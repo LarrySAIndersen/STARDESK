@@ -29,30 +29,19 @@ Læs `ARCHITECTURE.md` før du gør noget i denne repo.
 - Initial schema fra `init.sql` (kør én gang manuelt)
 - Alle videre ændringer via Alembic
 
-## Guardrails — stop og spørg
+## Guardrails — minimal friction mode
 
-**Spørg ALTID før du:**
+Du kan handle frit. Spørg KUN før du:
 
-1. Overskriver/sletter:
-   - `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`
-   - `.env`, `.env.local`, `.env.production`
-   - `package.json`, `pyproject.toml`
-   - `vercel.json`, `railway.toml`, `Procfile`
-   - `next.config.*`, `tsconfig.json`
-   - Eksisterende Alembic migrations
+1. Sletter filer eller mapper
+2. Kører destruktive DB-kommandoer (DROP, TRUNCATE, DELETE uden WHERE)
+3. Force-pushes eller resetter git history
+4. Tilføjer paid tier services eller services der koster penge
+5. Skriver secrets/credentials nogen steder
 
-2. Kører destruktive DB-ops:
-   - `DROP`, `TRUNCATE`, `DELETE FROM` uden WHERE
-   - `ALTER TABLE` der dropper kolonner
-   - Manuelle migrations der ikke kan rulles tilbage
-
-3. Kører `rm -rf`, `git reset --hard`, `git push --force`
-
-4. Tilføjer nye top-level dependencies uden at sige hvorfor
-
-5. Ændrer environment variables eller secrets
-
-**Når du er i tvivl: stop, beskriv hvad du vil, vent på "ja".**
+For alt andet: bare gør det. Hvis du fortryder, så rul tilbage med git.
+Rapportér efter ændringer: præcis hvilke filer der blev oprettet, ændret
+eller slettet.
 
 ## Konventioner
 
