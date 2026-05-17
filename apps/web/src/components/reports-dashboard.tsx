@@ -11,10 +11,16 @@ import type { OperationsDashboard } from "@/types/dashboard";
 import type { StandardReport } from "@/types/report";
 import type { Ticket } from "@/types/ticket";
 
-import { BUCKET_ACCENTS } from "@/lib/dashboard-buckets";
-
 const STATUS_BUCKET_KEYS = ["modtaget", "igangsat", "lost", "lukket"] as const;
 const GENAABNET_KEY = "genaabnet";
+
+const BUCKET_ACCENTS: Record<string, string> = {
+  modtaget: "border-t-star-blue",
+  igangsat: "border-t-star-navy",
+  lost: "border-t-emerald-600",
+  lukket: "border-t-gray-500",
+  genaabnet: "border-t-star-red",
+};
 
 function ReportKpiCard({
   label,
@@ -167,31 +173,12 @@ export function ReportsDashboard() {
 
   return (
     <div className="space-y-8">
-      {error ? <p className="text-star-red text-sm">{error}</p> : null}
-
       <StarSectionCard
         variant="navy"
         title="Standardrapporter — Service Desk Manager"
-        description="ITSM-overblik: sagspipeline, genåbninger og eksport til CSV og Excel."
+        description="ITSM-overblik: åbne og lukkede sager, sagspipeline (modtaget → igangsat → løst → lukket) og genåbninger. Eksporter til CSV eller Excel."
       >
         <div className="flex flex-wrap items-end gap-4">
-          <div>
-            <label htmlFor="period-days" className="text-star-navy text-sm font-medium">
-              Periode for genåbninger
-            </label>
-            <select
-              id="period-days"
-              className="border-input mt-1 flex h-9 w-full min-w-[12rem] rounded-sm border bg-white px-3 text-sm sm:w-auto"
-              value={periodDays}
-              onChange={(e) => setPeriodDays(Number(e.target.value))}
-            >
-              <option value={7}>7 dage</option>
-              <option value={30}>30 dage</option>
-              <option value={90}>90 dage</option>
-              <option value={365}>365 dage</option>
-              <option value={0}>Alle genåbninger</option>
-            </select>
-          </div>
           <Button
             type="button"
             className="bg-star-blue hover:bg-star-navy rounded-sm"
@@ -212,12 +199,13 @@ export function ReportsDashboard() {
         </div>
       </StarSectionCard>
 
+      {error ? <p className="text-star-red text-sm">{error}</p> : null}
+
       {dashboard ? (
-        <StarSectionCard
-          variant="navy"
-          title="Driftsoverblik"
-          description="Nøgletal fra driftsdashboard — opdateres sammen med rapporten."
-        >
+        <section aria-labelledby="reports-kpi-heading">
+          <h2 id="reports-kpi-heading" className="text-star-navy mb-4 text-lg font-semibold">
+            Nøgletal (drift)
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <ReportKpiCard label="Åbne sager" value={dashboard.open_count} />
             <ReportKpiCard
@@ -246,15 +234,18 @@ export function ReportsDashboard() {
               }
             />
           </div>
-        </StarSectionCard>
+        </section>
       ) : null}
 
       {report ? (
         <>
-          <StarSectionCard
-            title="Sagspipeline (nuværende status)"
-            description="Fordeling af alle sager efter aktuel status. Klik en kategori for at se sagslisten."
-          >
+          <section aria-labelledby="reports-pipeline-heading">
+            <h2 id="reports-pipeline-heading" className="text-star-navy mb-2 text-lg font-semibold">
+              Sagspipeline (nuværende status)
+            </h2>
+            <p className="text-muted-foreground mb-4 text-sm">
+              Fordeling af alle sager efter aktuel status. Klik en kategori for at se sagslisten.
+            </p>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {statusBuckets.map((bucket) => (
                 <BucketCard
@@ -265,7 +256,7 @@ export function ReportsDashboard() {
                 />
               ))}
             </div>
-          </StarSectionCard>
+          </section>
 
           <section aria-labelledby="reports-reopen-heading" className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -310,11 +301,7 @@ export function ReportsDashboard() {
               </div>
             ) : null}
           </section>
-        </>
-      ) : null}
 
-      {report && selected ? (
-        <>
           {selected ? (
             <StarSectionCard
               variant="accent"
