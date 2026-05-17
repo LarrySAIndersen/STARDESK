@@ -7,9 +7,9 @@ import { UserMenu } from "@/components/user-menu";
 
 export function AgentTopBar({ title }: { title?: string }) {
   return (
-    <header className="border-border bg-card/80 sticky top-0 z-40 border-b backdrop-blur-sm">
-      <section className="flex flex-wrap items-center gap-4 px-6 py-4">
-        <label className="relative min-w-[12rem] flex-1 max-w-xl">
+    <header className="border-border bg-card/80 sticky top-0 z-40 shrink-0 border-b backdrop-blur-sm">
+      <section className="flex items-center gap-4 px-6 py-3">
+        <label className="relative min-w-0 flex-1 sm:max-w-md lg:max-w-xl">
           <Search
             className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden
@@ -23,12 +23,12 @@ export function AgentTopBar({ title }: { title?: string }) {
         </label>
 
         {title ? (
-          <h1 className="text-foreground hidden text-lg font-semibold tracking-tight lg:block">
+          <h1 className="text-foreground hidden shrink-0 text-lg font-semibold tracking-tight xl:block">
             {title}
           </h1>
         ) : null}
 
-        <section className="ml-auto flex items-center gap-1">
+        <section className="ml-auto flex shrink-0 items-center gap-1">
           <button
             type="button"
             className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-2 transition-colors"

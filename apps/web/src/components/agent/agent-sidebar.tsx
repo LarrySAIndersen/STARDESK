@@ -10,7 +10,6 @@ import {
   Users,
 } from "lucide-react";
 
-import { StarLogo } from "@/components/star-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -35,22 +34,11 @@ export function AgentSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="bg-sidebar text-sidebar-foreground flex w-56 shrink-0 flex-col border-r border-sidebar-border">
-      <header className="border-sidebar-border border-b px-5 py-5">
-        <Link href="/" className="group flex items-center gap-2.5">
-          <StarLogo priority className="h-8 transition-opacity group-hover:opacity-90" />
-          <div className="min-w-0">
-            <span className="text-primary block text-lg font-bold leading-tight tracking-tight">
-              STARdesk
-            </span>
-            <span className="text-muted-foreground mt-0.5 block text-xs font-medium">
-              Sagsstyring
-            </span>
-          </div>
-        </Link>
-      </header>
-
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Hovednavigation">
+    <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full min-h-0 flex-col overflow-hidden border-r">
+      <nav
+        className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
+        aria-label="Hovednavigation"
+      >
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
@@ -70,7 +58,7 @@ export function AgentSidebar() {
         })}
       </nav>
 
-      <footer className="border-sidebar-border border-t p-4">
+      <footer className="border-sidebar-border shrink-0 border-t p-4">
         <Button
           nativeButton={false}
           render={<Link href="/tickets/new" />}

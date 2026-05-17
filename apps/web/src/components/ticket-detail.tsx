@@ -13,6 +13,7 @@ import { TicketStatusForm } from "@/components/ticket-status-form";
 import { TicketComments } from "@/components/ticket-comments";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { Badge } from "@/components/ui/badge";
+import { ResizableSplit } from "@/components/ui/resizable-split";
 import {
   Card,
   CardContent,
@@ -104,8 +105,13 @@ export function TicketDetailView({
         ) : null}
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,400px)]">
-        <div className="space-y-6">
+      <ResizableSplit
+        storageKey="stardesk-ticket-detail"
+        defaultSizes={[62, 38]}
+        minSizes={[40, 28]}
+        className="min-h-[24rem] items-start"
+      >
+        <div className="space-y-6 overflow-auto pr-2">
           <Card className="ledger-card shadow-sm">
             <CardHeader className="border-b pb-4">
               <CardTitle className="ledger-label text-star-navy font-semibold">
@@ -197,7 +203,7 @@ export function TicketDetailView({
           ) : null}
         </div>
 
-        <aside className="space-y-6">
+        <aside className="space-y-6 overflow-auto pl-2">
           {ticket.timestamps && ticket.activity ? (
             <TicketActivityPanel timestamps={ticket.timestamps} activity={ticket.activity} />
           ) : null}
@@ -225,7 +231,7 @@ export function TicketDetailView({
             </CardContent>
           </Card>
         </aside>
-      </div>
+      </ResizableSplit>
     </article>
   );
 }

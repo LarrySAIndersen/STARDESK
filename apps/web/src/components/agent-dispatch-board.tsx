@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
+import { ResizableSplit } from "@/components/ui/resizable-split";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { apiPatch } from "@/lib/api";
@@ -189,7 +190,12 @@ export function AgentDispatchBoard({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[1fr_minmax(280px,340px)]">
+      <ResizableSplit
+        storageKey="stardesk-dispatch-board"
+        defaultSizes={[68, 32]}
+        minSizes={[42, 22]}
+        className="min-h-[28rem] gap-0"
+      >
         <section
           className="star-section-card overflow-hidden"
           aria-labelledby="dispatch-tickets-heading"
@@ -388,7 +394,7 @@ export function AgentDispatchBoard({
             );
           })}
         </aside>
-      </div>
+      </ResizableSplit>
 
       {error ? (
         <p className="text-destructive text-sm" role="alert">

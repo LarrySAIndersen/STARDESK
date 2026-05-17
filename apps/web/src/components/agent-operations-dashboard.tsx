@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LongestTicketCard } from "@/components/dashboard/longest-ticket-card";
 import { StarSectionCard } from "@/components/star/section-card";
 import { Badge } from "@/components/ui/badge";
+import { ResizableSplit } from "@/components/ui/resizable-split";
 import {
   BUCKET_ACCENTS,
   BUCKET_DESCRIPTIONS_DA,
@@ -159,7 +160,12 @@ export function AgentOperationsDashboard({
       </div>
 
       {/* 7-day throughput + longest open ticket */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <ResizableSplit
+        storageKey="stardesk-dashboard-throughput"
+        defaultSizes={[48, 52]}
+        minSizes={[32, 32]}
+        className="min-h-[12rem]"
+      >
         <LongestTicketCard ticket={dashboard.longest_open} />
         <StarSectionCard
           variant="accent"
@@ -185,7 +191,7 @@ export function AgentOperationsDashboard({
             />
           </div>
         </StarSectionCard>
-      </div>
+      </ResizableSplit>
 
       {/* Gauges */}
       <StarSectionCard
