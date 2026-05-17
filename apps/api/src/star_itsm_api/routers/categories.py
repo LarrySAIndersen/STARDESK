@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.security import get_current_user
 from star_itsm_api.deps import require_db
+from star_itsm_api.models.user import User
 from star_itsm_api.models.category import Category, Subcategory
 from star_itsm_api.schemas.category import CategoryRead, SubcategoryRead
 
@@ -10,7 +12,10 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 
 
 @router.get("", response_model=list[CategoryRead])
-async def list_categories(db: AsyncSession = Depends(require_db)) -> list[CategoryRead]:
+async def list_categories(
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(get_current_user),
+) -> list[CategoryRead]:
     categories = (
         await db.execute(
             select(Category)

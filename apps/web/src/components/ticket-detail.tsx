@@ -11,7 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
+import { isStaff } from "@/lib/auth";
 import type { TicketDetail } from "@/types/ticket";
+import type { User } from "@/types/user";
 
 function formatDate(iso: string | null): string {
   if (!iso) {
@@ -23,7 +25,14 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-export function TicketDetailView({ ticket }: { ticket: TicketDetail }) {
+export function TicketDetailView({
+  ticket,
+  currentUser,
+}: {
+  ticket: TicketDetail;
+  currentUser: User | null;
+}) {
+  const staff = isStaff(currentUser);
   return (
     <div className="space-y-6">
       <div>
@@ -76,7 +85,9 @@ export function TicketDetailView({ ticket }: { ticket: TicketDetail }) {
               <span className="text-muted-foreground">Oprettet:</span>{" "}
               {formatDate(ticket.created_at)}
             </p>
-            <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
+            {staff ? (
+              <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -107,7 +118,7 @@ export function TicketDetailView({ ticket }: { ticket: TicketDetail }) {
               ))}
             </ul>
           )}
-          <CommentForm ticketId={ticket.id} />
+          <CommentForm ticketId={ticket.id} allowInternal={staff} />
         </CardContent>
       </Card>
     </div>

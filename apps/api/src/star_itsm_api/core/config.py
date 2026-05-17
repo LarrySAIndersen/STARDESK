@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     mail_from: str | None = Field(default=None, validation_alias="MAIL_FROM")
     cron_secret: str | None = Field(default=None, validation_alias="CRON_SECRET")
     webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
+    jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
 
     @property
     def cors_origins(self) -> list[str]:

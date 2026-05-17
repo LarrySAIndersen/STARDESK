@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { apiGet } from "@/lib/api";
+import { apiGetServer } from "@/lib/api-server";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import type { Ticket } from "@/types/ticket";
 
@@ -44,7 +44,7 @@ export async function TicketList() {
   let fetchError: string | null = null;
 
   try {
-    tickets = await apiGet<Ticket[]>("/api/v1/tickets");
+    tickets = await apiGetServer<Ticket[]>("/api/v1/tickets");
   } catch {
     fetchError = "Kunne ikke hente sager fra API. Tjek at backend kører.";
   }

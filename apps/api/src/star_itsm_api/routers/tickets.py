@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.constants import SYSTEM_USER_ID
+from star_itsm_api.core.security import (
+    ROLE_AGENT,
+    ROLE_ADMIN,
+    ROLE_SUBMITTER,
+    get_current_user,
+    is_staff,
+    require_roles,
+)
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.ticket import Ticket
@@ -28,7 +35,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-async def _comment_to_read(db: AsyncSession, comment: TicketComment) -> CommentRead:
+def _ensure_ticket_access(ticket: Ticket, user: User) -> None:
+    if user.role == ROLE_SUBMITTER and ticket.reporter_user_id != user.id:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+async def _comment_to_read(
+    db: AsyncSession,
+    comment: TicketComment,
+    *,
+    hide_internal: bool,
+) -> CommentRead | None:
+    if hide_internal and comment.is_internal:
+        return None
     author = await db.get(User, comment.author_user_id)
     return CommentRead(
         id=comment.id,
@@ -40,14 +59,19 @@ async def _comment_to_read(db: AsyncSession, comment: TicketComment) -> CommentR
 
 
 @router.get("", response_model=list[TicketRead])
-async def list_tickets(db: AsyncSession = Depends(require_db)) -> list[TicketRead]:
+async def list_tickets(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[TicketRead]:
     try:
-        result = await db.execute(
-            select(Ticket)
-            .where(Ticket.deleted_at.is_(None))
-            .order_by(Ticket.created_at.desc())
-        )
+        stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
+        if current_user.role == ROLE_SUBMITTER:
+            stmt = stmt.where(Ticket.reporter_user_id == current_user.id)
+        stmt = stmt.order_by(Ticket.created_at.desc())
+        result = await db.execute(stmt)
         return [TicketRead.model_validate(row) for row in result.scalars().all()]
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Failed to list tickets")
         await db.rollback()
@@ -58,6 +82,7 @@ async def list_tickets(db: AsyncSession = Depends(require_db)) -> list[TicketRea
 async def create_ticket(
     payload: TicketCreate,
     db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ) -> TicketRead:
     routing = await apply_routing(
         db,
@@ -81,7 +106,7 @@ async def create_ticket(
         description=payload.description,
         status="assigned" if routing.assigned_team_id else "new",
         priority=routing.priority,
-        reporter_user_id=SYSTEM_USER_ID,
+        reporter_user_id=current_user.id,
         assigned_team_id=routing.assigned_team_id,
         assigned_user_id=routing.assigned_user_id,
         category_id=payload.category_id,
@@ -99,7 +124,7 @@ async def create_ticket(
         TicketEvent(
             id=uuid.uuid4(),
             ticket_id=ticket.id,
-            actor_user_id=SYSTEM_USER_ID,
+            actor_user_id=current_user.id,
             event_type="ticket.created",
             payload={"ticket_number": ticket.ticket_number},
             created_at=now,
@@ -114,10 +139,12 @@ async def create_ticket(
 async def get_ticket(
     ticket_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _ensure_ticket_access(ticket, current_user)
 
     comments_result = await db.execute(
         select(TicketComment)
@@ -127,9 +154,13 @@ async def get_ticket(
         )
         .order_by(TicketComment.created_at.asc())
     )
-    comments = [
-        await _comment_to_read(db, comment) for comment in comments_result.scalars().all()
-    ]
+    hide_internal = current_user.role == ROLE_SUBMITTER
+    comments: list[CommentRead] = []
+    for comment in comments_result.scalars().all():
+        read = await _comment_to_read(db, comment, hide_internal=hide_internal)
+        if read is not None:
+            comments.append(read)
+
     return TicketDetailRead(
         **TicketRead.model_validate(ticket).model_dump(),
         description=ticket.description,
@@ -148,6 +179,7 @@ async def update_ticket_status(
     ticket_id: uuid.UUID,
     payload: TicketStatusUpdate,
     db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
 ) -> TicketRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
@@ -158,7 +190,7 @@ async def update_ticket_status(
         TicketEvent(
             id=uuid.uuid4(),
             ticket_id=ticket.id,
-            actor_user_id=SYSTEM_USER_ID,
+            actor_user_id=current_user.id,
             event_type="ticket.status_changed",
             payload={"status": payload.status},
             created_at=datetime.now(UTC),
@@ -174,18 +206,22 @@ async def create_comment(
     ticket_id: uuid.UUID,
     payload: CommentCreate,
     db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ) -> CommentRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    _ensure_ticket_access(ticket, current_user)
+
+    is_internal = payload.is_internal if is_staff(current_user) else False
 
     now = datetime.now(UTC)
     comment = TicketComment(
         id=uuid.uuid4(),
         ticket_id=ticket_id,
-        author_user_id=SYSTEM_USER_ID,
+        author_user_id=current_user.id,
         body=payload.body,
-        is_internal=payload.is_internal,
+        is_internal=is_internal,
         created_at=now,
         deleted_at=None,
     )
@@ -194,12 +230,14 @@ async def create_comment(
         TicketEvent(
             id=uuid.uuid4(),
             ticket_id=ticket_id,
-            actor_user_id=SYSTEM_USER_ID,
+            actor_user_id=current_user.id,
             event_type="comment.created",
-            payload={"comment_id": str(comment.id), "is_internal": payload.is_internal},
+            payload={"comment_id": str(comment.id), "is_internal": is_internal},
             created_at=now,
         )
     )
     await db.commit()
     await db.refresh(comment)
-    return await _comment_to_read(db, comment)
+    read = await _comment_to_read(db, comment, hide_internal=False)
+    assert read is not None
+    return read

@@ -1,0 +1,110 @@
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
+
+import bcrypt
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from star_itsm_api.core.config import settings
+from star_itsm_api.deps import require_db
+from star_itsm_api.models.user import User
+
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_HOURS = 12
+
+security_scheme = HTTPBearer(auto_error=False)
+
+ROLE_SUBMITTER = "end_user"
+ROLE_AGENT = "agent"
+ROLE_ADMIN = "admin"
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+
+
+def verify_password(password: str, password_hash: str | None) -> bool:
+    if not password_hash:
+        return False
+    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+
+
+def create_access_token(*, user_id: UUID, role: str, email: str) -> str:
+    if not settings.jwt_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="JWT_SECRET is not configured",
+        )
+    expire = datetime.now(UTC) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "role": role,
+        "email": email,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    if not settings.jwt_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="JWT_SECRET is not configured",
+        )
+    try:
+        return jwt.decode(token, settings.jwt_secret, algorithms=[ALGORITHM])
+    except jwt.PyJWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        ) from exc
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: AsyncSession = Depends(require_db),
+) -> User:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    payload = decode_access_token(credentials.credentials)
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = await db.get(User, UUID(str(user_id)))
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
+def require_roles(*roles: str):
+    async def _checker(user: User = Depends(get_current_user)) -> User:
+        if user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return user
+
+    return _checker
+
+
+def is_staff(user: User) -> bool:
+    return user.role in {ROLE_AGENT, ROLE_ADMIN}
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    result = await db.execute(
+        select(User).where(
+            User.email == email.lower().strip(),
+            User.deleted_at.is_(None),
+        )
+    )
+    return result.scalar_one_or_none()

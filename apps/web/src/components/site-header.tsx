@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 
 export function SiteHeader() {
@@ -9,7 +10,7 @@ export function SiteHeader() {
         <Link href="/" className="text-lg font-semibold tracking-tight">
           STARdesk
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-3">
           <Link
             href="/"
             className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
@@ -19,9 +20,9 @@ export function SiteHeader() {
           <Button nativeButton={false} render={<Link href="/tickets/new" />}>
             Opret sag
           </Button>
+          <UserMenu />
         </nav>
       </div>
     </header>
   );
 }
-

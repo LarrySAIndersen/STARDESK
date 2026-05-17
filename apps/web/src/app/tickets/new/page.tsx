@@ -1,11 +1,11 @@
 import { CreateTicketForm } from "@/components/create-ticket-form";
-import { apiGet } from "@/lib/api";
+import { apiGetServer } from "@/lib/api-server";
 import type { Category } from "@/types/category";
 
 export default async function NewTicketPage() {
   let categories: Category[] = [];
   try {
-    categories = await apiGet<Category[]>("/api/v1/categories");
+    categories = await apiGetServer<Category[]>("/api/v1/categories");
   } catch {
     categories = [];
   }

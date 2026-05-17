@@ -9,7 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiPost } from "@/lib/api";
 import type { Comment } from "@/types/comment";
 
-export function CommentForm({ ticketId }: { ticketId: string }) {
+export function CommentForm({
+  ticketId,
+  allowInternal = false,
+}: {
+  ticketId: string;
+  allowInternal?: boolean;
+}) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [isInternal, setIsInternal] = useState(false);
@@ -50,14 +56,16 @@ export function CommentForm({ ticketId }: { ticketId: string }) {
           placeholder="Skriv en opdatering…"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={isInternal}
-          onChange={(event) => setIsInternal(event.target.checked)}
-        />
-        Intern note (kun synlig for agenter)
-      </label>
+      {allowInternal ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={isInternal}
+            onChange={(event) => setIsInternal(event.target.checked)}
+          />
+          Intern note (kun synlig for agenter)
+        </label>
+      ) : null}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button type="submit" disabled={isSubmitting || !body.trim()}>
         {isSubmitting ? "Gemmer…" : "Tilføj kommentar"}

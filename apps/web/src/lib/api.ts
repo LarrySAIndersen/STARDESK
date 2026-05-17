@@ -1,3 +1,5 @@
+import { getClientToken } from "@/lib/auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export class ApiError extends Error {
@@ -14,6 +16,15 @@ function buildUrl(path: string): string {
   const base = API_BASE.replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalizedPath}`;
+}
+
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getClientToken();
+  return {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -34,10 +45,7 @@ async function parseError(response: Response): Promise<string> {
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(buildUrl(path), {
     ...init,
-    headers: {
-      Accept: "application/json",
-      ...init?.headers,
-    },
+    headers: authHeaders(init?.headers),
     cache: "no-store",
   });
 
@@ -56,11 +64,10 @@ export async function apiPost<T>(
   const response = await fetch(buildUrl(path), {
     method: "POST",
     ...init,
-    headers: {
-      Accept: "application/json",
+    headers: authHeaders({
       "Content-Type": "application/json",
       ...init?.headers,
-    },
+    }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -80,11 +87,10 @@ export async function apiPatch<T>(
   const response = await fetch(buildUrl(path), {
     method: "PATCH",
     ...init,
-    headers: {
-      Accept: "application/json",
+    headers: authHeaders({
       "Content-Type": "application/json",
       ...init?.headers,
-    },
+    }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
