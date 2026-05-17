@@ -184,9 +184,36 @@ async def ticket_hierarchy_detail_extras(
         return {"children": [], "related_major_tickets": []}
 
 
+def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
+    """Minimal ticket payload when joined list context queries fail."""
+    return TicketRead(
+        id=ticket.id,
+        ticket_number=ticket.ticket_number,
+        title=ticket.title,
+        status=ticket.status,
+        priority=ticket.priority,
+        ticket_type=ticket.ticket_type,
+        is_major=getattr(ticket, "is_major", False),
+        is_shared=getattr(ticket, "is_shared", False),
+        is_security_ticket=getattr(ticket, "is_security_ticket", False),
+        parent_ticket_id=getattr(ticket, "parent_ticket_id", None),
+        assigned_team_id=ticket.assigned_team_id,
+        response_due_at=ticket.response_due_at,
+        resolution_due_at=ticket.resolution_due_at,
+        created_at=ticket.created_at,
+        updated_at=getattr(ticket, "updated_at", None),
+        fault_displayed=getattr(ticket, "fault_displayed", False),
+        tags=list(getattr(ticket, "tags", None) or []),
+        emoji=getattr(ticket, "emoji", None),
+    )
+
+
 async def ticket_to_read(db: AsyncSession, ticket: Ticket) -> TicketRead:
-    items = await tickets_to_read_list(db, [ticket])
-    return items[0]
+    try:
+        items = await tickets_to_read_list(db, [ticket])
+        return items[0]
+    except Exception:
+        return _fallback_ticket_read(ticket)
 
 
 async def ticket_to_detail_read(
@@ -198,4 +225,9 @@ async def ticket_to_detail_read(
 ) -> TicketDetailRead:
     base = await ticket_to_read(db, ticket)
     hierarchy = await ticket_hierarchy_detail_extras(db, ticket) if include_hierarchy else {}
-    return TicketDetailRead(**base.model_dump(), **hierarchy, **extra)
+    payload = {**base.model_dump(), **hierarchy, **extra}
+    try:
+        return TicketDetailRead(**payload)
+    except Exception:
+        payload["intelligence"] = None
+        return TicketDetailRead(**payload)
