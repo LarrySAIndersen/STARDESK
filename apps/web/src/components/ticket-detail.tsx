@@ -1,9 +1,12 @@
 import Link from "next/link";
 
 import { TicketActivityPanel } from "@/components/ticket-activity-panel";
+import { TicketItsmSummary } from "@/components/ticket-itsm-summary";
+import { TicketIntelligencePanel } from "@/components/ticket-intelligence-panel";
 import { TicketComments } from "@/components/ticket-comments";
 import { TicketAttachments } from "@/components/ticket-attachments";
 import { TicketAssignmentForm } from "@/components/ticket-assignment-form";
+import { TicketHierarchySection } from "@/components/ticket-hierarchy-section";
 import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketStatusForm } from "@/components/ticket-status-form";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import { isStaff } from "@/lib/auth";
 import type { Team } from "@/types/team";
@@ -51,11 +55,29 @@ export function TicketDetailView({
           ← Tilbage til oversigt
         </Link>
         <h1 className="mt-2 font-mono text-sm">{ticket.ticket_number}</h1>
-        <h2 className="text-2xl font-semibold tracking-tight">{ticket.title}</h2>
+        <h2 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
+          {ticket.emoji ? (
+            <span className="text-3xl leading-none" aria-hidden>
+              {ticket.emoji}
+            </span>
+          ) : null}
+          {ticket.title}
+        </h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="outline">{statusLabel(ticket.status)}</Badge>
           <Badge>{priorityLabel(ticket.priority)}</Badge>
           {ticket.is_major ? <Badge variant="destructive">Stor sag</Badge> : null}
+          {ticket.parent_ticket_id ? (
+            <Badge variant="secondary">Små sag</Badge>
+          ) : null}
+          {(ticket.child_count ?? 0) > 0 ? (
+            <Badge variant="outline">{ticket.child_count} små sager</Badge>
+          ) : null}
+          {ticket.is_security_ticket ? (
+            <Badge variant="outline" className="border-amber-600 text-amber-800">
+              Sikkerhedssag
+            </Badge>
+          ) : null}
           {ticket.escalation_level > 0 ? (
             <Badge variant="destructive">
               Eskalering niveau {ticket.escalation_level}
@@ -67,7 +89,19 @@ export function TicketDetailView({
             </Badge>
           ))}
         </div>
+        {(ticket.tags?.length ?? 0) > 0 ? (
+          <div className="mt-3">
+            <p className="text-muted-foreground mb-1 text-xs font-medium uppercase tracking-wide">
+              Tags
+            </p>
+            <TicketTagBadges tags={ticket.tags} emoji={null} maxTags={10} />
+          </div>
+        ) : null}
       </div>
+
+      <TicketItsmSummary ticket={ticket} />
+
+      <TicketHierarchySection ticket={ticket} staffView={staff} />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -134,7 +168,7 @@ export function TicketDetailView({
                 <span className="text-sm">{ticket.assignment_reason}</span>
               </p>
             ) : null}
-            <TicketMetadataForm ticket={ticket} />
+            <TicketMetadataForm ticket={ticket} staff={staff} />
             {staff ? (
               <>
                 <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
@@ -149,6 +183,10 @@ export function TicketDetailView({
           </CardContent>
         </Card>
       </div>
+
+      {staff && ticket.intelligence ? (
+        <TicketIntelligencePanel ticketId={ticket.id} intelligence={ticket.intelligence} />
+      ) : null}
 
       {showAttachments ? (
         <TicketAttachments

@@ -1,5 +1,7 @@
 # Deploy STARdesk (cloud prototype)
 
+> Fuld dokumentation til genskabelse og fejlsøgning: [DOCUMENTATION.md](./DOCUMENTATION.md)
+
 Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 
 ## Hurtig checklist (15 min)

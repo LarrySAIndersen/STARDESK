@@ -1,15 +1,8 @@
 import { cookies } from "next/headers";
 
+import { buildBackendUrl } from "@/lib/api-backend";
 import { ApiError } from "@/lib/api";
 import { TOKEN_COOKIE } from "@/lib/auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
-function buildUrl(path: string): string {
-  const base = API_BASE.replace(/\/$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalizedPath}`;
-}
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
@@ -19,10 +12,21 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-export async function apiGetServer<T>(path: string): Promise<T> {
-  const response = await fetch(buildUrl(path), {
+type ApiGetServerOptions = {
+  /** Seconds to cache read-only reference data (teams, categories). */
+  revalidate?: number;
+};
+
+export async function apiGetServer<T>(
+  path: string,
+  options?: ApiGetServerOptions,
+): Promise<T> {
+  const revalidate = options?.revalidate;
+  const response = await fetch(buildBackendUrl(path), {
     headers: await authHeaders(),
-    cache: "no-store",
+    ...(revalidate !== undefined
+      ? { next: { revalidate } }
+      : { cache: "no-store" as const }),
   });
   if (!response.ok) {
     throw new ApiError(response.status, `API-fejl: ${response.status}`);

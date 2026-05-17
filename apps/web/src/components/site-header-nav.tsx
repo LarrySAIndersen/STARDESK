@@ -17,7 +17,7 @@ export function SiteHeaderNav() {
   const staff = isStaff(user);
 
   return (
-    <nav className="flex flex-wrap items-center gap-1">
+    <nav className="flex flex-wrap items-center gap-1" aria-label="Hovednavigation">
       {NAV.filter((item) => !item.staffOnly || staff).map((item) => (
         <Link key={item.href} href={item.href} className="star-nav-link">
           {item.label}

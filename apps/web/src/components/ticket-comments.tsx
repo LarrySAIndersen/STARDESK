@@ -1,5 +1,11 @@
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { CommentReactionBar } from "@/components/comment-reaction-bar";
 import { CommentForm } from "@/components/comment-form";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -16,19 +22,62 @@ function formatDate(iso: string): string {
   }).format(new Date(iso));
 }
 
-function CommentItem({ comment, staffView }: { comment: Comment; staffView: boolean }) {
+function defaultExpanded(index: number, total: number): boolean {
+  return index >= total - 3;
+}
+
+function CommentItem({
+  comment,
+  ticketId,
+  staffView,
+  defaultOpen,
+}: {
+  comment: Comment;
+  ticketId: string;
+  staffView: boolean;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const reactions = comment.reactions ?? {
+    positive_count: 0,
+    negative_count: 0,
+    current_user_sentiment: null,
+  };
+
   return (
-    <li className="border-b pb-4 last:border-0">
-      <div className="mb-1 flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-medium">{comment.author_display_name}</span>
-        <span className="text-muted-foreground">{formatDate(comment.created_at)}</span>
-        {staffView ? (
-          <Badge variant={comment.is_internal ? "secondary" : "outline"}>
-            {comment.visibility_label_da}
-          </Badge>
-        ) : null}
+    <li className="rounded-md border border-star-blue/15 bg-white p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">{comment.author_display_name}</p>
+          <p className="text-muted-foreground text-xs">{formatDate(comment.created_at)}</p>
+          {staffView ? (
+            <Badge
+              variant={comment.is_internal ? "secondary" : "outline"}
+              className="mt-1"
+            >
+              {comment.visibility_label_da}
+            </Badge>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0 text-xs"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+        >
+          {open ? "Skjul" : "Vis"}
+        </Button>
       </div>
-      <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+      {open ? (
+        <>
+          <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+          <CommentReactionBar ticketId={ticketId} commentId={comment.id} initial={reactions} />
+        </>
+      ) : (
+        <p className="text-muted-foreground mt-2 truncate text-sm">{comment.body}</p>
+      )}
     </li>
   );
 }
@@ -42,60 +91,45 @@ export function TicketComments({
   comments: Comment[];
   staffView: boolean;
 }) {
-  const externalComments = comments.filter((c) => !c.is_internal);
-  const internalComments = staffView ? comments.filter((c) => c.is_internal) : [];
+  const visible = useMemo(() => {
+    const list = staffView ? comments : comments.filter((c) => !c.is_internal);
+    return [...list].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+  }, [comments, staffView]);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>
-            {staffView ? "Eksterne opdateringer" : "Opdateringer fra sagsbehandling"}
-          </CardTitle>
+          <CardTitle>Kommentarer og noter</CardTitle>
           <CardDescription>
-            {staffView
-              ? "Vises i kundeportalen når indmelder åbner sagen."
-              : "Beskeder fra STAR og opdateringer på din sag."}
+            Kronologisk oversigt — navn og tidspunkt er altid synlige. Klik Vis/Skjul for
+            indhold. Brug 👍 og 👎 på hver kommentar.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {externalComments.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen eksterne opdateringer endnu.</p>
+          {visible.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Ingen kommentarer endnu.</p>
           ) : (
-            <ul className="space-y-4">
-              {externalComments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} staffView={staffView} />
+            <ul className="space-y-3">
+              {visible.map((comment, index) => (
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  ticketId={ticketId}
+                  staffView={staffView}
+                  defaultOpen={defaultExpanded(index, visible.length)}
+                />
               ))}
             </ul>
           )}
         </CardContent>
       </Card>
 
-      {staffView ? (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle>Interne noter</CardTitle>
-            <CardDescription>
-              Kun synlige for agenter og administratorer — vises ikke i kundeportalen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {internalComments.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Ingen interne noter endnu.</p>
-            ) : (
-              <ul className="space-y-4">
-                {internalComments.map((comment) => (
-                  <CommentItem key={comment.id} comment={comment} staffView={staffView} />
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      ) : null}
-
       <Card>
         <CardHeader>
-          <CardTitle>{staffView ? "Ny opdatering" : "Skriv til sagsbehandling"}</CardTitle>
+          <CardTitle>{staffView ? "Ny kommentar" : "Skriv til sagsbehandling"}</CardTitle>
         </CardHeader>
         <CardContent>
           <CommentForm ticketId={ticketId} staffMode={staffView} />

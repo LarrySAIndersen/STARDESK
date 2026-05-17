@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { TicketDetailView } from "@/components/ticket-detail";
@@ -8,6 +9,8 @@ import { isStaff, USER_COOKIE } from "@/lib/auth";
 import type { Team } from "@/types/team";
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
+
+export const dynamic = "force-dynamic";
 
 export default async function TicketDetailPage({
   params,
@@ -26,16 +29,15 @@ export default async function TicketDetailPage({
     }
   }
 
+  const staff = isStaff(currentUser);
+
   try {
-    const ticket = await apiGetServer<TicketDetail>(`/api/v1/tickets/${id}`);
-    let teams: Team[] = [];
-    if (isStaff(currentUser)) {
-      try {
-        teams = await apiGetServer<Team[]>("/api/v1/teams");
-      } catch {
-        teams = [];
-      }
-    }
+    const [ticket, teams] = await Promise.all([
+      apiGetServer<TicketDetail>(`/api/v1/tickets/${id}`),
+      staff
+        ? apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 }).catch(() => [] as Team[])
+        : Promise.resolve([] as Team[]),
+    ]);
     return (
       <main className="star-page max-w-7xl">
         <TicketDetailView ticket={ticket} currentUser={currentUser} teams={teams} />
@@ -44,6 +46,20 @@ export default async function TicketDetailPage({
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       notFound();
+    }
+    if (error instanceof ApiError && error.status === 403) {
+      return (
+        <main className="star-page max-w-7xl">
+          <p className="text-destructive text-sm">
+            Du har ikke adgang til denne sag. Log ind med en bruger der har adgang, eller gå
+            tilbage til{" "}
+            <Link href="/" className="text-star-blue underline">
+              oversigten
+            </Link>
+            .
+          </p>
+        </main>
+      );
     }
     return (
       <main className="star-page max-w-7xl">

@@ -1,5 +1,5 @@
 -- 3 demo-sager per aktiv gruppe (til drag-and-drop oversigt)
--- Kør efter seed-orgs-30 og seed-sf-master-group (safe to re-run)
+-- Kør efter seed-sf-ecosystem-reset.sql (safe to re-run)
 
 DO $$
 DECLARE
@@ -19,7 +19,7 @@ BEGIN
     END IF;
 
     FOR team_row IN
-        SELECT id, name FROM teams WHERE is_active ORDER BY name
+        SELECT id, name, organization_id FROM teams WHERE is_active ORDER BY name
     LOOP
         FOR idx IN 1..3 LOOP
             new_id := gen_random_uuid();
@@ -33,6 +33,7 @@ BEGIN
                 priority,
                 reporter_user_id,
                 assigned_team_id,
+                organization_id,
                 source,
                 gdpr_consent,
                 gdpr_consent_at,
@@ -50,6 +51,7 @@ BEGIN
                 CASE WHEN idx = 1 THEN 'high' WHEN idx = 2 THEN 'medium' ELSE 'low' END,
                 reporter,
                 team_row.id,
+                team_row.organization_id,
                 'portal',
                 TRUE,
                 NOW(),

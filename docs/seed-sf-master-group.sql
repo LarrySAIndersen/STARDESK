@@ -16,7 +16,7 @@ SELECT t.id, u.id, NOW()
 FROM teams t
 CROSS JOIN users u
 WHERE t.name = 'SF'
-  AND u.role IN ('agent', 'admin')
+  AND u.role IN ('agent', 'admin', 'top_admin')
   AND u.deleted_at IS NULL
 ON CONFLICT (team_id, user_id) DO NOTHING;
 

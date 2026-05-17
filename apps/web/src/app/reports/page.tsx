@@ -1,9 +1,21 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
+import dynamic from "next/dynamic";
+
 import { PageHero } from "@/components/page-hero";
-import { ReportsDashboard } from "@/components/reports-dashboard";
 import { isStaff, USER_COOKIE } from "@/lib/auth";
+
+const ReportsDashboard = dynamic(
+  () => import("@/components/reports-dashboard").then((mod) => mod.ReportsDashboard),
+  {
+    loading: () => (
+      <p className="text-muted-foreground text-sm" aria-live="polite">
+        Henter rapport…
+      </p>
+    ),
+  },
+);
 import type { User } from "@/types/user";
 
 export default async function ReportsPage() {
@@ -18,7 +30,7 @@ export default async function ReportsPage() {
   }
 
   if (!isStaff(currentUser)) {
-    redirect("/login");
+    redirect("/");
   }
 
   return (

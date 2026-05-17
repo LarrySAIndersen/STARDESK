@@ -10,7 +10,7 @@ export function SiteHeader() {
           <span className="text-white/90">
             Styrelsen for Arbejdsmarked og Rekruttering — ITSM prototype
           </span>
-          <span className="hidden text-white/70 sm:inline">STARdesk</span>
+          <span className="hidden text-white/90 sm:inline">STARdesk</span>
         </div>
       </div>
 

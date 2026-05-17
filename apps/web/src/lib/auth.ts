@@ -3,11 +3,11 @@ import type { User } from "@/types/user";
 export const TOKEN_COOKIE = "stardesk_token";
 export const USER_COOKIE = "stardesk_user";
 
-export function setSession(token: string, user: User) {
+/** @deprecated Use POST /api/auth/login — token is HttpOnly server-side. */
+export function setSession(_token: string, user: User) {
   const maxAge = 60 * 60 * 12;
   const secure = typeof window !== "undefined" && window.location.protocol === "https:";
   const secureFlag = secure ? "; Secure" : "";
-  document.cookie = `${TOKEN_COOKIE}=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
   document.cookie = `${USER_COOKIE}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
 }
 
@@ -47,7 +47,17 @@ export function getClientUser(): User | null {
 }
 
 export function isStaff(user: User | null): boolean {
-  return user?.role === "agent" || user?.role === "admin";
+  return (
+    user?.role === "agent" || user?.role === "admin" || user?.role === "top_admin"
+  );
+}
+
+export function isAdmin(user: User | null): boolean {
+  return user?.role === "admin" || user?.role === "top_admin";
+}
+
+export function canExportTickets(user: User | null): boolean {
+  return isStaff(user);
 }
 
 export function isSubmitter(user: User | null): boolean {

@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
     upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
+    app_env: str = Field(default="development", validation_alias="APP_ENV")
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() in {"production", "prod"}
+
+    @property
+    def integration_secrets_required(self) -> bool:
+        """Cron/webhook endpoints must not be open when APP_ENV=production."""
+        return self.is_production
 
     @property
     def cors_origins(self) -> list[str]:

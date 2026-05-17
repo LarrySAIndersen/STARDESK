@@ -8,10 +8,24 @@ from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.schemas.comment import CommentRead
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, TicketTimestampsRead
+from star_itsm_api.schemas.ticket_intelligence import TicketIntelligenceRead
 from star_itsm_api.services.cpr import assert_no_cpr_outside_field, validate_cpr
+from star_itsm_api.services.ticket_tags import normalize_tags, validate_emoji
 
 
 CLOSED_STATUSES = frozenset({"closed", "cancelled"})
+
+
+class TicketSummaryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    ticket_number: str
+    title: str
+    status: str
+    priority: str
+    is_major: bool = False
+    is_security_ticket: bool = False
 
 
 class TicketRead(BaseModel):
@@ -24,6 +38,11 @@ class TicketRead(BaseModel):
     priority: str
     ticket_type: str
     is_major: bool = False
+    is_shared: bool = False
+    is_security_ticket: bool = False
+    parent_ticket_id: UUID | None = None
+    parent: TicketSummaryRead | None = None
+    child_count: int = 0
     sub_causes: list[SubCauseRead] = Field(default_factory=list)
     category_name_da: str | None = None
     subcategory_name_da: str | None = None
@@ -36,9 +55,14 @@ class TicketRead(BaseModel):
     created_at: datetime
     updated_at: datetime | None = None
     fault_displayed: bool = False
+    tags: list[str] = Field(default_factory=list)
+    emoji: str | None = None
 
 
 class TicketDetailRead(TicketRead):
+    children: list[TicketSummaryRead] = Field(default_factory=list)
+    related_major_tickets: list[TicketSummaryRead] = Field(default_factory=list)
+    intelligence: TicketIntelligenceRead | None = None
     description: str
     category_id: UUID | None
     subcategory_id: UUID | None
@@ -69,8 +93,22 @@ class TicketCreate(BaseModel):
     subcategory_id: UUID | None = None
     sub_cause_ids: list[UUID] = Field(default_factory=list)
     is_major: bool = False
+    is_security_ticket: bool = False
+    parent_ticket_id: UUID | None = None
     gdpr_consent: bool = False
     subject_cpr: str | None = Field(default=None, max_length=20)
+    tags: list[str] = Field(default_factory=list, max_length=10)
+    emoji: str | None = Field(default=None, max_length=16)
+
+    @field_validator("tags")
+    @classmethod
+    def normalize_create_tags(cls, value: list[str]) -> list[str]:
+        return normalize_tags(value)
+
+    @field_validator("emoji")
+    @classmethod
+    def validate_create_emoji(cls, value: str | None) -> str | None:
+        return validate_emoji(value)
 
     @field_validator("gdpr_consent")
     @classmethod
@@ -96,9 +134,33 @@ class TicketCreate(BaseModel):
         return self
 
 
+class TicketParentUpdate(BaseModel):
+    parent_ticket_id: UUID | None = None
+
+
+class TicketRelatedMajorCreate(BaseModel):
+    related_ticket_id: UUID
+
+
 class TicketMetadataUpdate(BaseModel):
     is_major: bool | None = None
+    is_security_ticket: bool | None = None
+    parent_ticket_id: UUID | None = None
     sub_cause_ids: list[UUID] | None = None
+    tags: list[str] | None = None
+    emoji: str | None = Field(default=None, max_length=16)
+
+    @field_validator("tags")
+    @classmethod
+    def normalize_metadata_tags(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return normalize_tags(value)
+
+    @field_validator("emoji")
+    @classmethod
+    def validate_metadata_emoji(cls, value: str | None) -> str | None:
+        return validate_emoji(value)
 
 
 class TicketStatusUpdate(BaseModel):

@@ -21,6 +21,7 @@ security_scheme = HTTPBearer(auto_error=False)
 ROLE_SUBMITTER = "end_user"
 ROLE_AGENT = "agent"
 ROLE_ADMIN = "admin"
+ROLE_TOP_ADMIN = "top_admin"
 
 
 def hash_password(password: str) -> str:
@@ -79,7 +80,7 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     user = await db.get(User, UUID(str(user_id)))
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
 
@@ -97,7 +98,15 @@ def require_roles(*roles: str):
 
 
 def is_staff(user: User) -> bool:
-    return user.role in {ROLE_AGENT, ROLE_ADMIN}
+    return user.role in {ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN}
+
+
+def require_staff():
+    return require_roles(ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN)
+
+
+def require_admin():
+    return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN)
 
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
@@ -105,6 +114,7 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
         select(User).where(
             User.email == email.lower().strip(),
             User.deleted_at.is_(None),
+            User.is_active.is_(True),
         )
     )
     return result.scalar_one_or_none()

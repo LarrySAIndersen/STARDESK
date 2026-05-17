@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Run Neon migrations and seeds in order. Reads DATABASE_URL from apps/api/.env."""
+"""Run Neon migrations and seeds in order. Reads DATABASE_URL from apps/api/.env.
+
+See docs/DOCUMENTATION.md and docs/database-rebuild.md for structure and troubleshooting.
+"""
 
 from __future__ import annotations
 
@@ -18,14 +21,17 @@ MIGRATIONS = [
     "docs/gdpr-attachments-migration.sql",
     "docs/ticket-activity-timestamps-migration.sql",
     "docs/ticket-assignment-fields-migration.sql",
+    "docs/ticket-tags-emoji-migration.sql",
+    "docs/ticket-intelligence-migration.sql",
+    "docs/comment-reactions-migration.sql",
 ]
 
 SEEDS = [
     "docs/seed-mvp.sql",
     "docs/seed-sub-causes.sql",
-    "docs/seed-orgs-30.sql",
-    "docs/seed-sf-master-group.sql",
+    "docs/seed-sf-ecosystem-reset.sql",
     "docs/seed-group-sample-tickets.sql",
+    "docs/seed-ticket-intelligence.sql",
     "docs/seed-larrysanders.sql",
 ]
 

@@ -9,12 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import (
     ROLE_AGENT,
-    ROLE_ADMIN,
     ROLE_SUBMITTER,
     get_current_user,
     is_staff,
-    require_roles,
+    require_staff,
 )
+from star_itsm_api.services.permissions import is_admin, is_staff_role
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.team import Team
@@ -22,15 +22,33 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
-from star_itsm_api.schemas.comment import CommentCreate, CommentRead
+from star_itsm_api.schemas.comment import (
+    CommentCreate,
+    CommentReactionSummary,
+    CommentReactionUpdate,
+    CommentRead,
+)
+from star_itsm_api.services.comment_reactions import (
+    apply_reaction_summaries,
+    load_reaction_summaries,
+    set_comment_reaction,
+)
 from star_itsm_api.schemas.ticket import (
     CLOSED_STATUSES,
     TicketAssignmentUpdate,
     TicketCreate,
     TicketDetailRead,
     TicketMetadataUpdate,
+    TicketParentUpdate,
     TicketRead,
+    TicketRelatedMajorCreate,
     TicketStatusUpdate,
+)
+from star_itsm_api.services.ticket_hierarchy import (
+    HierarchyValidationError,
+    add_related_major_link,
+    remove_related_major_link,
+    set_parent_ticket_id,
 )
 from star_itsm_api.services.sub_causes import (
     replace_ticket_sub_causes,
@@ -40,6 +58,7 @@ from star_itsm_api.services.ticket_read import ticket_to_detail_read, ticket_to_
 from star_itsm_api.services.org_access import (
     apply_agent_team_list_filter,
     apply_ticket_list_filter,
+    can_assign_to_any_team,
     get_user_organization_id,
     user_can_access_ticket,
 )
@@ -54,6 +73,11 @@ from star_itsm_api.services.attachments import (
     save_ticket_upload,
 )
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
+from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_security import (
+    require_staff_for_security_metadata_update,
+    resolve_create_security_flag,
+)
 from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket_timestamps_read
 from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
 from star_itsm_api.services.ticket_timestamps import (
@@ -61,6 +85,18 @@ from star_itsm_api.services.ticket_timestamps import (
     maybe_set_assigned_at,
     maybe_set_first_response,
     touch_ticket_updated,
+)
+from star_itsm_api.schemas.ticket_intelligence import (
+    TicketIntelligenceRead,
+    TicketIntelligenceUpdate,
+    TicketLlmContextRead,
+    TicketLlmEvalPackRead,
+)
+from star_itsm_api.services.ticket_intelligence import (
+    EVALUATION_RUBRIC_DA,
+    build_ticket_llm_context,
+    build_llm_context_batch,
+    intelligence_from_ticket,
 )
 
 logger = logging.getLogger(__name__)
@@ -123,23 +159,82 @@ async def list_tickets(
         default=False,
         description="Open major incidents for agent banner (staff only)",
     ),
+    store_sager: bool = Query(
+        default=False,
+        description="Store sager only (slutbruger portal)",
+    ),
+    q: str | None = Query(
+        default=None,
+        max_length=100,
+        description="Search title, description, sagsnr. or tags",
+    ),
+    parent_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter child tickets of a store sag",
+    ),
+    has_parent: bool | None = Query(
+        default=None,
+        description="True = små sager only; False = tickets without parent",
+    ),
+    is_store: bool | None = Query(
+        default=None,
+        description="True = store sager (is_major, no parent)",
+    ),
+    security_only: bool = Query(
+        default=False,
+        description="Only security tickets (sikkerhedssager)",
+    ),
+    open_only: bool = Query(
+        default=False,
+        description="Exclude resolved/closed/cancelled tickets",
+    ),
+    limit: int = Query(
+        default=100,
+        ge=1,
+        le=500,
+        description="Maximum tickets returned (newest first)",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
         stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
-        stmt = apply_ticket_list_filter(stmt, current_user)
+        stmt = apply_ticket_list_filter(stmt, current_user, store_sager=store_sager)
+        if parent_id is not None:
+            stmt = stmt.where(Ticket.parent_ticket_id == parent_id)
+        if has_parent is True:
+            stmt = stmt.where(Ticket.parent_ticket_id.is_not(None))
+        elif has_parent is False:
+            stmt = stmt.where(Ticket.parent_ticket_id.is_(None))
+        if is_store is True:
+            stmt = stmt.where(
+                Ticket.is_major.is_(True),
+                Ticket.parent_ticket_id.is_(None),
+            )
+        elif is_store is False:
+            stmt = stmt.where(
+                (Ticket.is_major.is_(False)) | (Ticket.parent_ticket_id.is_not(None))
+            )
         if board:
-            if current_user.role not in {ROLE_AGENT, ROLE_ADMIN}:
+            if not is_staff_role(current_user):
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
+            open_only = True
+            limit = min(limit, 500)
         elif major_open:
-            if current_user.role not in {ROLE_AGENT, ROLE_ADMIN}:
+            if not is_staff_role(current_user):
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
             stmt = stmt.where(Ticket.is_major.is_(True))
             stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+        elif store_sager and current_user.role != ROLE_SUBMITTER:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
         elif current_user.role == ROLE_AGENT:
             stmt = await apply_agent_team_list_filter(db, stmt, current_user)
-        stmt = stmt.order_by(Ticket.created_at.desc())
+        if security_only:
+            stmt = stmt.where(Ticket.is_security_ticket.is_(True))
+        if open_only:
+            stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+        stmt = apply_ticket_search_filter(stmt, q)
+        stmt = stmt.order_by(Ticket.created_at.desc()).limit(limit)
         result = await db.execute(stmt)
         return await tickets_to_read_list(db, list(result.scalars().all()))
     except HTTPException:
@@ -148,6 +243,39 @@ async def list_tickets(
         logger.exception("Failed to list tickets")
         await db.rollback()
         raise HTTPException(status_code=500, detail="Could not load tickets") from None
+
+
+@router.get("/llm-eval-pack", response_model=TicketLlmEvalPackRead)
+async def get_llm_eval_pack(
+    board: bool = Query(
+        default=True,
+        description="Use dispatch-board ticket scope for agents",
+    ),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=100),
+    open_only: bool = Query(default=True, description="Exclude closed/cancelled"),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketLlmEvalPackRead:
+    """Batch LLM-ready context for semantic + ease evaluation."""
+    stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
+    stmt = apply_ticket_list_filter(stmt, current_user)
+    if board:
+        pass
+    elif current_user.role == ROLE_AGENT:
+        stmt = await apply_agent_team_list_filter(db, stmt, current_user)
+    if open_only:
+        stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+    stmt = stmt.order_by(Ticket.created_at.desc())
+    offset = (page - 1) * page_size
+    result = await db.execute(stmt.offset(offset).limit(page_size))
+    tickets = list(result.scalars().all())
+    items = await build_llm_context_batch(db, tickets)
+    return TicketLlmEvalPackRead(
+        evaluation_rubric_da=EVALUATION_RUBRIC_DA,
+        count=len(items),
+        items=items,
+    )
 
 
 @router.post("", response_model=TicketRead, status_code=201)
@@ -174,6 +302,15 @@ async def create_ticket(
         payload.sub_cause_ids,
         category_id=payload.category_id,
     )
+    is_security_ticket = resolve_create_security_flag(
+        current_user,
+        payload.is_security_ticket,
+    )
+    if payload.parent_ticket_id is not None and payload.is_major:
+        raise HTTPException(
+            status_code=400,
+            detail="Store sager cannot have a parent ticket",
+        )
     now = datetime.now(UTC)
     ticket = Ticket(
         id=uuid.uuid4(),
@@ -198,12 +335,22 @@ async def create_ticket(
         gdpr_consent_at=now,
         subject_cpr=payload.subject_cpr,
         is_major=payload.is_major,
+        is_security_ticket=is_security_ticket,
+        parent_ticket_id=None,
+        tags=payload.tags,
+        emoji=payload.emoji,
         created_at=now,
         updated_at=now,
         deleted_at=None,
     )
     db.add(ticket)
     await db.flush()
+    if payload.parent_ticket_id is not None:
+        try:
+            await set_parent_ticket_id(db, ticket, payload.parent_ticket_id)
+        except HierarchyValidationError as exc:
+            await db.rollback()
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     if ticket.status == "assigned":
         maybe_set_assigned_at(ticket, now=now)
     if payload.sub_cause_ids:
@@ -248,6 +395,13 @@ async def get_ticket(
         read = await _comment_to_read(db, comment, hide_internal=hide_internal)
         if read is not None:
             comments.append(read)
+    comment_ids = [c.id for c in comments]
+    reaction_map = await load_reaction_summaries(
+        db,
+        comment_ids,
+        current_user_id=current_user.id,
+    )
+    comments = apply_reaction_summaries(comments, reaction_map)
 
     team_name, user_name = await _assignment_names(db, ticket)
     attachments = await list_ticket_attachments_for_detail(
@@ -257,10 +411,16 @@ async def get_ticket(
         reporter_user_id=ticket.reporter_user_id,
     )
     activity = await build_ticket_activity(db, ticket, current_user)
+    intelligence = (
+        intelligence_from_ticket(ticket)
+        if is_staff(current_user)
+        else None
+    )
     return await ticket_to_detail_read(
         db,
         ticket,
         extra={
+            "intelligence": intelligence,
             "description": ticket.description,
             "category_id": ticket.category_id,
             "subcategory_id": ticket.subcategory_id,
@@ -347,7 +507,7 @@ async def update_ticket_status(
     ticket_id: uuid.UUID,
     payload: TicketStatusUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
+    current_user: User = Depends(require_staff()),
 ) -> TicketRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
@@ -394,8 +554,20 @@ async def update_ticket_metadata(
     await _ensure_ticket_access(db, ticket, current_user)
 
     updates = payload.model_dump(exclude_unset=True)
+    require_staff_for_security_metadata_update(current_user, updates)
     if "is_major" in updates and updates["is_major"] is not None:
         ticket.is_major = updates["is_major"]
+        if ticket.is_major:
+            ticket.parent_ticket_id = None
+    if "is_shared" in updates and updates["is_shared"] is not None:
+        ticket.is_shared = updates["is_shared"]
+    if "is_security_ticket" in updates and updates["is_security_ticket"] is not None:
+        ticket.is_security_ticket = updates["is_security_ticket"]
+    if "parent_ticket_id" in updates:
+        try:
+            await set_parent_ticket_id(db, ticket, updates["parent_ticket_id"])
+        except HierarchyValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
     if "sub_cause_ids" in updates:
         sub_cause_ids = updates["sub_cause_ids"] or []
         await validate_sub_cause_ids(
@@ -404,6 +576,10 @@ async def update_ticket_metadata(
             category_id=ticket.category_id,
         )
         await replace_ticket_sub_causes(db, ticket.id, sub_cause_ids)
+    if "tags" in updates and updates["tags"] is not None:
+        ticket.tags = updates["tags"]
+    if "emoji" in updates:
+        ticket.emoji = updates["emoji"]
 
     if updates:
         now = datetime.now(UTC)
@@ -422,12 +598,121 @@ async def update_ticket_metadata(
     return await get_ticket(ticket_id, db, current_user)
 
 
+@router.patch("/{ticket_id}/parent", response_model=TicketDetailRead)
+async def update_ticket_parent(
+    ticket_id: uuid.UUID,
+    payload: TicketParentUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        await set_parent_ticket_id(db, ticket, payload.parent_ticket_id)
+    except HierarchyValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    now = datetime.now(UTC)
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.parent_changed",
+            payload={
+                "parent_ticket_id": str(payload.parent_ticket_id)
+                if payload.parent_ticket_id
+                else None,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
+    return await get_ticket(ticket_id, db, current_user)
+
+
+@router.post(
+    "/{ticket_id}/related-majors",
+    response_model=TicketDetailRead,
+    status_code=201,
+)
+async def link_related_major_ticket(
+    ticket_id: uuid.UUID,
+    payload: TicketRelatedMajorCreate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    if not ticket.is_major or ticket.parent_ticket_id is not None:
+        raise HTTPException(status_code=400, detail="Only store sager can link to other store sager")
+    try:
+        await add_related_major_link(
+            db,
+            ticket_id=ticket_id,
+            related_ticket_id=payload.related_ticket_id,
+        )
+    except HierarchyValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    now = datetime.now(UTC)
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.related_major_linked",
+            payload={"related_ticket_id": str(payload.related_ticket_id)},
+            created_at=now,
+        )
+    )
+    await db.commit()
+    return await get_ticket(ticket_id, db, current_user)
+
+
+@router.delete("/{ticket_id}/related-majors/{related_ticket_id}", status_code=204)
+async def unlink_related_major_ticket(
+    ticket_id: uuid.UUID,
+    related_ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> None:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    removed = await remove_related_major_link(
+        db,
+        ticket_id=ticket_id,
+        related_ticket_id=related_ticket_id,
+    )
+    if not removed:
+        raise HTTPException(status_code=404, detail="Link not found")
+    now = datetime.now(UTC)
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.related_major_unlinked",
+            payload={"related_ticket_id": str(related_ticket_id)},
+            created_at=now,
+        )
+    )
+    await db.commit()
+
+
 @router.patch("/{ticket_id}/assignment", response_model=TicketDetailRead)
 async def assign_ticket(
     ticket_id: uuid.UUID,
     payload: TicketAssignmentUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
+    current_user: User = Depends(require_staff()),
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
@@ -446,11 +731,8 @@ async def assign_ticket(
         team = await db.get(Team, team_id)
         if team is None or not team.is_active:
             raise HTTPException(status_code=400, detail="Invalid group")
-        if current_user.role == ROLE_AGENT:
-            actor_org = get_user_organization_id(current_user)
-            team_org = getattr(team, "organization_id", None)
-            in_org_team = actor_org is not None and team_org == actor_org
-            if not in_org_team and not await user_in_team(db, current_user.id, team_id):
+        if current_user.role == ROLE_AGENT and not can_assign_to_any_team(current_user):
+            if not await user_in_team(db, current_user.id, team_id):
                 raise HTTPException(status_code=403, detail="Not a member of this group")
 
     if user_id is not None:
@@ -459,10 +741,11 @@ async def assign_ticket(
             raise HTTPException(status_code=400, detail="Invalid user")
         if assignee.role == ROLE_SUBMITTER:
             raise HTTPException(status_code=400, detail="Cannot assign to submitter")
-        actor_org = get_user_organization_id(current_user)
-        assignee_org = get_user_organization_id(assignee)
-        if actor_org is not None and assignee_org != actor_org:
-            raise HTTPException(status_code=400, detail="User is not in your organization")
+        if not is_admin(current_user):
+            actor_org = get_user_organization_id(current_user)
+            assignee_org = get_user_organization_id(assignee)
+            if actor_org is not None and assignee_org != actor_org:
+                raise HTTPException(status_code=400, detail="User is not in your organization")
         if team_id is not None and not await user_in_team(db, user_id, team_id):
             raise HTTPException(
                 status_code=400,
@@ -504,6 +787,54 @@ async def assign_ticket(
     await db.commit()
     await db.refresh(ticket)
     return await get_ticket(ticket_id, db, current_user)
+
+
+@router.get("/{ticket_id}/llm-context", response_model=TicketLlmContextRead)
+async def get_ticket_llm_context(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketLlmContextRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    return await build_ticket_llm_context(db, ticket)
+
+
+@router.patch("/{ticket_id}/intelligence", response_model=TicketIntelligenceRead)
+async def update_ticket_intelligence(
+    ticket_id: uuid.UUID,
+    payload: TicketIntelligenceUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketIntelligenceRead:
+    """Persist LLM or manual triage metadata (e.g. after external evaluation)."""
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    updates = payload.model_dump(exclude_unset=True)
+    if "semantic_topics" in updates and updates["semantic_topics"] is not None:
+        ticket.semantic_topics = [t.strip().lower() for t in updates["semantic_topics"] if t.strip()]
+    if "ease_score" in updates:
+        ticket.ease_score = updates["ease_score"]
+    if "complexity_score" in updates:
+        ticket.complexity_score = updates["complexity_score"]
+    if "llm_summary" in updates:
+        ticket.llm_summary = updates["llm_summary"]
+    if "handling_hints" in updates and updates["handling_hints"] is not None:
+        ticket.handling_hints = [h.strip() for h in updates["handling_hints"] if h.strip()]
+    if "source" in updates:
+        ticket.intelligence_source = updates["source"]
+    elif updates:
+        ticket.intelligence_source = "manual"
+    now = datetime.now(UTC)
+    ticket.intelligence_updated_at = now
+    touch_ticket_updated(ticket, now)
+    await db.commit()
+    await db.refresh(ticket)
+    return intelligence_from_ticket(ticket)
 
 
 @router.post("/{ticket_id}/comments", response_model=CommentRead, status_code=201)
@@ -559,4 +890,38 @@ async def create_comment(
     await db.refresh(comment)
     read = await _comment_to_read(db, comment, hide_internal=False)
     assert read is not None
-    return read
+    summaries = await load_reaction_summaries(db, [read.id], current_user_id=current_user.id)
+    enriched = apply_reaction_summaries([read], summaries)
+    return enriched[0]
+
+
+@router.put(
+    "/{ticket_id}/comments/{comment_id}/reactions",
+    response_model=CommentReactionSummary,
+)
+async def upsert_comment_reaction(
+    ticket_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    payload: CommentReactionUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> CommentReactionSummary:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    comment = await db.get(TicketComment, comment_id)
+    if comment is None or comment.deleted_at is not None or comment.ticket_id != ticket_id:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    if current_user.role == ROLE_SUBMITTER and comment.is_internal:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    summary = await set_comment_reaction(
+        db,
+        comment_id=comment_id,
+        user_id=current_user.id,
+        sentiment=payload.sentiment,
+    )
+    await db.commit()
+    return summary

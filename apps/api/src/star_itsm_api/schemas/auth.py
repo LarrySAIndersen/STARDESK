@@ -27,9 +27,10 @@ class TokenResponse(BaseModel):
 
 
 ROLE_LABELS: dict[str, str] = {
-    "end_user": "Submitter",
-    "agent": "Agent (Service Desk)",
+    "end_user": "Slutbruger",
+    "agent": "Agent",
     "admin": "Administrator",
+    "top_admin": "Topadministrator",
 }
 
 

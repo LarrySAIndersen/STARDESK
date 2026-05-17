@@ -14,9 +14,10 @@ export function UserMenu() {
     return null;
   }
 
-  function logout() {
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
     clearSession();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 

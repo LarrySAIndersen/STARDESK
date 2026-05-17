@@ -1,19 +1,29 @@
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 
-import { PageHero } from "@/components/page-hero";
+import { LoginForm } from "@/components/login-form";
 import { TicketList } from "@/components/ticket-list";
+import { TicketListShell } from "@/components/ticket-list-shell";
 import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
+import { TOKEN_COOKIE } from "@/lib/auth";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+
+  if (!token) {
+    return (
+      <main className="star-page px-6 py-10">
+        <LoginForm />
+      </main>
+    );
+  }
+
   return (
     <main className="star-page">
-      <PageHero
-        title="Sagsstyring"
-        lead="Agenter ser åbne store sager øverst og derefter sin kø. Kunder og organisationer ser alle egne sager — med STAR's farver og struktur fra star.dk."
-      />
-
       <Suspense fallback={<TicketListSkeleton />}>
-        <TicketList />
+        <TicketListShell>
+          <TicketList />
+        </TicketListShell>
       </Suspense>
     </main>
   );

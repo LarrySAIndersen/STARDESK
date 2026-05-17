@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ItilTicketTable } from "@/components/itil-ticket-table";
 import { StarSectionCard } from "@/components/star/section-card";
+import { TicketExcelExportButton } from "@/components/ticket-excel-export-button";
 import { Button } from "@/components/ui/button";
 import { apiGet } from "@/lib/api";
-import { getClientToken } from "@/lib/auth";
 import type { StandardReport } from "@/types/report";
 import type { Ticket } from "@/types/ticket";
 
@@ -67,26 +67,26 @@ export function ReportsDashboard() {
   }, [loadReport]);
 
   function downloadCsv(bucket?: string) {
-    const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
-    const token = getClientToken();
     const params = new URLSearchParams({ period_days: String(periodDays) });
     if (bucket) {
       params.set("bucket", bucket);
     }
-    const url = `${base}/api/v1/reports/standard/export?${params.toString()}`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "");
-    if (token) {
-      fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => res.blob())
-        .then((blob) => {
-          link.href = URL.createObjectURL(blob);
-          link.click();
-          URL.revokeObjectURL(link.href);
-        })
-        .catch(() => setError("Kunne ikke hente CSV"));
-    }
+    const url = `/api/proxy/v1/reports/standard/export?${params.toString()}`;
+    fetch(url, { credentials: "same-origin" })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("export failed");
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "rapport.csv";
+        link.click();
+        URL.revokeObjectURL(link.href);
+      })
+      .catch(() => setError("Kunne ikke hente CSV"));
   }
 
   const selected = report?.buckets.find((b) => b.key === activeBucket);
@@ -132,6 +132,7 @@ export function ReportsDashboard() {
           >
             Download alle (CSV)
           </Button>
+          <TicketExcelExportButton />
         </div>
       </StarSectionCard>
 

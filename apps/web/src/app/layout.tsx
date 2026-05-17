@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { SkipLink } from "@/components/skip-link";
 
 import "./globals.css";
 
@@ -33,8 +34,11 @@ export default function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} flex min-h-screen flex-col antialiased`}
       >
+        <SkipLink />
         <SiteHeader />
-        <div className="bg-star-blue-light/30 flex-1">{children}</div>
+        <div id="main-content" tabIndex={-1} className="bg-star-blue-light/30 flex-1 outline-none">
+          {children}
+        </div>
         <SiteFooter />
       </body>
     </html>

@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_ADMIN
+from star_itsm_api.services.permissions import has_full_ticket_visibility
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
@@ -72,7 +72,7 @@ def is_reopen_transition(previous: str, new: str) -> bool:
 async def _ticket_scope_stmt(user: User):
     stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
     org_id = get_user_organization_id(user)
-    if user.role != ROLE_ADMIN and org_id is not None:
+    if not has_full_ticket_visibility(user) and org_id is not None:
         stmt = stmt.where(Ticket.organization_id == org_id)
     return stmt
 
@@ -149,17 +149,16 @@ async def build_standard_report(
     ticket_ids = [t.id for t in tickets]
     reopened_map = await _reopened_ticket_ids(db, ticket_ids=ticket_ids, since=since)
 
-    enriched = await tickets_to_read_list(db, tickets)
-    enrich_by_id = {t.id: t for t in enriched}
-
     buckets: list[ReportBucket] = []
-    assigned_ids: set[uuid.UUID] = set()
 
     for key, label, description, statuses in BUCKET_DEFINITIONS:
         rows: list[ReportTicketRow] = []
-        for ticket in tickets:
-            if ticket.status not in statuses:
-                continue
+        bucket_tickets = [t for t in tickets if t.status in statuses]
+        enrich_by_id = {
+            t.id: t
+            for t in await tickets_to_read_list(db, bucket_tickets)
+        }
+        for ticket in bucket_tickets:
             enriched_row = enrich_by_id.get(ticket.id)
             row = _to_report_row(ticket, reopened_at=reopened_map.get(ticket.id))
             if enriched_row:
@@ -170,7 +169,6 @@ async def build_standard_report(
                     }
                 )
             rows.append(row)
-            assigned_ids.add(ticket.id)
         buckets.append(
             ReportBucket(
                 key=key,
@@ -181,12 +179,17 @@ async def build_standard_report(
             )
         )
 
+    reopen_tickets = [t for t in tickets if t.id in reopened_map]
+    reopen_enrich_by_id = {
+        t.id: t for t in await tickets_to_read_list(db, reopen_tickets)
+    }
+
     reopen_rows: list[ReportTicketRow] = []
-    for ticket in tickets:
+    for ticket in reopen_tickets:
         reopened_at = reopened_map.get(ticket.id)
         if reopened_at is None:
             continue
-        enriched_row = enrich_by_id.get(ticket.id)
+        enriched_row = reopen_enrich_by_id.get(ticket.id)
         row = _to_report_row(ticket, reopened_at=reopened_at)
         if enriched_row:
             row = row.model_copy(

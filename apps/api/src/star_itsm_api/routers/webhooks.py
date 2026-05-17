@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.config import settings
+from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.core.constants import SYSTEM_USER_ID
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.ticket import Ticket
@@ -28,18 +28,19 @@ class EmailInboundPayload(BaseModel):
     body: str = Field(min_length=1)
 
 
-def _verify_webhook_secret(provided: str | None) -> None:
-    if settings.webhook_secret and provided != settings.webhook_secret:
-        raise HTTPException(status_code=401, detail="Invalid webhook secret")
-
-
 @router.post("/email-inbound", response_model=TicketRead, status_code=201)
 async def email_inbound(
     payload: EmailInboundPayload,
     db: AsyncSession = Depends(require_db),
     x_webhook_secret: str | None = Header(default=None),
 ) -> TicketRead:
-    _verify_webhook_secret(x_webhook_secret)
+    from star_itsm_api.core.config import settings
+
+    verify_integration_secret(
+        configured_secret=settings.webhook_secret,
+        provided=x_webhook_secret,
+        integration_name="WEBHOOK_SECRET",
+    )
 
     routing = await apply_routing(
         db,

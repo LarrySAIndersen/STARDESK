@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.core.constants import SYSTEM_USER_ID
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
@@ -24,8 +25,11 @@ OPEN_STATUSES = ("new", "assigned", "in_progress", "on_hold")
 
 
 def _verify_cron_secret(provided: str | None) -> None:
-    if settings.cron_secret and provided != settings.cron_secret:
-        raise HTTPException(status_code=401, detail="Invalid cron secret")
+    verify_integration_secret(
+        configured_secret=settings.cron_secret,
+        provided=provided,
+        integration_name="CRON_SECRET",
+    )
 
 
 @router.post("/sla-check")

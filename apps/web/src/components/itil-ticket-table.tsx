@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import type { Ticket } from "@/types/ticket";
 
@@ -60,6 +61,7 @@ export function ItilTicketTable({
           <TableRow>
             <TableHead>Sagsnr.</TableHead>
             <TableHead>Kort beskrivelse</TableHead>
+            <TableHead>Tags</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Prioritet</TableHead>
             <TableHead>Type</TableHead>
@@ -87,19 +89,42 @@ export function ItilTicketTable({
                 >
                   {ticket.ticket_number}
                 </Link>
-                {ticket.is_major ? (
-                  <Badge variant="destructive" className="ml-1 text-[10px]">
+                {ticket.is_major && !ticket.parent_ticket_id ? (
+                  <Badge variant="destructive" className="ml-1" aria-label="Stor sag">
                     Stor
+                  </Badge>
+                ) : null}
+                {ticket.parent_ticket_id ? (
+                  <Badge variant="secondary" className="ml-1" aria-label="Små sag">
+                    Små
+                  </Badge>
+                ) : null}
+                {(ticket.child_count ?? 0) > 0 ? (
+                  <Badge variant="outline" className="ml-1" aria-label="Har små sager">
+                    {ticket.child_count}
+                  </Badge>
+                ) : null}
+                {ticket.is_security_ticket ? (
+                  <Badge variant="outline" className="ml-1 border-amber-600 text-amber-800" aria-label="Sikkerhedssag">
+                    Sikkerhed
                   </Badge>
                 ) : null}
               </TableCell>
               <TableCell className="max-w-[14rem] truncate">
                 <Link
                   href={`/tickets/${ticket.id}`}
-                  className="text-star-navy hover:text-star-blue font-medium"
+                  className="text-star-navy hover:text-star-blue inline-flex items-center gap-1 font-medium"
                 >
+                  {ticket.emoji ? (
+                    <span className="text-base" aria-hidden>
+                      {ticket.emoji}
+                    </span>
+                  ) : null}
                   {ticket.title}
                 </Link>
+              </TableCell>
+              <TableCell className="max-w-[8rem]">
+                <TicketTagBadges tags={ticket.tags} emoji={null} maxTags={2} />
               </TableCell>
               <TableCell>
                 <Badge variant="outline">{statusLabel(ticket.status)}</Badge>

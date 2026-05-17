@@ -6,20 +6,39 @@ import { useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
+  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SecurityTicketFilter } from "@/components/security-ticket-filter";
+import { TicketSearchInput } from "@/components/ticket-search-input";
+import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { apiPatch } from "@/lib/api";
+import { getClientUser } from "@/lib/auth";
+import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
 
 const DRAG_TYPE = "application/x-stardesk-ticket";
+
+function readDraggedTicketId(dataTransfer: DataTransfer): string {
+  const fromCustom = dataTransfer.getData(DRAG_TYPE);
+  if (fromCustom) {
+    return fromCustom;
+  }
+  const plain = dataTransfer.getData("text/plain");
+  if (plain && /^[0-9a-f-]{36}$/i.test(plain)) {
+    return plain;
+  }
+  return "";
+}
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) {
@@ -46,8 +65,8 @@ function sortTeams(teams: Team[]): Team[] {
 type PendingDrop = {
   ticketId: string;
   ticketTitle: string;
-  teamId: string;
-  teamName: string;
+  teamId?: string;
+  teamName?: string;
 };
 
 export function AgentDispatchBoard({
@@ -62,36 +81,54 @@ export function AgentDispatchBoard({
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [securityOnly, setSecurityOnly] = useState(false);
 
+  const currentUser = getClientUser();
+  const isOrgAgent =
+    currentUser?.role === "agent" && Boolean(currentUser.organization_name);
   const sortedTeams = useMemo(() => sortTeams(teams), [teams]);
 
   const openTickets = useMemo(
     () =>
       [...tickets]
         .filter((t) => !["closed", "cancelled"].includes(t.status))
+        .filter((t) => ticketMatchesSearch(t, searchQuery))
+        .filter((t) => !securityOnly || Boolean(t.is_security_ticket))
         .sort((a, b) => {
           if (a.is_major !== b.is_major) {
             return a.is_major ? -1 : 1;
           }
+          if (Boolean(a.is_security_ticket) !== Boolean(b.is_security_ticket)) {
+            return a.is_security_ticket ? -1 : 1;
+          }
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [tickets],
+    [tickets, searchQuery, securityOnly],
   );
 
   const ticketsByTeam = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, Ticket[]>();
     for (const ticket of openTickets) {
       if (ticket.assigned_team_id) {
-        map.set(ticket.assigned_team_id, (map.get(ticket.assigned_team_id) ?? 0) + 1);
+        const list = map.get(ticket.assigned_team_id) ?? [];
+        list.push(ticket);
+        map.set(ticket.assigned_team_id, list);
       }
+    }
+    for (const [teamId, list] of map) {
+      list.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      map.set(teamId, list);
     }
     return map;
   }, [openTickets]);
 
-  function handleDragStart(ticketId: string, title: string) {
+  function handleDragStart(ticketId: string) {
     return (event: React.DragEvent) => {
       event.dataTransfer.setData(DRAG_TYPE, ticketId);
-      event.dataTransfer.setData("text/plain", title);
+      event.dataTransfer.setData("text/plain", ticketId);
       event.dataTransfer.effectAllowed = "move";
     };
   }
@@ -100,7 +137,7 @@ export function AgentDispatchBoard({
     return (event: React.DragEvent) => {
       event.preventDefault();
       setDragOverTeamId(null);
-      const ticketId = event.dataTransfer.getData(DRAG_TYPE);
+      const ticketId = readDraggedTicketId(event.dataTransfer);
       if (!ticketId) {
         return;
       }
@@ -117,7 +154,18 @@ export function AgentDispatchBoard({
     };
   }
 
-  async function confirmAssignment(data: { reason: string; faultDisplayed: boolean }) {
+  function openAssignDialog(ticket: Ticket) {
+    setPending({
+      ticketId: ticket.id,
+      ticketTitle: ticket.title,
+    });
+  }
+
+  async function confirmAssignment(data: {
+    teamId: string;
+    reason: string;
+    faultDisplayed: boolean;
+  }) {
     if (!pending) {
       return;
     }
@@ -125,7 +173,7 @@ export function AgentDispatchBoard({
     setError(null);
     try {
       await apiPatch(`/api/v1/tickets/${pending.ticketId}/assignment`, {
-        assigned_team_id: pending.teamId,
+        assigned_team_id: data.teamId,
         assigned_user_id: null,
         assignment_reason: data.reason,
         fault_displayed: data.faultDisplayed,
@@ -142,27 +190,51 @@ export function AgentDispatchBoard({
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-[1fr_minmax(280px,340px)]">
-        <section className="star-section-card overflow-hidden">
+        <section
+          className="star-section-card overflow-hidden"
+          aria-labelledby="dispatch-tickets-heading"
+        >
           <div className="star-section-header">
-            <h2 className="star-section-title">Sagsoversigt</h2>
+            <h2 id="dispatch-tickets-heading" className="star-section-title">
+              Sagsoversigt
+            </h2>
             <p className="star-section-desc">
-              Træk en sag til en gruppe til højre. Store sager er markeret med rød badge.
+              {isOrgAgent
+                ? `Viser sager for ${currentUser?.organization_name ?? "din organisation"}. Træk til en anden gruppe for at videresende.`
+                : "Træk en sag til en gruppe til højre, eller brug knappen Tildel til gruppe."}{" "}
+              Store sager er markeret med badge.
             </p>
           </div>
-          <div className="star-section-body star-table-wrap">
+          <div className="star-section-body space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TicketSearchInput value={searchQuery} onChange={setSearchQuery} />
+              <SecurityTicketFilter
+                id="dispatch-security-only"
+                checked={securityOnly}
+                onChange={setSecurityOnly}
+              />
+            </div>
+            <div className="star-table-wrap">
             {openTickets.length === 0 ? (
               <p className="text-muted-foreground text-sm">Ingen åbne sager.</p>
             ) : (
               <Table>
+                <TableCaption className="sr-only">
+                  Åbne sager. Træk en række til en gruppe til højre for at tildele.
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Sagsnr.</TableHead>
-                    <TableHead>Titel</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Prioritet</TableHead>
-                    <TableHead>Gruppe</TableHead>
-                    <TableHead>Fejlviseret</TableHead>
-                    <TableHead>Oprettet</TableHead>
+                    <TableHead scope="col">Sagsnr.</TableHead>
+                    <TableHead scope="col">Titel</TableHead>
+                    <TableHead scope="col">Tags / emoji</TableHead>
+                    <TableHead scope="col">Status</TableHead>
+                    <TableHead scope="col">Prioritet</TableHead>
+                    <TableHead scope="col">Gruppe</TableHead>
+                    <TableHead scope="col">Fejlviseret</TableHead>
+                    <TableHead scope="col">Oprettet</TableHead>
+                    <TableHead scope="col">
+                      <span className="sr-only">Handling</span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -170,7 +242,8 @@ export function AgentDispatchBoard({
                     <TableRow
                       key={ticket.id}
                       draggable
-                      onDragStart={handleDragStart(ticket.id, ticket.title)}
+                      onDragStart={handleDragStart(ticket.id)}
+                      aria-label={`Sag ${ticket.ticket_number}: ${ticket.title}`}
                       className="cursor-grab active:cursor-grabbing"
                     >
                       <TableCell className="font-mono text-xs">
@@ -185,12 +258,29 @@ export function AgentDispatchBoard({
                       <TableCell className="max-w-[12rem]">
                         <div className="flex flex-wrap items-center gap-1">
                           {ticket.is_major ? (
-                            <Badge variant="destructive" className="text-[10px]">
+                            <Badge variant="destructive" aria-label="Stor sag">
                               Stor sag
                             </Badge>
                           ) : null}
-                          <span className="truncate font-medium">{ticket.title}</span>
+                          {ticket.is_security_ticket ? (
+                            <Badge
+                              variant="outline"
+                              className="border-amber-600 text-amber-800"
+                              aria-label="Sikkerhedssag"
+                            >
+                              Sikkerhed
+                            </Badge>
+                          ) : null}
+                          <Link
+                            href={`/tickets/${ticket.id}`}
+                            className="text-star-blue truncate font-medium hover:underline"
+                          >
+                            {ticket.title}
+                          </Link>
                         </div>
+                      </TableCell>
+                      <TableCell className="max-w-[8rem]">
+                        <TicketTagBadges tags={ticket.tags} emoji={ticket.emoji} />
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{statusLabel(ticket.status)}</Badge>
@@ -211,25 +301,40 @@ export function AgentDispatchBoard({
                       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                         {formatDate(ticket.created_at)}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openAssignDialog(ticket)}
+                        >
+                          Tildel til gruppe
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             )}
+            </div>
           </div>
         </section>
 
-        <aside className="space-y-3">
+        <aside className="space-y-3" aria-labelledby="dispatch-groups-heading">
           <div className="star-section-header rounded-t-md">
-            <h2 className="star-section-title">Grupper</h2>
-            <p className="star-section-desc">Slip sagen her for at tildele</p>
+            <h2 id="dispatch-groups-heading" className="star-section-title">
+              Grupper
+            </h2>
+            <p className="star-section-desc">Slip en sag her for at tildele</p>
           </div>
           {sortedTeams.map((team) => {
-            const count = ticketsByTeam.get(team.id) ?? 0;
+            const teamTickets = ticketsByTeam.get(team.id) ?? [];
             const isOver = dragOverTeamId === team.id;
             return (
               <div
                 key={team.id}
+                role="group"
+                aria-label={`${team.name}, slip sag her`}
                 onDragOver={(event) => {
                   event.preventDefault();
                   event.dataTransfer.dropEffect = "move";
@@ -247,28 +352,56 @@ export function AgentDispatchBoard({
                   <div>
                     <p className="text-star-navy font-semibold">{team.name}</p>
                     {team.name === "SF" ? (
-                      <p className="text-star-blue text-[10px] font-medium uppercase">
+                      <p className="text-star-navy text-xs font-medium uppercase">
                         Hovedgruppe
                       </p>
                     ) : null}
                   </div>
-                  <Badge variant="outline">{count} sag{count === 1 ? "" : "er"}</Badge>
+                  <Badge variant="outline">
+                    {teamTickets.length} sag{teamTickets.length === 1 ? "" : "er"}
+                  </Badge>
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">
                   {team.members.length} medlemmer
                 </p>
+                {teamTickets.length > 0 ? (
+                  <ul className="mt-3 space-y-1.5 border-t border-star-blue/15 pt-3">
+                    {teamTickets.map((ticket) => (
+                      <li key={ticket.id}>
+                        <Link
+                          href={`/tickets/${ticket.id}`}
+                          className="text-star-blue hover:text-star-navy block text-xs leading-snug font-medium hover:underline"
+                          draggable={false}
+                        >
+                          <span className="font-mono">{ticket.ticket_number}</span>
+                          <span className="text-foreground ml-1 font-normal">
+                            {ticket.title}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground mt-2 text-xs">Ingen tildelte sager</p>
+                )}
               </div>
             );
           })}
         </aside>
       </div>
 
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
+      {error ? (
+        <p className="text-destructive text-sm" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       {pending ? (
         <AssignmentDropDialog
           ticketTitle={pending.ticketTitle}
           teamName={pending.teamName}
+          teamId={pending.teamId}
+          teams={sortedTeams}
           onConfirm={confirmAssignment}
           onCancel={() => !isSaving && setPending(null)}
         />

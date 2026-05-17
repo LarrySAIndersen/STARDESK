@@ -1,0 +1,49 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  api-security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API and dev tools
+        run: |
+          pip install -e ".[dev]"
+          pip install bandit pip-audit
+      - name: Ruff lint
+        run: pip install ruff && ruff check src tests
+      - name: Pytest
+        run: pytest -q
+      - name: Bandit (SAST)
+        run: bandit -r src -ll -q
+      - name: pip-audit (dependencies)
+        run: pip-audit -r <(pip freeze) || true
+
+  web-security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: npm audit
+        run: npm audit --audit-level=high || true

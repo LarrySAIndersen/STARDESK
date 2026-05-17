@@ -17,7 +17,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TicketTagsEmojiFields } from "@/components/ticket-tags-emoji-fields";
 import { assertNoCprInFreeText, validateCprOptional } from "@/lib/cpr";
+import { parseTagsInput } from "@/lib/ticket-tags";
 import { apiGet, apiPost, apiPostForm } from "@/lib/api";
 import type { Attachment } from "@/types/attachment";
 import type { Category } from "@/types/category";
@@ -32,6 +34,7 @@ const schema = z.object({
   category_id: z.string().optional(),
   subcategory_id: z.string().optional(),
   is_major: z.boolean(),
+  is_security_ticket: z.boolean(),
   gdpr_consent: z.boolean().refine((value) => value, {
     message: "Du skal acceptere behandling af personoplysninger (GDPR)",
   }),
@@ -56,12 +59,22 @@ type FormValues = z.infer<typeof schema>;
 const selectClassName =
   "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
-export function CreateTicketForm({ categories }: { categories: Category[] }) {
+export function CreateTicketForm({
+  categories,
+  staffOnly = false,
+}: {
+  categories: Category[];
+  staffOnly?: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [subCauses, setSubCauses] = useState<SubCause[]>([]);
   const [selectedSubCauseIds, setSelectedSubCauseIds] = useState<string[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [tagsInput, setTagsInput] = useState("");
+  const [emoji, setEmoji] = useState<string | null>(null);
+  const [storeTickets, setStoreTickets] = useState<Ticket[]>([]);
+  const [parentTicketId, setParentTicketId] = useState("");
   const {
     register,
     handleSubmit,
@@ -73,11 +86,35 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
       ticket_type: "incident",
       priority: "medium",
       is_major: false,
+      is_security_ticket: false,
       gdpr_consent: false,
     },
   });
 
   const categoryId = watch("category_id");
+  const isMajor = watch("is_major");
+
+  useEffect(() => {
+    if (isMajor) {
+      setParentTicketId("");
+      return;
+    }
+    let cancelled = false;
+    apiGet<Ticket[]>("/api/v1/tickets?is_store=true")
+      .then((data) => {
+        if (!cancelled) {
+          setStoreTickets(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStoreTickets([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMajor]);
   const subcategories = useMemo(() => {
     const category = categories.find((item) => item.id === categoryId);
     return category?.subcategories ?? [];
@@ -123,8 +160,12 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
       subcategory_id: values.subcategory_id || null,
       sub_cause_ids: selectedSubCauseIds,
       is_major: values.is_major,
+      parent_ticket_id: values.is_major ? null : parentTicketId || null,
+      is_security_ticket: staffOnly ? values.is_security_ticket : false,
       gdpr_consent: true,
       subject_cpr: values.subject_cpr?.trim() || null,
+      tags: parseTagsInput(tagsInput),
+      emoji,
     };
     try {
       const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);
@@ -253,6 +294,45 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
             <input type="checkbox" className="size-4 rounded border" {...register("is_major")} />
             <span>Stor sag (vises i kolonner til højre på forsiden)</span>
           </label>
+
+          {!isMajor && storeTickets.length > 0 ? (
+            <div className="space-y-2">
+              <Label htmlFor="parent_ticket_id">Tilknyt store sag (valgfrit)</Label>
+              <select
+                id="parent_ticket_id"
+                className={selectClassName}
+                value={parentTicketId}
+                onChange={(e) => setParentTicketId(e.target.value)}
+                disabled={isSubmitting}
+              >
+                <option value="">Ingen</option>
+                {storeTickets.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.ticket_number} — {store.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          {staffOnly ? (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 rounded border"
+                {...register("is_security_ticket")}
+              />
+              <span>Sikkerhedssag</span>
+            </label>
+          ) : null}
+
+          <TicketTagsEmojiFields
+            tagsValue={tagsInput}
+            onTagsChange={setTagsInput}
+            emojiValue={emoji}
+            onEmojiChange={setEmoji}
+            disabled={isSubmitting}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="subject_cpr">CPR-nummer (valgfrit)</Label>

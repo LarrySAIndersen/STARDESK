@@ -12,7 +12,7 @@
   --star-blue-light: #eef2f8;
   --star-gray-bar: #f4f4f4;
   --star-text: #1a1a1a;
-  --star-text-muted: #4a5568;
+  --star-text-muted: #3d4a5c;
 
   --background: #ffffff;
   --foreground: var(--star-text);
@@ -179,7 +179,35 @@
   }
 
   .star-nav-link--active {
-    @apply bg-star-blue-light text-star-blue;
+    @apply bg-star-blue-light text-star-navy font-semibold;
+  }
+
+  .skip-link {
+    @apply bg-star-navy text-white fixed top-2 left-2 z-[100] rounded-sm px-4 py-2 text-sm font-semibold shadow-md;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .skip-link:focus {
+    clip: auto;
+    clip-path: none;
+    height: auto;
+    overflow: visible;
+    width: auto;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   .star-table-wrap {

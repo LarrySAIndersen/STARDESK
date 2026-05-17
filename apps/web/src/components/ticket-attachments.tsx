@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { attachmentDownloadUrl } from "@/lib/api";
-import { getClientToken } from "@/lib/auth";
 import type { Attachment } from "@/types/attachment";
 
 function formatDate(iso: string | null): string {
@@ -45,9 +44,8 @@ export function TicketAttachments({
     }
     setDownloadingId(attachment.id);
     try {
-      const token = getClientToken();
       const response = await fetch(attachmentDownloadUrl(ticketId, attachment.id), {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "same-origin",
       });
       if (!response.ok) {
         throw new Error("Kunne ikke hente filen");

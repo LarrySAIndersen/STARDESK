@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +33,7 @@ async def login(
 ) -> TokenResponse:
     user = await get_user_by_email(db, payload.email)
     if user is None or not verify_password(payload.password, user.password_hash):
+        await asyncio.sleep(0.4)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Forkert e-mail eller adgangskode",

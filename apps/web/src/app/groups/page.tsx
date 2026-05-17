@@ -26,13 +26,13 @@ export default async function GroupsPage() {
   }
 
   if (!isStaff(currentUser)) {
-    redirect("/login");
+    redirect("/");
   }
 
   let teams: Team[] = [];
   let error: string | null = null;
   try {
-    teams = await apiGetServer<Team[]>("/api/v1/teams");
+    teams = await apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 });
   } catch (err) {
     if (err instanceof ApiError) {
       error = err.message;

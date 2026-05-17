@@ -1,7 +1,3 @@
-import { getClientToken } from "@/lib/auth";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -12,19 +8,15 @@ export class ApiError extends Error {
   }
 }
 
-function buildUrl(path: string): string {
-  const base = API_BASE.replace(/\/$/, "");
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalizedPath}`;
-}
-
-function authHeaders(extra?: HeadersInit): HeadersInit {
-  const token = getClientToken();
-  return {
-    Accept: "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
+function resolveClientUrl(path: string): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (typeof window === "undefined") {
+    return normalized;
+  }
+  if (normalized.startsWith("/api/v1/")) {
+    return `/api/proxy/${normalized.slice("/api/".length)}`;
+  }
+  return normalized;
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -43,9 +35,12 @@ async function parseError(response: Response): Promise<string> {
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(resolveClientUrl(path), {
     ...init,
-    headers: authHeaders(init?.headers),
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
     cache: "no-store",
   });
 
@@ -61,13 +56,14 @@ export async function apiPost<T>(
   body: unknown,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(resolveClientUrl(path), {
     method: "POST",
     ...init,
-    headers: authHeaders({
+    headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
       ...init?.headers,
-    }),
+    },
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -84,10 +80,13 @@ export async function apiPostForm<T>(
   formData: FormData,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(buildUrl(path), {
+  const response = await fetch(resolveClientUrl(path), {
     method: "POST",
     ...init,
-    headers: authHeaders(init?.headers),
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
     body: formData,
     cache: "no-store",
   });
@@ -100,21 +99,22 @@ export async function apiPostForm<T>(
 }
 
 export function attachmentDownloadUrl(ticketId: string, attachmentId: string): string {
-  return buildUrl(`/api/v1/tickets/${ticketId}/attachments/${attachmentId}/download`);
+  return `/api/proxy/v1/tickets/${ticketId}/attachments/${attachmentId}/download`;
 }
 
-export async function apiPatch<T>(
+export async function apiPut<T>(
   path: string,
   body: unknown,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(buildUrl(path), {
-    method: "PATCH",
+  const response = await fetch(resolveClientUrl(path), {
+    method: "PUT",
     ...init,
-    headers: authHeaders({
+    headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
       ...init?.headers,
-    }),
+    },
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -124,4 +124,44 @@ export async function apiPatch<T>(
   }
 
   return response.json() as Promise<T>;
+}
+
+export async function apiPatch<T>(
+  path: string,
+  body: unknown,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(resolveClientUrl(path), {
+    method: "PATCH",
+    ...init,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response));
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export async function apiDelete(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(resolveClientUrl(path), {
+    method: "DELETE",
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response));
+  }
 }

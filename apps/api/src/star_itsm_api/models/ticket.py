@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from star_itsm_api.models.base import Base
@@ -40,7 +40,30 @@ class Ticket(Base):
     subject_cpr: Mapped[str | None] = mapped_column(String(11), nullable=True)
     assignment_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     fault_displayed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String(64)), nullable=False, default=list)
+    emoji: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    semantic_topics: Mapped[list[str]] = mapped_column(
+        ARRAY(String(64)),
+        nullable=False,
+        default=list,
+    )
+    ease_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    complexity_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    llm_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    handling_hints: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    intelligence_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    intelligence_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     is_major: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_shared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_security_ticket: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    parent_ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tickets.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     escalation_level: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     last_escalation_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),

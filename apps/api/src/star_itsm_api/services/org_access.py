@@ -3,9 +3,10 @@ import uuid
 from sqlalchemy import Select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_ADMIN, ROLE_AGENT, ROLE_SUBMITTER
+from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
+from star_itsm_api.services.permissions import has_full_ticket_visibility, is_admin
 from star_itsm_api.services.teams import get_user_team_ids
 
 
@@ -13,14 +14,55 @@ def get_user_organization_id(user: User) -> uuid.UUID | None:
     return getattr(user, "organization_id", None)
 
 
-def apply_ticket_list_filter(stmt: Select[tuple[Ticket]], user: User) -> Select[tuple[Ticket]]:
-    if user.role == ROLE_ADMIN:
+def is_sf_virksomhed_agent(user: User) -> bool:
+    """Agent tied to one indmelder-organisation (not SF central admin)."""
+    return user.role == ROLE_AGENT and get_user_organization_id(user) is not None
+
+
+def can_assign_to_any_team(user: User) -> bool:
+    """SF admins and virksomhed agents may forward tickets to any group."""
+    return is_admin(user) or is_sf_virksomhed_agent(user)
+
+
+def _end_user_list_visibility(user: User):
+    """Slutbruger: own organisation, delte sager, and own reporter tickets without org."""
+    org_id = get_user_organization_id(user)
+    clauses = [Ticket.is_shared.is_(True)]
+    if org_id is not None:
+        clauses.append(Ticket.organization_id == org_id)
+    clauses.append(Ticket.reporter_user_id == user.id)
+    return or_(*clauses)
+
+
+def apply_ticket_list_filter(
+    stmt: Select[tuple[Ticket]],
+    user: User,
+    *,
+    store_sager: bool = False,
+) -> Select[tuple[Ticket]]:
+    if has_full_ticket_visibility(user):
         return stmt
     org_id = get_user_organization_id(user)
-    if org_id is not None:
+    if org_id is not None and user.role == ROLE_AGENT:
         return stmt.where(Ticket.organization_id == org_id)
     if user.role == ROLE_SUBMITTER:
-        return stmt.where(Ticket.reporter_user_id == user.id)
+        if store_sager:
+            org_id = get_user_organization_id(user)
+            if org_id is not None:
+                return stmt.where(
+                    Ticket.is_major.is_(True),
+                    or_(
+                        Ticket.organization_id == org_id,
+                        Ticket.is_shared.is_(True),
+                    ),
+                )
+            return stmt.where(
+                or_(
+                    Ticket.is_major.is_(True),
+                    Ticket.reporter_user_id == user.id,
+                )
+            )
+        return stmt.where(_end_user_list_visibility(user))
     return stmt
 
 
@@ -41,14 +83,23 @@ async def apply_agent_team_list_filter(
 
 
 async def user_can_access_ticket(db: AsyncSession, user: User, ticket: Ticket) -> bool:
-    if user.role == ROLE_ADMIN:
+    if has_full_ticket_visibility(user):
         return True
     org_id = get_user_organization_id(user)
     if org_id is not None and ticket.organization_id == org_id:
         return True
-    if user.role == ROLE_SUBMITTER and ticket.reporter_user_id == user.id:
+    if getattr(ticket, "is_shared", False):
         return True
+    if user.role == ROLE_SUBMITTER:
+        if ticket.reporter_user_id == user.id:
+            return True
+        if ticket.is_major and org_id is not None and ticket.organization_id == org_id:
+            return True
+        if ticket.is_major and getattr(ticket, "is_shared", False):
+            return True
     if user.role == ROLE_AGENT:
+        if org_id is None:
+            return True
         if ticket.reporter_user_id == user.id or ticket.assigned_user_id == user.id:
             return True
         team_ids = await get_user_team_ids(db, user.id)
