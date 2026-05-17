@@ -52,3 +52,31 @@ async def build_team_read(db: AsyncSession, team: Team) -> TeamRead:
         is_active=team.is_active,
         members=members,
     )
+
+
+async def sync_team_members(
+    db: AsyncSession,
+    team_id: uuid.UUID,
+    user_ids: list[uuid.UUID],
+) -> None:
+    if user_ids:
+        valid = await db.execute(
+            select(User.id).where(
+                User.id.in_(user_ids),
+                User.deleted_at.is_(None),
+                User.is_active.is_(True),
+            )
+        )
+        valid_ids = set(valid.scalars().all())
+        if valid_ids != set(user_ids):
+            raise ValueError("invalid_user")
+
+    existing = await db.execute(select(TeamMember).where(TeamMember.team_id == team_id))
+    for membership in existing.scalars().all():
+        await db.delete(membership)
+
+    from datetime import UTC, datetime
+
+    now = datetime.now(UTC)
+    for user_id in user_ids:
+        db.add(TeamMember(team_id=team_id, user_id=user_id, joined_at=now))

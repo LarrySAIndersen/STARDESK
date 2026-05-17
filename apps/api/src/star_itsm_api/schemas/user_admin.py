@@ -1,0 +1,98 @@
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from star_itsm_api.core.security import (
+    ROLE_ADMIN,
+    ROLE_AGENT,
+    ROLE_SUBMITTER,
+    ROLE_TOP_ADMIN,
+)
+from star_itsm_api.schemas.auth import ROLE_LABELS
+
+ASSIGNABLE_ROLES = (ROLE_SUBMITTER, ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN)
+
+
+class UserTeamSummary(BaseModel):
+    id: UUID
+    name: str
+
+
+class UserAdminRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    email: str
+    display_name: str
+    role: str
+    role_label: str
+    is_active: bool
+    organization_id: UUID | None = None
+    organization_name: str | None = None
+    teams: list[UserTeamSummary] = Field(default_factory=list)
+
+
+class UserAdminListItem(BaseModel):
+    id: UUID
+    email: str
+    display_name: str
+    role: str
+    role_label: str
+    is_active: bool
+    organization_name: str | None = None
+    team_names: list[str] = Field(default_factory=list)
+
+
+class UserAdminListResponse(BaseModel):
+    items: list[UserAdminListItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class UserAdminUpdate(BaseModel):
+    display_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
+    role: str | None = Field(default=None, pattern="^(end_user|agent|admin|top_admin)$")
+    is_active: bool | None = None
+    organization_id: UUID | None = None
+    team_ids: list[UUID] | None = None
+
+
+class UserAdminPasswordReset(BaseModel):
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class OrganizationOption(BaseModel):
+    id: UUID
+    name: str
+
+
+class RoleOption(BaseModel):
+    value: str
+    label: str
+
+
+class UserAdminMeta(BaseModel):
+    roles: list[RoleOption]
+    organizations: list[OrganizationOption]
+
+
+def user_to_admin_read(
+    user,
+    *,
+    organization_name: str | None,
+    teams: list[UserTeamSummary],
+) -> UserAdminRead:
+    return UserAdminRead(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role=user.role,
+        role_label=ROLE_LABELS.get(user.role, user.role),
+        is_active=user.is_active,
+        organization_id=getattr(user, "organization_id", None),
+        organization_name=organization_name,
+        teams=teams,
+    )

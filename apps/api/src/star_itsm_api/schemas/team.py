@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TeamMemberRead(BaseModel):
@@ -23,3 +23,10 @@ class TeamRead(BaseModel):
     description: str | None
     is_active: bool
     members: list[TeamMemberRead] = []
+
+
+class TeamAdminUpdate(BaseModel):
+    user_ids: list[UUID] | None = Field(
+        default=None,
+        description="Replace team membership with this user list when set",
+    )

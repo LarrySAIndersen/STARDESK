@@ -56,6 +56,10 @@ export function isAdmin(user: User | null): boolean {
   return user?.role === "admin" || user?.role === "top_admin";
 }
 
+export function canManageUsers(user: User | null): boolean {
+  return isAdmin(user);
+}
+
 export function canExportTickets(user: User | null): boolean {
   return isStaff(user);
 }

@@ -51,6 +51,28 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export async function apiPostNoContent(
+  path: string,
+  body: unknown,
+  init?: RequestInit,
+): Promise<void> {
+  const response = await fetch(resolveClientUrl(path), {
+    method: "POST",
+    ...init,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response));
+  }
+}
+
 export async function apiPost<T>(
   path: string,
   body: unknown,

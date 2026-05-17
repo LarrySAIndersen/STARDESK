@@ -1,16 +1,17 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import get_current_user, require_staff
+from star_itsm_api.core.security import get_current_user, require_admin, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.user import User
-from star_itsm_api.schemas.team import TeamRead
-from star_itsm_api.services.org_access import can_assign_to_any_team, get_user_organization_id
-from star_itsm_api.services.teams import build_team_read, get_user_team_ids
+from star_itsm_api.schemas.team import TeamAdminUpdate, TeamRead
+from star_itsm_api.services.org_access import can_assign_to_any_team
+from star_itsm_api.services.permissions import can_manage_users
+from star_itsm_api.services.teams import build_team_read, get_user_team_ids, sync_team_members
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -45,5 +46,32 @@ async def get_team(
         team_ids = await get_user_team_ids(db, current_user.id)
         if team_id not in team_ids:
             raise HTTPException(status_code=404, detail="Group not found")
+
+    return await build_team_read(db, team)
+
+
+@router.patch("/{team_id}", response_model=TeamRead)
+async def update_team_members(
+    team_id: uuid.UUID,
+    payload: TeamAdminUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> TeamRead:
+    if not can_manage_users(current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    team = await db.get(Team, team_id)
+    if team is None or not team.is_active:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    if payload.user_ids is not None:
+        try:
+            await sync_team_members(db, team.id, payload.user_ids)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ugyldig bruger",
+            ) from None
+        await db.commit()
 
     return await build_team_read(db, team)

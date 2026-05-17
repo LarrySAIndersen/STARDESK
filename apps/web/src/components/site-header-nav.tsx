@@ -4,21 +4,26 @@ import Link from "next/link";
 
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
-import { getClientUser, isStaff } from "@/lib/auth";
+import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
 
 const NAV = [
-  { href: "/", label: "Sager", staffOnly: false },
-  { href: "/groups", label: "Grupper", staffOnly: true },
-  { href: "/reports", label: "Rapporter", staffOnly: true },
+  { href: "/", label: "Sager", staffOnly: false, adminOnly: false },
+  { href: "/groups", label: "Grupper", staffOnly: true, adminOnly: false },
+  { href: "/users", label: "Brugere", staffOnly: false, adminOnly: true },
+  { href: "/reports", label: "Rapporter", staffOnly: true, adminOnly: false },
 ] as const;
 
 export function SiteHeaderNav() {
   const user = getClientUser();
   const staff = isStaff(user);
+  const admin = canManageUsers(user);
 
   return (
     <nav className="flex flex-wrap items-center gap-1" aria-label="Hovednavigation">
-      {NAV.filter((item) => !item.staffOnly || staff).map((item) => (
+      {NAV.filter(
+        (item) =>
+          (!item.staffOnly || staff) && (!item.adminOnly || admin),
+      ).map((item) => (
         <Link key={item.href} href={item.href} className="star-nav-link">
           {item.label}
         </Link>

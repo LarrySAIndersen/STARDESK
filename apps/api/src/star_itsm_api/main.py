@@ -10,7 +10,18 @@ from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
-from star_itsm_api.routers import auth, categories, cron, health, reports, sub_causes, teams, tickets, webhooks
+from star_itsm_api.routers import (
+    auth,
+    categories,
+    cron,
+    health,
+    reports,
+    sub_causes,
+    teams,
+    tickets,
+    users,
+    webhooks,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +64,4 @@ app.include_router(sub_causes.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(cron.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")

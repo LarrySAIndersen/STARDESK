@@ -1,3 +1,4 @@
+import { AdminGroupsPanel } from "@/components/admin-groups-panel";
 import { PageHero } from "@/components/page-hero";
 import {
   Card,
@@ -8,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
-import { isStaff, USER_COOKIE } from "@/lib/auth";
+import { isAdmin, isStaff, USER_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Team } from "@/types/team";
@@ -51,14 +52,22 @@ export default async function GroupsPage() {
     return a.name.localeCompare(b.name, "da");
   });
 
+  const adminView = isAdmin(currentUser);
+
   return (
     <main className="star-page">
       <PageHero
         title="Grupper"
-        lead="SF er hovedgruppe for alle agenter. Undergrupper (Es Trifft, SF Chest m.fl.) modtager sager for deres organisation."
+        lead={
+          adminView
+            ? "SF er hovedgruppe for alle agenter. Undergrupper (Virksomhed, North Star m.fl.) modtager sager for deres organisation. Administratorer kan redigere medlemmer."
+            : "SF er hovedgruppe for alle agenter. Undergrupper modtager sager for deres organisation."
+        }
       />
 
-      {error ? (
+      {adminView ? (
+        <AdminGroupsPanel initialTeams={sortedTeams} initialError={error} />
+      ) : error ? (
         <p className="text-destructive mt-6 text-sm">{error}</p>
       ) : sortedTeams.length === 0 ? (
         <p className="text-muted-foreground mt-6 text-sm">Ingen grupper fundet.</p>
