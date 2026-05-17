@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,7 +9,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
+    database_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "DATABASE_URL",
+            "POSTGRES_URL",
+            "POSTGRES_PRISMA_URL",
+        ),
+    )
     frontend_url: str = Field(
         default="http://localhost:3000",
         validation_alias="FRONTEND_URL",

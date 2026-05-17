@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.startup_checks import validate_production_settings
+from star_itsm_api.db import engine
+from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import auth, categories, cron, health, reports, sub_causes, teams, tickets, webhooks
 
@@ -21,6 +23,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "DATABASE_URL is not set — API starts without DB; "
             "data endpoints return 503."
         )
+    else:
+        await ensure_ticket_schema_current(engine, settings.database_url)
     yield
 
 

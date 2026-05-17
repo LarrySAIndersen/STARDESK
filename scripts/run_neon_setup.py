@@ -24,6 +24,9 @@ MIGRATIONS = [
     "docs/ticket-tags-emoji-migration.sql",
     "docs/ticket-intelligence-migration.sql",
     "docs/comment-reactions-migration.sql",
+    "docs/ticket-hierarchy-migration.sql",
+    "docs/ticket-shared-migration.sql",
+    "docs/ticket-security-flag-migration.sql",
 ]
 
 SEEDS = [
@@ -88,6 +91,7 @@ def table_exists(conn: psycopg.Connection, table: str) -> bool:
 
 
 def main() -> int:
+    migrations_only = "--migrations-only" in sys.argv
     dsn = load_database_url()
     print("Connecting to Neon...")
     with psycopg.connect(dsn, autocommit=False) as conn:
@@ -111,18 +115,21 @@ def main() -> int:
                 print(f"FAILED\n     {exc}")
                 return 1
 
-        print("\nSeeds:")
-        for rel in SEEDS:
-            path = ROOT / rel
-            if not path.exists():
-                print(f"  SKIP missing {rel}")
-                continue
-            try:
-                run_sql_file(conn, path)
-            except psycopg.Error as exc:
-                conn.rollback()
-                print(f"FAILED\n     {exc}")
-                return 1
+        if not migrations_only:
+            print("\nSeeds:")
+            for rel in SEEDS:
+                path = ROOT / rel
+                if not path.exists():
+                    print(f"  SKIP missing {rel}")
+                    continue
+                try:
+                    run_sql_file(conn, path)
+                except psycopg.Error as exc:
+                    conn.rollback()
+                    print(f"FAILED\n     {exc}")
+                    return 1
+        else:
+            print("\nSeeds: skipped (--migrations-only)")
 
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM tickets WHERE deleted_at IS NULL")
