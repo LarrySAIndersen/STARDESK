@@ -1,7 +1,6 @@
 from httpx import AsyncClient
 
 
-async def test_list_tickets_returns_empty_without_database(client: AsyncClient) -> None:
+async def test_list_tickets_without_database_returns_503(client: AsyncClient) -> None:
     response = await client.get("/api/v1/tickets")
-    assert response.status_code == 200
-    assert response.json() == []
+    assert response.status_code == 503

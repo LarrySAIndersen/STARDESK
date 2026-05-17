@@ -14,6 +14,10 @@ class Settings(BaseSettings):
         default="http://localhost:3000",
         validation_alias="FRONTEND_URL",
     )
+    resend_api_key: str | None = Field(default=None, validation_alias="RESEND_API_KEY")
+    mail_from: str | None = Field(default=None, validation_alias="MAIL_FROM")
+    cron_secret: str | None = Field(default=None, validation_alias="CRON_SECRET")
+    webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
 
     @property
     def cors_origins(self) -> list[str]:

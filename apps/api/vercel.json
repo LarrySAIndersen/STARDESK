@@ -6,5 +6,11 @@
       "entrypoint": "index.py",
       "routePrefix": "/"
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/v1/cron/sla-check",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

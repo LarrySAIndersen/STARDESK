@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -77,10 +79,20 @@ export async function TicketList() {
               {tickets.map((ticket) => (
                 <TableRow key={ticket.id}>
                   <TableCell className="font-mono text-xs">
-                    {ticket.ticket_number}
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="hover:underline"
+                    >
+                      {ticket.ticket_number}
+                    </Link>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {ticket.title}
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="hover:underline"
+                    >
+                      {ticket.title}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{statusLabel(ticket.status)}</Badge>
@@ -102,3 +114,4 @@ export async function TicketList() {
     </Card>
   );
 }
+

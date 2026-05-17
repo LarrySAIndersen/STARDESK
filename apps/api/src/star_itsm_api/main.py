@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.routers import health, tickets
+from star_itsm_api.routers import categories, cron, health, tickets, webhooks
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if not settings.database_url:
         logger.warning(
             "DATABASE_URL is not set — API starts without DB; "
-            "GET /api/v1/tickets returns an empty list."
+            "data endpoints return 503."
         )
     yield
 
 
 app = FastAPI(
     title="STARdesk API",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -38,3 +38,6 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(tickets.router, prefix="/api/v1")
+app.include_router(categories.router, prefix="/api/v1")
+app.include_router(webhooks.router, prefix="/api/v1")
+app.include_router(cron.router, prefix="/api/v1")

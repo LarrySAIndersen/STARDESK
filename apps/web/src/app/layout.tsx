@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
+import { SiteHeader } from "@/components/site-header";
+
 import "./globals.css";
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -30,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} min-h-screen antialiased`}
       >
+        <SiteHeader />
         {children}
       </body>
     </html>
