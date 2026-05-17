@@ -2,6 +2,20 @@
 
 Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 
+## Hurtig checklist (15 min)
+
+1. [Neon](https://neon.tech) → nyt project → SQL Editor → kør hele `init.sql`
+2. Kopiér connection string → skift `postgresql://` til `postgresql+asyncpg://`
+3. [Railway](https://railway.app) → Deploy GitHub `STARDESK` → root **`apps/api`**
+4. Railway variables: `DATABASE_URL`, `FRONTEND_URL` (midlertidigt `http://localhost:3000`)
+5. Railway → **Generate domain** → kopiér URL
+6. [Vercel](https://vercel.com) → Import `STARDESK` → root **`apps/web`**
+7. Vercel variable: `NEXT_PUBLIC_API_URL` = Railway-URL
+8. Railway: opdater `FRONTEND_URL` til Vercel-URL (komma-separeret med localhost er OK)
+9. Neon SQL Editor → kør `docs/test-data.sql` → åbn Vercel-URL
+
+`FRONTEND_URL` kan være flere origins: `https://dit-projekt.vercel.app,http://localhost:3000`
+
 ## Forudsætninger
 
 1. `init.sql` er kørt i [Neon](https://neon.tech) SQL Editor.
