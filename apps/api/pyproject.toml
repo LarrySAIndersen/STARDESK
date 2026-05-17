@@ -34,6 +34,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/star_itsm_api"]
 
+[tool.vercel]
+entrypoint = "star_itsm_api.main:app"
+
+[tool.vercel.scripts]
+build = "pip install ."
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

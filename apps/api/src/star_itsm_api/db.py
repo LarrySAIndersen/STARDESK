@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -12,18 +13,33 @@ from star_itsm_api.core.config import settings
 engine: AsyncEngine | None = None
 async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
-def _connect_args() -> dict[str, bool]:
-    url = settings.database_url or ""
-    if "sslmode=require" in url or "ssl=require" in url:
+
+def normalize_database_url(url: str) -> str:
+    """Strip query params that asyncpg does not accept (e.g. sslmode)."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    filtered = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if key not in {"sslmode", "channel_binding"}
+    ]
+    return urlunparse(parsed._replace(query=urlencode(filtered)))
+
+
+def _connect_args(url: str) -> dict[str, bool]:
+    if "sslmode=require" in url or "ssl=require" in url or "neon.tech" in url:
         return {"ssl": True}
     return {}
 
 
 if settings.database_url:
+    _raw_url = settings.database_url
+    _db_url = normalize_database_url(_raw_url)
     engine = create_async_engine(
-        settings.database_url,
+        _db_url,
         echo=False,
-        connect_args=_connect_args(),
+        connect_args=_connect_args(_raw_url),
     )
     async_session_factory = async_sessionmaker(
         engine,

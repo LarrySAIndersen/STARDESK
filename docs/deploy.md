@@ -4,6 +4,20 @@ Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 
 ## Hurtig checklist (15 min)
 
+### Vercel (anbefalet — begge apps)
+
+1. [Neon](https://neon.tech) → project → SQL Editor → kør `init.sql` + `docs/test-data.sql`
+2. [Vercel](https://vercel.com) → deploy **`apps/api`** (FastAPI) med `DATABASE_URL` (`postgresql+asyncpg://…`)
+3. Vercel → deploy **`apps/web`** med `NEXT_PUBLIC_API_URL` = API-URL
+4. API: sæt `FRONTEND_URL` til web-URL (komma-separeret med localhost er OK)
+
+**Live (eksempel):**
+
+- Frontend: https://web-seven-neon-6bvmcoel7n.vercel.app
+- API: https://api-gamma-amber.vercel.app
+
+### Railway (alternativ til API)
+
 1. [Neon](https://neon.tech) → nyt project → SQL Editor → kør hele `init.sql`
 2. Kopiér connection string → skift `postgresql://` til `postgresql+asyncpg://`
 3. [Railway](https://railway.app) → Deploy GitHub `STARDESK` → root **`apps/api`**
