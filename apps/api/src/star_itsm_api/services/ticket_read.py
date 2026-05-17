@@ -171,14 +171,17 @@ async def ticket_hierarchy_detail_extras(
     db: AsyncSession,
     ticket: Ticket,
 ) -> dict:
-    children = await get_child_tickets(db, ticket.id)
-    related: list[TicketSummaryRead] = []
-    if ticket.is_major and ticket.parent_ticket_id is None:
-        related = await tickets_to_summaries(await get_related_major_tickets(db, ticket.id))
-    return {
-        "children": await tickets_to_summaries(children),
-        "related_major_tickets": related,
-    }
+    try:
+        children = await get_child_tickets(db, ticket.id)
+        related: list[TicketSummaryRead] = []
+        if ticket.is_major and ticket.parent_ticket_id is None:
+            related = await tickets_to_summaries(await get_related_major_tickets(db, ticket.id))
+        return {
+            "children": await tickets_to_summaries(children),
+            "related_major_tickets": related,
+        }
+    except Exception:
+        return {"children": [], "related_major_tickets": []}
 
 
 async def ticket_to_read(db: AsyncSession, ticket: Ticket) -> TicketRead:

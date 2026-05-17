@@ -430,11 +430,16 @@ async def _get_ticket_detail(
         reporter_user_id=ticket.reporter_user_id,
     )
     activity = await build_ticket_activity(db, ticket, current_user)
-    intelligence = (
-        intelligence_from_ticket(ticket)
-        if is_staff(current_user)
-        else None
-    )
+    intelligence = None
+    if is_staff(current_user):
+        try:
+            intelligence = intelligence_from_ticket(ticket)
+        except Exception:
+            logger.warning(
+                "Could not build intelligence for ticket %s",
+                ticket_id,
+                exc_info=True,
+            )
     return await ticket_to_detail_read(
         db,
         ticket,

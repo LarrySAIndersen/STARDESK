@@ -78,6 +78,17 @@ async def build_ticket_activity(
     ticket: Ticket,
     user: User,
 ) -> list[TicketActivityItemRead]:
+    try:
+        return await _build_ticket_activity(db, ticket, user)
+    except Exception:
+        return []
+
+
+async def _build_ticket_activity(
+    db: AsyncSession,
+    ticket: Ticket,
+    user: User,
+) -> list[TicketActivityItemRead]:
     hide_internal = user.role == ROLE_SUBMITTER and not is_staff(user)
 
     result = await db.execute(

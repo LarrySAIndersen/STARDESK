@@ -69,6 +69,24 @@ async def list_ticket_attachments_for_detail(
     if not is_staff(user) and user.id != reporter_user_id:
         return []
 
+    try:
+        return await _list_ticket_attachments_for_detail(
+            db,
+            ticket_id=ticket_id,
+            user=user,
+            reporter_user_id=reporter_user_id,
+        )
+    except Exception:
+        return []
+
+
+async def _list_ticket_attachments_for_detail(
+    db: AsyncSession,
+    *,
+    ticket_id: uuid.UUID,
+    user: User,
+    reporter_user_id: uuid.UUID,
+) -> list[AttachmentRead]:
     result = await db.execute(
         select(Attachment)
         .where(Attachment.ticket_id == ticket_id)
