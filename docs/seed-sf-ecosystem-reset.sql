@@ -29,7 +29,10 @@ WHERE deleted_at IS NULL
     'sirius03@example.dk',
     'bi01@example.dk',
     'bi02@example.dk',
-    'bi03@example.dk'
+    'bi03@example.dk',
+    'sfchest01@example.dk',
+    'sfchest02@example.dk',
+    'sfchest03@example.dk'
   );
 
 -- SF hovedgruppe (ingen organisation — fælles dispatch)
@@ -49,6 +52,7 @@ ON CONFLICT (name) DO UPDATE SET
 INSERT INTO organizations (name, description, is_active) VALUES
     ('Virksomhed', 'SF-virksomhed', TRUE),
     ('North Star', 'SF-virksomhed — North Star', TRUE),
+    ('SF Operations', 'SF-virksomhed', TRUE),
     ('Jobflow', 'SF-virksomhed', TRUE),
     ('Sirius', 'SF-virksomhed', TRUE),
     ('BI', 'SF-virksomhed', TRUE)
@@ -57,6 +61,7 @@ ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active =
 INSERT INTO teams (name, description, is_active, organization_id) VALUES
     ('Virksomhed', 'Gruppe Virksomhed', TRUE, (SELECT id FROM organizations WHERE name = 'Virksomhed')),
     ('North Star', 'Gruppe North Star', TRUE, (SELECT id FROM organizations WHERE name = 'North Star')),
+    ('SF Operations', 'Gruppe SF Operations', TRUE, (SELECT id FROM organizations WHERE name = 'SF Operations')),
     ('SF AI Operations', 'AI-drift og automatisering', TRUE, NULL),
     ('Jobflow', 'Gruppe Jobflow', TRUE, (SELECT id FROM organizations WHERE name = 'Jobflow')),
     ('Sirius', 'Gruppe Sirius', TRUE, (SELECT id FROM organizations WHERE name = 'Sirius')),
@@ -68,9 +73,9 @@ ON CONFLICT (name) DO UPDATE SET
 
 -- SF admins (fuld adgang, ingen organisation)
 INSERT INTO users (email, display_name, role, is_active, password_hash, organization_id) VALUES
-    ('sf01@example.dk', 'SF Topadmin Anna', 'top_admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL),
-    ('sf02@example.dk', 'SF Admin Bo', 'admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL),
-    ('sf03@example.dk', 'SF Admin Clara', 'admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL)
+    ('sf01@example.dk', 'Anna', 'top_admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL),
+    ('sf02@example.dk', 'Bo', 'admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL),
+    ('sf03@example.dk', 'Clara', 'admin', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL)
 ON CONFLICT (email) DO UPDATE SET
     display_name = EXCLUDED.display_name,
     role = EXCLUDED.role,
@@ -95,7 +100,10 @@ INSERT INTO users (email, display_name, role, is_active, password_hash, organiza
     ('sirius03@example.dk', 'Sirius Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Sirius')),
     ('bi01@example.dk', 'BI Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'BI')),
     ('bi02@example.dk', 'BI Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'BI')),
-    ('bi03@example.dk', 'BI Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'BI'))
+    ('bi03@example.dk', 'BI Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'BI')),
+    ('sfchest01@example.dk', 'SF Operations Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Operations')),
+    ('sfchest02@example.dk', 'SF Operations Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Operations')),
+    ('sfchest03@example.dk', 'SF Operations Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Operations'))
 ON CONFLICT (email) DO UPDATE SET
     display_name = EXCLUDED.display_name,
     role = 'agent',
@@ -113,12 +121,20 @@ WHERE user_id IN (
       AND email LIKE '%@example.dk'
 );
 
--- Hver virksomheds-agent: egen gruppe + SF hovedgruppe
+-- SF hovedgruppe: kun Larry, Anna/Bo/Clara og SF Operations agent 1–2
 INSERT INTO team_members (team_id, user_id, joined_at)
 SELECT t.id, u.id, NOW()
 FROM users u
 JOIN teams t ON t.name = 'SF'
-WHERE u.deleted_at IS NULL AND u.role IN ('agent', 'admin', 'top_admin')
+WHERE u.deleted_at IS NULL
+  AND u.email IN (
+      'larrysanders@example.dk',
+      'sf01@example.dk',
+      'sf02@example.dk',
+      'sf03@example.dk',
+      'sfchest01@example.dk',
+      'sfchest02@example.dk'
+  )
 ON CONFLICT DO NOTHING;
 
 INSERT INTO team_members (team_id, user_id, joined_at)
@@ -158,3 +174,10 @@ ON CONFLICT (email) DO UPDATE SET
     is_active = TRUE,
     deleted_at = NULL,
     updated_at = NOW();
+
+INSERT INTO team_members (team_id, user_id, joined_at)
+SELECT t.id, u.id, NOW()
+FROM teams t
+JOIN users u ON u.email = 'larrysanders@example.dk'
+WHERE t.name = 'SF' AND u.deleted_at IS NULL
+ON CONFLICT DO NOTHING;

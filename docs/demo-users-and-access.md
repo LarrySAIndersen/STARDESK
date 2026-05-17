@@ -41,9 +41,9 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 
 | E-mail | Navn | Rolle |
 |--------|------|-------|
-| sf01@example.dk | SF Topadmin Anna | `top_admin` |
-| sf02@example.dk | SF Admin Bo | `admin` |
-| sf03@example.dk | SF Admin Clara | `admin` |
+| sf01@example.dk | Anna | `top_admin` |
+| sf02@example.dk | Bo | `admin` |
+| sf03@example.dk | Clara | `admin` |
 
 ### Virksomheds-agenter (3 pr. org)
 
@@ -54,14 +54,16 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 | Jobflow | jobflow01@ – jobflow03@example.dk |
 | Sirius | sirius01@ – sirius03@example.dk |
 | BI | bi01@ – bi03@example.dk |
+| SF Operations | sfchest01@ – sfchest03@example.dk |
 
 ## Grupper (teams) — dispatch
 
 | Gruppenavn | Organisation | Formål |
 |------------|--------------|--------|
-| SF | (ingen) | Hovedgruppe — videresendelse på tværs |
+| SF | (ingen) | Hovedgruppe — 6 medlemmer (Larry, Anna, Bo, Clara, Operations agent 1–2) |
 | Virksomhed | Virksomhed | Lokal gruppe |
 | North Star | North Star | Lokal gruppe |
+| SF Operations | SF Operations | Lokal gruppe (agent 3 kun her, ikke i SF) |
 | SF AI Operations | SF AI Operations | Fælles AI-drift |
 | Jobflow | Jobflow | Lokal gruppe |
 | Sirius | Sirius | Lokal gruppe |

@@ -2,7 +2,7 @@
 -- Run after init.sql (safe to re-run with ON CONFLICT where noted).
 
 UPDATE teams SET escalation_email = 'servicedesk@example.dk' WHERE name IN ('SF Service Desk', 'Service Desk');
-UPDATE teams SET escalation_email = 'infra@example.dk' WHERE name IN ('SF Operations', 'Infrastruktur');
+UPDATE teams SET escalation_email = 'infra@example.dk' WHERE name IN ('SF Infrastruktur', 'SF Operations', 'Infrastruktur');
 UPDATE teams SET escalation_email = 'app@example.dk' WHERE name = 'Applikation';
 
 INSERT INTO subcategories (category_id, name, name_da, sort_order)
@@ -56,7 +56,7 @@ SELECT
     'high',
     'high'
 FROM categories c
-JOIN teams t ON t.name IN ('SF Operations', 'Infrastruktur')
+JOIN teams t ON t.name IN ('SF Infrastruktur', 'Infrastruktur')
 WHERE c.name = 'network'
 AND NOT EXISTS (
     SELECT 1 FROM routing_rules r WHERE r.name = 'Netværk → Infrastruktur'

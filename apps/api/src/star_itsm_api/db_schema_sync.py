@@ -61,8 +61,39 @@ async def _needs_sf_groups_migration(engine: AsyncEngine) -> bool:
                 """
                 SELECT 1
                 FROM teams
-                WHERE name IN ('Infrastruktur', 'Service Desk', 'SF Chest', 'Es Trifft', 'SF A North Star Series')
+                WHERE name IN (
+                    'Infrastruktur',
+                    'Service Desk',
+                    'SF Chest',
+                    'Es Trifft',
+                    'SF A North Star Series'
+                )
                   AND is_active = TRUE
+                LIMIT 1
+                """
+            )
+        )
+        if result.scalar() is not None:
+            return True
+        result = await conn.execute(
+            text(
+                """
+                SELECT 1
+                FROM teams t
+                WHERE t.name = 'SF'
+                  AND (
+                      EXISTS (SELECT 1 FROM organizations WHERE name = 'SF Chest')
+                      OR EXISTS (
+                          SELECT 1 FROM users u
+                          WHERE u.email = 'sfchest01@example.dk'
+                            AND u.display_name LIKE 'SF Chest%'
+                            AND u.deleted_at IS NULL
+                      )
+                      OR (
+                          SELECT COUNT(*) FROM team_members tm
+                          WHERE tm.team_id = t.id
+                      ) > 6
+                  )
                 LIMIT 1
                 """
             )
@@ -86,8 +117,11 @@ async def ensure_ticket_schema_current(
             else:
                 logger.error("Ticket schema sync finished but is_security_ticket still missing")
         if await _needs_sf_groups_migration(engine):
-            logger.warning("SF group names outdated — applying group rename migration")
+            logger.warning("SF group names outdated — applying SF group migrations")
             await asyncio.to_thread(_run_single_migration, database_url, "13_sf-groups-rename-migration.sql")
+            await asyncio.to_thread(
+                _run_single_migration, database_url, "14_sf-operations-master-group.sql"
+            )
     except Exception:
         logger.exception("Schema sync failed — some endpoints may return 500")
 

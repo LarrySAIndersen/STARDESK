@@ -8,7 +8,7 @@ INSERT INTO teams (id, name, description, is_active) VALUES
     (
         'a1000001-0000-4000-8000-000000000001',
         'SF',
-        'Hovedgruppe for SF-virksomheder: Es Trifft, SF Chest, SF A North Star Series og Jobflow',
+        'Hovedgruppe for SF-virksomheder: Es Trifft, SF Operations, SF A North Star Series og Jobflow',
         TRUE
     ),
     (
@@ -19,8 +19,8 @@ INSERT INTO teams (id, name, description, is_active) VALUES
     ),
     (
         'a1000001-0000-4000-8000-000000000003',
-        'SF Chest',
-        'SF Chest — SF-gruppe',
+        'SF Operations',
+        'SF Operations — SF-gruppe',
         TRUE
     ),
     (
@@ -47,9 +47,9 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash) VALU
     ('b1000001-0000-4000-8000-000000000004', 'estrifft01@example.dk', 'Es Trifft Agent Dorte', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
     ('b1000001-0000-4000-8000-000000000005', 'estrifft02@example.dk', 'Es Trifft Agent Erik', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
     ('b1000001-0000-4000-8000-000000000006', 'estrifft03@example.dk', 'Es Trifft Agent Freja', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
-    ('b1000001-0000-4000-8000-000000000007', 'sfchest01@example.dk', 'SF Chest Agent Gustav', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
-    ('b1000001-0000-4000-8000-000000000008', 'sfchest02@example.dk', 'SF Chest Agent Hanna', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
-    ('b1000001-0000-4000-8000-000000000009', 'sfchest03@example.dk', 'SF Chest Agent Ivan', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
+    ('b1000001-0000-4000-8000-000000000007', 'sfchest01@example.dk', 'SF Operations Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
+    ('b1000001-0000-4000-8000-000000000008', 'sfchest02@example.dk', 'SF Operations Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
+    ('b1000001-0000-4000-8000-000000000009', 'sfchest03@example.dk', 'SF Operations Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
     ('b1000001-0000-4000-8000-000000000010', 'northstar01@example.dk', 'North Star Agent Julie', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
     ('b1000001-0000-4000-8000-000000000011', 'northstar02@example.dk', 'North Star Agent Kim', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),
     ('b1000001-0000-4000-8000-000000000012', 'northstar03@example.dk', 'North Star Agent Lars', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'),

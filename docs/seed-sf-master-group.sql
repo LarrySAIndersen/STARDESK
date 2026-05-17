@@ -1,23 +1,32 @@
--- SF hovedgruppe + alle agenter som medlemmer (kør efter seed-orgs-30.sql)
--- Password for test agents: Stardesk2026!
+-- SF hovedgruppe — kun 6 medlemmer (kør efter seed-sf-ecosystem-reset.sql)
 
 INSERT INTO teams (id, name, description, is_active) VALUES (
     'a1000001-0000-4000-8000-000000000001',
     'SF',
-    'Hovedgruppe — alle agenter er medlemmer og kan tildeles sager på tværs af SF-virksomheder',
+    'Hovedgruppe — SF-admins og udvalgte agenter til videresendelse på tværs',
     TRUE
 )
 ON CONFLICT (name) DO UPDATE SET
     description = EXCLUDED.description,
     is_active = TRUE;
 
+DELETE FROM team_members
+WHERE team_id IN (SELECT id FROM teams WHERE name = 'SF');
+
 INSERT INTO team_members (team_id, user_id, joined_at)
 SELECT t.id, u.id, NOW()
 FROM teams t
 CROSS JOIN users u
 WHERE t.name = 'SF'
-  AND u.role IN ('agent', 'admin', 'top_admin')
   AND u.deleted_at IS NULL
+  AND u.email IN (
+      'larrysanders@example.dk',
+      'sf01@example.dk',
+      'sf02@example.dk',
+      'sf03@example.dk',
+      'sfchest01@example.dk',
+      'sfchest02@example.dk'
+  )
 ON CONFLICT (team_id, user_id) DO NOTHING;
 
 INSERT INTO routing_rules (

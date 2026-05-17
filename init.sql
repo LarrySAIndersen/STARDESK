@@ -280,7 +280,7 @@ INSERT INTO users (id, email, display_name, role, is_active) VALUES
 
 INSERT INTO teams (name, description) VALUES
     ('SF Service Desk', 'First-line support — modtager alle nye sager'),
-    ('SF Operations', 'Servere, netværk, AD, Azure'),
+    ('SF Infrastruktur', 'Servere, netværk, AD, Azure'),
     ('SF AI Operations', 'AI-drift og automatisering'),
     ('Applikation', 'Applikationsdrift og -support');
 
