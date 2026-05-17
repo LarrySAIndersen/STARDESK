@@ -39,7 +39,7 @@ export default async function TicketDetailPage({
         : Promise.resolve([] as Team[]),
     ]);
     return (
-      <main className="star-page max-w-7xl">
+      <main className="mx-auto w-full max-w-7xl">
         <TicketDetailView ticket={ticket} currentUser={currentUser} teams={teams} />
       </main>
     );
@@ -61,10 +61,18 @@ export default async function TicketDetailPage({
         </main>
       );
     }
+    const detail =
+      error instanceof ApiError
+        ? `Kunne ikke hente sagen (API ${error.status}).`
+        : "Kunne ikke hente sagen.";
     return (
       <main className="star-page max-w-7xl">
         <p className="text-destructive text-sm">
-          Kunne ikke hente sagen. Tjek at API&apos;et kører.
+          {detail} Prøv igen om et øjeblik, eller gå tilbage til{" "}
+          <Link href="/" className="text-star-blue underline">
+            oversigten
+          </Link>
+          .
         </p>
       </main>
     );

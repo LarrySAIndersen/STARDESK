@@ -70,3 +70,9 @@ def test_intelligence_heuristic_when_not_stored() -> None:
     assert read.source == "heuristic"
     assert read.ease_score is not None
     assert 1 <= read.ease_score <= 5
+
+
+def test_intelligence_clamps_invalid_stored_scores() -> None:
+    read = intelligence_from_ticket(_ticket(ease_score=0, complexity_score=99))
+    assert read.ease_score == 1
+    assert read.complexity_score == 5

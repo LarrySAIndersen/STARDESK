@@ -376,6 +376,21 @@ async def get_ticket(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> TicketDetailRead:
+    try:
+        return await _get_ticket_detail(db, ticket_id, current_user)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to load ticket %s", ticket_id)
+        await db.rollback()
+        raise HTTPException(status_code=500, detail="Could not load ticket") from None
+
+
+async def _get_ticket_detail(
+    db: AsyncSession,
+    ticket_id: uuid.UUID,
+    current_user: User,
+) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -396,11 +411,15 @@ async def get_ticket(
         if read is not None:
             comments.append(read)
     comment_ids = [c.id for c in comments]
-    reaction_map = await load_reaction_summaries(
-        db,
-        comment_ids,
-        current_user_id=current_user.id,
-    )
+    try:
+        reaction_map = await load_reaction_summaries(
+            db,
+            comment_ids,
+            current_user_id=current_user.id,
+        )
+    except Exception:
+        logger.warning("Could not load comment reactions for ticket %s", ticket_id, exc_info=True)
+        reaction_map = {}
     comments = apply_reaction_summaries(comments, reaction_map)
 
     team_name, user_name = await _assignment_names(db, ticket)

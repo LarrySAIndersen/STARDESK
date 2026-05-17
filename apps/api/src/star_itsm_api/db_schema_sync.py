@@ -22,7 +22,12 @@ def _sync_database_url(url: str) -> str:
     )
 
 
-async def _schema_has_column(engine: AsyncEngine, column_name: str) -> bool:
+async def _schema_has_column(
+    engine: AsyncEngine,
+    column_name: str,
+    *,
+    table_name: str = "tickets",
+) -> bool:
     async with engine.connect() as conn:
         result = await conn.execute(
             text(
@@ -30,13 +35,46 @@ async def _schema_has_column(engine: AsyncEngine, column_name: str) -> bool:
                 SELECT 1
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
-                  AND table_name = 'tickets'
+                  AND table_name = :table_name
                   AND column_name = :column_name
                 """
             ),
-            {"column_name": column_name},
+            {"table_name": table_name, "column_name": column_name},
         )
         return result.scalar() is not None
+
+
+async def _table_exists(engine: AsyncEngine, table_name: str) -> bool:
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT 1
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                  AND table_name = :table_name
+                """
+            ),
+            {"table_name": table_name},
+        )
+        return result.scalar() is not None
+
+
+async def _schema_needs_migration(engine: AsyncEngine) -> bool:
+    """True when bundled SQL migrations should run (detail/list depend on these)."""
+    if not await _schema_has_column(engine, "is_security_ticket"):
+        return True
+    if not await _schema_has_column(engine, "scan_status", table_name="attachments"):
+        return True
+    if not await _schema_has_column(engine, "assigned_at"):
+        return True
+    if not await _schema_has_column(engine, "tags"):
+        return True
+    if not await _table_exists(engine, "comment_reactions"):
+        return True
+    if not await _table_exists(engine, "ticket_links"):
+        return True
+    return False
 
 
 def _run_migrations(database_url: str) -> None:
@@ -109,13 +147,13 @@ async def ensure_ticket_schema_current(
     if engine is None or not database_url:
         return
     try:
-        if not await _schema_has_column(engine, "is_security_ticket"):
-            logger.warning("Ticket schema outdated — applying SQL migrations")
+        if await _schema_needs_migration(engine):
+            logger.warning("Database schema outdated — applying SQL migrations")
             await asyncio.to_thread(_run_migrations, database_url)
-            if await _schema_has_column(engine, "is_security_ticket"):
-                logger.info("Ticket schema sync completed")
+            if await _schema_needs_migration(engine):
+                logger.error("Schema sync finished but required tables/columns are still missing")
             else:
-                logger.error("Ticket schema sync finished but is_security_ticket still missing")
+                logger.info("Database schema sync completed")
         if await _needs_sf_groups_migration(engine):
             logger.warning("SF group names outdated — applying SF group migrations")
             await asyncio.to_thread(_run_single_migration, database_url, "13_sf-groups-rename-migration.sql")

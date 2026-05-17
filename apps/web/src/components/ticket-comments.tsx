@@ -86,10 +86,12 @@ export function TicketComments({
   ticketId,
   comments,
   staffView,
+  embedded = false,
 }: {
   ticketId: string;
   comments: Comment[];
   staffView: boolean;
+  embedded?: boolean;
 }) {
   const visible = useMemo(() => {
     const list = staffView ? comments : comments.filter((c) => !c.is_internal);
@@ -97,6 +99,25 @@ export function TicketComments({
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
   }, [comments, staffView]);
+
+  const list =
+    visible.length === 0 ? null : (
+      <ul className="space-y-3">
+        {visible.map((comment, index) => (
+          <CommentItem
+            key={comment.id}
+            comment={comment}
+            ticketId={ticketId}
+            staffView={staffView}
+            defaultOpen={defaultExpanded(index, visible.length)}
+          />
+        ))}
+      </ul>
+    );
+
+  if (embedded) {
+    return list;
+  }
 
   return (
     <div className="space-y-6">
@@ -109,21 +130,7 @@ export function TicketComments({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {visible.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen kommentarer endnu.</p>
-          ) : (
-            <ul className="space-y-3">
-              {visible.map((comment, index) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  ticketId={ticketId}
-                  staffView={staffView}
-                  defaultOpen={defaultExpanded(index, visible.length)}
-                />
-              ))}
-            </ul>
-          )}
+          {list ?? <p className="text-muted-foreground text-sm">Ingen kommentarer endnu.</p>}
         </CardContent>
       </Card>
 

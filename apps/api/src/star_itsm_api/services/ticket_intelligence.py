@@ -204,9 +204,15 @@ def default_handling_hints(ticket: Ticket, ease: int, complexity: int) -> list[s
     return hints
 
 
+def _clamp_score(value: int | None) -> int | None:
+    if value is None:
+        return None
+    return max(1, min(5, int(value)))
+
+
 def intelligence_from_ticket(ticket: Ticket) -> TicketIntelligenceRead:
-    stored_ease = getattr(ticket, "ease_score", None)
-    stored_complexity = getattr(ticket, "complexity_score", None)
+    stored_ease = _clamp_score(getattr(ticket, "ease_score", None))
+    stored_complexity = _clamp_score(getattr(ticket, "complexity_score", None))
     stored_topics = list(getattr(ticket, "semantic_topics", None) or [])
     stored_summary = getattr(ticket, "llm_summary", None)
     stored_hints = list(getattr(ticket, "handling_hints", None) or [])

@@ -12,10 +12,12 @@ import type { Comment, CommentVisibility } from "@/types/comment";
 export function CommentForm({
   ticketId,
   staffMode = false,
+  primaryNavy = false,
 }: {
   ticketId: string;
   /** Agent/admin: choose internal vs external (customer portal). */
   staffMode?: boolean;
+  primaryNavy?: boolean;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -124,7 +126,11 @@ export function CommentForm({
       </div>
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <Button type="submit" disabled={isSubmitting || !body.trim()}>
+      <Button
+        type="submit"
+        disabled={isSubmitting || !body.trim()}
+        className={primaryNavy ? "bg-star-navy hover:bg-star-blue w-full rounded-sm" : undefined}
+      >
         {isSubmitting ? "Gemmer…" : staffMode ? "Gem opdatering" : "Tilføj besked"}
       </Button>
     </form>
