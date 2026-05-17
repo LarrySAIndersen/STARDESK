@@ -233,4 +233,23 @@
   .star-table-wrap [data-slot="table-row"][data-major="true"] {
     @apply bg-star-red/5;
   }
+
+  @keyframes login-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-6px);
+    }
+    40%,
+    80% {
+      transform: translateX(6px);
+    }
+  }
+
+  .login-shake {
+    animation: login-shake 0.45s ease-in-out;
+  }
 }

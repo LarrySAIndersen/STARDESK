@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { TOKEN_COOKIE } from "@/lib/auth";
 
 /** Routes that work without a session (login UI lives on `/`). */
-const PUBLIC_PATHS = ["/", "/login"];
+const PUBLIC_PATHS = ["/", "/login", "/skift-adgangskode"];
 
 const BASIC_AUTH_REALM = "Secure Area";
 
@@ -18,11 +18,17 @@ function isBasicAuthEnabled(): boolean {
   return Boolean(user && password);
 }
 
+/** BFF auth routes must run without a session (login, logout, change-password). */
+function isAuthApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/auth/");
+}
+
 /** Paths that must never receive a Basic Auth challenge (static + health probe). */
 function isBasicAuthExcluded(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname === "/favicon.ico") return true;
   if (pathname === "/api/health") return true;
+  if (isAuthApiPath(pathname)) return true;
   return false;
 }
 
@@ -82,6 +88,10 @@ function verifyBasicAuth(request: NextRequest): boolean {
 function handleJwtSession(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
+
+  if (isAuthApiPath(pathname)) {
+    return NextResponse.next();
+  }
 
   if (pathname === "/login" || pathname.startsWith("/login/")) {
     return NextResponse.redirect(new URL("/", request.url));

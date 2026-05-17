@@ -85,8 +85,8 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <motionCard fieldError={fieldError}>
-      <Card className="star-section-card w-full max-w-md overflow-hidden border-t-4 border-t-star-red shadow-lg">
+    <div className={cn("mx-auto w-full max-w-md", fieldError && "login-shake")}>
+      <Card className="star-section-card overflow-hidden border-t-4 border-t-star-red shadow-lg">
         <CardHeader className="bg-star-navy text-white">
           <CardTitle className="text-white">Skift adgangskode</CardTitle>
           <CardDescription className="text-white/80">
@@ -95,8 +95,7 @@ export function ChangePasswordForm() {
         </CardHeader>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+            <PasswordField label="E-mail" htmlFor="email">
               <Input
                 id="email"
                 type="email"
@@ -106,9 +105,8 @@ export function ChangePasswordForm() {
                 className={inputClass}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Nuværende adgangskode</Label>
+            </PasswordField>
+            <PasswordField label="Nuværende adgangskode" htmlFor="current-password">
               <Input
                 id="current-password"
                 type="password"
@@ -118,9 +116,8 @@ export function ChangePasswordForm() {
                 className={inputClass}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Ny adgangskode</Label>
+            </PasswordField>
+            <PasswordField label="Ny adgangskode" htmlFor="new-password">
               <Input
                 id="new-password"
                 type="password"
@@ -131,9 +128,8 @@ export function ChangePasswordForm() {
                 minLength={8}
                 required
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Bekræft ny adgangskode</Label>
+            </PasswordField>
+            <PasswordField label="Bekræft ny adgangskode" htmlFor="confirm-password">
               <Input
                 id="confirm-password"
                 type="password"
@@ -144,7 +140,7 @@ export function ChangePasswordForm() {
                 minLength={8}
                 required
               />
-            </motionCard>
+            </PasswordField>
             {error ? (
               <p className="text-destructive text-sm font-medium" role="alert">
                 {error}
@@ -170,18 +166,23 @@ export function ChangePasswordForm() {
           </form>
         </CardContent>
       </Card>
-    </motionCard>
+    </div>
   );
 }
 
-function motionCard({
-  fieldError,
+function PasswordField({
+  label,
+  htmlFor,
   children,
 }: {
-  fieldError: boolean;
+  label: string;
+  htmlFor: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("mx-auto w-full max-w-md", fieldError && "login-shake")}>{children}</motionCard>
+    <div className="space-y-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
   );
 }
