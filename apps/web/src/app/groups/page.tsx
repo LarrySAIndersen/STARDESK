@@ -1,15 +1,10 @@
 import { AdminGroupsPanel } from "@/components/admin-groups-panel";
+import { GroupsTeamSections } from "@/components/groups-team-sections";
 import { PageHero } from "@/components/page-hero";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
 import { isAdmin, isStaff, USER_COOKIE } from "@/lib/auth";
+import { sortTeamsForDisplay } from "@/lib/team-categories";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Team } from "@/types/team";
@@ -42,15 +37,7 @@ export default async function GroupsPage() {
     }
   }
 
-  const sortedTeams = [...teams].sort((a, b) => {
-    if (a.name === "SF") {
-      return -1;
-    }
-    if (b.name === "SF") {
-      return 1;
-    }
-    return a.name.localeCompare(b.name, "da");
-  });
+  const sortedTeams = sortTeamsForDisplay(teams);
 
   const adminView = isAdmin(currentUser);
 
@@ -72,46 +59,7 @@ export default async function GroupsPage() {
       ) : sortedTeams.length === 0 ? (
         <p className="text-muted-foreground mt-6 text-sm">Ingen grupper fundet.</p>
       ) : (
-        <ul className="mt-8 grid gap-6 sm:grid-cols-2">
-          {sortedTeams.map((team) => (
-            <li key={team.id}>
-              <Card className="star-section-card overflow-hidden">
-                <CardHeader className="bg-star-blue-light border-b">
-                  <CardTitle className="text-star-navy flex items-center gap-2">
-                    {team.name}
-                    {team.name === "SF" ? (
-                      <span className="bg-star-blue rounded px-1.5 py-0.5 text-[10px] font-semibold text-white uppercase">
-                        Hovedgruppe
-                      </span>
-                    ) : null}
-                  </CardTitle>
-                  {team.description ? (
-                    <CardDescription>{team.description}</CardDescription>
-                  ) : null}
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide">
-                    Medlemmer ({team.members.length})
-                  </p>
-                  {team.members.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">Ingen medlemmer</p>
-                  ) : (
-                    <ul className="space-y-2 text-sm">
-                      {team.members.map((member) => (
-                        <li key={member.user_id} className="flex justify-between gap-2">
-                          <span>{member.display_name}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {member.role_label}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <GroupsTeamSections teams={sortedTeams} />
       )}
     </main>
   );

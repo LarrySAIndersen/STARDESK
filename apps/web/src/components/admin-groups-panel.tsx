@@ -2,14 +2,8 @@
 
 import { useCallback, useEffect, useId, useState, type ReactNode, type RefObject } from "react";
 
+import { GroupsTeamSections } from "@/components/groups-team-sections";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiGet, apiPatch } from "@/lib/api";
 import type { UserAdminListResponse } from "@/types/admin-user";
@@ -197,53 +191,7 @@ export function AdminGroupsPanel({
 
   return (
     <>
-      <ul className="mt-8 grid gap-6 sm:grid-cols-2">
-        {teams.map((team) => (
-          <li key={team.id}>
-            <Card className="star-section-card overflow-hidden">
-              <CardHeader className="bg-star-blue-light border-b">
-                <CardTitle className="text-star-navy flex items-center gap-2">
-                  {team.name}
-                  {team.name === "SF" ? (
-                    <span className="bg-star-blue rounded px-1.5 py-0.5 text-[10px] font-semibold text-white uppercase">
-                      Hovedgruppe
-                    </span>
-                  ) : null}
-                </CardTitle>
-                {team.description ? <CardDescription>{team.description}</CardDescription> : null}
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-3 text-xs font-medium uppercase tracking-wide">
-                  Medlemmer ({team.members.length})
-                </p>
-                {team.members.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Ingen medlemmer</p>
-                ) : (
-                  <ul className="space-y-2 text-sm">
-                    {team.members.map((member) => (
-                      <li key={member.user_id} className="flex justify-between gap-2">
-                        <span>{member.display_name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {member.role_label}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => setEditingTeam(team)}
-                >
-                  Rediger medlemmer
-                </Button>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
+      <GroupsTeamSections teams={teams} onEditMembers={setEditingTeam} />
 
       {editingTeam ? (
         <GroupMembersDialog
