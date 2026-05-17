@@ -17,10 +17,14 @@ class RoutingResult:
 
 
 async def _default_team_id(db: AsyncSession) -> uuid.UUID | None:
-    result = await db.execute(
-        select(Team.id).where(Team.name == "Service Desk", Team.is_active.is_(True)).limit(1)
-    )
-    return result.scalar_one_or_none()
+    for team_name in ("SF Service Desk", "Service Desk"):
+        result = await db.execute(
+            select(Team.id).where(Team.name == team_name, Team.is_active.is_(True)).limit(1)
+        )
+        team_id = result.scalar_one_or_none()
+        if team_id is not None:
+            return team_id
+    return None
 
 
 async def apply_routing(

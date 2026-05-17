@@ -49,8 +49,7 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 
 | Organisation | E-mails |
 |--------------|---------|
-| Es Trifft | estrifft01@ – estrifft03@example.dk |
-| SF Chest | sfchest01@ – sfchest03@example.dk |
+| Virksomhed | estrifft01@ – estrifft03@example.dk |
 | North Star | northstar01@ – northstar03@example.dk |
 | Jobflow | jobflow01@ – jobflow03@example.dk |
 | Sirius | sirius01@ – sirius03@example.dk |
@@ -61,9 +60,9 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 | Gruppenavn | Organisation | Formål |
 |------------|--------------|--------|
 | SF | (ingen) | Hovedgruppe — videresendelse på tværs |
-| Es Trifft | Es Trifft | Lokal gruppe |
-| SF Chest | SF Chest | Lokal gruppe |
-| SF A North Star Series | North Star | Lokal gruppe |
+| Virksomhed | Virksomhed | Lokal gruppe |
+| North Star | North Star | Lokal gruppe |
+| SF AI Operations | SF AI Operations | Fælles AI-drift |
 | Jobflow | Jobflow | Lokal gruppe |
 | Sirius | Sirius | Lokal gruppe |
 | BI | BI | Lokal gruppe |

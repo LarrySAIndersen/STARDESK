@@ -5,9 +5,8 @@ from pathlib import Path
 PWD = "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"
 
 ORGS = [
-    ("Es Trifft", "estrifft"),
-    ("SF Chest", "sfchest"),
-    ("SF A North Star Series", "northstar"),
+    ("Virksomhed", "estrifft"),
+    ("North Star", "northstar"),
     ("Jobflow", "jobflow"),
     ("SF Koncern", "sfkoncern"),
     ("Nordisk Forsyning", "forsyning"),

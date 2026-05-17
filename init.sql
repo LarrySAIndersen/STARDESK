@@ -279,8 +279,9 @@ INSERT INTO users (id, email, display_name, role, is_active) VALUES
     ('00000000-0000-0000-0000-000000000001', 'system@star.dk', 'System', 'admin', TRUE);
 
 INSERT INTO teams (name, description) VALUES
-    ('Service Desk', 'First-line support - modtager alle nye sager'),
-    ('Infrastruktur', 'Servere, netværk, AD, Azure'),
+    ('SF Service Desk', 'First-line support — modtager alle nye sager'),
+    ('SF Operations', 'Servere, netværk, AD, Azure'),
+    ('SF AI Operations', 'AI-drift og automatisering'),
     ('Applikation', 'Applikationsdrift og -support');
 
 INSERT INTO categories (name, name_da, sort_order) VALUES

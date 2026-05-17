@@ -18,9 +18,6 @@ WHERE deleted_at IS NULL
     'estrifft01@example.dk',
     'estrifft02@example.dk',
     'estrifft03@example.dk',
-    'sfchest01@example.dk',
-    'sfchest02@example.dk',
-    'sfchest03@example.dk',
     'northstar01@example.dk',
     'northstar02@example.dk',
     'northstar03@example.dk',
@@ -50,18 +47,17 @@ ON CONFLICT (name) DO UPDATE SET
 
 -- Virksomheder (navn er nøgle — undgår id-kollision med ældre seed)
 INSERT INTO organizations (name, description, is_active) VALUES
-    ('Es Trifft', 'SF-virksomhed', TRUE),
-    ('SF Chest', 'SF-virksomhed', TRUE),
-    ('SF A North Star Series', 'SF-virksomhed — North Star', TRUE),
+    ('Virksomhed', 'SF-virksomhed', TRUE),
+    ('North Star', 'SF-virksomhed — North Star', TRUE),
     ('Jobflow', 'SF-virksomhed', TRUE),
     ('Sirius', 'SF-virksomhed', TRUE),
     ('BI', 'SF-virksomhed', TRUE)
 ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active = TRUE;
 
 INSERT INTO teams (name, description, is_active, organization_id) VALUES
-    ('Es Trifft', 'Gruppe Es Trifft', TRUE, (SELECT id FROM organizations WHERE name = 'Es Trifft')),
-    ('SF Chest', 'Gruppe SF Chest', TRUE, (SELECT id FROM organizations WHERE name = 'SF Chest')),
-    ('SF A North Star Series', 'Gruppe North Star', TRUE, (SELECT id FROM organizations WHERE name = 'SF A North Star Series')),
+    ('Virksomhed', 'Gruppe Virksomhed', TRUE, (SELECT id FROM organizations WHERE name = 'Virksomhed')),
+    ('North Star', 'Gruppe North Star', TRUE, (SELECT id FROM organizations WHERE name = 'North Star')),
+    ('SF AI Operations', 'AI-drift og automatisering', TRUE, NULL),
     ('Jobflow', 'Gruppe Jobflow', TRUE, (SELECT id FROM organizations WHERE name = 'Jobflow')),
     ('Sirius', 'Gruppe Sirius', TRUE, (SELECT id FROM organizations WHERE name = 'Sirius')),
     ('BI', 'Gruppe BI', TRUE, (SELECT id FROM organizations WHERE name = 'BI'))
@@ -85,15 +81,12 @@ ON CONFLICT (email) DO UPDATE SET
 
 -- Virksomheds-agenter (ikke admin)
 INSERT INTO users (email, display_name, role, is_active, password_hash, organization_id) VALUES
-    ('estrifft01@example.dk', 'Es Trifft Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Es Trifft')),
-    ('estrifft02@example.dk', 'Es Trifft Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Es Trifft')),
-    ('estrifft03@example.dk', 'Es Trifft Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Es Trifft')),
-    ('sfchest01@example.dk', 'SF Chest Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Chest')),
-    ('sfchest02@example.dk', 'SF Chest Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Chest')),
-    ('sfchest03@example.dk', 'SF Chest Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Chest')),
-    ('northstar01@example.dk', 'North Star Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF A North Star Series')),
-    ('northstar02@example.dk', 'North Star Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF A North Star Series')),
-    ('northstar03@example.dk', 'North Star Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF A North Star Series')),
+    ('estrifft01@example.dk', 'Virksomhed Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Virksomhed')),
+    ('estrifft02@example.dk', 'Virksomhed Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Virksomhed')),
+    ('estrifft03@example.dk', 'Virksomhed Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Virksomhed')),
+    ('northstar01@example.dk', 'North Star Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'North Star')),
+    ('northstar02@example.dk', 'North Star Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'North Star')),
+    ('northstar03@example.dk', 'North Star Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'North Star')),
     ('jobflow01@example.dk', 'Jobflow Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Jobflow')),
     ('jobflow02@example.dk', 'Jobflow Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Jobflow')),
     ('jobflow03@example.dk', 'Jobflow Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Jobflow')),

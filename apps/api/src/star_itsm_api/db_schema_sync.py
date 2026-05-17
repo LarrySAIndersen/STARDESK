@@ -54,6 +54,22 @@ def _run_migrations(database_url: str) -> None:
                 logger.warning("Migration %s skipped: %s", path.name, exc)
 
 
+async def _needs_sf_groups_migration(engine: AsyncEngine) -> bool:
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT 1
+                FROM teams
+                WHERE name IN ('Infrastruktur', 'Service Desk', 'SF Chest', 'Es Trifft', 'SF A North Star Series')
+                  AND is_active = TRUE
+                LIMIT 1
+                """
+            )
+        )
+        return result.scalar() is not None
+
+
 async def ensure_ticket_schema_current(
     engine: AsyncEngine | None,
     database_url: str | None,
@@ -62,13 +78,33 @@ async def ensure_ticket_schema_current(
     if engine is None or not database_url:
         return
     try:
-        if await _schema_has_column(engine, "is_security_ticket"):
-            return
-        logger.warning("Ticket schema outdated — applying SQL migrations")
-        await asyncio.to_thread(_run_migrations, database_url)
-        if await _schema_has_column(engine, "is_security_ticket"):
-            logger.info("Ticket schema sync completed")
-        else:
-            logger.error("Ticket schema sync finished but is_security_ticket still missing")
+        if not await _schema_has_column(engine, "is_security_ticket"):
+            logger.warning("Ticket schema outdated — applying SQL migrations")
+            await asyncio.to_thread(_run_migrations, database_url)
+            if await _schema_has_column(engine, "is_security_ticket"):
+                logger.info("Ticket schema sync completed")
+            else:
+                logger.error("Ticket schema sync finished but is_security_ticket still missing")
+        if await _needs_sf_groups_migration(engine):
+            logger.warning("SF group names outdated — applying group rename migration")
+            await asyncio.to_thread(_run_single_migration, database_url, "13_sf-groups-rename-migration.sql")
     except Exception:
-        logger.exception("Ticket schema sync failed — ticket/report endpoints may return 500")
+        logger.exception("Schema sync failed — some endpoints may return 500")
+
+
+def _run_single_migration(database_url: str, filename: str) -> None:
+    path = Path(__file__).resolve().parent.joinpath("sql", "migrations", filename)
+    if not path.is_file():
+        logger.error("Migration file missing: %s", filename)
+        return
+    dsn = _sync_database_url(database_url)
+    sql = path.read_text(encoding="utf-8")
+    with psycopg.connect(dsn, autocommit=False) as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+            conn.commit()
+            logger.info("Applied migration %s", filename)
+        except Exception as exc:
+            conn.rollback()
+            logger.warning("Migration %s failed: %s", filename, exc)
