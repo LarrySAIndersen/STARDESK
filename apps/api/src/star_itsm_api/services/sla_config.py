@@ -1,0 +1,66 @@
+"""Standard STAR resolution SLA targets (single source of truth for calculation)."""
+
+from dataclasses import dataclass
+from typing import Literal
+
+Priority = Literal["critical", "high", "medium", "low"]
+SlaTimeKind = Literal["calendar_hours", "business_days"]
+
+
+@dataclass(frozen=True)
+class SlaRule:
+    priority: Priority
+    label_da: str
+    policy_name: str
+    response_kind: SlaTimeKind
+    response_amount: int
+    resolution_kind: SlaTimeKind
+    resolution_amount: int
+
+
+# P1/P2: calendar hours (24/7). P3/P4: business days Mon–Fri (no Danish holidays in v1).
+STANDARD_SLA_RULES: dict[Priority, SlaRule] = {
+    "critical": SlaRule(
+        priority="critical",
+        label_da="Kritisk",
+        policy_name="Critical (24/7)",
+        response_kind="calendar_hours",
+        response_amount=1,
+        resolution_kind="calendar_hours",
+        resolution_amount=4,
+    ),
+    "high": SlaRule(
+        priority="high",
+        label_da="Høj",
+        policy_name="High",
+        response_kind="calendar_hours",
+        response_amount=2,
+        resolution_kind="calendar_hours",
+        resolution_amount=8,
+    ),
+    "medium": SlaRule(
+        priority="medium",
+        label_da="Mellem",
+        policy_name="Medium",
+        response_kind="business_days",
+        response_amount=1,
+        resolution_kind="business_days",
+        resolution_amount=3,
+    ),
+    "low": SlaRule(
+        priority="low",
+        label_da="Lav",
+        policy_name="Low",
+        response_kind="business_days",
+        response_amount=1,
+        resolution_kind="business_days",
+        resolution_amount=5,
+    ),
+}
+
+
+def get_sla_rule(priority: str) -> SlaRule:
+    rule = STANDARD_SLA_RULES.get(priority)  # type: ignore[arg-type]
+    if rule is None:
+        return STANDARD_SLA_RULES["medium"]
+    return rule

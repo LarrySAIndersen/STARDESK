@@ -19,6 +19,7 @@ import {
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
 import { ResizableSplit } from "@/components/ui/resizable-split";
 import { TicketSearchInput } from "@/components/ticket-search-input";
+import { SlaCountdown } from "@/components/sla-countdown";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { apiPatch } from "@/lib/api";
 import { getClientUser } from "@/lib/auth";
@@ -235,6 +236,7 @@ export function AgentDispatchBoard({
                     <TableHead scope="col">Tags / emoji</TableHead>
                     <TableHead scope="col">Status</TableHead>
                     <TableHead scope="col">Prioritet</TableHead>
+                    <TableHead scope="col">SLA</TableHead>
                     <TableHead scope="col">Gruppe</TableHead>
                     <TableHead scope="col">Fejlviseret</TableHead>
                     <TableHead scope="col">Oprettet</TableHead>
@@ -293,6 +295,15 @@ export function AgentDispatchBoard({
                       </TableCell>
                       <TableCell>
                         <Badge>{priorityLabel(ticket.priority)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <SlaCountdown
+                          status={ticket.status}
+                          resolutionDueAt={ticket.resolution_due_at}
+                          slaRemainingSeconds={ticket.sla_remaining_seconds}
+                          slaBreached={ticket.sla_breached}
+                          compact
+                        />
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs">
                         {ticket.assigned_team_name ?? "—"}

@@ -9,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SlaCountdown } from "@/components/sla-countdown";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import type { Ticket } from "@/types/ticket";
@@ -72,8 +73,7 @@ export function ItilTicketTable({
             {!compact ? <TableHead>Underårsager</TableHead> : null}
             <TableHead>Oprettet</TableHead>
             <TableHead>Opdateret</TableHead>
-            <TableHead>Respons frist</TableHead>
-            <TableHead>Løsningsfrist</TableHead>
+            <TableHead>SLA</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -158,11 +158,14 @@ export function ItilTicketTable({
               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                 {formatDate(ticket.updated_at)}
               </TableCell>
-              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                {formatDate(ticket.response_due_at)}
-              </TableCell>
-              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                {formatDate(ticket.resolution_due_at)}
+              <TableCell>
+                <SlaCountdown
+                  status={ticket.status}
+                  resolutionDueAt={ticket.resolution_due_at}
+                  slaRemainingSeconds={ticket.sla_remaining_seconds}
+                  slaBreached={ticket.sla_breached}
+                  compact
+                />
               </TableCell>
             </TableRow>
           ))}

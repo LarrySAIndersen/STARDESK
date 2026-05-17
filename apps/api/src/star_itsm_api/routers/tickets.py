@@ -63,7 +63,7 @@ from star_itsm_api.services.org_access import (
     user_can_access_ticket,
 )
 from star_itsm_api.services.routing import apply_routing
-from star_itsm_api.services.sla import compute_sla_due_dates
+from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.teams import user_in_team
 from star_itsm_api.services.reports import is_reopen_transition
 from star_itsm_api.models.attachment import Attachment
@@ -291,12 +291,6 @@ async def create_ticket(
         subcategory_id=payload.subcategory_id,
         priority=payload.priority,
     )
-    sla = await compute_sla_due_dates(
-        db,
-        priority=routing.priority,
-        category_id=payload.category_id,
-        subcategory_id=payload.subcategory_id,
-    )
     await validate_sub_cause_ids(
         db,
         payload.sub_cause_ids,
@@ -327,9 +321,6 @@ async def create_ticket(
         category_id=payload.category_id,
         subcategory_id=payload.subcategory_id,
         source="portal",
-        sla_policy_id=sla.sla_policy_id,
-        response_due_at=sla.response_due_at,
-        resolution_due_at=sla.resolution_due_at,
         escalation_level=0,
         gdpr_consent=payload.gdpr_consent,
         gdpr_consent_at=now if payload.gdpr_consent else None,
@@ -344,6 +335,12 @@ async def create_ticket(
         deleted_at=None,
     )
     db.add(ticket)
+    await apply_sla_to_ticket(
+        db,
+        ticket,
+        priority=routing.priority,
+        start_at=now,
+    )
     await db.flush()
     if payload.parent_ticket_id is not None:
         try:
@@ -604,6 +601,14 @@ async def update_ticket_metadata(
         ticket.tags = updates["tags"]
     if "emoji" in updates:
         ticket.emoji = updates["emoji"]
+    if "priority" in updates and updates["priority"] is not None:
+        ticket.priority = updates["priority"]
+        await apply_sla_to_ticket(
+            db,
+            ticket,
+            priority=updates["priority"],
+            start_at=ticket.created_at,
+        )
 
     if updates:
         now = datetime.now(UTC)

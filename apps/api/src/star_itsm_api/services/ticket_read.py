@@ -9,6 +9,7 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead, TicketSummaryRead
+from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
 from star_itsm_api.services.sub_causes import get_sub_causes_by_ticket_ids
 from star_itsm_api.services.ticket_hierarchy import (
     get_child_tickets,
@@ -117,6 +118,7 @@ def _ticket_to_read(
     parents: dict[uuid.UUID, TicketSummaryRead],
     child_counts: dict[uuid.UUID, int],
 ) -> TicketRead:
+    sla = sla_fields_for_ticket(ticket)
     return TicketRead(
         id=ticket.id,
         ticket_number=ticket.ticket_number,
@@ -139,8 +141,10 @@ def _ticket_to_read(
         assigned_team_name=teams.get(ticket.assigned_team_id) if ticket.assigned_team_id else None,
         assigned_user_name=users.get(ticket.assigned_user_id) if ticket.assigned_user_id else None,
         reporter_display_name=users.get(ticket.reporter_user_id),
-        response_due_at=ticket.response_due_at,
-        resolution_due_at=ticket.resolution_due_at,
+        response_due_at=sla["response_due_at"],
+        resolution_due_at=sla["resolution_due_at"],
+        sla_remaining_seconds=sla["sla_remaining_seconds"],
+        sla_breached=sla["sla_breached"],
         created_at=ticket.created_at,
         updated_at=getattr(ticket, "updated_at", None),
         fault_displayed=getattr(ticket, "fault_displayed", False),
@@ -186,6 +190,7 @@ async def ticket_hierarchy_detail_extras(
 
 def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
     """Minimal ticket payload when joined list context queries fail."""
+    sla = sla_fields_for_ticket(ticket)
     return TicketRead(
         id=ticket.id,
         ticket_number=ticket.ticket_number,
@@ -198,8 +203,10 @@ def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
         is_security_ticket=getattr(ticket, "is_security_ticket", False),
         parent_ticket_id=getattr(ticket, "parent_ticket_id", None),
         assigned_team_id=ticket.assigned_team_id,
-        response_due_at=ticket.response_due_at,
-        resolution_due_at=ticket.resolution_due_at,
+        response_due_at=sla["response_due_at"],
+        resolution_due_at=sla["resolution_due_at"],
+        sla_remaining_seconds=sla["sla_remaining_seconds"],
+        sla_breached=sla["sla_breached"],
         created_at=ticket.created_at,
         updated_at=getattr(ticket, "updated_at", None),
         fault_displayed=getattr(ticket, "fault_displayed", False),

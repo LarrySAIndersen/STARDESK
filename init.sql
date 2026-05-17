@@ -270,10 +270,10 @@ CREATE INDEX idx_email_log_unprocessed ON email_inbound_log (received_at)
 
 -- Seed data
 INSERT INTO sla_policies (name, description, response_time_minutes, resolution_time_minutes, business_hours_only) VALUES
-    ('Critical (24/7)', 'Kritiske sager - respons 15 min, løsning 4 timer', 15, 240, FALSE),
-    ('High',            'Høj prioritet - respons 1 time, løsning 1 arbejdsdag', 60, 480, TRUE),
-    ('Medium',          'Normal prioritet - respons 4 timer, løsning 3 arbejdsdage', 240, 1440, TRUE),
-    ('Low',             'Lav prioritet - respons 1 dag, løsning 5 arbejdsdage', 480, 2400, TRUE);
+    ('Critical (24/7)', 'Kritisk P1 — respons 1 t, løsning 4 timer (24/7)', 60, 240, FALSE),
+    ('High',            'Høj P2 — respons 2 t, løsning 8 timer (24/7)', 120, 480, FALSE),
+    ('Medium',          'Mellem P3 — respons 1 hverdag, løsning 3 hverdage', 480, 4320, TRUE),
+    ('Low',             'Lav P4 — respons 1 hverdag, løsning 5 hverdage', 480, 7200, TRUE);
 
 INSERT INTO users (id, email, display_name, role, is_active) VALUES
     ('00000000-0000-0000-0000-000000000001', 'system@star.dk', 'System', 'admin', TRUE);

@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SlaCountdown } from "@/components/sla-countdown";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { isStaff } from "@/lib/auth";
 import type { Team } from "@/types/team";
@@ -84,6 +85,12 @@ export function TicketDetailView({
               Sikkerhedssag
             </Badge>
           ) : null}
+          <SlaCountdown
+            status={ticket.status}
+            resolutionDueAt={ticket.resolution_due_at}
+            slaRemainingSeconds={ticket.sla_remaining_seconds}
+            slaBreached={ticket.sla_breached}
+          />
         </div>
         <h1 className="text-star-navy mt-4 flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight md:text-3xl">
           {ticket.emoji ? (
@@ -171,7 +178,18 @@ export function TicketDetailView({
                 />
                 <DetailField
                   label="Løsningsfrist"
-                  value={formatDate(ticket.resolution_due_at)}
+                  value={
+                    <div className="space-y-2">
+                      <span>{formatDate(ticket.resolution_due_at)}</span>
+                      <SlaCountdown
+                        status={ticket.status}
+                        resolutionDueAt={ticket.resolution_due_at}
+                        slaRemainingSeconds={ticket.sla_remaining_seconds}
+                        slaBreached={ticket.sla_breached}
+                        compact
+                      />
+                    </div>
+                  }
                 />
               </dl>
             </CardContent>

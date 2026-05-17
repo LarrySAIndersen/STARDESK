@@ -52,6 +52,8 @@ class TicketRead(BaseModel):
     reporter_display_name: str | None = None
     response_due_at: datetime | None = None
     resolution_due_at: datetime | None = None
+    sla_remaining_seconds: int | None = None
+    sla_breached: bool = False
     created_at: datetime
     updated_at: datetime | None = None
     fault_displayed: bool = False
@@ -145,6 +147,7 @@ class TicketMetadataUpdate(BaseModel):
     is_major: bool | None = None
     is_security_ticket: bool | None = None
     parent_ticket_id: UUID | None = None
+    priority: Literal["critical", "high", "medium", "low"] | None = None
     sub_cause_ids: list[UUID] | None = None
     tags: list[str] | None = None
     emoji: str | None = Field(default=None, max_length=16)

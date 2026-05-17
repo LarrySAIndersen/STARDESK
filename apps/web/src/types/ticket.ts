@@ -36,6 +36,8 @@ export interface Ticket {
   reporter_display_name?: string | null;
   response_due_at?: string | null;
   resolution_due_at?: string | null;
+  sla_remaining_seconds?: number | null;
+  sla_breached?: boolean;
   created_at: string;
   updated_at?: string | null;
   tags?: string[];

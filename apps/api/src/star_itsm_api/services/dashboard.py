@@ -17,6 +17,8 @@ from star_itsm_api.services.reports import (
     status_label_da,
     _ticket_scope_stmt,
 )
+from star_itsm_api.services.sla_enrichment import effective_resolution_due_at
+from star_itsm_api.services.sla_status import sla_breached, sla_due_soon
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 
 PRIORITY_ORDER = ("critical", "high", "medium", "low")
@@ -109,18 +111,10 @@ async def build_dashboard(db: AsyncSession, user: User) -> DashboardRead:
             longest_age = age_days
             longest = ticket
 
-        overdue_sla = False
-        due_soon_sla = False
-        for due_at in (ticket.response_due_at, ticket.resolution_due_at):
-            if due_at is None:
-                continue
-            if due_at < now:
-                overdue_sla = True
-            elif due_at <= now + timedelta(hours=4):
-                due_soon_sla = True
-        if overdue_sla:
+        resolution_due = effective_resolution_due_at(ticket)
+        if sla_breached(resolution_due, now=now, status=ticket.status):
             sla_overdue_count += 1
-        elif due_soon_sla:
+        elif sla_due_soon(resolution_due, now=now, status=ticket.status):
             sla_due_soon_count += 1
 
     longest_open: LongestOpenTicket | None = None

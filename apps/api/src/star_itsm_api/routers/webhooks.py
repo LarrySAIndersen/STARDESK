@@ -13,7 +13,7 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.schemas.ticket import TicketRead
 from star_itsm_api.services.routing import apply_routing
-from star_itsm_api.services.sla import compute_sla_due_dates
+from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 
 logger = logging.getLogger(__name__)
@@ -49,12 +49,6 @@ async def email_inbound(
         subcategory_id=None,
         priority="medium",
     )
-    sla = await compute_sla_due_dates(
-        db,
-        priority=routing.priority,
-        category_id=None,
-        subcategory_id=None,
-    )
     now = datetime.now(UTC)
     title = payload.subject[:256]
     ticket = Ticket(
@@ -71,14 +65,12 @@ async def email_inbound(
         category_id=None,
         subcategory_id=None,
         source="email",
-        sla_policy_id=sla.sla_policy_id,
-        response_due_at=sla.response_due_at,
-        resolution_due_at=sla.resolution_due_at,
         escalation_level=0,
         created_at=now,
         deleted_at=None,
     )
     db.add(ticket)
+    await apply_sla_to_ticket(db, ticket, priority=routing.priority, start_at=now)
     db.add(
         TicketEvent(
             id=uuid.uuid4(),
