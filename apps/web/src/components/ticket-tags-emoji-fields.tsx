@@ -20,7 +20,7 @@ export function TicketTagsEmojiFields({
   disabled?: boolean;
 }) {
   return (
-    <div className="border-star-blue/30 bg-star-blue-light/40 space-y-4 rounded-md border border-dashed p-4">
+    <div className="border-input bg-background space-y-4 rounded-md border p-4">
       <div className="space-y-2">
         <Label htmlFor={tagsInputId}>Tags (søgbare)</Label>
         <input

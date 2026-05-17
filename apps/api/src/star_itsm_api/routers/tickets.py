@@ -332,7 +332,7 @@ async def create_ticket(
         resolution_due_at=sla.resolution_due_at,
         escalation_level=0,
         gdpr_consent=payload.gdpr_consent,
-        gdpr_consent_at=now,
+        gdpr_consent_at=now if payload.gdpr_consent else None,
         subject_cpr=payload.subject_cpr,
         is_major=payload.is_major,
         is_security_ticket=is_security_ticket,

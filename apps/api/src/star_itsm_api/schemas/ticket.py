@@ -110,13 +110,6 @@ class TicketCreate(BaseModel):
     def validate_create_emoji(cls, value: str | None) -> str | None:
         return validate_emoji(value)
 
-    @field_validator("gdpr_consent")
-    @classmethod
-    def gdpr_must_be_accepted(cls, value: bool) -> bool:
-        if not value:
-            raise ValueError("Du skal acceptere behandling af personoplysninger (GDPR)")
-        return value
-
     @field_validator("subject_cpr")
     @classmethod
     def normalize_subject_cpr(cls, value: str | None) -> str | None:
@@ -125,12 +118,18 @@ class TicketCreate(BaseModel):
         return validate_cpr(value)
 
     @model_validator(mode="after")
-    def cpr_only_in_dedicated_field(self) -> "TicketCreate":
+    def privacy_fields(self) -> "TicketCreate":
         assert_no_cpr_outside_field(
             subject_cpr=self.subject_cpr,
             title=self.title,
             description=self.description,
         )
+        if self.subject_cpr and not self.gdpr_consent:
+            raise ValueError(
+                "Du skal acceptere behandling af personoplysninger (GDPR) når du angiver CPR"
+            )
+        if not self.subject_cpr:
+            self.gdpr_consent = False
         return self
 
 
