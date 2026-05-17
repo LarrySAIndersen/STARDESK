@@ -7,12 +7,19 @@ from star_itsm_api.core.security import (
     create_access_token,
     get_current_user,
     get_user_by_email,
+    hash_password,
     verify_password,
 )
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
-from star_itsm_api.schemas.auth import LoginRequest, TokenResponse, UserRead, user_to_read
+from star_itsm_api.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    TokenResponse,
+    UserRead,
+    user_to_read,
+)
 from star_itsm_api.services.org_access import get_user_organization_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -42,6 +49,29 @@ async def login(
     token = create_access_token(user_id=user.id, role=user.role, email=user.email)
     org_name = await _organization_name(db, user)
     return TokenResponse(access_token=token, user=user_to_read(user, organization_name=org_name))
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    payload: ChangePasswordRequest,
+    db: AsyncSession = Depends(require_db),
+) -> None:
+    if payload.current_password == payload.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Den nye adgangskode skal være forskellig fra den nuværende",
+        )
+
+    user = await get_user_by_email(db, payload.email)
+    if user is None or not verify_password(payload.current_password, user.password_hash):
+        await asyncio.sleep(0.4)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Forkert e-mail eller nuværende adgangskode",
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+    await db.commit()
 
 
 @router.get("/me", response_model=UserRead)

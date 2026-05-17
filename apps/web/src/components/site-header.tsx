@@ -1,8 +1,12 @@
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { SiteHeaderNav } from "@/components/site-header-nav";
+import { TOKEN_COOKIE } from "@/lib/auth";
 
-export function SiteHeader() {
+export async function SiteHeader() {
+  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+  const isAuthenticated = Boolean(token);
   return (
     <header className="sticky top-0 z-50 shadow-sm">
       <div className="bg-star-navy text-white">
@@ -33,7 +37,7 @@ export function SiteHeader() {
             </div>
           </Link>
 
-          <SiteHeaderNav />
+          {isAuthenticated ? <SiteHeaderNav /> : null}
         </div>
       </div>
     </header>
