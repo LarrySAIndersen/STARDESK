@@ -13,6 +13,8 @@ from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.services.mail import send_escalation_email
+from star_itsm_api.services.ticket_timestamps import touch_ticket_updated
+from star_itsm_api.services.virus_scan import scan_pending_attachments
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ async def sla_check(
     for ticket in overdue:
         ticket.escalation_level += 1
         ticket.last_escalation_at = now
+        touch_ticket_updated(ticket, now)
         db.add(
             TicketEvent(
                 id=uuid.uuid4(),
@@ -76,3 +79,19 @@ async def sla_check(
 
     await db.commit()
     return {"escalated": escalated, "checked_at": now.isoformat()}
+
+
+@router.post("/virus-scan")
+async def virus_scan_pending(
+    db: AsyncSession = Depends(require_db),
+    authorization: str | None = Header(default=None),
+) -> dict[str, int | str]:
+    token = authorization.removeprefix("Bearer ").strip() if authorization else None
+    _verify_cron_secret(token)
+
+    scanned = await scan_pending_attachments(db)
+    await db.commit()
+    return {
+        "scanned": scanned,
+        "checked_at": datetime.now(UTC).isoformat(),
+    }

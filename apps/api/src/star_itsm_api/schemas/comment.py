@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -10,6 +11,8 @@ class CommentRead(BaseModel):
     id: UUID
     body: str
     is_internal: bool
+    visibility: Literal["internal", "external"]
+    visibility_label_da: str
     author_display_name: str
     created_at: datetime
 
@@ -17,3 +20,4 @@ class CommentRead(BaseModel):
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1)
     is_internal: bool = False
+    visibility: Literal["internal", "external"] | None = None

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -17,8 +17,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { apiPost } from "@/lib/api";
+import { assertNoCprInFreeText, validateCprOptional } from "@/lib/cpr";
+import { apiGet, apiPost, apiPostForm } from "@/lib/api";
+import type { Attachment } from "@/types/attachment";
 import type { Category } from "@/types/category";
+import type { SubCause } from "@/types/sub-cause";
 import type { Ticket, TicketCreateInput } from "@/types/ticket";
 
 const schema = z.object({
@@ -28,6 +31,24 @@ const schema = z.object({
   priority: z.enum(["critical", "high", "medium", "low"]),
   category_id: z.string().optional(),
   subcategory_id: z.string().optional(),
+  is_major: z.boolean(),
+  gdpr_consent: z.boolean().refine((value) => value, {
+    message: "Du skal acceptere behandling af personoplysninger (GDPR)",
+  }),
+  subject_cpr: z
+    .string()
+    .optional()
+    .superRefine((value, ctx) => {
+      const result = validateCprOptional(value);
+      if (result !== true) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: result });
+      }
+    }),
+}).superRefine((data, ctx) => {
+  const textCheck = assertNoCprInFreeText(data.title, data.description);
+  if (textCheck !== true) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: textCheck, path: ["description"] });
+  }
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -38,6 +59,9 @@ const selectClassName =
 export function CreateTicketForm({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [subCauses, setSubCauses] = useState<SubCause[]>([]);
+  const [selectedSubCauseIds, setSelectedSubCauseIds] = useState<string[]>([]);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const {
     register,
     handleSubmit,
@@ -48,6 +72,8 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
     defaultValues: {
       ticket_type: "incident",
       priority: "medium",
+      is_major: false,
+      gdpr_consent: false,
     },
   });
 
@@ -56,6 +82,35 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
     const category = categories.find((item) => item.id === categoryId);
     return category?.subcategories ?? [];
   }, [categories, categoryId]);
+
+  useEffect(() => {
+    setSelectedSubCauseIds([]);
+    if (!categoryId) {
+      setSubCauses([]);
+      return;
+    }
+    let cancelled = false;
+    apiGet<SubCause[]>(`/api/v1/sub-causes?category_id=${categoryId}`)
+      .then((data) => {
+        if (!cancelled) {
+          setSubCauses(data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSubCauses([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId]);
+
+  function toggleSubCause(id: string) {
+    setSelectedSubCauseIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  }
 
   async function onSubmit(values: FormValues) {
     setError(null);
@@ -66,9 +121,21 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
       priority: values.priority,
       category_id: values.category_id || null,
       subcategory_id: values.subcategory_id || null,
+      sub_cause_ids: selectedSubCauseIds,
+      is_major: values.is_major,
+      gdpr_consent: true,
+      subject_cpr: values.subject_cpr?.trim() || null,
     };
     try {
       const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append("file", attachmentFile);
+        await apiPostForm<Attachment>(
+          `/api/v1/tickets/${ticket.id}/attachments`,
+          formData,
+        );
+      }
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
     } catch (err) {
@@ -77,11 +144,11 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Opret ny sag</CardTitle>
+    <Card className="star-section-card overflow-hidden border-t-4 border-t-star-blue">
+      <CardHeader className="bg-star-blue-light border-b">
+        <CardTitle className="text-star-navy">Opret ny sag</CardTitle>
         <CardDescription>
-          Udfyld felterne — sagen routes automatisk til det rigtige team.
+          Vælg kategori og underårsager — store sager vises i kolonner på forsiden.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -157,6 +224,84 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
           </div>
 
           <div className="space-y-2">
+            <Label>Underårsager</Label>
+            {subCauses.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Vælg en kategori for at se underårsager.
+              </p>
+            ) : (
+              <ul className="border-input max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+                {subCauses.map((sc) => (
+                  <li key={sc.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      id={`sc-${sc.id}`}
+                      checked={selectedSubCauseIds.includes(sc.id)}
+                      onChange={() => toggleSubCause(sc.id)}
+                      className="size-4 rounded border"
+                    />
+                    <label htmlFor={`sc-${sc.id}`} className="cursor-pointer">
+                      {sc.name_da}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="size-4 rounded border" {...register("is_major")} />
+            <span>Stor sag (vises i kolonner til højre på forsiden)</span>
+          </label>
+
+          <div className="space-y-2">
+            <Label htmlFor="subject_cpr">CPR-nummer (valgfrit)</Label>
+            <Input
+              id="subject_cpr"
+              placeholder="DDMMYY-XXXX"
+              autoComplete="off"
+              {...register("subject_cpr")}
+            />
+            {errors.subject_cpr ? (
+              <p className="text-destructive text-sm">{errors.subject_cpr.message}</p>
+            ) : (
+              <p className="text-muted-foreground text-xs">
+                CPR må kun angives her — ikke i titel eller beskrivelse.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="attachment">Vedhæft dokument (valgfrit)</Label>
+            <Input
+              id="attachment"
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx"
+              onChange={(event) => {
+                setAttachmentFile(event.target.files?.[0] ?? null);
+              }}
+            />
+            <p className="text-muted-foreground text-xs">
+              Filen virusscannes før sagsbehandlere kan åbne den. Max 10 MB.
+            </p>
+          </div>
+
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="mt-1 size-4 rounded border"
+              {...register("gdpr_consent")}
+            />
+            <span>
+              Jeg giver samtykke til, at STAR behandler personoplysninger i denne sag i
+              overensstemmelse med GDPR (påkrævet).
+            </span>
+          </label>
+          {errors.gdpr_consent ? (
+            <p className="text-destructive text-sm">{errors.gdpr_consent.message}</p>
+          ) : null}
+
+          <div className="space-y-2">
             <Label htmlFor="description">Beskrivelse</Label>
             <Textarea id="description" rows={6} {...register("description")} />
             {errors.description ? (
@@ -168,7 +313,11 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
 
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-          <Button type="submit" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="bg-star-blue hover:bg-star-navy rounded-sm font-semibold"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Opretter…" : "Opret sag"}
           </Button>
         </form>
@@ -176,4 +325,3 @@ export function CreateTicketForm({ categories }: { categories: Category[] }) {
     </Card>
   );
 }
-

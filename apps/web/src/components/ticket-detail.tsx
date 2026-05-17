@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-import { CommentForm } from "@/components/comment-form";
+import { TicketActivityPanel } from "@/components/ticket-activity-panel";
+import { TicketComments } from "@/components/ticket-comments";
+import { TicketAttachments } from "@/components/ticket-attachments";
+import { TicketAssignmentForm } from "@/components/ticket-assignment-form";
+import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketStatusForm } from "@/components/ticket-status-form";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import { isStaff } from "@/lib/auth";
+import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
 import type { User } from "@/types/user";
 
@@ -28,11 +33,14 @@ function formatDate(iso: string | null): string {
 export function TicketDetailView({
   ticket,
   currentUser,
+  teams = [],
 }: {
   ticket: TicketDetail;
   currentUser: User | null;
+  teams?: Team[];
 }) {
   const staff = isStaff(currentUser);
+  const showAttachments = (ticket.attachments?.length ?? 0) > 0;
   return (
     <div className="space-y-6">
       <div>
@@ -47,11 +55,17 @@ export function TicketDetailView({
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant="outline">{statusLabel(ticket.status)}</Badge>
           <Badge>{priorityLabel(ticket.priority)}</Badge>
+          {ticket.is_major ? <Badge variant="destructive">Stor sag</Badge> : null}
           {ticket.escalation_level > 0 ? (
             <Badge variant="destructive">
               Eskalering niveau {ticket.escalation_level}
             </Badge>
           ) : null}
+          {(ticket.sub_causes ?? []).map((sc) => (
+            <Badge key={sc.id} variant="secondary">
+              {sc.name_da}
+            </Badge>
+          ))}
         </div>
       </div>
 
@@ -83,44 +97,61 @@ export function TicketDetailView({
             </p>
             <p>
               <span className="text-muted-foreground">Oprettet:</span>{" "}
-              {formatDate(ticket.created_at)}
+              {formatDate(ticket.timestamps?.created_at ?? ticket.created_at)}
             </p>
+            <p>
+              <span className="text-muted-foreground">Senest opdateret:</span>{" "}
+              {formatDate(ticket.timestamps?.updated_at ?? ticket.updated_at ?? null)}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Gruppe:</span>{" "}
+              {ticket.assigned_team_name ?? "—"}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Sagsbehandler:</span>{" "}
+              {ticket.assigned_user_name ?? "—"}
+            </p>
+            {ticket.gdpr_consent ? (
+              <p>
+                <span className="text-muted-foreground">GDPR-samtykke:</span>{" "}
+                {formatDate(ticket.gdpr_consent_at)}
+              </p>
+            ) : null}
+            {ticket.subject_cpr ? (
+              <p>
+                <span className="text-muted-foreground">CPR:</span>{" "}
+                <span className="font-mono">{ticket.subject_cpr}</span>
+              </p>
+            ) : null}
+            <TicketMetadataForm ticket={ticket} />
             {staff ? (
-              <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
+              <>
+                <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
+                <TicketAssignmentForm
+                  ticketId={ticket.id}
+                  teams={teams}
+                  currentTeamId={ticket.assigned_team_id}
+                  currentUserId={ticket.assigned_user_id}
+                />
+              </>
             ) : null}
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kommentarer</CardTitle>
-          <CardDescription>{ticket.comments.length} kommentar(er)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {ticket.comments.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen kommentarer endnu.</p>
-          ) : (
-            <ul className="space-y-4">
-              {ticket.comments.map((comment) => (
-                <li key={comment.id} className="border-b pb-4 last:border-0">
-                  <div className="mb-1 flex items-center gap-2 text-xs">
-                    <span className="font-medium">{comment.author_display_name}</span>
-                    <span className="text-muted-foreground">
-                      {formatDate(comment.created_at)}
-                    </span>
-                    {comment.is_internal ? (
-                      <Badge variant="secondary">Intern</Badge>
-                    ) : null}
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-          <CommentForm ticketId={ticket.id} allowInternal={staff} />
-        </CardContent>
-      </Card>
+      {showAttachments ? (
+        <TicketAttachments
+          ticketId={ticket.id}
+          attachments={ticket.attachments ?? []}
+          staffView={staff}
+        />
+      ) : null}
+
+      {ticket.timestamps && ticket.activity ? (
+        <TicketActivityPanel timestamps={ticket.timestamps} activity={ticket.activity} />
+      ) : null}
+
+      <TicketComments ticketId={ticket.id} comments={ticket.comments} staffView={staff} />
     </div>
   );
 }

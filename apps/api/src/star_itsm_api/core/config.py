@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     cron_secret: str | None = Field(default=None, validation_alias="CRON_SECRET")
     webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
+    upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
 
     @property
     def cors_origins(self) -> list[str]:

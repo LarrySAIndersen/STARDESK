@@ -79,6 +79,30 @@ export async function apiPost<T>(
   return response.json() as Promise<T>;
 }
 
+export async function apiPostForm<T>(
+  path: string,
+  formData: FormData,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    ...init,
+    headers: authHeaders(init?.headers),
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response));
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function attachmentDownloadUrl(ticketId: string, attachmentId: string): string {
+  return buildUrl(`/api/v1/tickets/${ticketId}/attachments/${attachmentId}/download`);
+}
+
 export async function apiPatch<T>(
   path: string,
   body: unknown,

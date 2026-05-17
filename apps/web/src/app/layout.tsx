@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
 import "./globals.css";
@@ -30,10 +31,11 @@ export default function RootLayout({
   return (
     <html lang="da">
       <body
-        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} min-h-screen antialiased`}
+        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} flex min-h-screen flex-col antialiased`}
       >
         <SiteHeader />
-        {children}
+        <div className="bg-star-blue-light/30 flex-1">{children}</div>
+        <SiteFooter />
       </body>
     </html>
   );

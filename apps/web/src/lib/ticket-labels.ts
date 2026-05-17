@@ -22,3 +22,13 @@ export function statusLabel(status: string): string {
 export function priorityLabel(priority: string): string {
   return PRIORITY_LABELS[priority] ?? priority;
 }
+
+const TICKET_TYPE_LABELS: Record<string, string> = {
+  incident: "Incident",
+  service_request: "Serviceanmodning",
+  problem: "Problem",
+};
+
+export function ticketTypeLabel(ticketType: string): string {
+  return TICKET_TYPE_LABELS[ticketType] ?? ticketType;
+}

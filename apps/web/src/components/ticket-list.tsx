@@ -1,47 +1,31 @@
-import Link from "next/link";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { AgentWorkspace } from "@/components/agent-workspace";
+import { MajorTicketsBoard } from "@/components/major-tickets-board";
+import { StarSectionCard } from "@/components/star/section-card";
+import { StarLinkArrow } from "@/components/star/link-arrow";
+import { ItilTicketTable } from "@/components/itil-ticket-table";
 import { apiGetServer } from "@/lib/api-server";
-import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
+import { isStaff, USER_COOKIE } from "@/lib/auth";
 import type { Ticket } from "@/types/ticket";
-
-function formatDate(iso: string): string {
-  return new Intl.DateTimeFormat("da-DK", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(iso));
-}
-
-function priorityVariant(
-  priority: string,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (priority === "critical" || priority === "high") {
-    return "destructive";
-  }
-  if (priority === "medium") {
-    return "default";
-  }
-  return "secondary";
-}
+import type { User } from "@/types/user";
+import { cookies } from "next/headers";
 
 export async function TicketList() {
   let tickets: Ticket[] = [];
   let fetchError: string | null = null;
+  let currentUser: User | null = null;
+
+  const userCookie = (await cookies()).get(USER_COOKIE)?.value;
+  if (userCookie) {
+    try {
+      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
+    } catch {
+      currentUser = null;
+    }
+  }
+
+  if (isStaff(currentUser)) {
+    return <AgentWorkspace currentUser={currentUser} />;
+  }
 
   try {
     tickets = await apiGetServer<Ticket[]>("/api/v1/tickets");
@@ -49,69 +33,29 @@ export async function TicketList() {
     fetchError = "Kunne ikke hente sager fra API. Tjek at backend kører.";
   }
 
+  const regularTickets = tickets.filter((ticket) => !ticket.is_major);
+  const listSubtitle = fetchError
+    ? "Forbindelse til API mislykkedes"
+    : currentUser?.organization_name
+      ? `${regularTickets.length} sag${regularTickets.length === 1 ? "" : "er"} i ${currentUser.organization_name}`
+      : `${regularTickets.length} sag${regularTickets.length === 1 ? "" : "er"}`;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sager</CardTitle>
-        <CardDescription>
-          {fetchError
-            ? "Forbindelse til API mislykkedes"
-            : `${tickets.length} sag${tickets.length === 1 ? "" : "er"}`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="grid gap-8 lg:grid-cols-[1fr_minmax(300px,380px)]">
+      <StarSectionCard variant="navy" title="Dine sager" description={listSubtitle}>
         {fetchError ? (
-          <p className="text-destructive text-sm">{fetchError}</p>
-        ) : tickets.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ingen sager endnu</p>
+          <p className="text-star-red text-sm">{fetchError}</p>
+        ) : regularTickets.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Ingen sager endnu.</p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sagsnr.</TableHead>
-                <TableHead>Titel</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Prioritet</TableHead>
-                <TableHead>Oprettet</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tickets.map((ticket) => (
-                <TableRow key={ticket.id}>
-                  <TableCell className="font-mono text-xs">
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="hover:underline"
-                    >
-                      {ticket.ticket_number}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    <Link
-                      href={`/tickets/${ticket.id}`}
-                      className="hover:underline"
-                    >
-                      {ticket.title}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{statusLabel(ticket.status)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={priorityVariant(ticket.priority)}>
-                      {priorityLabel(ticket.priority)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatDate(ticket.created_at)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ItilTicketTable tickets={regularTickets} />
         )}
-      </CardContent>
-    </Card>
+        <div className="mt-6 border-t pt-4">
+          <StarLinkArrow href="/tickets/new">Opret ny sag</StarLinkArrow>
+        </div>
+      </StarSectionCard>
+
+      <MajorTicketsBoard tickets={tickets} />
+    </div>
   );
 }
-

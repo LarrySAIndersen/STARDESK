@@ -54,12 +54,12 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Log ind på STARdesk</CardTitle>
-        <CardDescription>
+    <Card className="star-section-card w-full max-w-md overflow-hidden border-t-4 border-t-star-red shadow-lg">
+      <CardHeader className="bg-star-navy text-white">
+        <CardTitle className="text-white">Log ind på STARdesk</CardTitle>
+        <CardDescription className="text-white/80">
           Vælg en demo-bruger nedenfor. Adgangskode for alle:{" "}
-          <span className="font-mono">Stardesk2026!</span>
+          <span className="font-mono text-white">Stardesk2026!</span>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -87,7 +87,11 @@ export function LoginForm() {
             />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            className="bg-star-blue hover:bg-star-navy w-full rounded-sm font-semibold"
+            disabled={isSubmitting}
+          >
             {isSubmitting ? "Logger ind…" : "Log ind"}
           </Button>
         </form>

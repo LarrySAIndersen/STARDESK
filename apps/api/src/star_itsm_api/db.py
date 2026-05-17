@@ -40,6 +40,10 @@ if settings.database_url:
         _db_url,
         echo=False,
         connect_args=_connect_args(_raw_url),
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        pool_recycle=300,
     )
     async_session_factory = async_sessionmaker(
         engine,

@@ -21,15 +21,21 @@ export function UserMenu() {
   }
 
   return (
-    <div className="flex items-center gap-2 border-l pl-3">
+    <div className="border-star-blue/30 ml-2 flex items-center gap-2 border-l pl-3">
       <div className="hidden text-right sm:block">
-        <p className="text-sm font-medium leading-none">{user.display_name}</p>
-        <p className="text-muted-foreground text-xs">{user.role_label}</p>
+        <p className="text-star-navy text-sm font-medium leading-none">{user.display_name}</p>
+        <p className="text-star-blue text-xs">{user.role_label}</p>
       </div>
-      <Badge variant="outline" className="sm:hidden">
+      <Badge variant="outline" className="border-star-blue text-star-blue sm:hidden">
         {user.role_label}
       </Badge>
-      <Button type="button" variant="ghost" size="sm" onClick={logout}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-star-navy hover:text-star-blue"
+        onClick={logout}
+      >
         Log ud
       </Button>
     </div>

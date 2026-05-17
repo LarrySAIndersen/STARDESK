@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, SmallInteger, String, Text
+from sqlalchemy import Boolean, DateTime, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,7 @@ class Ticket(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     priority: Mapped[str] = mapped_column(String(16), nullable=False)
     reporter_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     assigned_team_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     assigned_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
@@ -27,10 +28,22 @@ class Ticket(Base):
     sla_policy_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     response_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolution_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    in_progress_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    on_hold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    gdpr_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    gdpr_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    subject_cpr: Mapped[str | None] = mapped_column(String(11), nullable=True)
+    is_major: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     escalation_level: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     last_escalation_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

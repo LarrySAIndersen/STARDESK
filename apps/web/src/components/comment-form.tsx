@@ -7,18 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiPost } from "@/lib/api";
-import type { Comment } from "@/types/comment";
+import type { Comment, CommentVisibility } from "@/types/comment";
 
 export function CommentForm({
   ticketId,
-  allowInternal = false,
+  staffMode = false,
 }: {
   ticketId: string;
-  allowInternal?: boolean;
+  /** Agent/admin: choose internal vs external (customer portal). */
+  staffMode?: boolean;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
-  const [isInternal, setIsInternal] = useState(false);
+  const [visibility, setVisibility] = useState<CommentVisibility>("external");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,10 +33,11 @@ export function CommentForm({
     try {
       await apiPost<Comment>(`/api/v1/tickets/${ticketId}/comments`, {
         body,
-        is_internal: isInternal,
+        visibility: staffMode ? visibility : "external",
+        is_internal: staffMode ? visibility === "internal" : false,
       });
       setBody("");
-      setIsInternal(false);
+      setVisibility("external");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme kommentar");
@@ -45,32 +47,86 @@ export function CommentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {staffMode ? (
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-medium">Opdateringstype</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label
+              className={`border-input flex cursor-pointer gap-3 rounded-md border p-3 text-sm ${
+                visibility === "external"
+                  ? "border-star-blue ring-star-blue/30 ring-2"
+                  : ""
+              }`}
+            >
+              <input
+                type="radio"
+                name="visibility"
+                value="external"
+                checked={visibility === "external"}
+                onChange={() => setVisibility("external")}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">Ekstern</span>
+                <span className="text-muted-foreground mt-0.5 block text-xs">
+                  Synlig i kundeportalen for indmelder og organisationen.
+                </span>
+              </span>
+            </label>
+            <label
+              className={`border-input flex cursor-pointer gap-3 rounded-md border p-3 text-sm ${
+                visibility === "internal"
+                  ? "border-star-blue ring-star-blue/30 ring-2"
+                  : ""
+              }`}
+            >
+              <input
+                type="radio"
+                name="visibility"
+                value="internal"
+                checked={visibility === "internal"}
+                onChange={() => setVisibility("internal")}
+                className="mt-0.5"
+              />
+              <span>
+                <span className="font-medium">Intern</span>
+                <span className="text-muted-foreground mt-0.5 block text-xs">
+                  Kun synlig for agenter og administratorer.
+                </span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+      ) : null}
+
       <div className="space-y-2">
-        <Label htmlFor="comment-body">Ny kommentar</Label>
+        <Label htmlFor="comment-body">
+          {staffMode
+            ? visibility === "internal"
+              ? "Intern note"
+              : "Ekstern opdatering"
+            : "Din besked"}
+        </Label>
         <Textarea
           id="comment-body"
           rows={4}
           value={body}
           onChange={(event) => setBody(event.target.value)}
-          placeholder="Skriv en opdatering…"
+          placeholder={
+            staffMode
+              ? visibility === "internal"
+                ? "Intern note til kolleger…"
+                : "Besked til indmelder (vises i kundeportalen)…"
+              : "Skriv en opdatering…"
+          }
         />
       </div>
-      {allowInternal ? (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={isInternal}
-            onChange={(event) => setIsInternal(event.target.checked)}
-          />
-          Intern note (kun synlig for agenter)
-        </label>
-      ) : null}
+
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button type="submit" disabled={isSubmitting || !body.trim()}>
-        {isSubmitting ? "Gemmer…" : "Tilføj kommentar"}
+        {isSubmitting ? "Gemmer…" : staffMode ? "Gem opdatering" : "Tilføj besked"}
       </Button>
     </form>
   );
 }
-

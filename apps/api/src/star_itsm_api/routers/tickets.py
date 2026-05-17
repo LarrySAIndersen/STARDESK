@@ -2,7 +2,8 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,28 +17,79 @@ from star_itsm_api.core.security import (
 )
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.comment import TicketComment
+from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
+from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.schemas.comment import CommentCreate, CommentRead
 from star_itsm_api.schemas.ticket import (
+    CLOSED_STATUSES,
+    TicketAssignmentUpdate,
     TicketCreate,
     TicketDetailRead,
+    TicketMetadataUpdate,
     TicketRead,
     TicketStatusUpdate,
 )
+from star_itsm_api.services.sub_causes import (
+    replace_ticket_sub_causes,
+    validate_sub_cause_ids,
+)
+from star_itsm_api.services.ticket_read import ticket_to_detail_read, ticket_to_read, tickets_to_read_list
+from star_itsm_api.services.org_access import (
+    apply_agent_team_list_filter,
+    apply_ticket_list_filter,
+    get_user_organization_id,
+    user_can_access_ticket,
+)
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import compute_sla_due_dates
+from star_itsm_api.services.teams import user_in_team
+from star_itsm_api.services.reports import is_reopen_transition
+from star_itsm_api.models.attachment import Attachment
+from star_itsm_api.services.attachments import (
+    list_ticket_attachments_for_detail,
+    resolve_download_path,
+    save_ticket_upload,
+)
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
+from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket_timestamps_read
+from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
+from star_itsm_api.services.ticket_timestamps import (
+    apply_status_milestone_timestamps,
+    maybe_set_assigned_at,
+    maybe_set_first_response,
+    touch_ticket_updated,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-def _ensure_ticket_access(ticket: Ticket, user: User) -> None:
-    if user.role == ROLE_SUBMITTER and ticket.reporter_user_id != user.id:
+async def _ensure_ticket_access(
+    db: AsyncSession,
+    ticket: Ticket,
+    user: User,
+) -> None:
+    if not await user_can_access_ticket(db, user, ticket):
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+async def _assignment_names(
+    db: AsyncSession,
+    ticket: Ticket,
+) -> tuple[str | None, str | None]:
+    team_name: str | None = None
+    user_name: str | None = None
+    if ticket.assigned_team_id:
+        team = await db.get(Team, ticket.assigned_team_id)
+        team_name = team.name if team else None
+    if ticket.assigned_user_id:
+        assignee = await db.get(User, ticket.assigned_user_id)
+        user_name = assignee.display_name if assignee else None
+    return team_name, user_name
 
 
 async def _comment_to_read(
@@ -49,10 +101,13 @@ async def _comment_to_read(
     if hide_internal and comment.is_internal:
         return None
     author = await db.get(User, comment.author_user_id)
+    visibility = "internal" if comment.is_internal else "external"
     return CommentRead(
         id=comment.id,
         body=comment.body,
         is_internal=comment.is_internal,
+        visibility=visibility,
+        visibility_label_da="Intern" if comment.is_internal else "Ekstern (kundeportal)",
         author_display_name=author.display_name if author else "Ukendt",
         created_at=comment.created_at,
     )
@@ -60,16 +115,26 @@ async def _comment_to_read(
 
 @router.get("", response_model=list[TicketRead])
 async def list_tickets(
+    major_open: bool = Query(
+        default=False,
+        description="Open major incidents for agent banner (staff only)",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
         stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
-        if current_user.role == ROLE_SUBMITTER:
-            stmt = stmt.where(Ticket.reporter_user_id == current_user.id)
+        stmt = apply_ticket_list_filter(stmt, current_user)
+        if major_open:
+            if current_user.role not in {ROLE_AGENT, ROLE_ADMIN}:
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            stmt = stmt.where(Ticket.is_major.is_(True))
+            stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+        elif current_user.role == ROLE_AGENT:
+            stmt = await apply_agent_team_list_filter(db, stmt, current_user)
         stmt = stmt.order_by(Ticket.created_at.desc())
         result = await db.execute(stmt)
-        return [TicketRead.model_validate(row) for row in result.scalars().all()]
+        return await tickets_to_read_list(db, list(result.scalars().all()))
     except HTTPException:
         raise
     except Exception:
@@ -97,6 +162,11 @@ async def create_ticket(
         category_id=payload.category_id,
         subcategory_id=payload.subcategory_id,
     )
+    await validate_sub_cause_ids(
+        db,
+        payload.sub_cause_ids,
+        category_id=payload.category_id,
+    )
     now = datetime.now(UTC)
     ticket = Ticket(
         id=uuid.uuid4(),
@@ -107,6 +177,7 @@ async def create_ticket(
         status="assigned" if routing.assigned_team_id else "new",
         priority=routing.priority,
         reporter_user_id=current_user.id,
+        organization_id=get_user_organization_id(current_user),
         assigned_team_id=routing.assigned_team_id,
         assigned_user_id=routing.assigned_user_id,
         category_id=payload.category_id,
@@ -116,10 +187,20 @@ async def create_ticket(
         response_due_at=sla.response_due_at,
         resolution_due_at=sla.resolution_due_at,
         escalation_level=0,
+        gdpr_consent=payload.gdpr_consent,
+        gdpr_consent_at=now,
+        subject_cpr=payload.subject_cpr,
+        is_major=payload.is_major,
         created_at=now,
+        updated_at=now,
         deleted_at=None,
     )
     db.add(ticket)
+    await db.flush()
+    if ticket.status == "assigned":
+        maybe_set_assigned_at(ticket, now=now)
+    if payload.sub_cause_ids:
+        await replace_ticket_sub_causes(db, ticket.id, payload.sub_cause_ids)
     db.add(
         TicketEvent(
             id=uuid.uuid4(),
@@ -132,7 +213,7 @@ async def create_ticket(
     )
     await db.commit()
     await db.refresh(ticket)
-    return TicketRead.model_validate(ticket)
+    return await ticket_to_read(db, ticket)
 
 
 @router.get("/{ticket_id}", response_model=TicketDetailRead)
@@ -144,7 +225,7 @@ async def get_ticket(
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    _ensure_ticket_access(ticket, current_user)
+    await _ensure_ticket_access(db, ticket, current_user)
 
     comments_result = await db.execute(
         select(TicketComment)
@@ -161,16 +242,94 @@ async def get_ticket(
         if read is not None:
             comments.append(read)
 
-    return TicketDetailRead(
-        **TicketRead.model_validate(ticket).model_dump(),
-        description=ticket.description,
-        category_id=ticket.category_id,
-        subcategory_id=ticket.subcategory_id,
-        assigned_team_id=ticket.assigned_team_id,
-        response_due_at=ticket.response_due_at,
-        resolution_due_at=ticket.resolution_due_at,
-        escalation_level=ticket.escalation_level,
-        comments=comments,
+    team_name, user_name = await _assignment_names(db, ticket)
+    attachments = await list_ticket_attachments_for_detail(
+        db,
+        ticket_id,
+        current_user,
+        reporter_user_id=ticket.reporter_user_id,
+    )
+    activity = await build_ticket_activity(db, ticket, current_user)
+    return await ticket_to_detail_read(
+        db,
+        ticket,
+        extra={
+            "description": ticket.description,
+            "category_id": ticket.category_id,
+            "subcategory_id": ticket.subcategory_id,
+            "assigned_team_id": ticket.assigned_team_id,
+            "assigned_team_name": team_name,
+            "assigned_user_id": ticket.assigned_user_id,
+            "assigned_user_name": user_name,
+            "response_due_at": ticket.response_due_at,
+            "resolution_due_at": ticket.resolution_due_at,
+            "escalation_level": ticket.escalation_level,
+            "attachments": attachments,
+            "comments": comments,
+            "timestamps": ticket_timestamps_read(ticket),
+            "activity": activity,
+            **ticket_sensitive_fields(ticket, current_user),
+        },
+    )
+
+
+@router.post("/{ticket_id}/attachments", response_model=AttachmentRead, status_code=201)
+async def upload_ticket_attachment(
+    ticket_id: uuid.UUID,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+):
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    if not is_staff(current_user) and current_user.id != ticket.reporter_user_id:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    now = datetime.now(UTC)
+    read = await save_ticket_upload(db, ticket_id=ticket_id, user=current_user, upload=file)
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket_id,
+            actor_user_id=current_user.id,
+            event_type="ticket.attachment.uploaded",
+            payload={
+                "attachment_id": str(read.id),
+                "filename": read.filename,
+                "scan_status": read.scan_status,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
+    return read
+
+
+@router.get("/{ticket_id}/attachments/{attachment_id}/download")
+async def download_ticket_attachment(
+    ticket_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    if not is_staff(current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    attachment = await db.get(Attachment, attachment_id)
+    if attachment is None or attachment.ticket_id != ticket_id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+
+    path = resolve_download_path(attachment)
+    return FileResponse(
+        path,
+        media_type=attachment.content_type,
+        filename=attachment.filename,
     )
 
 
@@ -184,21 +343,152 @@ async def update_ticket_status(
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
 
+    previous_status = ticket.status
+    now = datetime.now(UTC)
     ticket.status = payload.status
+    apply_status_milestone_timestamps(ticket, payload.status, now=now)
+
+    event_type = "ticket.status_changed"
+    if is_reopen_transition(previous_status, payload.status):
+        event_type = "ticket.reopened"
+
     db.add(
         TicketEvent(
             id=uuid.uuid4(),
             ticket_id=ticket.id,
             actor_user_id=current_user.id,
-            event_type="ticket.status_changed",
-            payload={"status": payload.status},
-            created_at=datetime.now(UTC),
+            event_type=event_type,
+            payload={
+                "status": payload.status,
+                "previous_status": previous_status,
+            },
+            created_at=now,
         )
     )
     await db.commit()
     await db.refresh(ticket)
-    return TicketRead.model_validate(ticket)
+    return await ticket_to_read(db, ticket)
+
+
+@router.patch("/{ticket_id}/metadata", response_model=TicketDetailRead)
+async def update_ticket_metadata(
+    ticket_id: uuid.UUID,
+    payload: TicketMetadataUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    updates = payload.model_dump(exclude_unset=True)
+    if "is_major" in updates and updates["is_major"] is not None:
+        ticket.is_major = updates["is_major"]
+    if "sub_cause_ids" in updates:
+        sub_cause_ids = updates["sub_cause_ids"] or []
+        await validate_sub_cause_ids(
+            db,
+            sub_cause_ids,
+            category_id=ticket.category_id,
+        )
+        await replace_ticket_sub_causes(db, ticket.id, sub_cause_ids)
+
+    if updates:
+        now = datetime.now(UTC)
+        touch_ticket_updated(ticket, now)
+        db.add(
+            TicketEvent(
+                id=uuid.uuid4(),
+                ticket_id=ticket.id,
+                actor_user_id=current_user.id,
+                event_type="ticket.metadata_changed",
+                payload={"fields": list(updates.keys())},
+                created_at=now,
+            )
+        )
+    await db.commit()
+    return await get_ticket(ticket_id, db, current_user)
+
+
+@router.patch("/{ticket_id}/assignment", response_model=TicketDetailRead)
+async def assign_ticket(
+    ticket_id: uuid.UUID,
+    payload: TicketAssignmentUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    updates = payload.model_dump(exclude_unset=True)
+    team_id = ticket.assigned_team_id
+    user_id = ticket.assigned_user_id
+    if "assigned_team_id" in updates:
+        team_id = updates["assigned_team_id"]
+    if "assigned_user_id" in updates:
+        user_id = updates["assigned_user_id"]
+
+    if team_id is not None:
+        team = await db.get(Team, team_id)
+        if team is None or not team.is_active:
+            raise HTTPException(status_code=400, detail="Invalid group")
+        if current_user.role == ROLE_AGENT:
+            actor_org = get_user_organization_id(current_user)
+            team_org = getattr(team, "organization_id", None)
+            in_org_team = actor_org is not None and team_org == actor_org
+            if not in_org_team and not await user_in_team(db, current_user.id, team_id):
+                raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    if user_id is not None:
+        assignee = await db.get(User, user_id)
+        if assignee is None or assignee.deleted_at is not None or not assignee.is_active:
+            raise HTTPException(status_code=400, detail="Invalid user")
+        if assignee.role == ROLE_SUBMITTER:
+            raise HTTPException(status_code=400, detail="Cannot assign to submitter")
+        actor_org = get_user_organization_id(current_user)
+        assignee_org = get_user_organization_id(assignee)
+        if actor_org is not None and assignee_org != actor_org:
+            raise HTTPException(status_code=400, detail="User is not in your organization")
+        if team_id is not None and not await user_in_team(db, user_id, team_id):
+            raise HTTPException(
+                status_code=400,
+                detail="User is not a member of the selected group",
+            )
+
+    previous = {
+        "assigned_team_id": str(ticket.assigned_team_id) if ticket.assigned_team_id else None,
+        "assigned_user_id": str(ticket.assigned_user_id) if ticket.assigned_user_id else None,
+    }
+    ticket.assigned_team_id = team_id
+    ticket.assigned_user_id = user_id
+    now = datetime.now(UTC)
+    if ticket.status == "new" and (team_id or user_id):
+        ticket.status = "assigned"
+        apply_status_milestone_timestamps(ticket, "assigned", now=now)
+    maybe_set_assigned_at(ticket, now=now)
+
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.assigned",
+            payload={
+                "previous": previous,
+                "assigned_team_id": str(team_id) if team_id else None,
+                "assigned_user_id": str(user_id) if user_id else None,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
+    await db.refresh(ticket)
+    return await get_ticket(ticket_id, db, current_user)
 
 
 @router.post("/{ticket_id}/comments", response_model=CommentRead, status_code=201)
@@ -211,9 +501,16 @@ async def create_comment(
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    _ensure_ticket_access(ticket, current_user)
+    await _ensure_ticket_access(db, ticket, current_user)
 
-    is_internal = payload.is_internal if is_staff(current_user) else False
+    if is_staff(current_user):
+        is_internal = (
+            payload.visibility == "internal"
+            if payload.visibility is not None
+            else payload.is_internal
+        )
+    else:
+        is_internal = False
 
     now = datetime.now(UTC)
     comment = TicketComment(
@@ -226,6 +523,13 @@ async def create_comment(
         deleted_at=None,
     )
     db.add(comment)
+    maybe_set_first_response(
+        ticket,
+        is_staff=is_staff(current_user),
+        is_internal=is_internal,
+        now=now,
+    )
+    touch_ticket_updated(ticket, now)
     db.add(
         TicketEvent(
             id=uuid.uuid4(),
