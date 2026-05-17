@@ -60,15 +60,25 @@ async def _table_exists(engine: AsyncEngine, table_name: str) -> bool:
         return result.scalar() is not None
 
 
+_REQUIRED_TICKET_COLUMNS = (
+    "organization_id",
+    "is_major",
+    "gdpr_consent",
+    "assigned_at",
+    "tags",
+    "semantic_topics",
+    "parent_ticket_id",
+    "is_shared",
+    "is_security_ticket",
+)
+
+
 async def _schema_needs_migration(engine: AsyncEngine) -> bool:
     """True when bundled SQL migrations should run (detail/list depend on these)."""
-    if not await _schema_has_column(engine, "is_security_ticket"):
-        return True
+    for column in _REQUIRED_TICKET_COLUMNS:
+        if not await _schema_has_column(engine, column):
+            return True
     if not await _schema_has_column(engine, "scan_status", table_name="attachments"):
-        return True
-    if not await _schema_has_column(engine, "assigned_at"):
-        return True
-    if not await _schema_has_column(engine, "tags"):
         return True
     if not await _table_exists(engine, "comment_reactions"):
         return True

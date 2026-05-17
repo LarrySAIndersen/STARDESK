@@ -36,10 +36,9 @@ def effective_response_due_at(ticket: Ticket) -> datetime | None:
 def sla_fields_for_ticket(ticket: Ticket) -> dict[str, datetime | int | bool | None]:
     resolution_due = effective_resolution_due_at(ticket)
     response_due = effective_response_due_at(ticket)
-    remaining = sla_remaining_seconds(
-        resolution_due,
-        status=ticket.status,
-    )
+    remaining: int | None = None
+    if ticket.status not in CLOSED_STATUSES:
+        remaining = sla_remaining_seconds(resolution_due)
     return {
         "response_due_at": response_due,
         "resolution_due_at": resolution_due,
