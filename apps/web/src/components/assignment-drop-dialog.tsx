@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useId, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ export function AssignmentDropDialog({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors },
   } = useForm<AssignmentFormValues>({
     resolver: zodResolver(schema),
@@ -63,12 +63,12 @@ export function AssignmentDropDialog({
     defaultValues: {
       reason: "",
       faultDisplayed: false,
-      teamId: "",
+      teamId: teamId ?? "",
     },
   });
 
-  const watchedTeamId = watch("teamId");
-  const reasonValue = watch("reason");
+  const watchedTeamId = useWatch({ control, name: "teamId" }) ?? "";
+  const reasonValue = useWatch({ control, name: "reason" }) ?? "";
   const resolvedTeamId = teamId ?? watchedTeamId ?? "";
   const resolvedTeamName =
     teamName ?? teams.find((t) => t.id === resolvedTeamId)?.name ?? "";
