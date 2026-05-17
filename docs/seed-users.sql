@@ -39,4 +39,6 @@ ON CONFLICT (email) DO UPDATE SET
     display_name = EXCLUDED.display_name,
     role = EXCLUDED.role,
     password_hash = EXCLUDED.password_hash,
-    is_active = EXCLUDED.is_active;
+    is_active = EXCLUDED.is_active,
+    deleted_at = NULL,
+    updated_at = NOW();
