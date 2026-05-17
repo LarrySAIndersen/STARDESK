@@ -32,7 +32,7 @@ export function SiteHeaderNav() {
       <Button
         nativeButton={false}
         render={<Link href="/tickets/new" />}
-        className="bg-star-blue hover:bg-star-navy ml-2 rounded-sm px-4 font-semibold"
+        className="bg-primary hover:bg-primary/90 ml-2 rounded-lg px-4 font-semibold shadow-sm"
       >
         Opret sag
       </Button>

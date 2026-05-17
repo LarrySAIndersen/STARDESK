@@ -34,7 +34,7 @@ export default async function ReportsPage() {
   }
 
   return (
-    <main className="star-page">
+    <main className="mx-auto w-full max-w-7xl">
       <PageHero
         title="Rapporter"
         lead="Standardrapporter for Service Desk Manager — modtaget, igangsat, løst, lukket og genåbnet."

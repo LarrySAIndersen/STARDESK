@@ -32,7 +32,7 @@ function ReportKpiCard({
   sub?: string;
 }) {
   return (
-    <div className="star-section-card border-t-star-blue border-t-4 p-4">
+    <div className="ledger-card border-t-primary border-t-4 p-4">
       <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
         {label}
       </p>
@@ -74,7 +74,7 @@ function BucketCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`star-section-card border-t-4 p-4 text-left transition-shadow hover:shadow-md ${
+      className={`ledger-card border-t-4 p-4 text-left transition-shadow hover:shadow-md ${
         BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue"
       } ${active ? "ring-star-blue ring-2" : ""}`}
     >

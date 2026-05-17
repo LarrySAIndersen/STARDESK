@@ -5,10 +5,12 @@ import { LoginForm } from "@/components/login-form";
 import { TicketList } from "@/components/ticket-list";
 import { TicketListShell } from "@/components/ticket-list-shell";
 import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
-import { TOKEN_COOKIE } from "@/lib/auth";
+import { isStaff, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import type { User } from "@/types/user";
 
 export default async function HomePage() {
-  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get(TOKEN_COOKIE)?.value;
 
   if (!token) {
     return (
@@ -18,8 +20,19 @@ export default async function HomePage() {
     );
   }
 
+  let currentUser: User | null = null;
+  const userCookie = cookieStore.get(USER_COOKIE)?.value;
+  if (userCookie) {
+    try {
+      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
+    } catch {
+      currentUser = null;
+    }
+  }
+  const staff = isStaff(currentUser);
+
   return (
-    <main className="star-page">
+    <main className={staff ? "mx-auto w-full max-w-7xl" : "star-page"}>
       <Suspense fallback={<TicketListSkeleton />}>
         <TicketListShell>
           <TicketList />
