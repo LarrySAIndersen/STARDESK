@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import type { OperationsDashboard } from "@/types/dashboard";
 
 function ChartFallback() {
-  return <div className="bg-muted/40 h-48 animate-pulse rounded-sm" aria-hidden />;
+  return <div className="bg-muted/40 h-48 animate-pulse rounded-xl" aria-hidden />;
 }
 
 const Gauge = dynamic(
@@ -45,7 +45,7 @@ function OpsKpiCard({
   return (
     <div
       className={cn(
-        "star-section-card border-t-4 p-4",
+        "ledger-card border-t-4 p-4",
         accent,
         highlight && "ring-star-red/40 ring-2",
       )}
@@ -144,7 +144,7 @@ export function AgentOperationsDashboard({
             <div
               key={bucket.key}
               className={cn(
-                "star-section-card border-t-4 p-4",
+                "ledger-card border-t-4 p-4",
                 BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue",
               )}
             >
@@ -262,8 +262,8 @@ export function AgentOperationsDashboard({
           title="Åbne sager efter prioritet"
           items={dashboard.priority_breakdown}
         />
-        <div className="flex flex-col justify-center rounded-sm border border-star-blue/30 bg-star-blue-light px-6 py-6">
-          <p className="text-star-navy font-semibold">Klar til tildeling?</p>
+        <section className="ledger-card flex flex-col justify-center border-primary/20 bg-secondary/50">
+          <p className="text-foreground font-semibold">Klar til tildeling?</p>
           <p className="text-muted-foreground mt-1 text-sm">
             Scroll til sagstildeling og grupper — eller åbn standardrapporter med detaljer per
             pipeline-trin.
@@ -271,18 +271,18 @@ export function AgentOperationsDashboard({
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
               href="#dispatch-board"
-              className="bg-star-blue hover:bg-star-navy rounded-sm px-4 py-2 text-sm font-semibold text-white"
+              className="bg-primary hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm"
             >
               Gå til tildeling
             </Link>
             <Link
               href="/reports"
-              className="border-star-blue text-star-blue hover:bg-white rounded-sm border bg-white/80 px-4 py-2 text-sm font-semibold"
+              className="border-primary text-primary hover:bg-card rounded-lg border bg-card/80 px-4 py-2 text-sm font-semibold"
             >
               Standardrapporter
             </Link>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

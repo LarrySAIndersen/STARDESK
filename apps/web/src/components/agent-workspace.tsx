@@ -35,21 +35,21 @@ export async function AgentWorkspace() {
       <section
         id="operations-dashboard"
         aria-label="Driftsdashboard"
-        className="star-section-card star-section-card--accent overflow-hidden"
+        className="ledger-card overflow-hidden p-0"
       >
-        <div className="star-section-header border-b-0 pb-0">
+        <header className="border-border border-b px-6 py-5">
           <PageHero
             title="Driftsdashboard"
             lead="Nøgletal, sagspipeline og SLA — samme ITSM-logik som standardrapporter."
           />
-        </div>
-        <div className="star-section-body pt-2">
+        </header>
+        <section className="px-6 py-6">
           {dashboard ? (
             <AgentOperationsDashboard dashboard={dashboard} />
           ) : (
             <p className="text-muted-foreground text-sm">Dashboarddata er ikke tilgængelig.</p>
           )}
-        </div>
+        </section>
       </section>
 
       <section
