@@ -1,0 +1,130 @@
+# Instructions for Cursor — star-itsm-cloud
+
+Du arbejder på **star-itsm-cloud**, en cloud-prototype af STAR's ITSM-system.
+Læs `ARCHITECTURE.md` før du gør noget i denne repo.
+
+## Sprog
+
+- **Kode, database, API**: Engelsk
+- **UI-tekst, mail-templates, brugervendte tekster**: Dansk
+- **Commit messages**: Engelsk
+- **Kommentarer i kode**: Engelsk
+
+## Stack
+
+**apps/web/** - Next.js 15 (App Router) + TypeScript + React 19
+- UI: shadcn/ui + Tailwind CSS v4
+- Forms: react-hook-form + zod
+- API client: fetch wrapper i `src/lib/api.ts`
+- Deployes til Vercel
+
+**apps/api/** - Python 3.12 + FastAPI
+- ORM: SQLAlchemy 2.0 (async)
+- Migrations: Alembic
+- Schemas: Pydantic v2
+- Mail: Resend (gratis tier i prototype)
+- Deployes til Railway
+
+**Database** - PostgreSQL 16 på Neon (serverless)
+- Initial schema fra `init.sql` (kør én gang manuelt)
+- Alle videre ændringer via Alembic
+
+## Guardrails — stop og spørg
+
+**Spørg ALTID før du:**
+
+1. Overskriver/sletter:
+   - `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`
+   - `.env`, `.env.local`, `.env.production`
+   - `package.json`, `pyproject.toml`
+   - `vercel.json`, `railway.toml`, `Procfile`
+   - `next.config.*`, `tsconfig.json`
+   - Eksisterende Alembic migrations
+
+2. Kører destruktive DB-ops:
+   - `DROP`, `TRUNCATE`, `DELETE FROM` uden WHERE
+   - `ALTER TABLE` der dropper kolonner
+   - Manuelle migrations der ikke kan rulles tilbage
+
+3. Kører `rm -rf`, `git reset --hard`, `git push --force`
+
+4. Tilføjer nye top-level dependencies uden at sige hvorfor
+
+5. Ændrer environment variables eller secrets
+
+**Når du er i tvivl: stop, beskriv hvad du vil, vent på "ja".**
+
+## Konventioner
+
+### Python (apps/api)
+- snake_case for variabler/funktioner, PascalCase for klasser
+- Type hints på alle public functions (ingen `Any` uden kommentar)
+- Pydantic models for ALL request/response bodies
+- SQLAlchemy models i `models/`, Pydantic schemas i `schemas/`
+- Async overalt — kun `async def` for I/O
+
+### TypeScript (apps/web)
+- Server Components by default
+- `'use client'` kun når nødvendigt
+- `import type` for type-only imports
+- Ingen `any` — brug `unknown` + narrow
+
+### Database
+- snake_case, plural tabeller (`tickets`, ikke `ticket`)
+- Alle tabeller har `id` (UUID), `created_at`, `updated_at`
+- Soft delete via `deleted_at`
+- Foreign keys altid med eksplicit `ON DELETE` policy
+
+### API
+- REST, resource-orienteret under `/api/v1/`
+- Datofelter i ISO 8601 UTC
+- Paginering: `?page=1&page_size=50`, max 100
+- Fejl: RFC 7807 problem-details JSON
+
+## Deployment
+
+**apps/web → Vercel:**
+- Push til `main` triggerer auto-deploy
+- Preview deployments på alle pull requests
+- Root directory i Vercel settings: `apps/web`
+
+**apps/api → Railway:**
+- Push til `main` triggerer auto-deploy
+- Procfile definerer start-kommando
+- Root directory: `apps/api`
+
+**Database → Neon:**
+- Connection string i `DATABASE_URL` (Railway env)
+- Alembic migrations kører via Railway pre-deploy hook eller manuelt
+
+## Testing
+
+- Hver endpoint: mindst én happy-path test (pytest + httpx)
+- Mutations: mindst én auth-fejl test
+- Frontend: kritiske flows (opret ticket, vis liste) får E2E senere
+
+## Hvad du SKAL gøre når du begynder en task
+
+1. Læs `ARCHITECTURE.md` hvis du ikke har endnu
+2. Tjek om der findes lignende kode — ikke parallel-implementér
+3. Lav planen først (3-5 punkter) hvis task er > 30 min arbejde
+4. Skriv koden
+5. Kør tests og linter inden du siger du er færdig
+6. Rapporter: præcis hvilke filer er oprettet/ændret/slettet
+
+## Hvad du IKKE må uden at spørge
+
+- Tilføje nye eksterne services (auth provider, mail provider, etc.)
+- Ændre database schema uden migration
+- Tilføje LLM-kald eller andre eksterne API-calls
+- Skrive secrets nogen steder, heller ikke som "TODO: replace"
+- Lave breaking changes til API-kontrakt
+
+## Brugerens præferencer (Jan, IT Operations)
+
+- Korte konkrete svar — ikke lange forklaringer medmindre der spørges
+- Få det til at virke først, optimer bagefter
+- Dansk i UI, engelsk i kode
+- Visuelt resultat > lange tekstforklaringer
+- Stop ved tvivl, fortsæt ikke "for at være hjælpsom"
+- Jan kører ikke kode lokalt — alt skal deployes til cloud for at testes
