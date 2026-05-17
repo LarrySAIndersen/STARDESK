@@ -2,6 +2,8 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { SiteHeaderNav } from "@/components/site-header-nav";
+import { StarLogo } from "@/components/star-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TOKEN_COOKIE } from "@/lib/auth";
 
 export async function SiteHeader() {
@@ -18,26 +20,23 @@ export async function SiteHeader() {
         </div>
       </div>
 
-      <div className="border-border border-b bg-white">
+      <div className="border-border border-b bg-white dark:bg-card">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link href="/" className="group flex items-center gap-3">
-            <div
-              className="border-star-navy text-star-navy flex size-11 shrink-0 items-center justify-center rounded-full border-2 bg-white transition-colors group-hover:bg-star-blue-light"
-              aria-hidden
-            >
-              <span className="text-lg leading-none">★</span>
-            </div>
+            <StarLogo priority className="transition-opacity group-hover:opacity-90" />
             <div>
-              <span className="text-star-navy block text-xl font-bold leading-tight tracking-tight">
+              <span className="text-star-navy dark:text-foreground block text-xl font-bold leading-tight tracking-tight">
                 STARdesk
               </span>
-              <span className="text-star-blue block text-xs font-medium">
+              <span className="text-star-blue dark:text-primary block text-xs font-medium">
                 Sagsstyring og self-service
               </span>
             </div>
           </Link>
 
-          {isAuthenticated ? <SiteHeaderNav /> : null}
+          <div className="flex flex-wrap items-center gap-3">
+            {isAuthenticated ? <SiteHeaderNav /> : <ThemeToggle />}
+          </div>
         </div>
       </div>
     </header>

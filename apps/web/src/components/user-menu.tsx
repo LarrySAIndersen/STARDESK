@@ -21,24 +21,33 @@ export function UserMenu() {
     router.refresh();
   }
 
+  const initials = user.display_name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="border-star-blue/30 ml-2 flex items-center gap-2 border-l pl-3">
-      <div className="hidden text-right sm:block">
-        <p className="text-star-navy text-sm font-medium leading-none">{user.display_name}</p>
-        <p className="text-star-blue text-xs">{user.role_label}</p>
-      </div>
-      <Badge variant="outline" className="border-star-blue text-star-blue sm:hidden">
+    <section className="border-border ml-2 flex items-center gap-2 border-l pl-3">
+      <span
+        className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+        aria-hidden
+      >
+        {initials}
+      </span>
+      <span className="hidden text-right sm:block">
+        <span className="text-foreground block text-sm font-medium leading-none">
+          {user.display_name}
+        </span>
+        <span className="text-muted-foreground text-xs">{user.role_label}</span>
+      </span>
+      <Badge variant="outline" className="sm:hidden">
         {user.role_label}
       </Badge>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="text-star-navy hover:text-star-blue"
-        onClick={logout}
-      >
+      <Button type="button" variant="ghost" size="sm" onClick={logout}>
         Log ud
       </Button>
-    </div>
+    </section>
   );
 }

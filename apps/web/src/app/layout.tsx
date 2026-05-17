@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { AgentShellWrapper } from "@/components/agent/agent-shell-wrapper";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SkipLink } from "@/components/skip-link";
 
 import "./globals.css";
 
-const ibmPlexSans = IBM_Plex_Sans({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -30,16 +30,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="da">
+    <html lang="da" suppressHydrationWarning>
       <body
-        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} flex min-h-screen flex-col antialiased`}
+        className={`${inter.variable} ${ibmPlexMono.variable} flex min-h-screen flex-col antialiased`}
       >
-        <SkipLink />
-        <SiteHeader />
-        <div id="main-content" tabIndex={-1} className="bg-star-blue-light/30 flex-1 outline-none">
-          {children}
-        </div>
-        <SiteFooter />
+        <ThemeProvider>
+          <SkipLink />
+          <AgentShellWrapper>{children}</AgentShellWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );

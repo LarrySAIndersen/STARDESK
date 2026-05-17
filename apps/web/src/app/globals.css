@@ -4,48 +4,92 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* STAR corporate palette (star.dk) */
+/* STAR corporate palette + modern agent UI (Architect Ledger–inspired) */
 :root {
   --star-blue: #3b5a95;
-  --star-navy: #003366;
+  --star-navy: #004792;
+  --star-primary: #004792;
   --star-red: #a51d36;
-  --star-blue-light: #eef2f8;
-  --star-gray-bar: #f4f4f4;
-  --star-text: #1a1a1a;
-  --star-text-muted: #3d4a5c;
+  --star-blue-light: #e8eef5;
+  --star-gray-bar: #f3f4f6;
+  --star-surface: #f8fafc;
+  --star-text: #111827;
+  --star-text-muted: #64748b;
 
-  --background: #ffffff;
+  --background: var(--star-gray-bar);
   --foreground: var(--star-text);
   --card: #ffffff;
   --card-foreground: var(--star-text);
   --popover: #ffffff;
   --popover-foreground: var(--star-text);
-  --primary: var(--star-blue);
+  --primary: var(--star-primary);
   --primary-foreground: #ffffff;
   --secondary: var(--star-blue-light);
   --secondary-foreground: var(--star-navy);
-  --muted: #f7f8fa;
+  --muted: #f1f5f9;
   --muted-foreground: var(--star-text-muted);
   --accent: var(--star-blue-light);
   --accent-foreground: var(--star-navy);
   --destructive: var(--star-red);
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: var(--star-blue);
-  --radius: 0.25rem;
-  --chart-1: var(--star-blue);
+  --ring: var(--star-primary);
+  --radius: 0.625rem;
+  --chart-1: var(--star-primary);
   --chart-2: var(--star-navy);
   --chart-3: var(--star-red);
   --chart-4: #6b8cbc;
   --chart-5: #c4d0e8;
-  --sidebar: var(--star-navy);
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: var(--star-blue);
+  --sidebar: #e8eef5;
+  --sidebar-foreground: #334155;
+  --sidebar-primary: var(--star-primary);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #004080;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: var(--star-primary);
+  --sidebar-border: #d8e2ee;
+  --sidebar-ring: var(--star-primary);
+}
+
+.dark {
+  --star-blue: #6b8cbc;
+  --star-navy: #8eb4e8;
+  --star-red: #e85a6f;
+  --star-blue-light: #1a2438;
+  --star-gray-bar: #141a24;
+  --star-text: #e8eaed;
+  --star-text-muted: #a8b4c4;
+
+  --background: #0f1419;
+  --foreground: var(--star-text);
+  --card: #161d27;
+  --card-foreground: var(--star-text);
+  --popover: #161d27;
+  --popover-foreground: var(--star-text);
+  --primary: #5a7ab8;
+  --primary-foreground: #ffffff;
+  --secondary: #1e2a3d;
+  --secondary-foreground: #c8d4e8;
+  --muted: #1a2438;
+  --muted-foreground: var(--star-text-muted);
+  --accent: #243044;
+  --accent-foreground: #c8d4e8;
+  --destructive: #e85a6f;
+  --border: #2a3548;
+  --input: #2a3548;
+  --ring: #6b8cbc;
+  --chart-1: #6b8cbc;
+  --chart-2: #8eb4e8;
+  --chart-3: #e85a6f;
+  --chart-4: #4a6a9a;
+  --chart-5: #2a3d5c;
+  --sidebar: #0a1628;
+  --sidebar-foreground: #e8eaed;
+  --sidebar-primary: #5a7ab8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a3050;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #004080;
-  --sidebar-ring: var(--star-blue);
+  --sidebar-border: #1a3050;
+  --sidebar-ring: #6b8cbc;
 }
 
 @theme inline {
@@ -109,10 +153,10 @@
   h1,
   h2,
   h3 {
-    @apply text-star-navy font-bold tracking-tight;
+    @apply text-star-navy dark:text-foreground font-bold tracking-tight;
   }
   a:not([data-slot="button"]) {
-    @apply text-star-blue transition-colors hover:text-star-navy;
+    @apply text-primary transition-colors hover:text-star-navy;
   }
 }
 
@@ -122,11 +166,11 @@
   }
 
   .star-hero {
-    @apply border-star-red mb-8 border-b-4 pb-8;
+    @apply mb-8 pb-2;
   }
 
   .star-hero-title {
-    @apply text-star-navy text-3xl font-bold md:text-4xl;
+    @apply text-star-navy dark:text-foreground text-3xl font-bold md:text-4xl;
   }
 
   .star-hero-lead {
@@ -134,15 +178,15 @@
   }
 
   .star-section-card {
-    @apply border-border overflow-hidden rounded-sm border bg-card shadow-sm;
+    @apply border-border overflow-hidden rounded-xl border bg-card shadow-sm;
   }
 
   .star-section-card--accent {
-    @apply border-star-red border-t-4;
+    @apply border-primary/20 border-t-4 border-t-primary;
   }
 
   .star-section-header {
-    @apply bg-star-blue-light border-border border-b px-6 py-4;
+    @apply border-border border-b bg-card px-6 py-4;
   }
 
   .star-section-header--navy {
@@ -175,11 +219,35 @@
   }
 
   .star-nav-link {
-    @apply text-star-navy hover:bg-star-blue-light rounded-sm px-3 py-2 text-sm font-medium transition-colors;
+    @apply text-star-navy dark:text-foreground hover:bg-star-blue-light dark:hover:bg-muted rounded-sm px-3 py-2 text-sm font-medium transition-colors;
   }
 
   .star-nav-link--active {
-    @apply bg-star-blue-light text-star-navy font-semibold;
+    @apply bg-star-blue-light dark:bg-muted text-star-navy dark:text-foreground font-semibold;
+  }
+
+  .ledger-nav-link {
+    @apply text-sidebar-foreground hover:bg-sidebar-accent/60 relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors;
+  }
+
+  .ledger-nav-link--active {
+    @apply bg-sidebar-accent text-primary font-semibold shadow-sm;
+  }
+
+  .ledger-nav-link--active::before {
+    @apply bg-primary absolute top-1 bottom-1 left-0 w-1 rounded-full content-[''];
+  }
+
+  .ledger-card {
+    @apply border-border rounded-xl border bg-card p-6 shadow-sm;
+  }
+
+  .ledger-label {
+    @apply text-muted-foreground text-xs font-semibold tracking-widest uppercase;
+  }
+
+  .ledger-status-pill {
+    @apply border-primary/20 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold;
   }
 
   .skip-link {

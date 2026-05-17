@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
@@ -35,6 +36,7 @@ export function SiteHeaderNav() {
       >
         Opret sag
       </Button>
+      <ThemeToggle />
       <UserMenu />
     </nav>
   );
