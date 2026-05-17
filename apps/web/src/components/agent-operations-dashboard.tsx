@@ -2,7 +2,13 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import { LongestTicketCard } from "@/components/dashboard/longest-ticket-card";
+import { StarSectionCard } from "@/components/star/section-card";
 import { Badge } from "@/components/ui/badge";
+import {
+  BUCKET_ACCENTS,
+  BUCKET_DESCRIPTIONS_DA,
+} from "@/lib/dashboard-buckets";
+import { cn } from "@/lib/utils";
 import type { OperationsDashboard } from "@/types/dashboard";
 
 function ChartFallback() {
@@ -14,7 +20,8 @@ const Gauge = dynamic(
   { loading: () => <ChartFallback /> },
 );
 const HorizontalBars = dynamic(
-  () => import("@/components/dashboard/horizontal-bars").then((mod) => mod.HorizontalBars),
+  () =>
+    import("@/components/dashboard/horizontal-bars").then((mod) => mod.HorizontalBars),
   { loading: () => <ChartFallback /> },
 );
 const TrendChart = dynamic(
@@ -22,14 +29,32 @@ const TrendChart = dynamic(
   { loading: () => <ChartFallback /> },
 );
 
-function kpiCard(label: string, value: string | number, sub?: string) {
+function OpsKpiCard({
+  label,
+  value,
+  sub,
+  accent = "border-t-star-blue",
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent?: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className="star-section-card border-t-star-blue border-t-4 p-4">
+    <div
+      className={cn(
+        "star-section-card border-t-4 p-4",
+        accent,
+        highlight && "ring-star-red/40 ring-2",
+      )}
+    >
       <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
         {label}
       </p>
       <p className="text-star-navy mt-1 text-3xl font-bold tabular-nums">{value}</p>
-      {sub ? <p className="text-muted-foreground mt-1 text-xs">{sub}</p> : null}
+      {sub ? <p className="text-muted-foreground mt-1 text-xs leading-snug">{sub}</p> : null}
     </div>
   );
 }
@@ -54,64 +79,139 @@ export function AgentOperationsDashboard({
     ),
   );
 
+  const updatedLabel = new Intl.DateTimeFormat("da-DK", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(dashboard.generated_at));
+
   return (
     <div className="space-y-8">
-      <header className="star-hero">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="star-hero-title">Driftsdashboard</h1>
-            <p className="star-hero-lead">
-              Live overblik over sagsudvikling, SLA og den sag der har været åben længst.
-            </p>
-          </div>
-          <p className="text-muted-foreground text-xs">
-            Opdateret{" "}
-            {new Intl.DateTimeFormat("da-DK", {
-              dateStyle: "short",
-              timeStyle: "short",
-            }).format(new Date(dashboard.generated_at))}
-          </p>
+      {/* Primary service desk KPIs */}
+      <div>
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <h3 className="text-star-navy text-sm font-semibold uppercase tracking-wide">
+            Nøgletal — drift
+          </h3>
+          <p className="text-muted-foreground text-xs">Opdateret {updatedLabel}</p>
         </div>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <LongestTicketCard ticket={dashboard.longest_open} />
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {kpiCard("Åbne sager", dashboard.open_count)}
-          {kpiCard("Lukket (7 dage)", dashboard.closed_last_7_days)}
-          {kpiCard(
-            "Gns. alder (åbne)",
-            dashboard.avg_open_age_days != null ? `${dashboard.avg_open_age_days} d` : "—",
-          )}
-          {kpiCard("Løsningsgrad (30 d)", `${dashboard.resolution_rate_pct}%`)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <OpsKpiCard label="Åbne sager" value={dashboard.open_count} accent="border-t-star-navy" />
+          <OpsKpiCard
+            label="SLA overskredet"
+            value={dashboard.sla_overdue_count}
+            sub={dashboard.sla_overdue_count > 0 ? "Kræver handling" : "Ingen overskridelser"}
+            accent="border-t-star-red"
+            highlight={dashboard.sla_overdue_count > 0}
+          />
+          <OpsKpiCard
+            label="SLA inden 4 t"
+            value={dashboard.sla_due_soon_count}
+            sub="Forfald inden for 4 timer"
+            accent="border-t-amber-500"
+            highlight={dashboard.sla_due_soon_count > 0}
+          />
+          <OpsKpiCard
+            label="Store sager"
+            value={dashboard.major_open_count}
+            sub="Åbne med markering Stor sag"
+            accent="border-t-star-red"
+            highlight={dashboard.major_open_count > 0}
+          />
+          <OpsKpiCard
+            label="Løsningsgrad"
+            value={`${dashboard.resolution_rate_pct}%`}
+            sub="Lukket/løst seneste 30 d vs. åbne"
+            accent="border-t-emerald-600"
+          />
+          <OpsKpiCard
+            label="Gns. alder (åbne)"
+            value={
+              dashboard.avg_open_age_days != null ? `${dashboard.avg_open_age_days} d` : "—"
+            }
+            sub={`${dashboard.closed_count.toLocaleString("da-DK")} lukket i alt`}
+            accent="border-t-star-blue"
+          />
         </div>
       </div>
 
-      <div className="star-section-card overflow-hidden shadow-md">
-        <div className="star-section-header--navy flex flex-wrap items-center justify-between gap-4 border-b-0 px-6 py-4">
-          <div>
-            <h2 className="star-section-title !text-white">Spidometre</h2>
-            <p className="star-section-desc mt-1 !text-white/90">
-              Backlog, SLA-overholdelse og gennemløb de seneste 7 dage
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {dashboard.major_open_count > 0 ? (
-              <Badge className="border-0 bg-star-red text-white hover:bg-star-red/90">
-                {dashboard.major_open_count} stor{dashboard.major_open_count === 1 ? "" : "e"} sag
-                {dashboard.major_open_count === 1 ? "" : "er"}
-              </Badge>
-            ) : null}
-            {dashboard.sla_due_soon_count > 0 ? (
-              <Badge variant="secondary" className="border border-white/30 bg-white/15 text-white">
-                {dashboard.sla_due_soon_count} SLA inden 4 t
-              </Badge>
-            ) : null}
-          </div>
+      {/* ITSM pipeline — same buckets as standard reports */}
+      <div>
+        <h3 className="text-star-navy mb-3 text-sm font-semibold uppercase tracking-wide">
+          Sagspipeline
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {dashboard.bucket_counts.map((bucket) => (
+            <div
+              key={bucket.key}
+              className={cn(
+                "star-section-card border-t-4 p-4",
+                BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue",
+              )}
+            >
+              <p className="text-star-navy text-2xl font-bold tabular-nums">{bucket.count}</p>
+              <p className="text-star-navy mt-1 text-sm font-semibold">{bucket.label_da}</p>
+              <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                {BUCKET_DESCRIPTIONS_DA[bucket.key] ?? ""}
+              </p>
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="star-section-body grid gap-8 sm:grid-cols-3 sm:items-stretch">
+      {/* 7-day throughput + longest open ticket */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <LongestTicketCard ticket={dashboard.longest_open} />
+        <StarSectionCard
+          variant="accent"
+          title="Aktivitet — seneste 7 dage"
+          description="Modtaget vs. lukket sager i den valgte periode."
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
+            <OpsKpiCard
+              label="Modtaget (7 d)"
+              value={dashboard.opened_last_7_days}
+              sub="Nye sager i perioden"
+              accent="border-t-star-blue"
+            />
+            <OpsKpiCard
+              label="Lukket (7 d)"
+              value={dashboard.closed_last_7_days}
+              sub={
+                dashboard.opened_last_7_days > 0
+                  ? `${throughputPct}% af modtagne lukket`
+                  : "Ingen modtagne i perioden"
+              }
+              accent="border-t-emerald-600"
+            />
+          </div>
+        </StarSectionCard>
+      </div>
+
+      {/* Gauges */}
+      <StarSectionCard
+        variant="navy"
+        title="Driftsindikatorer"
+        description="Backlog, SLA-overholdelse på åbne sager og gennemløb de seneste 7 dage."
+      >
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {dashboard.major_open_count > 0 ? (
+            <Badge className="border-0 bg-star-red text-white hover:bg-star-red/90">
+              {dashboard.major_open_count} stor{dashboard.major_open_count === 1 ? "" : "e"} sag
+              {dashboard.major_open_count === 1 ? "" : "er"}
+            </Badge>
+          ) : null}
+          {dashboard.sla_due_soon_count > 0 ? (
+            <Badge variant="secondary" className="border-star-blue/30 bg-white text-star-navy">
+              {dashboard.sla_due_soon_count} SLA inden 4 t
+            </Badge>
+          ) : null}
+          {dashboard.sla_overdue_count > 0 ? (
+            <Badge variant="destructive">
+              {dashboard.sla_overdue_count} SLA overskredet
+            </Badge>
+          ) : null}
+        </div>
+        <div className="grid gap-8 sm:grid-cols-3 sm:items-stretch">
           <Gauge
             label="Åben backlog"
             value={dashboard.open_count}
@@ -120,7 +220,7 @@ export function AgentOperationsDashboard({
             accent="navy"
           />
           <Gauge
-            label="SLA sundhed"
+            label="SLA sundhed (åbne)"
             value={slaHealthPct}
             max={100}
             unit="%"
@@ -136,13 +236,14 @@ export function AgentOperationsDashboard({
             value={throughputPct}
             max={100}
             unit="%"
-            hint={`${dashboard.closed_last_7_days} lukket / ${dashboard.opened_last_7_days} oprettet`}
+            hint={`${dashboard.closed_last_7_days} lukket / ${dashboard.opened_last_7_days} modtaget`}
             accent="blue"
           />
         </div>
-      </div>
+      </StarSectionCard>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Charts */}
+      <div className="grid gap-6 xl:grid-cols-2">
         <TrendChart
           title="Udvikling i sager"
           created={dashboard.daily_created}
@@ -155,39 +256,32 @@ export function AgentOperationsDashboard({
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <HorizontalBars
           id="priority-breakdown"
           title="Åbne sager efter prioritet"
           items={dashboard.priority_breakdown}
         />
-        <HorizontalBars
-          id="bucket-breakdown"
-          title="Pipeline (modtaget → lukket)"
-          items={dashboard.bucket_counts}
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-sm border border-star-blue/30 bg-star-blue-light px-6 py-4">
-        <div>
+        <div className="flex flex-col justify-center rounded-sm border border-star-blue/30 bg-star-blue-light px-6 py-6">
           <p className="text-star-navy font-semibold">Klar til tildeling?</p>
-          <p className="text-muted-foreground text-sm">
-            Scroll ned til sagsoversigt og grupper — eller gå til rapporter.
+          <p className="text-muted-foreground mt-1 text-sm">
+            Scroll til sagstildeling og grupper — eller åbn standardrapporter med detaljer per
+            pipeline-trin.
           </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="#dispatch-board"
-            className="bg-star-blue hover:bg-star-navy rounded-sm px-4 py-2 text-sm font-semibold text-white"
-          >
-            Gå til tildeling
-          </Link>
-          <Link
-            href="/reports"
-            className="border-star-blue text-star-blue hover:bg-white rounded-sm border px-4 py-2 text-sm font-semibold"
-          >
-            Standardrapporter
-          </Link>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="#dispatch-board"
+              className="bg-star-blue hover:bg-star-navy rounded-sm px-4 py-2 text-sm font-semibold text-white"
+            >
+              Gå til tildeling
+            </Link>
+            <Link
+              href="/reports"
+              className="border-star-blue text-star-blue hover:bg-white rounded-sm border bg-white/80 px-4 py-2 text-sm font-semibold"
+            >
+              Standardrapporter
+            </Link>
+          </div>
         </div>
       </div>
     </div>

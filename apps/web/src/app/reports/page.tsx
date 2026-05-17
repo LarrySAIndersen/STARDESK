@@ -39,7 +39,9 @@ export default async function ReportsPage() {
         title="Rapporter"
         lead="Standardrapporter for Service Desk Manager — modtaget, igangsat, løst, lukket og genåbnet."
       />
-      <ReportsDashboard />
+      <div className="space-y-8">
+        <ReportsDashboard />
+      </div>
     </main>
   );
 }
