@@ -1,13 +1,6 @@
 import Link from "next/link";
 
-import { UserMenu } from "@/components/user-menu";
-import { Button } from "@/components/ui/button";
-
-const NAV = [
-  { href: "/", label: "Sager" },
-  { href: "/reports", label: "Rapporter" },
-  { href: "/groups", label: "Grupper" },
-] as const;
+import { SiteHeaderNav } from "@/components/site-header-nav";
 
 export function SiteHeader() {
   return (
@@ -40,21 +33,7 @@ export function SiteHeader() {
             </div>
           </Link>
 
-          <nav className="flex flex-wrap items-center gap-1">
-            {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="star-nav-link">
-                {item.label}
-              </Link>
-            ))}
-            <Button
-              nativeButton={false}
-              render={<Link href="/tickets/new" />}
-              className="bg-star-blue hover:bg-star-navy ml-2 rounded-sm px-4 font-semibold"
-            >
-              Opret sag
-            </Button>
-            <UserMenu />
-          </nav>
+          <SiteHeaderNav />
         </div>
       </div>
     </header>

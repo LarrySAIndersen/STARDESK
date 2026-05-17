@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_ADMIN, get_current_user, require_roles
+from star_itsm_api.core.security import ROLE_ADMIN, ROLE_AGENT, get_current_user, require_roles
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.user import User
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 @router.get("", response_model=list[TeamRead])
 async def list_teams(
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
 ) -> list[TeamRead]:
     stmt = select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())
     if current_user.role != ROLE_ADMIN:
@@ -39,7 +39,7 @@ async def list_teams(
 async def get_team(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(ROLE_AGENT, ROLE_ADMIN)),
 ) -> TeamRead:
     team = await db.get(Team, team_id)
     if team is None or not team.is_active:

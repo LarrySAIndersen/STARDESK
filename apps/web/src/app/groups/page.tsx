@@ -41,24 +41,41 @@ export default async function GroupsPage() {
     }
   }
 
+  const sortedTeams = [...teams].sort((a, b) => {
+    if (a.name === "SF") {
+      return -1;
+    }
+    if (b.name === "SF") {
+      return 1;
+    }
+    return a.name.localeCompare(b.name, "da");
+  });
+
   return (
     <main className="star-page">
       <PageHero
         title="Grupper"
-        lead="Grupper modtager sager og har tilknyttede sagsbehandlere — samme struktur som på star.dk."
+        lead="SF er hovedgruppe for alle agenter. Undergrupper (Es Trifft, SF Chest m.fl.) modtager sager for deres organisation."
       />
 
       {error ? (
         <p className="text-destructive mt-6 text-sm">{error}</p>
-      ) : teams.length === 0 ? (
+      ) : sortedTeams.length === 0 ? (
         <p className="text-muted-foreground mt-6 text-sm">Ingen grupper fundet.</p>
       ) : (
         <ul className="mt-8 grid gap-6 sm:grid-cols-2">
-          {teams.map((team) => (
+          {sortedTeams.map((team) => (
             <li key={team.id}>
               <Card className="star-section-card overflow-hidden">
                 <CardHeader className="bg-star-blue-light border-b">
-                  <CardTitle className="text-star-navy">{team.name}</CardTitle>
+                  <CardTitle className="text-star-navy flex items-center gap-2">
+                    {team.name}
+                    {team.name === "SF" ? (
+                      <span className="bg-star-blue rounded px-1.5 py-0.5 text-[10px] font-semibold text-white uppercase">
+                        Hovedgruppe
+                      </span>
+                    ) : null}
+                  </CardTitle>
                   {team.description ? (
                     <CardDescription>{team.description}</CardDescription>
                   ) : null}

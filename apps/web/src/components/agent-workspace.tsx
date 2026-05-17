@@ -1,3 +1,4 @@
+import { AgentGroupsPanel } from "@/components/agent-groups-panel";
 import { StarSectionCard } from "@/components/star/section-card";
 import { ItilTicketTable } from "@/components/itil-ticket-table";
 import { apiGetServer } from "@/lib/api-server";
@@ -52,6 +53,8 @@ export async function AgentWorkspace({ currentUser }: { currentUser: User | null
           <ItilTicketTable tickets={assignedQueue} />
         )}
       </StarSectionCard>
+
+      <AgentGroupsPanel />
     </div>
   );
 }

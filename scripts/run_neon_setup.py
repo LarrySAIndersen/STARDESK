@@ -23,6 +23,7 @@ SEEDS = [
     "docs/seed-mvp.sql",
     "docs/seed-sub-causes.sql",
     "docs/seed-orgs-30.sql",
+    "docs/seed-sf-master-group.sql",
     "docs/seed-larrysanders.sql",
 ]
 
