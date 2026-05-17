@@ -17,6 +17,7 @@ MIGRATIONS = [
     "docs/ticket-underaarsag-migration.sql",
     "docs/gdpr-attachments-migration.sql",
     "docs/ticket-activity-timestamps-migration.sql",
+    "docs/ticket-assignment-fields-migration.sql",
 ]
 
 SEEDS = [
@@ -24,6 +25,7 @@ SEEDS = [
     "docs/seed-sub-causes.sql",
     "docs/seed-orgs-30.sql",
     "docs/seed-sf-master-group.sql",
+    "docs/seed-group-sample-tickets.sql",
     "docs/seed-larrysanders.sql",
 ]
 

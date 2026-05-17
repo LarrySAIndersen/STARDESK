@@ -27,6 +27,7 @@ class TicketRead(BaseModel):
     sub_causes: list[SubCauseRead] = Field(default_factory=list)
     category_name_da: str | None = None
     subcategory_name_da: str | None = None
+    assigned_team_id: UUID | None = None
     assigned_team_name: str | None = None
     assigned_user_name: str | None = None
     reporter_display_name: str | None = None
@@ -34,6 +35,7 @@ class TicketRead(BaseModel):
     resolution_due_at: datetime | None = None
     created_at: datetime
     updated_at: datetime | None = None
+    fault_displayed: bool = False
 
 
 class TicketDetailRead(TicketRead):
@@ -47,6 +49,8 @@ class TicketDetailRead(TicketRead):
     response_due_at: datetime | None
     resolution_due_at: datetime | None
     escalation_level: int
+    assignment_reason: str | None = None
+    fault_displayed: bool = False
     gdpr_consent: bool = False
     gdpr_consent_at: datetime | None = None
     subject_cpr: str | None = None
@@ -112,3 +116,5 @@ class TicketStatusUpdate(BaseModel):
 class TicketAssignmentUpdate(BaseModel):
     assigned_team_id: UUID | None = None
     assigned_user_id: UUID | None = None
+    assignment_reason: str | None = Field(default=None, max_length=2000)
+    fault_displayed: bool | None = None

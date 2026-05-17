@@ -14,7 +14,10 @@ export interface Ticket {
   sub_causes: SubCause[];
   category_name_da?: string | null;
   subcategory_name_da?: string | null;
+  assigned_team_id?: string | null;
   assigned_team_name?: string | null;
+  fault_displayed?: boolean;
+  assignment_reason?: string | null;
   assigned_user_name?: string | null;
   reporter_display_name?: string | null;
   response_due_at?: string | null;

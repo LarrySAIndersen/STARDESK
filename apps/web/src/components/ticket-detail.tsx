@@ -123,6 +123,17 @@ export function TicketDetailView({
                 <span className="font-mono">{ticket.subject_cpr}</span>
               </p>
             ) : null}
+            {ticket.fault_displayed ? (
+              <p>
+                <span className="text-muted-foreground">Fejlviseret:</span> Ja
+              </p>
+            ) : null}
+            {ticket.assignment_reason ? (
+              <p>
+                <span className="text-muted-foreground">Tildelingsårsag:</span>{" "}
+                <span className="text-sm">{ticket.assignment_reason}</span>
+              </p>
+            ) : null}
             <TicketMetadataForm ticket={ticket} />
             {staff ? (
               <>

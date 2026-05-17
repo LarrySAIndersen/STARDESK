@@ -79,6 +79,7 @@ def _ticket_to_read(
         subcategory_name_da=subcategories.get(ticket.subcategory_id)
         if ticket.subcategory_id
         else None,
+        assigned_team_id=ticket.assigned_team_id,
         assigned_team_name=teams.get(ticket.assigned_team_id) if ticket.assigned_team_id else None,
         assigned_user_name=users.get(ticket.assigned_user_id) if ticket.assigned_user_id else None,
         reporter_display_name=users.get(ticket.reporter_user_id),
@@ -86,6 +87,7 @@ def _ticket_to_read(
         resolution_due_at=ticket.resolution_due_at,
         created_at=ticket.created_at,
         updated_at=getattr(ticket, "updated_at", None),
+        fault_displayed=getattr(ticket, "fault_displayed", False),
     )
 
 

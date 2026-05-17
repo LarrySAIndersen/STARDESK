@@ -1,60 +1,47 @@
-import { AgentGroupsPanel } from "@/components/agent-groups-panel";
+import { AgentDispatchBoard } from "@/components/agent-dispatch-board";
 import { StarSectionCard } from "@/components/star/section-card";
 import { ItilTicketTable } from "@/components/itil-ticket-table";
 import { apiGetServer } from "@/lib/api-server";
+import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
 
-export async function AgentWorkspace({ currentUser }: { currentUser: User | null }) {
+export async function AgentWorkspace(_props: { currentUser: User | null }) {
+  let tickets: Ticket[] = [];
+  let teams: Team[] = [];
   let majorOpen: Ticket[] = [];
-  let assignedQueue: Ticket[] = [];
   let fetchError: string | null = null;
 
   try {
-    const [major, queue] = await Promise.all([
+    const [boardTickets, teamList, major] = await Promise.all([
+      apiGetServer<Ticket[]>("/api/v1/tickets?board=true"),
+      apiGetServer<Team[]>("/api/v1/teams"),
       apiGetServer<Ticket[]>("/api/v1/tickets?major_open=true"),
-      apiGetServer<Ticket[]>("/api/v1/tickets"),
     ]);
+    tickets = boardTickets;
+    teams = teamList;
     majorOpen = major;
-    assignedQueue = queue;
   } catch {
     fetchError = "Kunne ikke hente sager fra API. Tjek at backend kører.";
   }
 
-  const orgLabel = currentUser?.organization_name
-    ? ` — ${currentUser.organization_name}`
-    : "";
-
-  const queueTitle =
-    currentUser?.role === "admin" ? "Alle sager" : "Min kø — tildelt mig eller min gruppe";
-  const queueDescription =
-    currentUser?.role === "admin"
-      ? `${assignedQueue.length} sag${assignedQueue.length === 1 ? "" : "er"} i systemet`
-      : `${assignedQueue.length} sag${assignedQueue.length === 1 ? "" : "er"} i din kø`;
-
   return (
     <div className="space-y-8">
-      <StarSectionCard
-        variant="accent"
-        title="Åbne store sager"
-        description={`Vises for alle agenter${orgLabel}. Sager markeret som stor sag, der ikke er lukket.`}
-      >
-        {fetchError ? (
-          <p className="text-star-red text-sm">{fetchError}</p>
-        ) : (
+      {majorOpen.length > 0 ? (
+        <StarSectionCard
+          variant="accent"
+          title="Åbne store sager"
+          description="Kræver særlig opmærksomhed — markeret med Stor sag i oversigten."
+        >
           <ItilTicketTable tickets={majorOpen} compact />
-        )}
-      </StarSectionCard>
+        </StarSectionCard>
+      ) : null}
 
-      <StarSectionCard variant="navy" title={queueTitle} description={fetchError ? undefined : queueDescription}>
-        {fetchError ? (
-          <p className="text-star-red text-sm">{fetchError}</p>
-        ) : (
-          <ItilTicketTable tickets={assignedQueue} />
-        )}
-      </StarSectionCard>
-
-      <AgentGroupsPanel />
+      {fetchError ? (
+        <p className="text-star-red text-sm">{fetchError}</p>
+      ) : (
+        <AgentDispatchBoard tickets={tickets} teams={teams} />
+      )}
     </div>
   );
 }

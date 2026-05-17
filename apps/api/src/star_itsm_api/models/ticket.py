@@ -38,6 +38,8 @@ class Ticket(Base):
     gdpr_consent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     gdpr_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     subject_cpr: Mapped[str | None] = mapped_column(String(11), nullable=True)
+    assignment_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fault_displayed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_major: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     escalation_level: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     last_escalation_at: Mapped[datetime | None] = mapped_column(

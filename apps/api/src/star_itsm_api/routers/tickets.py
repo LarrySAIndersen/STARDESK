@@ -115,6 +115,10 @@ async def _comment_to_read(
 
 @router.get("", response_model=list[TicketRead])
 async def list_tickets(
+    board: bool = Query(
+        default=False,
+        description="Full org ticket list for dispatch board (staff only)",
+    ),
     major_open: bool = Query(
         default=False,
         description="Open major incidents for agent banner (staff only)",
@@ -125,7 +129,10 @@ async def list_tickets(
     try:
         stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
         stmt = apply_ticket_list_filter(stmt, current_user)
-        if major_open:
+        if board:
+            if current_user.role not in {ROLE_AGENT, ROLE_ADMIN}:
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+        elif major_open:
             if current_user.role not in {ROLE_AGENT, ROLE_ADMIN}:
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
             stmt = stmt.where(Ticket.is_major.is_(True))
@@ -264,6 +271,8 @@ async def get_ticket(
             "response_due_at": ticket.response_due_at,
             "resolution_due_at": ticket.resolution_due_at,
             "escalation_level": ticket.escalation_level,
+            "assignment_reason": ticket.assignment_reason,
+            "fault_displayed": ticket.fault_displayed,
             "attachments": attachments,
             "comments": comments,
             "timestamps": ticket_timestamps_read(ticket),
@@ -466,6 +475,10 @@ async def assign_ticket(
     }
     ticket.assigned_team_id = team_id
     ticket.assigned_user_id = user_id
+    if "assignment_reason" in updates:
+        ticket.assignment_reason = updates["assignment_reason"]
+    if "fault_displayed" in updates and updates["fault_displayed"] is not None:
+        ticket.fault_displayed = updates["fault_displayed"]
     now = datetime.now(UTC)
     if ticket.status == "new" and (team_id or user_id):
         ticket.status = "assigned"
@@ -482,6 +495,8 @@ async def assign_ticket(
                 "previous": previous,
                 "assigned_team_id": str(team_id) if team_id else None,
                 "assigned_user_id": str(user_id) if user_id else None,
+                "assignment_reason": ticket.assignment_reason,
+                "fault_displayed": ticket.fault_displayed,
             },
             created_at=now,
         )
