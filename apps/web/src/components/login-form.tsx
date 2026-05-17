@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
+import { cn } from "@/lib/utils";
 
 export function LoginForm() {
   const router = useRouter();
@@ -25,11 +27,15 @@ export function LoginForm() {
   );
   const [password, setPassword] = useState(showDemoPicker ? DEMO_PASSWORD : "");
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const inputClass = cn(fieldError && "border-destructive ring-destructive/30");
 
   async function performLogin(loginEmail: string, loginPassword: string) {
     setIsSubmitting(true);
     setError(null);
+    setFieldError(false);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -38,8 +44,22 @@ export function LoginForm() {
         cache: "no-store",
       });
       if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { detail?: string };
-        throw new Error(body.detail ?? "Forkert e-mail eller adgangskode");
+        const body = (await response.json().catch(() => ({}))) as {
+          detail?: string | Array<{ msg?: string }>;
+        };
+        setFieldError(true);
+        const detail =
+          typeof body.detail === "string"
+            ? body.detail
+            : Array.isArray(body.detail)
+              ? (body.detail[0]?.msg ?? "Forkert e-mail eller adgangskode")
+              : "Forkert e-mail eller adgangskode";
+        throw new Error(detail);
+      }
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        setFieldError(true);
+        throw new Error("Login mislykkedes — uventet svar fra serveren");
       }
       router.replace("/");
       router.refresh();
@@ -61,6 +81,7 @@ export function LoginForm() {
     setEmail(user.email);
     setPassword(user.password);
     setError(null);
+    setFieldError(false);
   }
 
   function quickLogin(user: DemoUser) {
@@ -71,86 +92,112 @@ export function LoginForm() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
-      <div className="text-center">
-        <h1 className="text-star-navy text-2xl font-bold tracking-tight">
-          Log ind på STARdesk
-        </h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          {showDemoPicker
-            ? "Vælg en testbruger i tabellen eller indtast e-mail og adgangskode."
-            : "Indtast din e-mail og adgangskode."}
-        </p>
-      </div>
+      <div className={cn("space-y-8", fieldError && "login-shake")}>
+        <div className="text-center">
+          <h1 className="text-star-navy text-2xl font-bold tracking-tight">
+            Log ind på STARdesk
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {showDemoPicker
+              ? "Vælg en testbruger i tabellen eller indtast e-mail og adgangskode."
+              : "Indtast din e-mail og adgangskode."}
+          </p>
+        </div>
 
-      <div
-        className={
-          showDemoPicker
-            ? "grid gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start"
-            : "flex justify-center"
-        }
-      >
-        <Card className="star-section-card w-full max-w-md overflow-hidden border-t-4 border-t-star-red shadow-lg lg:max-w-none">
-          <CardHeader className="bg-star-navy text-white">
-            <CardTitle className="text-white">Login</CardTitle>
-            <CardDescription className="text-white/80">
-              {showDemoPicker ? (
-                <>
-                  Standardadgangskode:{" "}
-                  <span className="font-mono text-white">{DEMO_PASSWORD}</span>
-                </>
-              ) : (
-                "STAR ITSM prototype"
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="username"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Adgangskode</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
-              </div>
-              {error ? <p className="text-destructive text-sm">{error}</p> : null}
-              <Button
-                type="submit"
-                className="bg-star-blue hover:bg-star-navy w-full rounded-sm font-semibold"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Logger ind…" : "Log ind"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {showDemoPicker ? (
-          <Card className="star-section-card overflow-hidden shadow-lg">
+        <div
+          className={
+            showDemoPicker
+              ? "grid gap-8 lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start"
+              : "flex justify-center"
+          }
+        >
+          <Card className="star-section-card w-full max-w-md overflow-hidden border-t-4 border-t-star-red shadow-lg lg:max-w-none">
+            <CardHeader className="bg-star-navy text-white">
+              <CardTitle className="text-white">Login</CardTitle>
+              <CardDescription className="text-white/80">
+                {showDemoPicker ? (
+                  <>
+                    Standardadgangskode:{" "}
+                    <span className="font-mono text-white">{DEMO_PASSWORD}</span>
+                  </>
+                ) : (
+                  "STAR ITSM prototype"
+                )}
+              </CardDescription>
+            </CardHeader>
             <CardContent className="pt-6">
-              <DemoUserPicker
-                selectedEmail={email}
-                onSelect={selectUser}
-                onQuickLogin={quickLogin}
-                isSubmitting={isSubmitting}
-              />
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    value={email}
+                    onChange={(event) => {
+                      setEmail(event.target.value);
+                      if (fieldError) setFieldError(false);
+                    }}
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Adgangskode</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      if (fieldError) setFieldError(false);
+                    }}
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                {error ? (
+                  <div
+                    className="border-destructive/40 bg-destructive/5 rounded-md border px-3 py-2"
+                    role="alert"
+                    aria-live="polite"
+                  >
+                    <p className="text-destructive text-sm font-medium">{error}</p>
+                  </div>
+                ) : null}
+                <Button
+                  type="submit"
+                  className="bg-star-blue hover:bg-star-navy w-full rounded-sm font-semibold"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Logger ind…" : "Log ind"}
+                </Button>
+                <p className="text-center text-sm">
+                  <Link
+                    href="/skift-adgangskode"
+                    className="text-star-blue hover:text-star-navy underline"
+                  >
+                    Skift adgangskode
+                  </Link>
+                </p>
+              </form>
             </CardContent>
           </Card>
-        ) : null}
+
+          {showDemoPicker ? (
+            <Card className="star-section-card overflow-hidden shadow-lg">
+              <CardContent className="pt-6">
+                <DemoUserPicker
+                  selectedEmail={email}
+                  onSelect={selectUser}
+                  onQuickLogin={quickLogin}
+                  isSubmitting={isSubmitting}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
       </div>
     </div>
   );
