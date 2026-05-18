@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import { AgentAssetPanel } from "@/components/agent/agent-asset-panel";
 import { AgentBrandHeader } from "@/components/agent/agent-brand-header";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
@@ -42,6 +43,17 @@ export function AgentShell({
       <AgentBrandHeader />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <AgentSidebar user={user} showUsersNav={showUsersNav} onSlackClick={handleSlackNav} />
+        <Suspense
+          fallback={
+            <aside className="wire-asset-panel" aria-hidden>
+              <div className="wire-asset-panel-header">
+                <span>Aktiver</span>
+              </div>
+            </aside>
+          }
+        >
+          <AgentAssetPanel />
+        </Suspense>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <AgentTopBar title={topBarTitle} actions={topBarActions} />
           <main

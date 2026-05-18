@@ -88,6 +88,9 @@ def _event_label(event_type: str, payload: dict) -> tuple[str, str, str | None]:
     if event_type == "sla.escalated":
         level = payload.get("level")
         return "SLA-eskalering", "system", f"Niveau {level}" if level is not None else None
+    if event_type == "ticket.slack_pushed":
+        channel_name = payload.get("channel_name") or payload.get("channel_id") or "ukendt"
+        return f"Sag delt i Slack (#{channel_name})", "internal", None
     return event_type, "internal", None
 
 

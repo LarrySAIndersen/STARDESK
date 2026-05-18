@@ -33,6 +33,7 @@ from star_itsm_api.services.comment_reactions import (
     load_reaction_summaries,
     set_comment_reaction,
 )
+from star_itsm_api.schemas.slack import SlackPushRequest, SlackPushResponse
 from star_itsm_api.schemas.ticket import (
     CLOSED_STATUSES,
     TicketAssignmentUpdate,
@@ -45,6 +46,7 @@ from star_itsm_api.schemas.ticket import (
     TicketRelatedMajorCreate,
     TicketStatusUpdate,
 )
+from star_itsm_api.services.slack_mock import get_mock_channel
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -749,6 +751,46 @@ async def update_ticket_priority(
     )
     await db.commit()
     return await get_ticket(ticket_id, db, current_user)
+
+
+@router.post("/{ticket_id}/slack-push", response_model=SlackPushResponse)
+async def push_ticket_to_slack(
+    ticket_id: uuid.UUID,
+    payload: SlackPushRequest,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> SlackPushResponse:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    channel = get_mock_channel(payload.channel_id)
+    if channel is None:
+        raise HTTPException(status_code=400, detail="Ukendt Slack-kanal")
+
+    now = datetime.now(UTC)
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.slack_pushed",
+            payload={
+                "channel_id": channel["channel_id"],
+                "channel_name": channel["name"],
+                "mock": True,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
+    return SlackPushResponse(
+        channel_id=channel["channel_id"],
+        channel_name=channel["name"],
+        mock=True,
+    )
 
 
 @router.patch("/{ticket_id}/parent", response_model=TicketDetailRead)

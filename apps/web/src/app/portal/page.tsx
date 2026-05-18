@@ -4,9 +4,5 @@ import { getServerUser } from "@/lib/auth-server";
 export default async function PortalPreviewPage() {
   const currentUser = await getServerUser();
 
-  return (
-    <div className="wire-scroll-content min-h-0 flex-1">
-      <EndUserTicketPortal currentUser={currentUser} />
-    </div>
-  );
+  return <EndUserTicketPortal currentUser={currentUser} />;
 }

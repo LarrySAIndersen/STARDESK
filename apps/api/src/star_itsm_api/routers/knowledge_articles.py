@@ -43,11 +43,7 @@ async def list_articles(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[KnowledgeArticleRead]:
-    if portal and is_staff(current_user):
-        pass
-    elif portal:
-        pass
-    elif not is_staff(current_user):
+    if not portal and not is_staff(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     try:
         tickets = await list_knowledge_articles(

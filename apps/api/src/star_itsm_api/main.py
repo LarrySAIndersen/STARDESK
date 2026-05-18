@@ -11,12 +11,14 @@ from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
+    assets,
     auth,
     categories,
     cron,
     health,
     knowledge_articles,
     reports,
+    slack,
     sub_causes,
     teams,
     tickets,
@@ -59,9 +61,11 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
+app.include_router(slack.router, prefix="/api/v1")
 app.include_router(knowledge_articles.router, prefix="/api/v1")
 app.include_router(teams.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
+app.include_router(assets.router, prefix="/api/v1")
 app.include_router(sub_causes.router, prefix="/api/v1")
 app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(cron.router, prefix="/api/v1")

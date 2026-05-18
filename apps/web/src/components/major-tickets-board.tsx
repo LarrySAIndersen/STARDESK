@@ -11,7 +11,13 @@ const COLUMNS: { key: string; title: string; statuses: string[] }[] = [
   { key: "done", title: "Afsluttet", statuses: ["resolved", "closed", "cancelled"] },
 ];
 
-export function MajorTicketsBoard({ tickets }: { tickets: Ticket[] }) {
+export function MajorTicketsBoard({
+  tickets,
+  overviewHref,
+}: {
+  tickets: Ticket[];
+  overviewHref?: (ticketId: string) => string;
+}) {
   const major = tickets.filter((ticket) => Boolean(ticket.is_major));
 
   return (
@@ -40,7 +46,9 @@ export function MajorTicketsBoard({ tickets }: { tickets: Ticket[] }) {
                     columnTickets.map((ticket) => (
                       <li key={ticket.id}>
                         <Link
-                          href={`/tickets/${ticket.id}`}
+                          href={
+                            overviewHref ? overviewHref(ticket.id) : `/tickets/${ticket.id}`
+                          }
                           className="border-star-blue/20 hover:border-star-blue block rounded-sm border bg-white p-3 text-sm shadow-sm transition-shadow hover:shadow-md"
                         >
                           <p className="text-star-blue font-mono text-[10px] font-semibold">

@@ -12,7 +12,9 @@ import { TicketAttachments } from "@/components/ticket-attachments";
 
 import { TicketAssignmentForm } from "@/components/ticket-assignment-form";
 
+import { KnowledgeArticlePromoteButton } from "@/components/knowledge-article-promote-button";
 import { TicketDetailActions } from "@/components/ticket-detail-actions";
+import { TicketSlackPush } from "@/components/ticket-slack-push";
 
 import { TicketHierarchySection } from "@/components/ticket-hierarchy-section";
 
@@ -34,6 +36,7 @@ import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 
 import { SlaCountdown } from "@/components/sla-countdown";
 
+import { hasTicketConnections, ticketOverviewHref } from "@/lib/ticket-connections";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 
 import { isStaff } from "@/lib/auth";
@@ -412,9 +415,29 @@ export function TicketDetailView({
 
         {staff ? (
 
-          <div className="mt-5">
+          <div className="mt-5 space-y-3">
 
-            <TicketDetailActions ticketId={ticket.id} currentStatus={ticket.status} />
+            <div className="flex flex-wrap items-center gap-2">
+
+              <TicketDetailActions ticketId={ticket.id} currentStatus={ticket.status} />
+
+              <TicketSlackPush
+
+                ticketId={ticket.id}
+
+                ticketNumber={ticket.ticket_number}
+
+                ticketTitle={ticket.title}
+
+              />
+
+            </div>
+
+            <div>
+
+              <KnowledgeArticlePromoteButton ticket={ticket} />
+
+            </div>
 
           </div>
 
@@ -541,5 +564,7 @@ export function TicketDetailView({
   );
 
 }
+
+
 
 

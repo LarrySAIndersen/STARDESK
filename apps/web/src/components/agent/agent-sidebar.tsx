@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   LayoutDashboard,
+  Library,
   MessageSquare,
   Plus,
   Ticket,
@@ -32,6 +33,9 @@ function isActive(pathname: string, href: string): boolean {
   }
   if (href === "/tickets/new") {
     return pathname === "/tickets/new";
+  }
+  if (href === "/knowledge") {
+    return pathname === "/knowledge" || pathname.startsWith("/knowledge/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -63,6 +67,9 @@ export function AgentSidebar({
     { href: "/", label: "Dashboard", icon: LayoutDashboard, section: "Techniker" },
     { href: "/tickets", label: "Alle sager", icon: Ticket },
     { href: "/tickets/new", label: "Ny sag", icon: Plus },
+    ...(staff
+      ? [{ href: "/knowledge", label: "Vidensartikler", icon: Library, section: "Techniker" }]
+      : []),
     ...(staff ? [{ href: "/groups", label: "Grupper", icon: Users }] : []),
     ...(showAdmin ? [{ href: "/users", label: "Brugere", icon: UserCog }] : []),
     { href: "/reports", label: "Rapporter", icon: BarChart3 },

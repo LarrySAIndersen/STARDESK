@@ -1,3 +1,5 @@
+import { findAssetById } from "@/lib/mock-assets";
+
 /** Build GET /api/v1/tickets query string from dashboard drill-down search params. */
 
 export function buildTicketsApiQuery(
@@ -76,6 +78,12 @@ export function dashboardFilterTitle(
   if (pick(searchParams.open_only) === "true" && !bucket && !sla) parts.push("åbne sager");
   if (pick(searchParams.opened_since_days) === "7") parts.push("modtaget seneste 7 d");
   if (pick(searchParams.closed_since_days) === "7") parts.push("lukket seneste 7 d");
+
+  const assetId = pick(searchParams.asset_id);
+  if (assetId) {
+    const asset = findAssetById(assetId);
+    parts.push(asset ? `aktiv: ${asset.label}` : `aktiv: ${assetId}`);
+  }
 
   return parts.length > 0 ? parts.join(" · ") : null;
 }

@@ -358,6 +358,66 @@
     @apply bg-star-blue-light text-star-navy border-star-red border-l-[3px] font-semibold;
   }
 
+  .wire-asset-panel {
+    @apply flex w-[188px] shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
+  }
+
+  .wire-asset-panel-header {
+    @apply text-star-navy flex shrink-0 items-center gap-2 border-b border-[var(--gray-border)] px-3 py-2.5 text-[11px] font-bold tracking-wide uppercase;
+  }
+
+  .wire-asset-tree {
+    @apply py-1;
+  }
+
+  .wire-asset-expand {
+    @apply text-[var(--gray-mid)] flex w-7 shrink-0 items-center justify-center hover:bg-star-blue-light hover:text-[var(--star-text)];
+  }
+
+  .wire-asset-row {
+    @apply text-[var(--star-text-muted)] min-w-0 flex-1 truncate border-l-[3px] border-transparent py-1.5 pr-2 text-left text-[12px] transition-colors;
+  }
+
+  .wire-asset-row:hover {
+    @apply bg-star-blue-light text-[var(--star-text)];
+  }
+
+  .wire-asset-row--system {
+    @apply font-medium;
+  }
+
+  .wire-asset-row--subsystem {
+    @apply pl-7 text-[11px];
+  }
+
+  .wire-asset-row--active {
+    @apply bg-star-blue-light text-star-navy border-star-red border-l-[3px] font-semibold;
+  }
+
+  .wire-asset-detail {
+    @apply shrink-0 border-t border-[var(--gray-border)] px-3 py-2.5;
+  }
+
+  .wire-asset-detail--empty {
+    @apply py-3;
+  }
+
+  .wire-asset-detail-label {
+    @apply text-star-navy truncate text-[11px] font-semibold;
+  }
+
+  .wire-asset-detail-meta {
+    @apply text-[var(--gray-mid)] mt-0.5 text-[10px];
+  }
+
+  .wire-asset-detail-action {
+    @apply bg-star-navy rounded-sm px-2 py-1 text-[10px] font-semibold text-white hover:bg-[var(--star-navy-dark)];
+  }
+
+  .wire-asset-detail-link {
+    @apply text-star-navy text-[10px] font-medium underline-offset-2 hover:underline;
+  }
+
   .wire-topbar {
     @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-[var(--gray-border)] border-t-[3px] bg-white px-5 py-2.5;
   }

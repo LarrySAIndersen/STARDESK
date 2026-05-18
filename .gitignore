@@ -63,3 +63,5 @@ scripts/debug-login.png
 
 # Local project notes (may contain credentials)
 Background/
+
+scripts/**/*.png
