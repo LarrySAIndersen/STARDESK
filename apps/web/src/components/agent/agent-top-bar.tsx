@@ -14,6 +14,12 @@ const TITLES: Record<string, string> = {
 };
 
 function titleForPath(pathname: string): string {
+  if (pathname.endsWith("/overview")) {
+    return "Tilknyttede sager";
+  }
+  if (pathname === "/tickets/major") {
+    return "Store sager";
+  }
   if (pathname.startsWith("/tickets/") && pathname !== "/tickets/new") {
     return "Sagsdetaljer";
   }

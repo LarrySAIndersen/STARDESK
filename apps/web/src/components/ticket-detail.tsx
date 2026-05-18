@@ -413,6 +413,17 @@ export function TicketDetailView({
 
         </h1>
 
+        {hasTicketConnections(ticket) ? (
+          <div className="mt-4">
+            <Link
+              href={ticketOverviewHref(ticket.id)}
+              className="border-star-navy bg-star-navy/5 text-star-navy hover:bg-star-navy inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors hover:text-white"
+            >
+              Oversigt / Tilknyttede sager
+            </Link>
+          </div>
+        ) : null}
+
         {staff ? (
 
           <div className="mt-5 space-y-3">
