@@ -16,6 +16,7 @@ export interface Ticket {
   id: string;
   ticket_number: string;
   title: string;
+  description?: string;
   status: string;
   priority: string;
   ticket_type: string;
@@ -42,6 +43,30 @@ export interface Ticket {
   updated_at?: string | null;
   tags?: string[];
   emoji?: string | null;
+  routing?: TicketRouting | null;
+  is_knowledge_article?: boolean;
+  knowledge_status?: string | null;
+  knowledge_status_label_da?: string | null;
+  knowledge_visibility?: string | null;
+  knowledge_visibility_label_da?: string | null;
+}
+
+export interface TicketIntake {
+  answers: Record<string, string>;
+}
+
+export interface TicketRouting {
+  completeness_score: number;
+  routing_ready: boolean;
+  missing_fields_da: string[];
+  intake: TicketIntake;
+  suggested_team_id?: string | null;
+  suggested_team_name?: string | null;
+  routing_confidence?: number | null;
+  routing_reason_da?: string | null;
+  computed_priority: string;
+  computed_priority_label_da: string;
+  computed_priority_reasons_da: string[];
 }
 
 export interface TicketIntelligence {
@@ -72,6 +97,7 @@ export interface TicketLlmContext {
     combined_text: string;
   };
   operational: Record<string, unknown>;
+  routing?: TicketRouting | null;
   prompt_snippet_da: string;
   evaluation_rubric_da: string;
 }
@@ -80,7 +106,7 @@ export interface TicketDetail extends Ticket {
   children?: TicketSummary[];
   related_major_tickets?: TicketSummary[];
   intelligence?: TicketIntelligence | null;
-  description: string;
+  description: string; // required on detail
   category_id: string | null;
   subcategory_id: string | null;
   assigned_team_id: string | null;
@@ -114,4 +140,5 @@ export interface TicketCreateInput {
   subject_cpr?: string | null;
   tags?: string[];
   emoji?: string | null;
+  intake_answers?: Record<string, string>;
 }

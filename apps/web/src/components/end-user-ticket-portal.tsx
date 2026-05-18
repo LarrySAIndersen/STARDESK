@@ -1,13 +1,14 @@
 import Link from "next/link";
 
-import { FilteredTicketTable } from "@/components/filtered-ticket-table";
-import { MajorTicketsBoard } from "@/components/major-tickets-board";
-import { StarSectionCard } from "@/components/star/section-card";
-import { StarLinkArrow } from "@/components/star/link-arrow";
-import { Badge } from "@/components/ui/badge";
 import { apiGetServer } from "@/lib/api-server";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
+
+const PORTAL_CATEGORIES = [
+  { title: "IT-support", sub: "Computer, software, adgang" },
+  { title: "HR & personale", sub: "Onboarding, adgang, politikker" },
+  { title: "Faciliteter", sub: "Lokaler, udstyr, print" },
+] as const;
 
 type EndUserTicketPortalProps = {
   currentUser: User | null;
@@ -15,77 +16,71 @@ type EndUserTicketPortalProps = {
 
 export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalProps) {
   let tickets: Ticket[] = [];
-  let storeSager: Ticket[] = [];
   let fetchError: string | null = null;
 
   try {
-    const [mine, majors] = await Promise.all([
-      apiGetServer<Ticket[]>("/api/v1/tickets"),
-      apiGetServer<Ticket[]>("/api/v1/tickets?store_sager=true"),
-    ]);
-    tickets = mine;
-    storeSager = majors.filter((t) => t.is_major);
+    tickets = await apiGetServer<Ticket[]>("/api/v1/tickets");
   } catch {
     fetchError = "Kunne ikke hente sager fra API. Tjek at backend kører.";
   }
 
   const regularTickets = tickets.filter((ticket) => !ticket.is_major);
-  const sharedTickets = regularTickets.filter((ticket) => ticket.is_shared);
   const ownOrgOnly = regularTickets.filter((ticket) => !ticket.is_shared);
 
-  const listSubtitle = fetchError
-    ? "Forbindelse til API mislykkedes"
-    : currentUser?.organization_name
-      ? `${ownOrgOnly.length} sag${ownOrgOnly.length === 1 ? "" : "er"} i ${currentUser.organization_name}`
-      : `${ownOrgOnly.length} sag${ownOrgOnly.length === 1 ? "" : "er"}`;
-
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_minmax(300px,380px)]">
-      <div className="space-y-8">
-        <StarSectionCard variant="navy" title="Dine sager" description={listSubtitle}>
-          {fetchError ? (
-            <p className="text-star-red text-sm">{fetchError}</p>
-          ) : ownOrgOnly.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen sager endnu.</p>
-          ) : (
-            <FilteredTicketTable tickets={ownOrgOnly} />
-          )}
-          <div className="mt-6 border-t pt-4">
-            <StarLinkArrow href="/tickets/new">Opret ny sag</StarLinkArrow>
-          </div>
-        </StarSectionCard>
+    <div className="space-y-6">
+      <section className="wire-portal-hero">
+        <h2 className="text-xl font-bold tracking-tight">
+          Hej{currentUser?.display_name ? `, ${currentUser.display_name.split(" ")[0]}` : ""} — hvordan kan vi hjælpe?
+        </h2>
+        <p className="mt-1 text-[13px] text-white/75">
+          Søg i videnbasen eller opret en ny sag til STAR Service Desk.
+        </p>
+        <input
+          type="search"
+          placeholder="Søg efter hjælp, vejledninger, sager…"
+          className="mt-3 w-full max-w-md rounded-[2px] border-2 border-white/30 bg-white/10 px-3.5 py-2 text-[13px] text-white outline-none placeholder:text-white/50 focus:border-white"
+          aria-label="Søg i portal"
+        />
+      </section>
 
-        <StarSectionCard
-          variant="accent"
-          title="Delte sager"
-          description={`${sharedTickets.length} delt${sharedTickets.length === 1 ? "" : "e"} sag${sharedTickets.length === 1 ? "" : "er"} på tværs af organisationer`}
-        >
-          {sharedTickets.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ingen delte sager lige nu.</p>
-          ) : (
-            <ul className="space-y-2">
-              {sharedTickets.map((ticket) => (
-                <li key={ticket.id}>
-                  <Link
-                    href={`/tickets/${ticket.id}`}
-                    className="border-star-blue/20 hover:border-star-blue flex items-center justify-between gap-2 rounded-sm border bg-white p-3 text-sm"
-                  >
-                    <span>
-                      <span className="text-star-blue font-mono text-xs">{ticket.ticket_number}</span>
-                      <span className="text-star-navy ml-2 font-medium">{ticket.title}</span>
-                    </span>
-                    <Badge variant="outline" className="border-star-blue text-star-blue text-[10px]">
-                      Delt
-                    </Badge>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </StarSectionCard>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {PORTAL_CATEGORIES.map((cat) => (
+          <Link key={cat.title} href="/tickets/new" className="wire-portal-card block">
+            <p className="text-star-navy text-[13px] font-bold">{cat.title}</p>
+            <p className="text-[var(--gray-mid)] mt-0.5 text-[11px]">{cat.sub}</p>
+          </Link>
+        ))}
       </div>
 
-      <MajorTicketsBoard tickets={storeSager.length > 0 ? storeSager : tickets} />
+      <section>
+        <h3 className="wire-sec-title mb-3">Mine sager</h3>
+        {fetchError ? (
+          <p className="text-star-red text-sm">{fetchError}</p>
+        ) : ownOrgOnly.length === 0 ? (
+          <p className="text-[var(--gray-mid)] text-sm">Ingen sager endnu.</p>
+        ) : (
+          <div className="wire-table-wrap">
+            {ownOrgOnly.map((ticket) => (
+              <Link
+                key={ticket.id}
+                href={`/tickets/${ticket.id}`}
+                className="my-ticket-row flex items-center gap-2 border-b border-[var(--gray-border)] px-3.5 py-2.5 text-xs last:border-b-0 hover:bg-star-blue-light"
+              >
+                <span className="font-mono font-semibold text-[var(--gray-mid)]">
+                  {ticket.ticket_number}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-medium">{ticket.title}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+        <div className="mt-4">
+          <Link href="/tickets/new" className="wire-btn wire-btn-red">
+            + Opret ny sag
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

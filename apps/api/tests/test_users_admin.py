@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -84,6 +85,7 @@ async def test_list_users_success(
                 role_label="Topadministrator",
                 is_active=True,
                 organization_name=None,
+                team_ids=[uuid.uuid4()],
                 team_names=["SF"],
             )
         ],
@@ -102,6 +104,8 @@ async def test_list_users_success(
     body = response.json()
     assert body["total"] == 1
     assert body["items"][0]["email"] == "sf01@example.dk"
+    assert body["items"][0]["team_ids"]
+    assert body["items"][0]["team_names"] == ["SF"]
 
 
 @pytest.mark.asyncio
@@ -173,6 +177,7 @@ async def test_get_user_success(
         role_label="Topadministrator",
         is_active=True,
         teams=[UserTeamSummary(id=uuid.uuid4(), name="SF")],
+        created_at=datetime(2024, 1, 15, 10, 0, tzinfo=UTC),
     )
     with patch(
         "star_itsm_api.routers.users.get_user_admin",

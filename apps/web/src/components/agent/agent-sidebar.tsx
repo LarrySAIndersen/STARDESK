@@ -5,69 +5,139 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   LayoutDashboard,
+  MessageSquare,
   Plus,
   Ticket,
+  UserCog,
   Users,
+  UserCircle,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import type { User } from "@/types/user";
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/#agent-workspace", label: "Sager", icon: Ticket },
-  { href: "/groups", label: "Grupper", icon: Users },
-  { href: "/reports", label: "Rapporter", icon: BarChart3 },
-] as const;
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  section?: string;
+  onClick?: () => void;
+};
 
 function isActive(pathname: string, href: string): boolean {
-  if (href === "/") {
-    return pathname === "/";
+  if (href === "/") return pathname === "/";
+  if (href === "/tickets") {
+    return pathname === "/tickets";
   }
-  if (href === "/#agent-workspace") {
-    return pathname.startsWith("/tickets");
+  if (href === "/tickets/new") {
+    return pathname === "/tickets/new";
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AgentSidebar() {
+export function AgentSidebar({
+  user: userFromServer,
+  showUsersNav: showUsersNavFromServer,
+  onSlackClick,
+}: {
+  /** Server-parsed session user — avoids client cookie parse mismatches. */
+  user?: User | null;
+  /** When set by AgentShellWrapper, matches server admin check (JWT + cookie). */
+  showUsersNav?: boolean;
+  onSlackClick?: () => void;
+}) {
   const pathname = usePathname();
+  const user = userFromServer ?? getClientUser();
+  const staff = isStaff(user);
+  const showAdmin = showUsersNavFromServer ?? canManageUsers(user);
+
+  const initials = user?.display_name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() ?? "?";
+
+  const items: NavItem[] = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard, section: "Techniker" },
+    { href: "/tickets", label: "Alle sager", icon: Ticket },
+    { href: "/tickets/new", label: "Ny sag", icon: Plus },
+    ...(staff ? [{ href: "/groups", label: "Grupper", icon: Users }] : []),
+    ...(showAdmin ? [{ href: "/users", label: "Brugere", icon: UserCog }] : []),
+    { href: "/reports", label: "Rapporter", icon: BarChart3 },
+    {
+      href: "/portal",
+      label: "Selvbetjeningsportal",
+      icon: UserCircle,
+      section: "Slutbrugere",
+    },
+    {
+      href: "#slack",
+      label: "Slack",
+      icon: MessageSquare,
+      section: "Integration",
+      onClick: onSlackClick,
+    },
+  ];
+
+  let lastSection: string | undefined;
 
   return (
-    <aside className="bg-sidebar text-sidebar-foreground border-sidebar-border flex h-full min-h-0 flex-col overflow-hidden border-r">
-      <nav
-        className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4"
-        aria-label="Hovednavigation"
-      >
-        {NAV.map((item) => {
-          const active = isActive(pathname, item.href);
+    <aside className="wire-sidebar">
+      <nav className="flex flex-1 flex-col overflow-y-auto py-1" aria-label="Hovednavigation">
+        {items.map((item) => {
+          const showSection = item.section && item.section !== lastSection;
+          if (item.section) lastSection = item.section;
           const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "ledger-nav-link",
-                active && "ledger-nav-link--active",
-              )}
-            >
-              <Icon className="size-[18px] shrink-0 stroke-[1.75]" aria-hidden />
+          const active = !item.onClick && isActive(pathname, item.href);
+
+          const className = cn("wire-nav-item", active && "wire-nav-item--active");
+
+          const inner = (
+            <>
+              <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
               {item.label}
-            </Link>
+            </>
+          );
+
+          return (
+            <div key={item.href + item.label}>
+              {showSection ? (
+                <p className="wire-nav-section">{item.section}</p>
+              ) : null}
+              {item.onClick ? (
+                <button type="button" className={className} onClick={item.onClick}>
+                  {inner}
+                </button>
+              ) : (
+                <Link href={item.href} className={className}>
+                  {inner}
+                </Link>
+              )}
+            </div>
           );
         })}
       </nav>
 
-      <footer className="border-sidebar-border shrink-0 border-t p-4">
-        <Button
-          nativeButton={false}
-          render={<Link href="/tickets/new" />}
-          className="bg-primary hover:bg-primary/90 w-full justify-center gap-2 rounded-lg font-semibold shadow-sm"
-        >
-          <Plus className="size-4" aria-hidden />
-          Opret sag
-        </Button>
-      </footer>
+      {user ? (
+        <footer className="flex items-center gap-2 border-t border-[var(--gray-border)] px-3.5 py-3">
+          <span
+            className="wire-avatar-sm bg-[var(--star-navy-dark)]"
+            aria-hidden
+          >
+            {initials}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-bold text-star-navy">
+              {user.display_name}
+            </p>
+            <p className="truncate text-[10px] text-[var(--gray-mid)]">
+              {user.role_label}
+            </p>
+            </div>
+        </footer>
+      ) : null}
     </aside>
   );
 }

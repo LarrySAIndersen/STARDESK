@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: SESSION_MAX_AGE,
   });
-  response.cookies.set(USER_COOKIE, JSON.stringify(data.user), {
+  response.cookies.set(USER_COOKIE, encodeURIComponent(JSON.stringify(data.user)), {
     httpOnly: false,
     secure,
     sameSite: "lax",

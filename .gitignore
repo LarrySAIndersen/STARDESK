@@ -44,9 +44,22 @@ Thumbs.db
 # Cursor
 .cursor/
 
+# Local credentials / test accounts (never commit)
+Background/Passwords and users
+**/Background/Passwords and users
+
 # Local SQL exports
 *.sql.bak
 dump.sql
 
 # Vercel
 .vercel/
+.env.vercel.production
+**/.env.vercel.production
+
+# Local usability / debug screenshots
+scripts/*.png
+scripts/debug-login.png
+
+# Local project notes (may contain credentials)
+Background/

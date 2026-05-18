@@ -70,6 +70,7 @@ _REQUIRED_TICKET_COLUMNS = (
     "parent_ticket_id",
     "is_shared",
     "is_security_ticket",
+    "is_knowledge_article",
 )
 
 

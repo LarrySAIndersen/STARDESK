@@ -5,10 +5,15 @@ import { useId, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import {
+  confidenceColor,
+  confidenceVerdict,
+  confidenceVerdictClass,
+} from "@/lib/wireframe-labels";
+import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 
 function buildSchema(requireTeamPick: boolean) {
@@ -28,6 +33,9 @@ export function AssignmentDropDialog({
   teamName,
   teamId,
   teams = [],
+  confidence,
+  routingReasonDa,
+  technicianName,
   onConfirm,
   onCancel,
 }: {
@@ -35,6 +43,9 @@ export function AssignmentDropDialog({
   teamName?: string;
   teamId?: string;
   teams?: Team[];
+  confidence?: number;
+  routingReasonDa?: string | null;
+  technicianName?: string;
   onConfirm: (data: {
     teamId: string;
     reason: string;
@@ -72,9 +83,12 @@ export function AssignmentDropDialog({
   const resolvedTeamId = teamId ?? watchedTeamId ?? "";
   const resolvedTeamName =
     teamName ?? teams.find((t) => t.id === resolvedTeamId)?.name ?? "";
-  const dialogTitle = resolvedTeamName
-    ? `Tildel til ${resolvedTeamName}`
-    : "Tildel sag til gruppe";
+  const dialogTitle = technicianName
+    ? `Bekræft tildeling — ${technicianName}`
+    : resolvedTeamName
+      ? `Tildel til ${resolvedTeamName}`
+      : "Tildel sag til gruppe";
+  const score = confidence ?? 0;
 
   const onSubmit = handleSubmit((values) => {
     const targetTeamId = teamId ?? values.teamId;
@@ -96,7 +110,7 @@ export function AssignmentDropDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="wire-confirm-overlay"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onCancel();
@@ -109,22 +123,61 @@ export function AssignmentDropDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="bg-background w-full max-w-md rounded-lg border p-6 shadow-lg"
+        className="wire-confirm-modal"
       >
-        <h2 id={titleId} className="text-star-navy text-lg font-semibold">
-          {dialogTitle}
-        </h2>
-        <p id={descId} className="text-muted-foreground mt-1 text-sm">
-          {ticketTitle}
-        </p>
+        <div className="border-b border-[var(--gray-border)] px-4 py-3.5">
+          <h2 id={titleId} className="text-star-navy text-sm font-bold">
+            {dialogTitle}
+          </h2>
+          <p id={descId} className="text-[var(--gray-mid)] mt-0.5 text-[11px]">
+            {ticketTitle}
+          </p>
+        </div>
 
-        <form className="mt-4 space-y-4" onSubmit={onSubmit} noValidate>
+        {confidence != null ? (
+          <div className="border-b border-[var(--gray-border)] px-4 py-3">
+            <div className="flex items-center gap-2 border border-[#B0B4EC] border-l-4 border-l-[var(--ai-purple)] bg-[var(--ai-purple-bg)] p-2.5">
+              <span className="wire-ai-pill">AI</span>
+              <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-[#E8E8E4]">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${score}%`, background: confidenceColor(score) }}
+                />
+              </div>
+              <span
+                className="text-lg font-bold"
+                style={{ color: confidenceColor(score) }}
+              >
+                {score}%
+              </span>
+              <span
+                className={cn(
+                  "rounded-[2px] px-1.5 py-px text-[10px] font-bold",
+                  confidenceVerdictClass(score) === "cv-good" &&
+                    "bg-[#E6F5EC] text-[#1A7A44]",
+                  confidenceVerdictClass(score) === "cv-ok" &&
+                    "bg-[#FFF3CD] text-[#7A4800]",
+                  confidenceVerdictClass(score) === "cv-bad" &&
+                    "bg-star-red-light text-star-red",
+                )}
+              >
+                {confidenceVerdict(score)}
+              </span>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[#2A2C7A]">
+              {routingReasonDa ??
+                "AI vurderer match ud fra emner, kategori og team-regler."}
+            </p>
+          </div>
+        ) : null}
+
+        <form className="space-y-4 px-4 py-3.5" onSubmit={onSubmit} noValidate>
           {needsTeamPick ? (
             <div className="space-y-2">
               <Label htmlFor={teamSelectId}>Gruppe</Label>
               <select
                 id={teamSelectId}
-                className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                className="wire-form-input h-9"
                 {...register("teamId")}
               >
                 <option value="">Vælg gruppe…</option>
@@ -135,7 +188,7 @@ export function AssignmentDropDialog({
                 ))}
               </select>
               {errors.teamId ? (
-                <p className="text-destructive text-xs" role="alert">
+                <p className="text-star-red text-xs" role="alert">
                   {errors.teamId.message}
                 </p>
               ) : null}
@@ -144,26 +197,23 @@ export function AssignmentDropDialog({
 
           <div className="space-y-2">
             <Label htmlFor="assignment-reason">
-              Årsag / bemærkning <span className="text-destructive">*</span>
+              Årsag / bemærkning <span className="text-star-red">*</span>
             </Label>
             <Textarea
               id="assignment-reason"
               rows={4}
-              placeholder="Beskriv hvorfor sagen flyttes til denne gruppe…"
+              className="wire-form-input min-h-[5rem]"
+              placeholder="Beskriv hvorfor sagen flyttes…"
               aria-required="true"
               aria-invalid={reasonInvalid}
               aria-describedby={reasonHintId}
               {...register("reason")}
             />
             {errors.reason ? (
-              <p id={reasonHintId} className="text-destructive text-xs" role="alert">
+              <p id={reasonHintId} className="text-star-red text-xs" role="alert">
                 {errors.reason.message}
               </p>
-            ) : (
-              <p id={reasonHintId} className="text-muted-foreground text-xs">
-                Forklar kort hvorfor sagen flyttes.
-              </p>
-            )}
+            ) : null}
           </div>
 
           <div className="flex items-start gap-2 text-sm">
@@ -178,17 +228,17 @@ export function AssignmentDropDialog({
             </Label>
           </div>
 
-          <div className="mt-6 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onCancel}>
+          <div className="flex justify-end gap-2 border-t border-[var(--gray-border)] pt-3">
+            <button type="button" className="wire-btn" onClick={onCancel}>
               Annuller
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              className="bg-star-blue hover:bg-star-navy"
+              className="wire-btn wire-btn-primary"
               disabled={!canSubmit}
             >
-              Gem tildeling
-            </Button>
+              Bekræft tildeling
+            </button>
           </div>
         </form>
       </div>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +8,10 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.dashboard import DashboardRead
 from star_itsm_api.schemas.report import StandardReportRead
 from star_itsm_api.services.dashboard import build_dashboard
+from star_itsm_api.services.dashboard_scope import (
+    default_dashboard_scope,
+    parse_dashboard_scope,
+)
 from star_itsm_api.services.reports import build_standard_report, report_to_csv
 from star_itsm_api.services.ticket_export import build_tickets_export_xlsx
 
@@ -16,10 +20,18 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("/dashboard", response_model=DashboardRead)
 async def get_operations_dashboard(
+    scope: str | None = Query(
+        default=None,
+        description="personal (default for agents), mine, group, created, all (default for admins)",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
 ) -> DashboardRead:
-    return await build_dashboard(db, current_user)
+    parsed = parse_dashboard_scope(scope)
+    if scope is not None and parsed is None:
+        raise HTTPException(status_code=400, detail="Invalid scope")
+    effective = parsed or default_dashboard_scope(current_user)
+    return await build_dashboard(db, current_user, scope=effective)
 
 
 @router.get("/standard", response_model=StandardReportRead)

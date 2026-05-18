@@ -9,6 +9,10 @@ import {
   BUCKET_ACCENTS,
   BUCKET_DESCRIPTIONS_DA,
 } from "@/lib/dashboard-buckets";
+import {
+  buildTicketsFilterHref,
+  type DashboardScope,
+} from "@/lib/dashboard-ticket-links";
 import { cn } from "@/lib/utils";
 import type { OperationsDashboard } from "@/types/dashboard";
 
@@ -36,35 +40,49 @@ function OpsKpiCard({
   sub,
   accent = "border-t-star-blue",
   highlight,
+  href,
 }: {
   label: string;
   value: string | number;
   sub?: string;
   accent?: string;
   highlight?: boolean;
+  href?: string;
 }) {
-  return (
-    <div
-      className={cn(
-        "ledger-card border-t-4 p-4",
-        accent,
-        highlight && "ring-star-red/40 ring-2",
-      )}
-    >
+  const className = cn(
+    "ledger-card block border-t-4 p-4 transition-shadow",
+    accent,
+    highlight && "ring-star-red/40 ring-2",
+    href &&
+      "cursor-pointer hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue",
+  );
+  const inner = (
+    <>
       <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
         {label}
       </p>
       <p className="text-star-navy mt-1 text-3xl font-bold tabular-nums">{value}</p>
       {sub ? <p className="text-muted-foreground mt-1 text-xs leading-snug">{sub}</p> : null}
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className={className} aria-label={`${label}: ${value}`}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 export function AgentOperationsDashboard({
   dashboard,
+  scope = "personal",
 }: {
   dashboard: OperationsDashboard;
+  scope?: DashboardScope;
 }) {
+  const filter = { scope };
   const slaHealthPct =
     dashboard.open_count > 0
       ? Math.round(
@@ -96,13 +114,19 @@ export function AgentOperationsDashboard({
           <p className="text-muted-foreground text-xs">Opdateret {updatedLabel}</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <OpsKpiCard label="Åbne sager" value={dashboard.open_count} accent="border-t-star-navy" />
+          <OpsKpiCard
+            label="Åbne sager"
+            value={dashboard.open_count}
+            accent="border-t-star-navy"
+            href={buildTicketsFilterHref({ ...filter, openOnly: true })}
+          />
           <OpsKpiCard
             label="SLA overskredet"
             value={dashboard.sla_overdue_count}
             sub={dashboard.sla_overdue_count > 0 ? "Kræver handling" : "Ingen overskridelser"}
             accent="border-t-star-red"
             highlight={dashboard.sla_overdue_count > 0}
+            href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "overdue" })}
           />
           <OpsKpiCard
             label="SLA inden 4 t"
@@ -110,6 +134,7 @@ export function AgentOperationsDashboard({
             sub="Forfald inden for 4 timer"
             accent="border-t-amber-500"
             highlight={dashboard.sla_due_soon_count > 0}
+            href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "due_soon" })}
           />
           <OpsKpiCard
             label="Store sager"
@@ -117,12 +142,14 @@ export function AgentOperationsDashboard({
             sub="Åbne med markering Stor sag"
             accent="border-t-star-red"
             highlight={dashboard.major_open_count > 0}
+            href={buildTicketsFilterHref({ ...filter, majorOpen: true })}
           />
           <OpsKpiCard
             label="Løsningsgrad"
             value={`${dashboard.resolution_rate_pct}%`}
             sub="Lukket/løst seneste 30 d vs. åbne"
             accent="border-t-emerald-600"
+            href={buildTicketsFilterHref({ ...filter, closedSinceDays: 30 })}
           />
           <OpsKpiCard
             label="Gns. alder (åbne)"
@@ -131,6 +158,7 @@ export function AgentOperationsDashboard({
             }
             sub={`${dashboard.closed_count.toLocaleString("da-DK")} lukket i alt`}
             accent="border-t-star-blue"
+            href={buildTicketsFilterHref({ ...filter, openOnly: true })}
           />
         </div>
       </div>
@@ -142,19 +170,21 @@ export function AgentOperationsDashboard({
         </h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {dashboard.bucket_counts.map((bucket) => (
-            <div
+            <Link
               key={bucket.key}
+              href={buildTicketsFilterHref({ ...filter, bucket: bucket.key })}
               className={cn(
-                "ledger-card border-t-4 p-4",
+                "ledger-card block border-t-4 p-4 transition-shadow hover:shadow-md",
                 BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue",
               )}
+              aria-label={`${bucket.label_da}: ${bucket.count} sager`}
             >
               <p className="text-star-navy text-2xl font-bold tabular-nums">{bucket.count}</p>
               <p className="text-star-navy mt-1 text-sm font-semibold">{bucket.label_da}</p>
               <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                 {BUCKET_DESCRIPTIONS_DA[bucket.key] ?? ""}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -178,6 +208,7 @@ export function AgentOperationsDashboard({
               value={dashboard.opened_last_7_days}
               sub="Nye sager i perioden"
               accent="border-t-star-blue"
+              href={buildTicketsFilterHref({ ...filter, openedSinceDays: 7 })}
             />
             <OpsKpiCard
               label="Lukket (7 d)"
@@ -188,6 +219,7 @@ export function AgentOperationsDashboard({
                   : "Ingen modtagne i perioden"
               }
               accent="border-t-emerald-600"
+              href={buildTicketsFilterHref({ ...filter, closedSinceDays: 7 })}
             />
           </div>
         </StarSectionCard>

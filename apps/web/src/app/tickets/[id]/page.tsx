@@ -4,10 +4,9 @@ import { notFound } from "next/navigation";
 import { TicketDetailView } from "@/components/ticket-detail";
 import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
-import { cookies } from "next/headers";
-import { isStaff, USER_COOKIE } from "@/lib/auth";
+import { getServerUser } from "@/lib/auth-server";
+import { isStaff } from "@/lib/auth";
 import type { Team } from "@/types/team";
-import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
 export const dynamic = "force-dynamic";
@@ -18,17 +17,7 @@ export default async function TicketDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const userCookie = (await cookies()).get(USER_COOKIE)?.value;
-  let currentUser: User | null = null;
-  if (userCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
-    } catch {
-      currentUser = null;
-    }
-  }
-
+  const currentUser = await getServerUser();
   const staff = isStaff(currentUser);
 
   try {
@@ -39,9 +28,9 @@ export default async function TicketDetailPage({
         : Promise.resolve([] as Team[]),
     ]);
     return (
-      <main className="mx-auto w-full max-w-7xl">
+      <div className="flex min-h-0 flex-1 flex-col">
         <TicketDetailView ticket={ticket} currentUser={currentUser} teams={teams} />
-      </main>
+      </div>
     );
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
@@ -49,7 +38,7 @@ export default async function TicketDetailPage({
     }
     if (error instanceof ApiError && error.status === 403) {
       return (
-        <main className="star-page max-w-7xl">
+        <div className="wire-scroll-content star-page max-w-7xl">
           <p className="text-destructive text-sm">
             Du har ikke adgang til denne sag. Log ind med en bruger der har adgang, eller gå
             tilbage til{" "}
@@ -58,7 +47,7 @@ export default async function TicketDetailPage({
             </Link>
             .
           </p>
-        </main>
+        </div>
       );
     }
     const detail =
@@ -66,7 +55,7 @@ export default async function TicketDetailPage({
         ? `Kunne ikke hente sagen (API ${error.status}).`
         : "Kunne ikke hente sagen.";
     return (
-      <main className="star-page max-w-7xl">
+      <div className="wire-scroll-content star-page max-w-7xl">
         <p className="text-destructive text-sm">
           {detail} Prøv igen om et øjeblik, eller gå tilbage til{" "}
           <Link href="/" className="text-star-blue underline">
@@ -74,7 +63,7 @@ export default async function TicketDetailPage({
           </Link>
           .
         </p>
-      </main>
+      </div>
     );
   }
 }

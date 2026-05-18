@@ -5,12 +5,18 @@ import { useCallback, useEffect, useId, useMemo, useState, type ReactNode, type 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import {
+  filterAdminUsers,
+  groupAdminUsersByTeam,
+} from "@/lib/admin-users-grouping";
 import { apiGet, apiPatch, apiPostNoContent } from "@/lib/api";
 import type {
+  UserAdminListItem,
   UserAdminListResponse,
   UserAdminMeta,
   UserAdminRead,
@@ -43,6 +49,118 @@ const passwordSchema = z
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+async function fetchAllAdminUsers(search: string): Promise<UserAdminListItem[]> {
+  const params = new URLSearchParams({ page: "1", page_size: "100" });
+  if (search.trim()) {
+    params.set("q", search.trim());
+  }
+  const first = await apiGet<UserAdminListResponse>(`/api/v1/users?${params}`);
+  const items = [...first.items];
+  const totalPages = Math.max(1, Math.ceil(first.total / first.page_size));
+  for (let page = 2; page <= totalPages; page += 1) {
+    const nextParams = new URLSearchParams(params);
+    nextParams.set("page", String(page));
+    const next = await apiGet<UserAdminListResponse>(`/api/v1/users?${nextParams}`);
+    items.push(...next.items);
+  }
+  return items;
+}
+
+function AddToTeamDialog({
+  user,
+  teams,
+  onClose,
+  onSaved,
+}: {
+  user: UserAdminListItem;
+  teams: Team[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const titleId = useId();
+  const panelRef = useFocusTrap(true, onClose);
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const availableTeams = teams.filter((team) => !user.team_ids.includes(team.id));
+
+  const onSave = async () => {
+    if (!selectedTeamId) {
+      setError("Vælg en gruppe");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await apiPatch<UserAdminRead>(`/api/v1/users/${user.id}`, {
+        team_ids: [...user.team_ids, selectedTeamId],
+      });
+      onSaved();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke tilføje til gruppe");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <UserEditDialogPanel
+        ref={panelRef}
+        titleId={titleId}
+        title={`Tilføj ${user.display_name} til gruppe`}
+        onClose={onClose}
+      >
+        {availableTeams.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Brugeren er allerede medlem af alle grupper.</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-team-select">Gruppe</Label>
+              <select
+                id="add-team-select"
+                className={selectClassName}
+                value={selectedTeamId}
+                onChange={(event) => setSelectedTeamId(event.target.value)}
+              >
+                <option value="">Vælg gruppe…</option>
+                {availableTeams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
+                Annuller
+              </Button>
+              <Button
+                type="button"
+                className="bg-star-blue hover:bg-star-navy"
+                disabled={saving}
+                onClick={() => void onSave()}
+              >
+                {saving ? "Gemmer…" : "Tilføj"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </UserEditDialogPanel>
+    </div>
+  );
+}
 
 function AdminUserEditDialog({
   userId,
@@ -226,22 +344,22 @@ function AdminUserEditDialog({
               <div className="space-y-2">
                 <Label>Grupper (dispatch)</Label>
                 <div className="border-input max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
-                    {teams.map((team) => (
-                      <label key={team.id} className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="size-4 rounded border"
-                          checked={selectedTeamIds.includes(team.id)}
-                          onChange={(event) => {
-                            const next = event.target.checked
-                              ? [...selectedTeamIds, team.id]
-                              : selectedTeamIds.filter((id) => id !== team.id);
-                            setValue("team_ids", next, { shouldDirty: true });
-                          }}
-                        />
-                        {team.name}
-                      </label>
-                    ))}
+                  {teams.map((team) => (
+                    <label key={team.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="size-4 rounded border"
+                        checked={selectedTeamIds.includes(team.id)}
+                        onChange={(event) => {
+                          const next = event.target.checked
+                            ? [...selectedTeamIds, team.id]
+                            : selectedTeamIds.filter((id) => id !== team.id);
+                          setValue("team_ids", next, { shouldDirty: true });
+                        }}
+                      />
+                      {team.name}
+                    </label>
+                  ))}
                 </div>
               </div>
 
@@ -355,33 +473,27 @@ function UserEditDialogPanel({
 export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole }) {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [data, setData] = useState<UserAdminListResponse | null>(null);
+  const [users, setUsers] = useState<UserAdminListItem[]>([]);
   const [meta, setMeta] = useState<UserAdminMeta | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [membershipBusy, setMembershipBusy] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [addingToTeamUser, setAddingToTeamUser] = useState<UserAdminListItem | null>(null);
 
   const loadList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        page_size: "25",
-      });
-      if (search.trim()) {
-        params.set("q", search.trim());
-      }
-      const list = await apiGet<UserAdminListResponse>(`/api/v1/users?${params}`);
-      setData(list);
+      const items = await fetchAllAdminUsers(search);
+      setUsers(items);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke hente brugere");
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [search]);
 
   useEffect(() => {
     void loadList();
@@ -410,7 +522,34 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
     };
   }, []);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.page_size)) : 1;
+  const filteredUsers = useMemo(() => filterAdminUsers(users, search), [users, search]);
+  const grouped = useMemo(
+    () => groupAdminUsersByTeam(filteredUsers, teams),
+    [filteredUsers, teams],
+  );
+
+  const updateMembership = async (user: UserAdminListItem, teamIds: string[]) => {
+    setMembershipBusy(true);
+    setError(null);
+    try {
+      await apiPatch<UserAdminRead>(`/api/v1/users/${user.id}`, { team_ids: teamIds });
+      await loadList();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke opdatere gruppemedlemskab");
+    } finally {
+      setMembershipBusy(false);
+    }
+  };
+
+  const onRemoveFromTeam = (user: UserAdminListItem, teamId: string) => {
+    if (membershipBusy) {
+      return;
+    }
+    void updateMembership(
+      user,
+      user.team_ids.filter((id) => id !== teamId),
+    );
+  };
 
   return (
     <section className="mt-8">
@@ -420,12 +559,11 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           <div className="flex gap-2">
             <Input
               id="user-search"
-              placeholder="Navn eller e-mail…"
+              placeholder="Navn, e-mail eller gruppe…"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
-                  setPage(1);
                   setSearch(query);
                 }
               }}
@@ -433,104 +571,32 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
             <Button
               type="button"
               className="bg-star-blue hover:bg-star-navy shrink-0"
-              onClick={() => {
-                setPage(1);
-                setSearch(query);
-              }}
+              onClick={() => setSearch(query)}
             >
               Søg
             </Button>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
-          {data ? `${data.total} bruger${data.total === 1 ? "" : "e"}` : null}
+          {loading ? "Henter…" : `${filteredUsers.length} bruger${filteredUsers.length === 1 ? "" : "e"}`}
+          {!loading ? " · API henter op til 100 pr. side (alle sider ved søgning)" : null}
         </p>
       </div>
 
       {error ? <p className="text-destructive mt-4 text-sm">{error}</p> : null}
 
-      <div className="star-section-card mt-6 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead>
-            <tr className="border-b bg-star-blue-light/60 text-xs uppercase tracking-wide text-star-navy">
-              <th className="px-4 py-3 font-semibold">Navn</th>
-              <th className="px-4 py-3 font-semibold">E-mail</th>
-              <th className="px-4 py-3 font-semibold">Rettighed</th>
-              <th className="px-4 py-3 font-semibold">Grupper</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 font-semibold" />
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="text-muted-foreground px-4 py-8 text-center">
-                  Henter brugere…
-                </td>
-              </tr>
-            ) : data?.items.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-muted-foreground px-4 py-8 text-center">
-                  Ingen brugere fundet.
-                </td>
-              </tr>
-            ) : (
-              data?.items.map((row) => (
-                <tr key={row.id} className="border-b last:border-0">
-                  <td className="px-4 py-3 font-medium">{row.display_name}</td>
-                  <td className="text-muted-foreground px-4 py-3">{row.email}</td>
-                  <td className="px-4 py-3">{row.role_label}</td>
-                  <td className="text-muted-foreground px-4 py-3">
-                    {row.team_names.length > 0 ? row.team_names.join(", ") : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.is_active ? (
-                      <span className="text-star-navy">Aktiv</span>
-                    ) : (
-                      <span className="text-destructive">Inaktiv</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={!meta}
-                      onClick={() => setEditingUserId(row.id)}
-                    >
-                      Rediger
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {data && totalPages > 1 ? (
-        <div className="mt-4 flex items-center justify-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Forrige
-          </Button>
-          <span className="text-muted-foreground text-sm">
-            Side {page} af {totalPages}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Næste
-          </Button>
-        </div>
-      ) : null}
+      {loading ? (
+        <p className="text-muted-foreground mt-8 text-sm">Henter brugere…</p>
+      ) : filteredUsers.length === 0 ? (
+        <p className="text-muted-foreground mt-8 text-sm">Ingen brugere fundet.</p>
+      ) : (
+        <AdminUsersGroupedSections
+          grouped={grouped}
+          onEdit={setEditingUserId}
+          onRemoveFromTeam={onRemoveFromTeam}
+          onAddToTeam={setAddingToTeamUser}
+        />
+      )}
 
       {editingUserId && meta ? (
         <AdminUserEditDialog
@@ -539,6 +605,15 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           teams={teams}
           currentUserRole={currentUserRole}
           onClose={() => setEditingUserId(null)}
+          onSaved={() => void loadList()}
+        />
+      ) : null}
+
+      {addingToTeamUser ? (
+        <AddToTeamDialog
+          user={addingToTeamUser}
+          teams={teams}
+          onClose={() => setAddingToTeamUser(null)}
           onSaved={() => void loadList()}
         />
       ) : null}

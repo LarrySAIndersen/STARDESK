@@ -1,19 +1,9 @@
-import { cookies } from "next/headers";
-
 import { PageHero } from "@/components/page-hero";
-import { isStaff, USER_COOKIE } from "@/lib/auth";
-import type { User } from "@/types/user";
+import { getServerUser } from "@/lib/auth-server";
+import { isStaff } from "@/lib/auth";
 
 export async function TicketListShell({ children }: { children: React.ReactNode }) {
-  let currentUser: User | null = null;
-  const userCookie = (await cookies()).get(USER_COOKIE)?.value;
-  if (userCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
-    } catch {
-      currentUser = null;
-    }
-  }
+  const currentUser = await getServerUser();
 
   if (isStaff(currentUser)) {
     return <>{children}</>;

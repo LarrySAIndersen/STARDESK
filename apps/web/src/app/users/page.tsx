@@ -1,32 +1,21 @@
 import { AdminUsersPanel } from "@/components/admin-users-panel";
-import { PageHero } from "@/components/page-hero";
-import { isAdmin, USER_COOKIE } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { canManageUsers } from "@/lib/auth";
+import { getServerUser } from "@/lib/auth-server";
 import { redirect } from "next/navigation";
-import type { User } from "@/types/user";
 
 export default async function UsersAdminPage() {
-  const userCookie = (await cookies()).get(USER_COOKIE)?.value;
-  let currentUser: User | null = null;
-  if (userCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
-    } catch {
-      currentUser = null;
-    }
-  }
+  const currentUser = await getServerUser();
 
-  if (!isAdmin(currentUser)) {
+  if (!canManageUsers(currentUser)) {
     redirect("/");
   }
 
   return (
-    <main className="star-page">
-      <PageHero
-        title="Brugere"
-        lead="Administrer konti, rettighedsgrupper, gruppemedlemskaber og adgangskoder."
-      />
+    <div className="wire-scroll-content min-h-0 flex-1">
+      <p className="text-muted-foreground mb-6 max-w-2xl text-sm">
+        Administrer konti, rettighedsgrupper, gruppemedlemskaber og adgangskoder.
+      </p>
       <AdminUsersPanel currentUserRole={currentUser!.role} />
-    </main>
+    </div>
   );
 }

@@ -9,6 +9,7 @@ from star_itsm_api.schemas.comment import CommentRead
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, TicketTimestampsRead
 from star_itsm_api.schemas.ticket_intelligence import TicketIntelligenceRead
+from star_itsm_api.schemas.ticket_routing import TicketRoutingRead
 from star_itsm_api.services.cpr import assert_no_cpr_outside_field, validate_cpr
 from star_itsm_api.services.ticket_tags import normalize_tags, validate_emoji
 
@@ -59,6 +60,12 @@ class TicketRead(BaseModel):
     fault_displayed: bool = False
     tags: list[str] = Field(default_factory=list)
     emoji: str | None = None
+    routing: TicketRoutingRead | None = None
+    is_knowledge_article: bool = False
+    knowledge_status: str | None = None
+    knowledge_status_label_da: str | None = None
+    knowledge_visibility: str | None = None
+    knowledge_visibility_label_da: str | None = None
 
 
 class TicketDetailRead(TicketRead):
@@ -101,6 +108,7 @@ class TicketCreate(BaseModel):
     subject_cpr: str | None = Field(default=None, max_length=20)
     tags: list[str] = Field(default_factory=list, max_length=10)
     emoji: str | None = Field(default=None, max_length=16)
+    intake_answers: dict[str, str] = Field(default_factory=dict, max_length=20)
 
     @field_validator("tags")
     @classmethod
@@ -143,11 +151,15 @@ class TicketRelatedMajorCreate(BaseModel):
     related_ticket_id: UUID
 
 
+class TicketPriorityUpdate(BaseModel):
+    priority: Literal["critical", "high", "medium", "low"]
+    reason: str = Field(min_length=10, max_length=2000)
+
+
 class TicketMetadataUpdate(BaseModel):
     is_major: bool | None = None
     is_security_ticket: bool | None = None
     parent_ticket_id: UUID | None = None
-    priority: Literal["critical", "high", "medium", "low"] | None = None
     sub_cause_ids: list[UUID] | None = None
     tags: list[str] | None = None
     emoji: str | None = Field(default=None, max_length=16)

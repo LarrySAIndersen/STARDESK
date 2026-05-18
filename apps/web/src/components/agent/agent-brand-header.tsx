@@ -1,31 +1,36 @@
+"use client";
+
 import Link from "next/link";
 
 import { StarLogo } from "@/components/star-logo";
+import { getClientUser } from "@/lib/auth";
 
 export function AgentBrandHeader() {
-  return (
-    <header className="border-border bg-card sticky top-0 z-50 shrink-0 border-b shadow-sm">
-      <div className="bg-star-navy text-white">
-        <div className="flex items-center justify-between px-6 py-1.5 text-xs">
-          <span className="text-white/90">
-            Styrelsen for Arbejdsmarked og Rekruttering — ITSM prototype
-          </span>
-          <span className="hidden text-white/90 sm:inline">STARdesk</span>
-        </div>
-      </div>
+  const user = getClientUser();
+  const initials = user?.display_name
+    .split(" ")
+    .map((p) => p[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() ?? "?";
 
-      <div className="px-6 py-3">
-        <Link href="/" className="group inline-flex max-w-full items-center gap-3">
-          <StarLogo priority className="transition-opacity group-hover:opacity-90" />
-          <div className="min-w-0">
-            <span className="text-star-navy dark:text-foreground block truncate text-xl font-bold leading-tight tracking-tight">
-              STARdesk
+  return (
+    <header className="wire-topheader">
+      <Link href="/" className="flex shrink-0 items-center gap-3">
+        <StarLogo priority inverted className="h-9 w-auto" />
+        <span className="border-l border-white/30 pl-4 text-sm font-semibold text-white">
+          Servicedesk
+        </span>
+      </Link>
+      <div className="ml-auto flex items-center gap-3">
+        {user ? (
+          <>
+            <span className="hidden text-xs text-white/80 sm:inline">{user.email}</span>
+            <span className="wire-avatar-sm" aria-hidden>
+              {initials}
             </span>
-            <span className="text-star-blue dark:text-primary block truncate text-xs font-medium">
-              Sagsstyring og self-service
-            </span>
-          </div>
-        </Link>
+          </>
+        ) : null}
       </div>
     </header>
   );

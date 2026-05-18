@@ -10,7 +10,12 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead, TicketSummaryRead
 from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
+from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
 from star_itsm_api.services.sub_causes import get_sub_causes_by_ticket_ids
+from star_itsm_api.services.knowledge_articles import (
+    KNOWLEDGE_STATUS_LABELS_DA,
+    KNOWLEDGE_VISIBILITY_LABELS_DA,
+)
 from star_itsm_api.services.ticket_hierarchy import (
     get_child_tickets,
     get_related_major_tickets,
@@ -117,8 +122,11 @@ def _ticket_to_read(
     users: dict[uuid.UUID, str],
     parents: dict[uuid.UUID, TicketSummaryRead],
     child_counts: dict[uuid.UUID, int],
+    active_teams: list[_TeamRef] | None = None,
 ) -> TicketRead:
     sla = sla_fields_for_ticket(ticket)
+    ka_status = getattr(ticket, "knowledge_status", None)
+    ka_visibility = getattr(ticket, "knowledge_visibility", None)
     return TicketRead(
         id=ticket.id,
         ticket_number=ticket.ticket_number,
@@ -150,12 +158,39 @@ def _ticket_to_read(
         fault_displayed=getattr(ticket, "fault_displayed", False),
         tags=list(getattr(ticket, "tags", None) or []),
         emoji=getattr(ticket, "emoji", None),
+        routing=build_ticket_routing(
+            ticket,
+            category_name_da=categories.get(ticket.category_id)
+            if ticket.category_id
+            else None,
+            sub_causes_count=len(sub_causes),
+            teams=active_teams,
+        ),
+        is_knowledge_article=getattr(ticket, "is_knowledge_article", False),
+        knowledge_status=ka_status,
+        knowledge_status_label_da=KNOWLEDGE_STATUS_LABELS_DA.get(ka_status, ka_status)
+        if ka_status
+        else None,
+        knowledge_visibility=ka_visibility,
+        knowledge_visibility_label_da=KNOWLEDGE_VISIBILITY_LABELS_DA.get(
+            ka_visibility, ka_visibility
+        )
+        if ka_visibility
+        else None,
     )
+
+
+async def _load_active_teams(db: AsyncSession) -> list[_TeamRef]:
+    rows = await db.execute(
+        select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())
+    )
+    return [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
 
 
 async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[TicketRead]:
     sub_map, categories, subcategories, teams, users = await _load_list_context(db, tickets)
     parents, child_counts = await _load_hierarchy_context(db, tickets)
+    active_teams = await _load_active_teams(db)
     return [
         _ticket_to_read(
             ticket,
@@ -166,6 +201,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
             users=users,
             parents=parents,
             child_counts=child_counts,
+            active_teams=active_teams,
         )
         for ticket in tickets
     ]

@@ -272,3 +272,8 @@ ALTER TABLE tickets
 CREATE INDEX IF NOT EXISTS idx_tickets_is_security
     ON tickets (is_security_ticket, status)
     WHERE deleted_at IS NULL AND is_security_ticket = TRUE;
+
+-- === docs/ticket-routing-metadata-migration.sql ===
+
+ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS routing_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;

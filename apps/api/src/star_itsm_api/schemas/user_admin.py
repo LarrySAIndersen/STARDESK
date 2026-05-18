@@ -31,6 +31,7 @@ class UserAdminRead(BaseModel):
     organization_id: UUID | None = None
     organization_name: str | None = None
     teams: list[UserTeamSummary] = Field(default_factory=list)
+    created_at: datetime | None = None
 
 
 class UserAdminListItem(BaseModel):
@@ -41,6 +42,7 @@ class UserAdminListItem(BaseModel):
     role_label: str
     is_active: bool
     organization_name: str | None = None
+    team_ids: list[UUID] = Field(default_factory=list)
     team_names: list[str] = Field(default_factory=list)
 
 
@@ -95,4 +97,5 @@ def user_to_admin_read(
         organization_id=getattr(user, "organization_id", None),
         organization_name=organization_name,
         teams=teams,
+        created_at=getattr(user, "created_at", None),
     )

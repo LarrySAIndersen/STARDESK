@@ -27,6 +27,7 @@ MIGRATIONS = [
     "docs/ticket-hierarchy-migration.sql",
     "docs/ticket-shared-migration.sql",
     "docs/ticket-security-flag-migration.sql",
+    "docs/ticket-routing-metadata-migration.sql",
 ]
 
 SEEDS = [

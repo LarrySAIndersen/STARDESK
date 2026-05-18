@@ -11,12 +11,19 @@ from star_itsm_api.schemas.dashboard import (
     DashboardRead,
     LongestOpenTicket,
 )
+from star_itsm_api.services.dashboard_scope import (
+    DashboardScope,
+    default_dashboard_scope,
+    filter_tickets_by_scope,
+    parse_dashboard_scope,
+)
 from star_itsm_api.services.reports import (
     BUCKET_DEFINITIONS,
     OPEN_STATUSES,
     status_label_da,
     _ticket_scope_stmt,
 )
+from star_itsm_api.services.teams import get_user_team_ids
 from star_itsm_api.services.sla_enrichment import effective_resolution_due_at
 from star_itsm_api.services.sla_status import sla_breached, sla_due_soon
 from star_itsm_api.services.ticket_read import tickets_to_read_list
@@ -37,15 +44,30 @@ def _days_between(start: datetime, end: datetime) -> float:
     return max(delta.total_seconds() / 86400, 0)
 
 
-async def build_dashboard(db: AsyncSession, user: User) -> DashboardRead:
+async def build_dashboard(
+    db: AsyncSession,
+    user: User,
+    *,
+    scope: DashboardScope | None = None,
+) -> DashboardRead:
     now = datetime.now(UTC)
     seven_days_ago = now - timedelta(days=7)
     thirty_days_ago = now - timedelta(days=30)
     chart_start = (now - timedelta(days=13)).date()
 
+    effective_scope = scope or default_dashboard_scope(user)
+
     stmt = await _ticket_scope_stmt(user)
     result = await db.execute(stmt)
     tickets = list(result.scalars().all())
+    if effective_scope != DashboardScope.all:
+        team_ids = await get_user_team_ids(db, user.id)
+        tickets = filter_tickets_by_scope(
+            tickets,
+            user=user,
+            team_ids=team_ids,
+            scope=effective_scope,
+        )
 
     open_count = 0
     closed_count = 0

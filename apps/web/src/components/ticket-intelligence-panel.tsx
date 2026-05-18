@@ -12,14 +12,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { apiGet } from "@/lib/api";
-import type { TicketIntelligence, TicketLlmContext } from "@/types/ticket";
+import type { TicketIntelligence, TicketLlmContext, TicketRouting } from "@/types/ticket";
 
 export function TicketIntelligencePanel({
   ticketId,
   intelligence,
+  routing,
 }: {
   ticketId: string;
   intelligence: TicketIntelligence;
+  routing?: TicketRouting | null;
 }) {
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
@@ -37,7 +39,7 @@ export function TicketIntelligencePanel({
   }
 
   return (
-    <Card className="border-star-blue/20">
+    <Card className="border-star-blue/20 shadow-sm">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Semantik og lethed (LLM)</CardTitle>
         <CardDescription>
@@ -45,6 +47,28 @@ export function TicketIntelligencePanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
+        {routing ? (
+          <>
+            <p className="text-muted-foreground text-xs">
+              Fuldstændighed: <strong>{routing.completeness_score}%</strong>
+              {routing.routing_ready ? " — klar til auto-tildeling" : ""}
+            </p>
+            {Object.keys(routing.intake.answers).length > 0 ? (
+              <p className="text-muted-foreground text-xs">
+                Indtag:{" "}
+                {Object.entries(routing.intake.answers)
+                  .map(([k, v]) => `${k}: ${v}`)
+                  .join(" · ")}
+              </p>
+            ) : null}
+            {routing.suggested_team_name ? (
+              <p className="text-xs text-[#2A2C7A]">
+                Routing: <strong>{routing.suggested_team_name}</strong>
+                {routing.routing_reason_da ? ` — ${routing.routing_reason_da}` : null}
+              </p>
+            ) : null}
+          </>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {intelligence.ease_score != null ? (
             <Badge className="bg-star-blue">

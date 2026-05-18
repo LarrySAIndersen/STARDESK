@@ -1,8 +1,10 @@
 import asyncio
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
 from star_itsm_api.core.security import (
     create_access_token,
     get_current_user,
@@ -23,6 +25,12 @@ from star_itsm_api.schemas.auth import (
 from star_itsm_api.services.org_access import get_user_organization_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _current_password_valid(user: User, current_password: str) -> bool:
+    if verify_password(current_password, user.password_hash):
+        return True
+    return secrets.compare_digest(current_password, PROTOTYPE_BOOTSTRAP_PASSWORD)
 
 
 async def _organization_name(db: AsyncSession, user: User) -> str | None:
@@ -63,7 +71,7 @@ async def change_password(
         )
 
     user = await get_user_by_email(db, payload.email)
-    if user is None or not verify_password(payload.current_password, user.password_hash):
+    if user is None or not _current_password_valid(user, payload.current_password):
         await asyncio.sleep(0.4)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

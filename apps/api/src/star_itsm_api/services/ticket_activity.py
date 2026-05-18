@@ -20,6 +20,13 @@ _STATUS_LABELS_DA = {
     "cancelled": "Annulleret",
 }
 
+_PRIORITY_LABELS_DA = {
+    "critical": "Kritisk",
+    "high": "Høj",
+    "medium": "Medium",
+    "low": "Lav",
+}
+
 
 def ticket_timestamps_read(ticket: Ticket) -> TicketTimestampsRead:
     return TicketTimestampsRead(
@@ -45,6 +52,12 @@ def _status_label(status: str | None) -> str:
     return _STATUS_LABELS_DA.get(status, status)
 
 
+def _priority_label(priority: str | None) -> str:
+    if not priority:
+        return "—"
+    return _PRIORITY_LABELS_DA.get(priority, priority)
+
+
 def _event_label(event_type: str, payload: dict) -> tuple[str, str, str | None]:
     """Return (label_da, visibility, detail)."""
     if event_type == "ticket.created":
@@ -62,6 +75,11 @@ def _event_label(event_type: str, payload: dict) -> tuple[str, str, str | None]:
         if payload.get("is_internal"):
             return "Intern note tilføjet", "internal", None
         return "Ekstern opdatering tilføjet", "external", None
+    if event_type == "ticket.priority_changed":
+        prev = _priority_label(payload.get("previous_priority"))
+        new = _priority_label(payload.get("priority"))
+        reason = (payload.get("reason") or "").strip()
+        return f"Prioritet ændret: {prev} → {new}", "internal", reason or None
     if event_type == "ticket.metadata_changed":
         return "Sagsmetadata opdateret", "internal", None
     if event_type == "ticket.attachment.uploaded":

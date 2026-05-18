@@ -14,7 +14,7 @@ from star_itsm_api.core.security import (
     is_staff,
     require_staff,
 )
-from star_itsm_api.services.permissions import is_admin, is_staff_role
+from star_itsm_api.services.permissions import can_manage_users, is_admin, is_staff_role
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.team import Team
@@ -40,6 +40,7 @@ from star_itsm_api.schemas.ticket import (
     TicketDetailRead,
     TicketMetadataUpdate,
     TicketParentUpdate,
+    TicketPriorityUpdate,
     TicketRead,
     TicketRelatedMajorCreate,
     TicketStatusUpdate,
@@ -55,12 +56,22 @@ from star_itsm_api.services.sub_causes import (
     validate_sub_cause_ids,
 )
 from star_itsm_api.services.ticket_read import ticket_to_detail_read, ticket_to_read, tickets_to_read_list
+from star_itsm_api.services.dashboard_scope import (
+    apply_dashboard_scope_stmt,
+    parse_dashboard_scope,
+)
 from star_itsm_api.services.org_access import (
     apply_agent_team_list_filter,
     apply_ticket_list_filter,
     can_assign_to_any_team,
     get_user_organization_id,
     user_can_access_ticket,
+)
+from star_itsm_api.services.ticket_dashboard_filters import (
+    apply_bucket_filter,
+    filter_tickets_by_sla,
+    filter_tickets_closed_since,
+    filter_tickets_opened_since,
 )
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
@@ -73,6 +84,7 @@ from star_itsm_api.services.attachments import (
     save_ticket_upload,
 )
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
+from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.ticket_search import apply_ticket_search_filter
 from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
@@ -98,6 +110,7 @@ from star_itsm_api.services.ticket_intelligence import (
     build_llm_context_batch,
     intelligence_from_ticket,
 )
+from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
 
 logger = logging.getLogger(__name__)
 
@@ -194,12 +207,70 @@ async def list_tickets(
         le=500,
         description="Maximum tickets returned (newest first)",
     ),
+    assignee_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter tickets assigned to this user (user management)",
+    ),
+    scope: str | None = Query(
+        default=None,
+        description="personal, mine, group, created, all — dashboard drill-down scope",
+    ),
+    bucket: str | None = Query(
+        default=None,
+        description="Pipeline bucket: modtaget, igangsat, lost, lukket",
+    ),
+    sla: str | None = Query(
+        default=None,
+        description="SLA filter on open tickets: overdue, due_soon",
+    ),
+    opened_since_days: int | None = Query(
+        default=None,
+        ge=1,
+        le=365,
+        description="Tickets created within N days",
+    ),
+    closed_since_days: int | None = Query(
+        default=None,
+        ge=1,
+        le=365,
+        description="Tickets closed/resolved within N days",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
+        if assignee_id is not None and not can_manage_users(current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        parsed_scope = parse_dashboard_scope(scope)
+        if scope is not None and parsed_scope is None:
+            raise HTTPException(status_code=400, detail="Invalid scope")
+        if sla is not None and sla not in ("overdue", "due_soon"):
+            raise HTTPException(status_code=400, detail="Invalid sla filter")
+
         stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
+        stmt = exclude_knowledge_articles(stmt)
         stmt = apply_ticket_list_filter(stmt, current_user, store_sager=store_sager)
+        if assignee_id is not None:
+            stmt = stmt.where(Ticket.assigned_user_id == assignee_id)
+        effective_scope = parsed_scope
+        dashboard_filters = (
+            effective_scope is not None
+            or bucket is not None
+            or sla is not None
+            or opened_since_days is not None
+            or closed_since_days is not None
+        )
+        if effective_scope is not None and is_staff_role(current_user):
+            stmt = await apply_dashboard_scope_stmt(
+                db, stmt, current_user, effective_scope
+            )
+        elif effective_scope is not None:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        if bucket is not None:
+            if not is_staff_role(current_user):
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            stmt = apply_bucket_filter(stmt, bucket)
         if parent_id is not None:
             stmt = stmt.where(Ticket.parent_ticket_id == parent_id)
         if has_parent is True:
@@ -227,7 +298,7 @@ async def list_tickets(
             stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
         elif store_sager and current_user.role != ROLE_SUBMITTER:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
-        elif current_user.role == ROLE_AGENT:
+        elif current_user.role == ROLE_AGENT and not dashboard_filters:
             stmt = await apply_agent_team_list_filter(db, stmt, current_user)
         if security_only:
             stmt = stmt.where(Ticket.is_security_ticket.is_(True))
@@ -236,7 +307,14 @@ async def list_tickets(
         stmt = apply_ticket_search_filter(stmt, q)
         stmt = stmt.order_by(Ticket.created_at.desc()).limit(limit)
         result = await db.execute(stmt)
-        return await tickets_to_read_list(db, list(result.scalars().all()))
+        tickets = list(result.scalars().all())
+        if sla is not None:
+            tickets = filter_tickets_by_sla(tickets, sla=sla)
+        if opened_since_days is not None:
+            tickets = filter_tickets_opened_since(tickets, days=opened_since_days)
+        if closed_since_days is not None:
+            tickets = filter_tickets_closed_since(tickets, days=closed_since_days)
+        return await tickets_to_read_list(db, tickets)
     except HTTPException:
         raise
     except Exception:
@@ -330,6 +408,7 @@ async def create_ticket(
         parent_ticket_id=None,
         tags=payload.tags,
         emoji=payload.emoji,
+        routing_metadata=intake_metadata_from_answers(payload.intake_answers),
         created_at=now,
         updated_at=now,
         deleted_at=None,
@@ -601,14 +680,6 @@ async def update_ticket_metadata(
         ticket.tags = updates["tags"]
     if "emoji" in updates:
         ticket.emoji = updates["emoji"]
-    if "priority" in updates and updates["priority"] is not None:
-        ticket.priority = updates["priority"]
-        await apply_sla_to_ticket(
-            db,
-            ticket,
-            priority=updates["priority"],
-            start_at=ticket.created_at,
-        )
 
     if updates:
         now = datetime.now(UTC)
@@ -623,6 +694,59 @@ async def update_ticket_metadata(
                 created_at=now,
             )
         )
+    await db.commit()
+    return await get_ticket(ticket_id, db, current_user)
+
+
+@router.patch("/{ticket_id}/priority", response_model=TicketDetailRead)
+async def update_ticket_priority(
+    ticket_id: uuid.UUID,
+    payload: TicketPriorityUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    previous_priority = ticket.priority
+    if payload.priority == previous_priority:
+        raise HTTPException(
+            status_code=400,
+            detail="Prioritet er uændret; angiv en ny prioritet for at gemme.",
+        )
+
+    reason = payload.reason.strip()
+    if len(reason) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Begrundelse skal være mindst 10 tegn.",
+        )
+
+    now = datetime.now(UTC)
+    ticket.priority = payload.priority
+    await apply_sla_to_ticket(
+        db,
+        ticket,
+        priority=payload.priority,
+        start_at=ticket.created_at,
+    )
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.priority_changed",
+            payload={
+                "priority": payload.priority,
+                "previous_priority": previous_priority,
+                "reason": reason,
+            },
+            created_at=now,
+        )
+    )
     await db.commit()
     return await get_ticket(ticket_id, db, current_user)
 

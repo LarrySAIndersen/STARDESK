@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, Text
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from star_itsm_api.models.base import Base
@@ -56,9 +56,13 @@ class Ticket(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    routing_metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     is_major: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_shared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_security_ticket: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_knowledge_article: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    knowledge_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    knowledge_visibility: Mapped[str | None] = mapped_column(String(16), nullable=True)
     parent_ticket_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("tickets.id", ondelete="SET NULL"),

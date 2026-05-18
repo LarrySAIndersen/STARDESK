@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from star_itsm_api.schemas.ticket_routing import TicketRoutingRead
+
 IntelligenceSource = Literal["seed", "heuristic", "llm", "manual"]
 
 
@@ -72,10 +74,11 @@ class TicketIntelligenceUpdate(BaseModel):
 class TicketLlmContextRead(BaseModel):
     """Single document optimized for LLM prompts and batch evaluation."""
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"
     ticket_id: UUID
     ticket_number: str
     intelligence: TicketIntelligenceRead
+    routing: TicketRoutingRead | None = None
     semantic_bundle: TicketSemanticBundleRead
     operational: TicketLlmOperationalRead
     prompt_snippet_da: str

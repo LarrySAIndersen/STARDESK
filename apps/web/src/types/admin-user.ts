@@ -11,6 +11,7 @@ export interface UserAdminListItem {
   role_label: string;
   is_active: boolean;
   organization_name: string | null;
+  team_ids: string[];
   team_names: string[];
 }
 
@@ -31,6 +32,7 @@ export interface UserAdminRead {
   organization_id: string | null;
   organization_name: string | null;
   teams: UserTeamSummary[];
+  created_at: string | null;
 }
 
 export interface RoleOption {

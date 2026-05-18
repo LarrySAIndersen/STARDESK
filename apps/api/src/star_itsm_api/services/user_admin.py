@@ -74,10 +74,19 @@ async def list_users_admin(
     base = select(User).where(User.deleted_at.is_(None))
     if q:
         term = f"%{q.strip().lower()}%"
+        team_member_ids = (
+            select(TeamMember.user_id)
+            .join(Team, TeamMember.team_id == Team.id)
+            .where(
+                Team.is_active.is_(True),
+                func.lower(Team.name).like(term),
+            )
+        )
         base = base.where(
             or_(
                 func.lower(User.email).like(term),
                 func.lower(User.display_name).like(term),
+                User.id.in_(team_member_ids),
             )
         )
 
@@ -107,6 +116,7 @@ async def list_users_admin(
             role_label=ROLE_LABELS.get(user.role, user.role),
             is_active=user.is_active,
             organization_name=org_names.get(user.organization_id) if user.organization_id else None,
+            team_ids=[t.id for t in team_map.get(user.id, [])],
             team_names=[t.name for t in team_map.get(user.id, [])],
         )
         for user in users

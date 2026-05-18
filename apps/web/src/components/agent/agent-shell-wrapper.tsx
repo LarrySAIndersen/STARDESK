@@ -3,13 +3,12 @@ import { cookies } from "next/headers";
 import { AgentShell } from "@/components/agent/agent-shell";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { isStaff, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
-import type { User } from "@/types/user";
+import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
+import { getServerUser } from "@/lib/auth-server";
 
 export async function AgentShellWrapper({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
-  const userCookie = cookieStore.get(USER_COOKIE)?.value;
 
   if (!token) {
     return (
@@ -23,20 +22,16 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
     );
   }
 
-  let currentUser: User | null = null;
-  if (userCookie) {
-    try {
-      currentUser = JSON.parse(decodeURIComponent(userCookie)) as User;
-    } catch {
-      currentUser = null;
-    }
-  }
+  const currentUser = await getServerUser();
+  const showUsersNav = canManageUsers(currentUser);
 
   if (isStaff(currentUser)) {
     return (
-      <main id="main-content" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
-        <AgentShell>{children}</AgentShell>
-      </main>
+      <div className="flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <AgentShell user={currentUser} showUsersNav={showUsersNav}>
+          {children}
+        </AgentShell>
+      </div>
     );
   }
 

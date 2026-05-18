@@ -15,6 +15,7 @@ from star_itsm_api.routers import (
     categories,
     cron,
     health,
+    knowledge_articles,
     reports,
     sub_causes,
     teams,
@@ -58,6 +59,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
+app.include_router(knowledge_articles.router, prefix="/api/v1")
 app.include_router(teams.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(sub_causes.router, prefix="/api/v1")

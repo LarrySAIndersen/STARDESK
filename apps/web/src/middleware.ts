@@ -23,10 +23,17 @@ function isAuthApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/auth/");
 }
 
+/** Public files from `public/` (logos, icons) — must not require JWT or Basic Auth. */
+function isStaticPublicAsset(pathname: string): boolean {
+  if (pathname.startsWith("/images/")) return true;
+  if (pathname === "/favicon.ico") return true;
+  return false;
+}
+
 /** Paths that must never receive a Basic Auth challenge (static + health probe). */
 function isBasicAuthExcluded(pathname: string): boolean {
+  if (isStaticPublicAsset(pathname)) return true;
   if (pathname.startsWith("/_next")) return true;
-  if (pathname === "/favicon.ico") return true;
   if (pathname === "/api/health") return true;
   if (isAuthApiPath(pathname)) return true;
   return false;
@@ -115,6 +122,10 @@ function handleJwtSession(request: NextRequest): NextResponse {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (isStaticPublicAsset(pathname)) {
+    return NextResponse.next();
+  }
+
   // Layer 1: optional site-wide Basic Auth (staging lock)
   if (isBasicAuthEnabled() && !isBasicAuthExcluded(pathname)) {
     if (!verifyBasicAuth(request)) {
@@ -132,6 +143,6 @@ export const config = {
      * Run on all paths except Next internals, favicon, and health probe.
      * Other `/api/*` routes are included so Basic Auth applies to them too.
      */
-    "/((?!_next/static|_next/image|_next|favicon.ico|api/health).*)",
+    "/((?!_next/static|_next/image|_next|favicon.ico|api/health|images/).*)",
   ],
 };

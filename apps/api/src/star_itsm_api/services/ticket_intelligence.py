@@ -4,7 +4,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.category import Category, Subcategory
@@ -19,7 +19,6 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketLlmOperationalRead,
     TicketSemanticBundleRead,
 )
-
 SCORE_LABELS_DA: dict[int, str] = {
     1: "Meget lav",
     2: "Lav",
@@ -390,11 +389,33 @@ async def build_ticket_llm_context(
         age_hours=age_hours,
         open_hours=open_hours,
     )
+    from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
+
     prompt = build_prompt_snippet(ticket, intelligence, operational)
+    team_rows = (
+        await db.execute(
+            select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())
+        )
+    ).scalars().all()
+    active_teams = [_TeamRef(id=t.id, name=t.name) for t in team_rows]
+    sc_result = await db.execute(
+        select(func.count())
+        .select_from(TicketSubCause)
+        .where(TicketSubCause.ticket_id == ticket.id)
+    )
+    sub_cause_count = int(sc_result.scalar_one() or 0)
+    routing = build_ticket_routing(
+        ticket,
+        category_name_da=category_name,
+        sub_causes_count=sub_cause_count,
+        teams=active_teams,
+    )
     return TicketLlmContextRead(
+        schema_version="1.1",
         ticket_id=ticket.id,
         ticket_number=ticket.ticket_number,
         intelligence=intelligence,
+        routing=routing,
         semantic_bundle=semantic_bundle,
         operational=operational,
         prompt_snippet_da=prompt,

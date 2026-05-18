@@ -14,12 +14,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DEMO_PASSWORD } from "@/lib/demo-users";
 import { cn } from "@/lib/utils";
 
 export function ChangePasswordForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState(DEMO_PASSWORD);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +91,9 @@ export function ChangePasswordForm() {
         <CardHeader className="bg-star-navy text-white">
           <CardTitle className="text-white">Skift adgangskode</CardTitle>
           <CardDescription className="text-white/80">
-            Indtast e-mail og nuværende adgangskode for at vælge en ny.
+            Angiv din e-mail og prototype-adgangskoden{" "}
+            <span className="font-medium text-white">{DEMO_PASSWORD}</span> som nuværende
+            adgangskode — også hvis du allerede har skiftet den før.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -113,9 +116,13 @@ export function ChangePasswordForm() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
+                placeholder={DEMO_PASSWORD}
                 className={inputClass}
                 required
               />
+              <p className="text-muted-foreground text-xs">
+                Brug altid <span className="font-medium">{DEMO_PASSWORD}</span> her i prototypen.
+              </p>
             </PasswordField>
             <PasswordField label="Ny adgangskode" htmlFor="new-password">
               <Input

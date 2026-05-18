@@ -1,52 +1,46 @@
 "use client";
 
-import { Bell, Search, Settings } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { ThemeToggle } from "@/components/theme-toggle";
-import { UserMenu } from "@/components/user-menu";
+const TITLES: Record<string, string> = {
+  "/": "Dashboard",
+  "/tickets": "Alle sager",
+  "/tickets/new": "Ny sag",
+  "/groups": "Grupper",
+  "/users": "Brugere",
+  "/reports": "Rapporter",
+  "/portal": "Selvbetjeningsportal",
+};
 
-export function AgentTopBar({ title }: { title?: string }) {
+function titleForPath(pathname: string): string {
+  if (pathname.startsWith("/tickets/") && pathname !== "/tickets/new") {
+    return "Sagsdetaljer";
+  }
+  return TITLES[pathname] ?? "STARdesk";
+}
+
+export function AgentTopBar({
+  title,
+  actions,
+}: {
+  title?: string;
+  actions?: React.ReactNode;
+}) {
+  const pathname = usePathname();
+  const displayTitle = title ?? titleForPath(pathname);
+
   return (
-    <header className="border-border bg-card/80 sticky top-0 z-40 shrink-0 border-b backdrop-blur-sm">
-      <section className="flex items-center gap-4 px-6 py-3">
-        <label className="relative min-w-0 flex-1 sm:max-w-md lg:max-w-xl">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden
-          />
-          <input
-            type="search"
-            placeholder="Søg sager, brugere, aktiver…"
-            className="border-input bg-muted/60 text-foreground placeholder:text-muted-foreground h-10 w-full rounded-full border-0 pr-4 pl-10 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring/40"
-            aria-label="Søg"
-          />
-        </label>
-
-        {title ? (
-          <h1 className="text-foreground hidden shrink-0 text-lg font-semibold tracking-tight xl:block">
-            {title}
-          </h1>
+    <header className="wire-topbar">
+      <h1 className="wire-topbar-title">{displayTitle}</h1>
+      <div className="flex items-center gap-2">
+        {actions}
+        {pathname !== "/tickets/new" ? (
+          <Link href="/tickets/new" className="wire-btn wire-btn-red wire-btn-sm">
+            + Ny sag
+          </Link>
         ) : null}
-
-        <section className="ml-auto flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-2 transition-colors"
-            aria-label="Notifikationer"
-          >
-            <Bell className="size-[18px] stroke-[1.75]" />
-          </button>
-          <button
-            type="button"
-            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-2 transition-colors"
-            aria-label="Indstillinger"
-          >
-            <Settings className="size-[18px] stroke-[1.75]" />
-          </button>
-          <ThemeToggle />
-          <UserMenu />
-        </section>
-      </section>
+      </div>
     </header>
   );
 }

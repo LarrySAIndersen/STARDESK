@@ -7,16 +7,9 @@ import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { TicketIntakeQuestions, type IntakeAnswers } from "@/components/ticket-intake-questions";
 import { TicketTagsEmojiFields } from "@/components/ticket-tags-emoji-fields";
 import { assertNoCprInFreeText, validateCprOptional } from "@/lib/cpr";
 import { parseTagsInput } from "@/lib/ticket-tags";
@@ -73,8 +66,9 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>;
 
-const selectClassName =
-  "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
+const selectClassName = "wire-form-input h-9";
+const inputClassName = "wire-form-input h-9";
+const textareaClassName = "wire-form-input min-h-[8rem] resize-y";
 
 export function CreateTicketForm({
   categories,
@@ -90,6 +84,7 @@ export function CreateTicketForm({
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [tagsInput, setTagsInput] = useState("");
   const [emoji, setEmoji] = useState<string | null>(null);
+  const [intakeAnswers, setIntakeAnswers] = useState<IntakeAnswers>({});
   const [storeTickets, setStoreTickets] = useState<Ticket[]>([]);
   const [parentTicketId, setParentTicketId] = useState("");
   const {
@@ -112,6 +107,8 @@ export function CreateTicketForm({
   });
 
   const categoryId = watch("category_id");
+  const watchedTitle = watch("title") ?? "";
+  const watchedDescription = watch("description") ?? "";
   const isMajor = watch("is_major");
   const subjectCpr = useWatch({ control, name: "subject_cpr" }) ?? "";
   const cprFilled = subjectCpr.trim().length > 0;
@@ -147,6 +144,10 @@ export function CreateTicketForm({
   const subcategories = useMemo(() => {
     const category = categories.find((item) => item.id === categoryId);
     return category?.subcategories ?? [];
+  }, [categories, categoryId]);
+
+  const categoryNameDa = useMemo(() => {
+    return categories.find((item) => item.id === categoryId)?.name_da;
   }, [categories, categoryId]);
 
   useEffect(() => {
@@ -196,6 +197,9 @@ export function CreateTicketForm({
       subject_cpr: cpr,
       tags: parseTagsInput(tagsInput),
       emoji,
+      intake_answers: Object.fromEntries(
+        Object.entries(intakeAnswers).filter(([, v]) => v.trim()),
+      ),
     };
     try {
       const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);
@@ -215,22 +219,19 @@ export function CreateTicketForm({
   }
 
   return (
-    <Card className="star-section-card overflow-hidden border-t-4 border-t-star-blue">
-      <CardHeader className="bg-star-blue-light border-b">
-        <CardTitle className="text-star-navy">Opret ny sag</CardTitle>
-        <CardDescription>
-          Beskriv sagen først — personoplysninger og tags er valgfrie.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-          <section className="space-y-4" aria-labelledby="create-ticket-basics">
-            <h2 id="create-ticket-basics" className="text-star-navy text-sm font-semibold">
-              Sagens indhold
-            </h2>
+    <section className="wire-card border-t-[3px] border-t-star-red">
+      <h1 className="wire-card-title">Opret ny sag</h1>
+      <p className="text-muted-foreground mb-6 text-sm">
+        Beskriv sagen først — personoplysninger og tags er valgfrie.
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <section className="space-y-4" aria-labelledby="create-ticket-basics">
+          <h2 id="create-ticket-basics" className="wire-card-title">
+            Sagens indhold
+          </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="ticket_type">Type</Label>
+                <label className="wire-form-label" htmlFor="ticket_type">Type</label>
                 <select
                   id="ticket_type"
                   className={selectClassName}
@@ -242,7 +243,7 @@ export function CreateTicketForm({
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priority">Prioritet</Label>
+                <label className="wire-form-label" htmlFor="priority">Prioritet</label>
                 <select
                   id="priority"
                   className={selectClassName}
@@ -257,29 +258,43 @@ export function CreateTicketForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="title">Titel</Label>
-              <Input id="title" {...register("title")} />
+              <label className="wire-form-label" htmlFor="title">Titel</label>
+              <Input id="title" className={inputClassName} {...register("title")} />
               {errors.title ? (
                 <p className="text-destructive text-sm">{errors.title.message}</p>
               ) : null}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Beskrivelse</Label>
-              <Textarea id="description" rows={6} {...register("description")} />
+              <label className="wire-form-label" htmlFor="description">Beskrivelse</label>
+              <Textarea
+                id="description"
+                rows={6}
+                className={textareaClassName}
+                {...register("description")}
+              />
               {errors.description ? (
                 <p className="text-destructive text-sm">{errors.description.message}</p>
               ) : null}
             </div>
+
+            <TicketIntakeQuestions
+              title={watchedTitle}
+              description={watchedDescription}
+              categoryName={categoryNameDa}
+              answers={intakeAnswers}
+              onChange={setIntakeAnswers}
+              disabled={isSubmitting}
+            />
           </section>
 
           <section className="space-y-4" aria-labelledby="create-ticket-classify">
-            <h2 id="create-ticket-classify" className="text-star-navy text-sm font-semibold">
+            <h2 id="create-ticket-classify" className="wire-card-title">
               Klassificering
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="category_id">Kategori</Label>
+                <label className="wire-form-label" htmlFor="category_id">Kategori</label>
                 <select
                   id="category_id"
                   className={selectClassName}
@@ -294,7 +309,7 @@ export function CreateTicketForm({
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="subcategory_id">Underkategori</Label>
+                <label className="wire-form-label" htmlFor="subcategory_id">Underkategori</label>
                 <select
                   id="subcategory_id"
                   className={selectClassName}
@@ -312,13 +327,13 @@ export function CreateTicketForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Underårsager</Label>
+              <label className="wire-form-label">Underårsager</label>
               {subCauses.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
                   Vælg en kategori for at se underårsager.
                 </p>
               ) : (
-                <ul className="border-input max-h-40 space-y-2 overflow-y-auto rounded-md border bg-white p-3">
+                <ul className="max-h-40 space-y-2 overflow-y-auto rounded-[2px] border border-[var(--gray-border)] bg-white p-3">
                   {subCauses.map((sc) => (
                     <li key={sc.id} className="flex items-center gap-2 text-sm">
                       <input
@@ -344,7 +359,7 @@ export function CreateTicketForm({
 
             {!isMajor && storeTickets.length > 0 ? (
               <div className="space-y-2">
-                <Label htmlFor="parent_ticket_id">Tilknyt store sag (valgfrit)</Label>
+                <label className="wire-form-label" htmlFor="parent_ticket_id">Tilknyt store sag (valgfrit)</label>
                 <select
                   id="parent_ticket_id"
                   className={selectClassName}
@@ -383,11 +398,11 @@ export function CreateTicketForm({
           </section>
 
           <section
-            className="border-muted bg-muted/30 space-y-4 rounded-lg border p-4"
+            className="space-y-4 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-4"
             aria-labelledby="create-ticket-privacy"
           >
             <div>
-              <h2 id="create-ticket-privacy" className="text-star-navy text-sm font-semibold">
+              <h2 id="create-ticket-privacy" className="wire-card-title">
                 Personoplysninger (valgfrit)
               </h2>
               <p className="text-muted-foreground mt-1 text-xs">
@@ -397,9 +412,10 @@ export function CreateTicketForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject_cpr">CPR-nummer</Label>
+              <label className="wire-form-label" htmlFor="subject_cpr">CPR-nummer</label>
               <Input
                 id="subject_cpr"
+                className={inputClassName}
                 placeholder="DDMMYY-XXXX"
                 autoComplete="off"
                 {...register("subject_cpr")}
@@ -433,11 +449,11 @@ export function CreateTicketForm({
           </section>
 
           <section className="space-y-4" aria-labelledby="create-ticket-attachment">
-            <h2 id="create-ticket-attachment" className="text-star-navy text-sm font-semibold">
+            <h2 id="create-ticket-attachment" className="wire-card-title">
               Vedhæftning
             </h2>
             <div className="space-y-2">
-              <Label htmlFor="attachment">Dokument (valgfrit)</Label>
+              <label className="wire-form-label" htmlFor="attachment">Dokument (valgfrit)</label>
               <Input
                 id="attachment"
                 type="file"
@@ -460,13 +476,12 @@ export function CreateTicketForm({
 
           <Button
             type="submit"
-            className="bg-star-blue hover:bg-star-navy w-full rounded-sm font-semibold sm:w-auto"
+            className="wire-btn wire-btn-primary w-full sm:w-auto"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Opretter…" : "Opret sag"}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+    </section>
   );
 }

@@ -1,35 +1,59 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+
 import { AgentBrandHeader } from "@/components/agent/agent-brand-header";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
-import { ResizableSplit } from "@/components/ui/resizable-split";
+import type { User } from "@/types/user";
 
 export function AgentShell({
   children,
   topBarTitle,
+  topBarActions,
+  user,
+  showUsersNav,
 }: {
   children: React.ReactNode;
   topBarTitle?: string;
+  topBarActions?: React.ReactNode;
+  user?: User | null;
+  /** Server-resolved admin nav — avoids JWT/cookie mismatch on client. */
+  showUsersNav?: boolean;
 }) {
-  return (
-    <div className="bg-background flex min-h-screen flex-col">
-      <AgentBrandHeader />
+  const pathname = usePathname();
+  const [slackTabRequest, setSlackTabRequest] = useState(0);
 
-      <ResizableSplit
-        storageKey="stardesk-agent-sidebar"
-        defaultSizes={[16, 84]}
-        minSizes={[12, 50]}
-        className="min-h-0 flex-1"
-      >
-        <AgentSidebar />
-        <div className="flex min-h-0 min-w-0 flex-col">
-          <AgentTopBar title={topBarTitle} />
-          <main className="flex-1 overflow-auto px-6 py-6 lg:px-8 lg:py-8">
+  const handleSlackNav = useCallback(() => {
+    setSlackTabRequest((n) => n + 1);
+    if (pathname !== "/") {
+      window.location.href = "/#dispatch-panel";
+    }
+  }, [pathname]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.getElementById("main-content")?.scrollTo(0, 0);
+  }, [pathname]);
+
+  return (
+    <div className="wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <AgentBrandHeader />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <AgentSidebar user={user} showUsersNav={showUsersNav} onSlackClick={handleSlackNav} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <AgentTopBar title={topBarTitle} actions={topBarActions} />
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
+            data-slack-tab-request={slackTabRequest}
+          >
             {children}
           </main>
         </div>
-      </ResizableSplit>
+      </div>
     </div>
   );
 }
