@@ -1,3 +1,10 @@
+import {
+  apiErrorMessage,
+  CHANGE_PASSWORD_PATH,
+  isMustChangePasswordError,
+  parseApiErrorDetail,
+} from "@/lib/api-errors";
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -19,19 +26,23 @@ function resolveClientUrl(path: string): string {
   return normalized;
 }
 
-async function parseError(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: string | { title?: string } };
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-    if (body.detail && typeof body.detail === "object" && body.detail.title) {
-      return body.detail.title;
-    }
-  } catch {
-    // ignore
+function redirectToChangePasswordClient(): void {
+  if (typeof window === "undefined") {
+    return;
   }
-  return `API-fejl: ${response.status}`;
+  if (window.location.pathname.startsWith("/skift-adgangskode")) {
+    return;
+  }
+  window.location.replace(CHANGE_PASSWORD_PATH);
+}
+
+async function throwApiError(response: Response): Promise<never> {
+  const detail = await parseApiErrorDetail(response);
+  if (isMustChangePasswordError(response.status, detail)) {
+    redirectToChangePasswordClient();
+    throw new ApiError(response.status, apiErrorMessage(detail));
+  }
+  throw new ApiError(response.status, apiErrorMessage(detail));
 }
 
 export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
@@ -45,7 +56,7 @@ export async function apiGet<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -69,7 +80,7 @@ export async function apiPostNoContent(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 }
 
@@ -91,7 +102,7 @@ export async function apiPost<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -114,7 +125,7 @@ export async function apiPostForm<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -142,7 +153,7 @@ export async function apiPut<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -166,7 +177,7 @@ export async function apiPatch<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 
   return response.json() as Promise<T>;
@@ -184,6 +195,6 @@ export async function apiDelete(path: string, init?: RequestInit): Promise<void>
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseError(response));
+    await throwApiError(response);
   }
 }

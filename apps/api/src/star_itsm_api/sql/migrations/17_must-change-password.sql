@@ -8,3 +8,7 @@ SET must_change_password = TRUE
 WHERE deleted_at IS NULL
   AND email LIKE '%@example.dk'
   AND must_change_password = FALSE;
+
+-- Emergency (production demo only): clear flag for top_admin without changing passwords:
+--   UPDATE users SET must_change_password = FALSE
+--   WHERE email IN ('larrysanders@example.dk') AND deleted_at IS NULL;

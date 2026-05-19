@@ -1,7 +1,14 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { ApiError } from "@/lib/api";
+import {
+  apiErrorMessage,
+  CHANGE_PASSWORD_PATH,
+  isMustChangePasswordError,
+  parseApiErrorDetail,
+} from "@/lib/api-errors";
 import { TOKEN_COOKIE } from "@/lib/auth";
 
 async function authHeaders(): Promise<HeadersInit> {
@@ -17,6 +24,14 @@ type ApiGetServerOptions = {
   revalidate?: number;
 };
 
+async function throwServerApiError(response: Response): Promise<never> {
+  const detail = await parseApiErrorDetail(response);
+  if (isMustChangePasswordError(response.status, detail)) {
+    redirect(CHANGE_PASSWORD_PATH);
+  }
+  throw new ApiError(response.status, apiErrorMessage(detail));
+}
+
 export async function apiGetServer<T>(
   path: string,
   options?: ApiGetServerOptions,
@@ -29,7 +44,7 @@ export async function apiGetServer<T>(
       : { cache: "no-store" as const }),
   });
   if (!response.ok) {
-    throw new ApiError(response.status, `API-fejl: ${response.status}`);
+    await throwServerApiError(response);
   }
   return response.json() as Promise<T>;
 }

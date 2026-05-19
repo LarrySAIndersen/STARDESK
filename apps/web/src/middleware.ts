@@ -104,6 +104,9 @@ function handleJwtSession(request: NextRequest): NextResponse {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // Option A: do not block app routes here — API allows GET while must_change_password;
+  // login flow redirects to /skift-adgangskode; mutations return 403 and client redirects.
+
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );

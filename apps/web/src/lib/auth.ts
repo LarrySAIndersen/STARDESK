@@ -60,7 +60,11 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
         continue;
       }
       const role = normalizeUserRole(parsed.role) ?? parsed.role;
-      return { ...parsed, role };
+      return {
+        ...parsed,
+        role,
+        must_change_password: Boolean(parsed.must_change_password),
+      };
     } catch {
       // try next candidate
     }

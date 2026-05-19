@@ -4,7 +4,7 @@ from uuid import UUID
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,9 +94,13 @@ async def get_current_user_session(
 
 
 async def get_current_user(
+    request: Request,
     user: User = Depends(get_current_user_session),
 ) -> User:
-    ensure_password_changed(user)
+    # Option A (prototype): allow read-only GET/HEAD while must_change_password so list
+    # pages work after migration 17; block POST/PUT/PATCH/DELETE until password changed.
+    if request.method not in ("GET", "HEAD"):
+        ensure_password_changed(user)
     return user
 
 
