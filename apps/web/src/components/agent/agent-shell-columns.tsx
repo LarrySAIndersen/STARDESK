@@ -1,8 +1,9 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useLayoutEffect } from "react";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
+import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import {
   SHELL_NAV,
@@ -17,13 +18,19 @@ type AgentShellColumnsProps = {
   sidebar: ReactNode;
   children: ReactNode;
   collapsed: boolean;
+  onToggle: () => void;
 };
 
 const FALLBACK_LAYOUT = {
   [SHELL_PANEL_NAV]: SHELL_NAV.default,
 };
 
-export function AgentShellColumns({ sidebar, children, collapsed }: AgentShellColumnsProps) {
+export function AgentShellColumns({
+  sidebar,
+  children,
+  collapsed,
+  onToggle,
+}: AgentShellColumnsProps) {
   const navPanelRef = usePanelRef();
   const panelIds = [SHELL_PANEL_NAV, SHELL_PANEL_MAIN];
 
@@ -35,7 +42,7 @@ export function AgentShellColumns({ sidebar, children, collapsed }: AgentShellCo
 
   const initialLayout = defaultLayout ?? FALLBACK_LAYOUT;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const panel = navPanelRef.current;
     if (!panel) return;
     if (collapsed) {
@@ -58,15 +65,17 @@ export function AgentShellColumns({ sidebar, children, collapsed }: AgentShellCo
         id={SHELL_PANEL_NAV}
         panelRef={navPanelRef}
         defaultSize={SHELL_NAV.default}
-        minSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : SHELL_NAV.min}
-        maxSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : SHELL_NAV.max}
+        minSize={SHELL_NAV.min}
+        maxSize={SHELL_NAV.max}
         collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
         collapsible
-        disabled={collapsed}
         groupResizeBehavior="preserve-pixel-size"
-        className="min-h-0 min-w-0"
+        className="min-h-0 min-w-0 overflow-hidden"
       >
-        {sidebar}
+        <div className="relative h-full min-h-0">
+          {sidebar}
+          {collapsed ? <SidebarRailExpand onExpand={onToggle} /> : null}
+        </div>
       </Panel>
       {collapsed ? null : <ShellResizeSeparator />}
       <Panel id={SHELL_PANEL_MAIN} minSize={240} className={cn("flex min-h-0 min-w-0 flex-col")}>

@@ -38,6 +38,7 @@ export function AgentShell({
       <div className="wire-shell-accent" aria-hidden="true" />
       <AgentShellColumns
         collapsed={collapsed}
+        onToggle={toggle}
         sidebar={
           <AgentSidebar
             user={user}

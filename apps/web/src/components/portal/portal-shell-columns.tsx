@@ -1,9 +1,10 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useLayoutEffect } from "react";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
+import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
 import { PortalTopBar } from "@/components/portal/portal-top-bar";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import { getClientUser, isStaff } from "@/lib/auth";
@@ -36,7 +37,7 @@ export function PortalShellColumns({ children }: PortalShellColumnsProps) {
     [PORTAL_PANEL_NAV]: PORTAL_NAV.default,
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const panel = navPanelRef.current;
     if (!panel) return;
     if (collapsed) {
@@ -59,15 +60,17 @@ export function PortalShellColumns({ children }: PortalShellColumnsProps) {
         id={PORTAL_PANEL_NAV}
         panelRef={navPanelRef}
         defaultSize={PORTAL_NAV.default}
-        minSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : PORTAL_NAV.min}
-        maxSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : PORTAL_NAV.max}
+        minSize={PORTAL_NAV.min}
+        maxSize={PORTAL_NAV.max}
         collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
         collapsible
-        disabled={collapsed}
         groupResizeBehavior="preserve-pixel-size"
-        className="min-h-0 min-w-0"
+        className="min-h-0 min-w-0 overflow-hidden"
       >
-        <PortalSidebar collapsed={collapsed} onToggle={toggle} />
+        <div className="relative h-full min-h-0">
+          <PortalSidebar collapsed={collapsed} onToggle={toggle} />
+          {collapsed ? <SidebarRailExpand onExpand={toggle} /> : null}
+        </div>
       </Panel>
       {collapsed ? null : <ShellResizeSeparator />}
       <Panel id={PORTAL_PANEL_MAIN} minSize={280} className="min-h-0 min-w-0">
