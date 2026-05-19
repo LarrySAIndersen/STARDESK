@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { KnowledgeArticle } from "@/types/knowledge-article";
 
@@ -12,7 +13,15 @@ export function PortalKnowledgeSearch({
   articles: KnowledgeArticle[];
   basePath?: string;
 }) {
+  const searchParams = useSearchParams();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    if (searchParams.get("focus") === "search") {
+      searchInputRef.current?.focus();
+    }
+  }, [searchParams]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -38,6 +47,7 @@ export function PortalKnowledgeSearch({
           Find vejledninger og løsninger fra STAR Service Desk.
         </p>
         <input
+          ref={searchInputRef}
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

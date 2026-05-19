@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { PortalKnowledgeSearch } from "@/components/portal-knowledge-search";
 import { ApiError } from "@/lib/api";
@@ -33,7 +34,9 @@ export default async function PortalKnowledgePage() {
   return (
     <div className="space-y-4 p-1">
       {fetchError ? <p className="text-star-red text-sm">{fetchError}</p> : null}
-      <PortalKnowledgeSearch articles={articles} />
+      <Suspense fallback={<p className="text-[var(--gray-mid)] text-sm">Indlæser vidensbase…</p>}>
+        <PortalKnowledgeSearch articles={articles} />
+      </Suspense>
     </div>
   );
 }
