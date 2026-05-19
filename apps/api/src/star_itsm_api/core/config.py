@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
     upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
     app_env: str = Field(default="development", validation_alias="APP_ENV")
+    slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")
+    slack_client_secret: str | None = Field(default=None, validation_alias="SLACK_CLIENT_SECRET")
+    slack_signing_secret: str | None = Field(default=None, validation_alias="SLACK_SIGNING_SECRET")
+    slack_redirect_uri: str | None = Field(default=None, validation_alias="SLACK_REDIRECT_URI")
+    slack_mock: bool = Field(default=False, validation_alias="SLACK_MOCK")
 
     @property
     def is_production(self) -> bool:

@@ -17,4 +17,31 @@ class SlackPushRequest(BaseModel):
 class SlackPushResponse(BaseModel):
     channel_id: str
     channel_name: str
-    mock: bool = True
+    mock: bool = False
+    message_ts: str | None = None
+
+
+class SlackStatusRead(BaseModel):
+    connected: bool
+    enabled: bool
+    team_id: str | None = None
+    team_name: str | None = None
+    default_channel_id: str | None = None
+    webhook_url: str | None = None
+    mode: str = "real"
+
+
+class SlackOAuthStartResponse(BaseModel):
+    authorize_url: str
+
+
+class SlackOAuthCallbackResponse(BaseModel):
+    connected: bool
+    team_id: str
+    team_name: str
+
+
+class SlackSettingsUpdate(BaseModel):
+    enabled: bool | None = None
+    default_channel_id: str | None = Field(default=None, max_length=64)
+    webhook_url: str | None = Field(default=None, max_length=1000)

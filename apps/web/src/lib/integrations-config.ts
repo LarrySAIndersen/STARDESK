@@ -12,7 +12,7 @@ export const INTEGRATION_META = [
   {
     id: "slack" as const,
     name: "Slack",
-    description: "Push sager til Slack-kanaler (prototype).",
+    description: "Forbind workspace med Slack OAuth og push sager direkte.",
     href: "/integrations/slack",
   },
   {
@@ -31,11 +31,11 @@ export const INTEGRATION_META = [
 
 export const DEFAULT_INTEGRATIONS: IntegrationsState = {
   slack: {
-    workspace_url: "https://stardesk-workspace.slack.com",
+    workspace_url: "",
     bot_token: "",
-    default_channel: "#support",
+    default_channel: "",
     webhook_url: "",
-    enabled: true,
+    enabled: false,
   },
   jira: {
     jira_url: "",

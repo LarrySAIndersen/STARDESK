@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiGet, apiPost } from "@/lib/api";
-import { MOCK_SLACK_CHANNELS } from "@/lib/slack-channels-mock";
-import type { SlackChannel, SlackPushResponse } from "@/types/slack";
+import type { SlackChannel, SlackPushResponse, SlackStatus } from "@/types/slack";
 
 function channelLabel(channel: SlackChannel): string {
   const prefix = channel.is_private ? "🔒" : "#";
@@ -27,10 +26,13 @@ export function TicketSlackPush({
   const router = useRouter();
   const titleId = useId();
 
-  const [channels, setChannels] = useState<SlackChannel[]>(MOCK_SLACK_CHANNELS);
+  const [channels, setChannels] = useState<SlackChannel[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isMockMode, setIsMockMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [channelId, setChannelId] = useState(MOCK_SLACK_CHANNELS[0]?.channel_id ?? "");
+  const [channelId, setChannelId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -41,11 +43,26 @@ export function TicketSlackPush({
 
   const panelRef = useFocusTrap(modalOpen, closeModal);
 
-  const loadChannels = useCallback(async () => {
+  const loadStatus = useCallback(async () => {
     try {
-      const list = await apiGet<SlackChannel[]>("/api/v1/slack/channels");
+      const status = await apiGet<SlackStatus>("/api/v1/integrations/slack/status");
+      setIsConnected(status.connected);
+      setIsMockMode(status.mode === "mock");
+      if (status.default_channel_id) {
+        setChannelId(status.default_channel_id);
+      }
+    } catch {
+      setIsConnected(false);
+      setIsMockMode(false);
+    }
+  }, []);
+
+  const loadChannels = useCallback(async () => {
+    setIsLoadingChannels(true);
+    try {
+      const list = await apiGet<SlackChannel[]>("/api/v1/integrations/slack/channels");
+      setChannels(list);
       if (list.length > 0) {
-        setChannels(list);
         setChannelId((current) => {
           if (list.some((c) => c.channel_id === current)) {
             return current;
@@ -53,14 +70,25 @@ export function TicketSlackPush({
           return list[0]!.channel_id;
         });
       }
-    } catch {
-      setChannels(MOCK_SLACK_CHANNELS);
+    } catch (err) {
+      setChannels([]);
+      setError(err instanceof Error ? err.message : "Kunne ikke hente Slack-kanaler");
+    } finally {
+      setIsLoadingChannels(false);
     }
   }, []);
 
   useEffect(() => {
+    void loadStatus();
+  }, [loadStatus]);
+
+  useEffect(() => {
+    if (!isConnected && !isMockMode) {
+      setChannels([]);
+      return;
+    }
     void loadChannels();
-  }, [loadChannels]);
+  }, [isConnected, isMockMode, loadChannels]);
 
   useEffect(() => {
     if (!success) {
@@ -72,6 +100,9 @@ export function TicketSlackPush({
 
   const openModal = () => {
     setError(null);
+    if (!isConnected && !isMockMode) {
+      setError("Slack er ikke forbundet. Gå til Integrationer > Slack for at forbinde.");
+    }
     setModalOpen(true);
   };
 
@@ -83,6 +114,10 @@ export function TicketSlackPush({
   };
 
   async function confirmPush() {
+    if (!isConnected && !isMockMode) {
+      setError("Slack er ikke forbundet.");
+      return;
+    }
     if (!channelId) {
       setError("Vælg en Slack-kanal.");
       return;
@@ -150,7 +185,11 @@ export function TicketSlackPush({
                 {ticketNumber} — {ticketTitle}
               </p>
               <p className="text-[var(--gray-mid)] mt-2 text-[10px]">
-                Prototype: ingen besked sendes til Slack endnu.
+                {isConnected
+                  ? "Beskeden sendes med workspace OAuth-bot."
+                  : isMockMode
+                    ? "Udviklingstilstand: mock Slack-kanaler (SLACK_MOCK=1)."
+                    : "Slack er ikke forbundet endnu."}
               </p>
             </div>
 
@@ -162,8 +201,11 @@ export function TicketSlackPush({
                   className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm"
                   value={channelId}
                   onChange={(e) => setChannelId(e.target.value)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoadingChannels || channels.length === 0}
                 >
+                  <option value="">
+                    {isLoadingChannels ? "Henter kanaler..." : "Vælg kanal"}
+                  </option>
                   {channels.map((channel) => (
                     <option key={channel.channel_id} value={channel.channel_id}>
                       {channelLabel(channel)}
@@ -185,7 +227,7 @@ export function TicketSlackPush({
                 <Button
                   type="button"
                   className="wire-btn wire-btn-primary"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (!isConnected && !isMockMode)}
                   onClick={() => void confirmPush()}
                 >
                   {isSubmitting ? "Sender…" : "Bekræft push"}

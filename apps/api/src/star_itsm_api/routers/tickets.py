@@ -47,6 +47,8 @@ from star_itsm_api.schemas.ticket import (
     TicketStatusUpdate,
 )
 from star_itsm_api.services.slack_mock import get_mock_channel
+from star_itsm_api.core.config import settings
+from star_itsm_api.services.slack import SlackApiError, get_slack_integration, post_ticket_message
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -781,9 +783,44 @@ async def push_ticket_to_slack(
         raise HTTPException(status_code=404, detail="Ticket not found")
     await _ensure_ticket_access(db, ticket, current_user)
 
-    channel = get_mock_channel(payload.channel_id)
-    if channel is None:
-        raise HTTPException(status_code=400, detail="Ukendt Slack-kanal")
+    org_id = get_user_organization_id(current_user)
+    integration = (
+        await get_slack_integration(db, organization_id=org_id)
+        if org_id is not None
+        else None
+    )
+
+    channel_name = payload.channel_id
+    mock_push = False
+    message_ts: str | None = None
+
+    if integration is not None and integration.slack_bot_token:
+        frontend_origin = settings.cors_origins[0] if settings.cors_origins else settings.frontend_url
+        ticket_url = f"{frontend_origin.rstrip('/')}/tickets/{ticket.id}"
+        message_text = (
+            f":ticket: *{ticket.ticket_number}* - {ticket.title}\n"
+            f"Status: `{ticket.status}`\n"
+            f"Prioritet: `{ticket.priority}`\n"
+            f"<{ticket_url}|Aabn sag i STARdesk>"
+        )
+        try:
+            result = await post_ticket_message(
+                bot_token=integration.slack_bot_token,
+                channel_id=payload.channel_id,
+                text=message_text,
+            )
+        except SlackApiError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        channel_name = result.channel_id
+        message_ts = result.ts
+    else:
+        if not settings.slack_mock:
+            raise HTTPException(status_code=400, detail="Slack er ikke forbundet.")
+        channel = get_mock_channel(payload.channel_id)
+        if channel is None:
+            raise HTTPException(status_code=400, detail="Ukendt Slack-kanal")
+        channel_name = channel["name"]
+        mock_push = True
 
     now = datetime.now(UTC)
     touch_ticket_updated(ticket, now)
@@ -794,18 +831,20 @@ async def push_ticket_to_slack(
             actor_user_id=current_user.id,
             event_type="ticket.slack_pushed",
             payload={
-                "channel_id": channel["channel_id"],
-                "channel_name": channel["name"],
-                "mock": True,
+                "channel_id": payload.channel_id,
+                "channel_name": channel_name,
+                "mock": mock_push,
+                "message_ts": message_ts,
             },
             created_at=now,
         )
     )
     await db.commit()
     return SlackPushResponse(
-        channel_id=channel["channel_id"],
-        channel_name=channel["name"],
-        mock=True,
+        channel_id=payload.channel_id,
+        channel_name=channel_name,
+        mock=mock_push,
+        message_ts=message_ts,
     )
 
 
