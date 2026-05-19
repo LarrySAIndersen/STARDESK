@@ -1,6 +1,7 @@
 # Testbrugere, grupper og adgang
 
 **Genskabelse i DB:** `docs/seed-sf-ecosystem-reset.sql`  
+**Vidensartikler (portal):** `docs/seed-knowledge-articles-kubernetes-it.sql` (KB-00001–00020, IT) · `docs/seed-knowledge-articles-arbejdsmarked.sql` (KB-00021–00055, arbejdsmarked/STAR)  
 **Eksterne leverandører (KMD, Netcompany, Schultz):** `docs/seed-vendor-groups-kmd-netcompany-schultz.sql`  
 **Migration (delt sag + roller):** `docs/ticket-shared-migration.sql`  
 **Login-UI:** `apps/web/src/lib/demo-users.ts` (skal matche seed)
