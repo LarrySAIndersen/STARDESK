@@ -1,10 +1,14 @@
 /** FastAPI detail when JWT user must change password before mutations. */
 export const MUST_CHANGE_PASSWORD_DETAIL = "must_change_password";
 
+/** Shown only on login redirect and the required change-password page — not in generic API errors. */
 export const MUST_CHANGE_PASSWORD_MESSAGE =
   "Du skal skifte adgangskode før du kan fortsætte.";
 
 export const CHANGE_PASSWORD_PATH = "/skift-adgangskode?required=1";
+
+/** Neutral copy for 403 must_change_password in modals and toasts — never the first-login message. */
+export const MUTATION_FORBIDDEN_MESSAGE = "Du har ikke adgang til denne handling.";
 
 export function isMustChangePasswordError(
   status: number,
@@ -30,7 +34,7 @@ export async function parseApiErrorDetail(response: Response): Promise<string> {
 
 export function apiErrorMessage(detail: string): string {
   if (detail === MUST_CHANGE_PASSWORD_DETAIL) {
-    return MUST_CHANGE_PASSWORD_MESSAGE;
+    return MUTATION_FORBIDDEN_MESSAGE;
   }
   return detail;
 }

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import get_current_user, require_admin, require_staff
+from star_itsm_api.core.security import require_admin_session, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.user import User
@@ -55,7 +55,7 @@ async def update_team_members(
     team_id: uuid.UUID,
     payload: TeamAdminUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_admin()),
+    current_user: User = Depends(require_admin_session()),
 ) -> TeamRead:
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")

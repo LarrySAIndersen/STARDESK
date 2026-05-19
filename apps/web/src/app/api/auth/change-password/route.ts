@@ -1,6 +1,11 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
+import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import type { User } from "@/types/user";
+
+const SESSION_MAX_AGE = 60 * 60 * 12;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -30,5 +35,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 
-  return new NextResponse(null, { status: 204 });
+  const response = new NextResponse(null, { status: 204 });
+  const cookieStore = await cookies();
+  const token = cookieStore.get(TOKEN_COOKIE)?.value;
+  if (token) {
+    const meResponse = await fetch(buildBackendUrl("/api/v1/auth/me"), {
+      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (meResponse.ok) {
+      const user = (await meResponse.json()) as User;
+      const secure = process.env.NODE_ENV === "production";
+      response.cookies.set(USER_COOKIE, encodeURIComponent(JSON.stringify(user)), {
+        httpOnly: false,
+        secure,
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_MAX_AGE,
+      });
+    }
+  }
+  return response;
 }

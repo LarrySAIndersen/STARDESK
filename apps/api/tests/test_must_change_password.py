@@ -106,3 +106,17 @@ async def test_must_change_password_allows_me(
     response = await authed_client.get("/api/v1/auth/me")
     assert response.status_code == 200
     assert response.json()["must_change_password"] is True
+
+
+@pytest.mark.asyncio
+async def test_must_change_password_blocks_patch_teams_with_agent_role(
+    authed_client: AsyncClient,
+    pending_user: User,
+) -> None:
+    pending_user.role = "agent"
+    response = await authed_client.patch(
+        "/api/v1/teams/a1000001-0000-4000-8000-000000000001",
+        json={"user_ids": []},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] != "must_change_password"

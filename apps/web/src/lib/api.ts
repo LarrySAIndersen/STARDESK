@@ -39,13 +39,10 @@ function redirectToChangePasswordClient(): void {
 
 async function throwApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  // Only redirect when the logged-in session user must change password — not for
-  // unrelated 403s (e.g. admin user-management while cookie is stale).
-  if (
-    isMustChangePasswordError(response.status, detail) &&
-    getClientUser()?.must_change_password
-  ) {
+  const sessionRequiresPasswordChange = Boolean(getClientUser()?.must_change_password);
+  if (isMustChangePasswordError(response.status, detail) && sessionRequiresPasswordChange) {
     redirectToChangePasswordClient();
+    // Never surface first-login password copy in modals — redirect handles the flow.
     throw new ApiError(response.status, apiErrorMessage(detail));
   }
   throw new ApiError(response.status, apiErrorMessage(detail));

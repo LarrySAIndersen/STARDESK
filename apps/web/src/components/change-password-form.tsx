@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getClientUser } from "@/lib/auth";
+import { getClientUser, writeUserCookie } from "@/lib/auth";
 import { DEMO_PASSWORD } from "@/lib/demo-users";
 import { PASSWORD_VALIDATION_MESSAGE, validatePassword } from "@/lib/password-policy";
 import { cn } from "@/lib/utils";
@@ -97,6 +97,10 @@ export function ChangePasswordForm({
       });
 
       if (loginResponse.ok) {
+        const loginBody = (await loginResponse.json()) as { user?: Parameters<typeof writeUserCookie>[0] };
+        if (loginBody.user) {
+          writeUserCookie(loginBody.user);
+        }
         router.replace("/");
         router.refresh();
         return;
