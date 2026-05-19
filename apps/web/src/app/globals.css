@@ -249,6 +249,22 @@
     @apply p-6;
   }
 
+  .star-section-body--spacious {
+    @apply p-8;
+  }
+
+  .dashboard-throughput-split {
+    @apply gap-8;
+  }
+
+  .dashboard-throughput-split [data-separator] {
+    @apply mx-1 w-2 shrink-0 bg-transparent;
+  }
+
+  .dashboard-ops-mini-card {
+    @apply p-5;
+  }
+
   .star-nav-link {
     @apply text-star-navy dark:text-foreground hover:bg-star-blue-light dark:hover:bg-muted rounded-sm px-3 py-2 text-sm font-medium transition-colors;
   }

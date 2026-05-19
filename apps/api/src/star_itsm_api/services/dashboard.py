@@ -154,7 +154,11 @@ async def build_dashboard(
             hours_open=round(hours_open, 1),
             created_at=longest.created_at,
             assigned_team_name=enriched_row.assigned_team_name if enriched_row else None,
+            assigned_user_name=enriched_row.assigned_user_name if enriched_row else None,
             priority=longest.priority,
+            resolution_due_at=enriched_row.resolution_due_at if enriched_row else None,
+            sla_remaining_seconds=enriched_row.sla_remaining_seconds if enriched_row else None,
+            sla_breached=enriched_row.sla_breached if enriched_row else False,
         )
 
     avg_open_age_days = (

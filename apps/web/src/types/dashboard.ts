@@ -8,7 +8,11 @@ export interface LongestOpenTicket {
   hours_open: number;
   created_at: string;
   assigned_team_name: string | null;
+  assigned_user_name?: string | null;
   priority: string;
+  resolution_due_at?: string | null;
+  sla_remaining_seconds?: number | null;
+  sla_breached?: boolean;
 }
 
 export interface CountByLabel {

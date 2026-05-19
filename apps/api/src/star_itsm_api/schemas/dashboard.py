@@ -14,7 +14,11 @@ class LongestOpenTicket(BaseModel):
     hours_open: float
     created_at: datetime
     assigned_team_name: str | None = None
+    assigned_user_name: str | None = None
     priority: str
+    resolution_due_at: datetime | None = None
+    sla_remaining_seconds: int | None = None
+    sla_breached: bool = False
 
 
 class CountByLabel(BaseModel):

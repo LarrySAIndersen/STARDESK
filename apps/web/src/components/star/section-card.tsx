@@ -8,12 +8,14 @@ export function StarSectionCard({
   variant = "default",
   children,
   className,
+  bodyClassName,
 }: {
   title: string;
   description?: string;
   variant?: SectionVariant;
   children: React.ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   const headerClass =
     variant === "navy"
@@ -34,7 +36,7 @@ export function StarSectionCard({
         <h2 className="star-section-title">{title}</h2>
         {description ? <p className="star-section-desc">{description}</p> : null}
       </div>
-      <div className="star-section-body">{children}</div>
+      <div className={cn("star-section-body", bodyClassName)}>{children}</div>
     </section>
   );
 }

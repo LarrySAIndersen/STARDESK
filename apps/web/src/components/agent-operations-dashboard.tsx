@@ -34,6 +34,14 @@ const TrendChart = dynamic(
   { loading: () => <ChartFallback /> },
 );
 
+function openedTodayCount(
+  dailyCreated: OperationsDashboard["daily_created"],
+  generatedAt: string,
+): number {
+  const dayKey = new Date(generatedAt).toISOString().slice(0, 10);
+  return dailyCreated.find((d) => d.date === dayKey)?.count ?? 0;
+}
+
 function OpsKpiCard({
   label,
   value,
@@ -41,6 +49,7 @@ function OpsKpiCard({
   accent = "border-t-star-blue",
   highlight,
   href,
+  compact,
 }: {
   label: string;
   value: string | number;
@@ -48,9 +57,11 @@ function OpsKpiCard({
   accent?: string;
   highlight?: boolean;
   href?: string;
+  compact?: boolean;
 }) {
   const className = cn(
-    "ledger-card block border-t-4 p-4 transition-shadow",
+    "ledger-card block border-t-4 transition-shadow",
+    compact ? "dashboard-ops-mini-card" : "p-4",
     accent,
     highlight && "ring-star-red/40 ring-2",
     href &&
@@ -97,6 +108,7 @@ export function AgentOperationsDashboard({
       (dashboard.closed_last_7_days / Math.max(dashboard.opened_last_7_days, 1)) * 100,
     ),
   );
+  const openedToday = openedTodayCount(dashboard.daily_created, dashboard.generated_at);
 
   const updatedLabel = new Intl.DateTimeFormat("da-DK", {
     dateStyle: "short",
@@ -194,32 +206,37 @@ export function AgentOperationsDashboard({
         storageKey="stardesk-dashboard-throughput"
         defaultSizes={[48, 52]}
         minSizes={[32, 32]}
-        className="min-h-[12rem]"
+        className="dashboard-throughput-split min-h-[12rem]"
+        panelClassName="min-h-0"
       >
         <LongestTicketCard ticket={dashboard.longest_open} />
         <StarSectionCard
           variant="accent"
           title="Aktivitet — seneste 7 dage"
-          description="Modtaget vs. lukket sager i den valgte periode."
+          description="Nye sager i dag og SLA-brud i det valgte omfang."
+          bodyClassName="star-section-body--spacious"
         >
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-2">
             <OpsKpiCard
-              label="Modtaget (7 d)"
-              value={dashboard.opened_last_7_days}
-              sub="Nye sager i perioden"
+              label="Nye i dag"
+              value={openedToday}
+              sub={`${dashboard.opened_last_7_days.toLocaleString("da-DK")} modtaget seneste 7 d`}
               accent="border-t-star-blue"
+              compact
               href={buildTicketsFilterHref({ ...filter, openedSinceDays: 7 })}
             />
             <OpsKpiCard
-              label="Lukket (7 d)"
-              value={dashboard.closed_last_7_days}
+              label="SLA-brud"
+              value={dashboard.sla_overdue_count}
               sub={
-                dashboard.opened_last_7_days > 0
-                  ? `${throughputPct}% af modtagne lukket`
-                  : "Ingen modtagne i perioden"
+                dashboard.sla_due_soon_count > 0
+                  ? `${dashboard.sla_due_soon_count} forfalder inden 4 t`
+                  : "Ingen SLA inden 4 t"
               }
-              accent="border-t-emerald-600"
-              href={buildTicketsFilterHref({ ...filter, closedSinceDays: 7 })}
+              accent="border-t-star-red"
+              highlight={dashboard.sla_overdue_count > 0}
+              compact
+              href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "overdue" })}
             />
           </div>
         </StarSectionCard>
