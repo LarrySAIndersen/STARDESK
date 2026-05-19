@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: stardesk
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - api-deployment.yaml
+  - api-service.yaml
+  - web-deployment.yaml
+  - web-service.yaml
+  - ingress.yaml
+# secret.yaml — create from secret.yaml.example; not included by default
+# schema-sync-job.yaml — optional pre-deploy job
+
+commonLabels:
+  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/part-of: stardesk
+
+images:
+  - name: stardesk-api
+    newName: stardesk-api
+    newTag: latest
+  - name: stardesk-web
+    newName: stardesk-web
+    newTag: latest

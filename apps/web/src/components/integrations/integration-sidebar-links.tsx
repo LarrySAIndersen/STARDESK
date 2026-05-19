@@ -24,14 +24,16 @@ function isIntegrationActive(pathname: string, href: string): boolean {
 
 export function IntegrationSidebarLinks({
   pathname,
+  collapsed = false,
 }: {
   pathname: string;
+  collapsed?: boolean;
 }) {
   const config = useIntegrationsConfig();
 
   return (
     <>
-      <p className="wire-nav-section">Integration</p>
+      {collapsed ? null : <p className="wire-nav-section">Integration</p>}
       {INTEGRATION_META.map((meta) => {
         const Icon = ICONS[meta.id];
         const itemConfig = config[meta.id];
@@ -43,15 +45,26 @@ export function IntegrationSidebarLinks({
           <Link
             key={meta.id}
             href={meta.href}
-            className={cn("wire-nav-item wire-nav-item--integration", active && "wire-nav-item--active")}
+            title={collapsed ? meta.name : undefined}
+            className={cn(
+              "wire-nav-item wire-nav-item--integration",
+              active && "wire-nav-item--active",
+              collapsed && "wire-nav-item--icon-only",
+            )}
           >
             <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{meta.name}</span>
-            <IntegrationStatusPill
-              status={status}
-              label={pillLabel}
-              className="ml-auto shrink-0"
-            />
+            {collapsed ? (
+              <span className="sr-only">{meta.name}</span>
+            ) : (
+              <>
+                <span className="min-w-0 flex-1 truncate">{meta.name}</span>
+                <IntegrationStatusPill
+                  status={status}
+                  label={pillLabel}
+                  className="ml-auto shrink-0"
+                />
+              </>
+            )}
           </Link>
         );
       })}

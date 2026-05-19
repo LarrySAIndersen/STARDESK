@@ -23,6 +23,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Standalone bundle for Docker/K8s; Vercel ignores this output layout.
+  output: "standalone",
   outputFileTracingRoot: process.cwd(),
   async headers() {
     return [

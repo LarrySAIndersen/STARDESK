@@ -1,7 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
+import { resolveUserAvatar } from "@/lib/user-avatar";
+import type { User } from "@/types/user";
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
@@ -11,6 +14,7 @@ const TITLES: Record<string, string> = {
   "/groups": "Grupper",
   "/users": "Brugere",
   "/reports": "Rapporter",
+  "/admin/dependencies": "Afhængigheder & sikkerhed",
   "/portal": "Selvbetjeningsportal",
   "/integrations": "Integrationer",
   "/integrations/slack": "Slack",
@@ -34,23 +38,22 @@ function titleForPath(pathname: string): string {
 export function AgentTopBar({
   title,
   actions,
+  user,
 }: {
   title?: string;
   actions?: React.ReactNode;
+  user?: User | null;
 }) {
   const pathname = usePathname();
   const displayTitle = title ?? titleForPath(pathname);
+  const resolvedUser = user ? (resolveUserAvatar(user) ?? user) : null;
 
   return (
     <header className="wire-topbar">
-      <h1 className="wire-topbar-title">{displayTitle}</h1>
-      <div className="flex items-center gap-2">
+      <h1 className="wire-topbar-title min-w-0 shrink">{displayTitle}</h1>
+      <div className="ml-auto flex min-w-0 shrink-0 items-center gap-3">
         {actions}
-        {pathname !== "/tickets/new" ? (
-          <Link href="/tickets/new" className="wire-btn wire-btn-red wire-btn-sm">
-            + Ny sag
-          </Link>
-        ) : null}
+        {resolvedUser ? <TopBarUserMenu user={resolvedUser} /> : null}
       </div>
     </header>
   );

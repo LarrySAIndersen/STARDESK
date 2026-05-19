@@ -1,0 +1,35 @@
+{{- if .Values.schemaSyncJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: schema-sync
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stardesk.labels" . | nindent 4 }}
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: schema-sync
+          image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
+          imagePullPolicy: {{ .Values.images.api.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: stardesk-config
+            - secretRef:
+                name: stardesk-secrets
+          command:
+            - python
+            - -c
+            - |
+              import asyncio
+              from star_itsm_api.core.config import settings
+              from star_itsm_api.db import engine
+              from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
+              if not settings.database_url:
+                  raise SystemExit("DATABASE_URL is required")
+              asyncio.run(ensure_ticket_schema_current(engine, settings.database_url))
+{{- end }}

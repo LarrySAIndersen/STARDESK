@@ -32,7 +32,16 @@ WHERE deleted_at IS NULL
     'bi03@example.dk',
     'sfchest01@example.dk',
     'sfchest02@example.dk',
-    'sfchest03@example.dk'
+    'sfchest03@example.dk',
+    'kmd01@example.dk',
+    'kmd02@example.dk',
+    'kmd03@example.dk',
+    'netcompany01@example.dk',
+    'netcompany02@example.dk',
+    'netcompany03@example.dk',
+    'schultz01@example.dk',
+    'schultz02@example.dk',
+    'schultz03@example.dk'
   );
 
 -- SF hovedgruppe (ingen organisation — fælles dispatch)
@@ -53,7 +62,7 @@ INSERT INTO organizations (name, description, is_active) VALUES
     ('Virksomhed', 'SF-virksomhed', TRUE),
     ('North Star', 'SF-virksomhed — North Star', TRUE),
     ('SF Operations', 'SF-virksomhed', TRUE),
-    ('Jobflow', 'SF-virksomhed', TRUE),
+    ('Jobflow', 'Intern SF-virksomhed', TRUE),
     ('Sirius', 'SF-virksomhed', TRUE),
     ('BI', 'SF-virksomhed', TRUE)
 ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active = TRUE;
@@ -63,7 +72,7 @@ INSERT INTO teams (name, description, is_active, organization_id) VALUES
     ('North Star', 'Gruppe North Star', TRUE, (SELECT id FROM organizations WHERE name = 'North Star')),
     ('SF Operations', 'Gruppe SF Operations', TRUE, (SELECT id FROM organizations WHERE name = 'SF Operations')),
     ('SF AI Operations', 'AI-drift og automatisering', TRUE, NULL),
-    ('Jobflow', 'Gruppe Jobflow', TRUE, (SELECT id FROM organizations WHERE name = 'Jobflow')),
+    ('Jobflow', 'Intern gruppe — Jobflow', TRUE, (SELECT id FROM organizations WHERE name = 'Jobflow')),
     ('Sirius', 'Gruppe Sirius', TRUE, (SELECT id FROM organizations WHERE name = 'Sirius')),
     ('BI', 'Gruppe BI', TRUE, (SELECT id FROM organizations WHERE name = 'BI'))
 ON CONFLICT (name) DO UPDATE SET

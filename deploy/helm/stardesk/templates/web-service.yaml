@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stardesk-web
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: stardesk-web
+    {{- include "stardesk.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app: stardesk-web
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

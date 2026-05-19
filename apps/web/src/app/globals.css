@@ -57,8 +57,17 @@
   --sidebar-ring: var(--star-primary);
 
   /* Shell column header row — aligns nav | main | panel dividers */
-  --wire-shell-header-h: 52px;
+  --wire-shell-header-h: 60px;
   --wire-topbar-accent-h: 3px;
+
+  /* Typography scale (wireframe / star.dk sans) */
+  --wire-font-weight-body: 500;
+  --wire-font-weight-muted: 500;
+  --wire-font-weight-label: 600;
+  --wire-font-weight-heading: 600;
+  --wire-font-weight-display: 700;
+  --wire-line-height-body: 1.5;
+  --wire-lead-max-width: 42rem;
 }
 
 .dark {
@@ -157,15 +166,21 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-weight: var(--wire-font-weight-body);
+    line-height: var(--wire-line-height-body);
   }
   html {
     @apply font-sans;
   }
-  h1,
+  h1 {
+    @apply text-star-navy dark:text-foreground font-bold tracking-tight;
+    font-weight: var(--wire-font-weight-display);
+  }
   h2,
   h3 {
-    @apply text-star-navy dark:text-foreground font-bold tracking-tight;
+    @apply text-star-navy dark:text-foreground font-semibold tracking-tight;
+    font-weight: var(--wire-font-weight-heading);
   }
   a:not([data-slot="button"]) {
     @apply text-primary transition-colors hover:text-star-navy;
@@ -186,7 +201,11 @@
   }
 
   .star-hero-lead {
-    @apply text-muted-foreground mt-3 max-w-3xl text-base leading-relaxed;
+    @apply text-muted-foreground mt-3 max-w-3xl text-base font-medium leading-normal;
+  }
+
+  .wire-page-lead {
+    @apply max-w-[var(--wire-lead-max-width)] font-sans text-sm font-medium leading-normal text-[var(--gray-mid)];
   }
 
   .star-section-card {
@@ -223,7 +242,7 @@
   }
 
   .star-section-desc {
-    @apply text-muted-foreground mt-1 text-sm;
+    @apply text-muted-foreground mt-1 text-sm font-medium leading-normal;
   }
 
   .star-section-body {
@@ -335,13 +354,21 @@
 
   /* Wireframe shell */
   .wire-app {
-    @apply bg-[var(--gray-bg)] text-[13px] text-[var(--star-text)];
+    @apply bg-[var(--gray-bg)] font-sans text-[13px] font-medium leading-normal text-[var(--star-text)];
   }
 
   .wire-topheader {
     @apply bg-star-navy sticky top-0 z-50 flex shrink-0 items-center gap-4 px-5;
     height: var(--wire-shell-header-h);
     min-height: var(--wire-shell-header-h);
+  }
+
+  /* Full-width red rule below brand bar — spans sidebar + main columns */
+  .wire-shell-accent {
+    flex-shrink: 0;
+    width: 100%;
+    height: var(--wire-topbar-accent-h);
+    background: var(--star-red);
   }
 
   /* Shared height + bottom rule for nav column, page title bar, asset panel headers */
@@ -359,12 +386,31 @@
     @apply flex h-full min-h-0 w-full shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
   }
 
+  .wire-sidebar--collapsed .wire-sidebar-footer {
+    @apply px-1.5 py-2;
+  }
+
+  .wire-sidebar-collapsed-brand {
+    @apply bg-star-navy flex shrink-0 items-center justify-center;
+    height: var(--wire-shell-header-h);
+    min-height: var(--wire-shell-header-h);
+  }
+
+  .wire-nav-item--icon-only {
+    @apply justify-center gap-0 border-l-0 px-0 py-2.5;
+  }
+
+  .wire-nav-item--icon-only.wire-nav-item--active {
+    @apply border-l-0;
+    box-shadow: inset 3px 0 0 var(--star-red);
+  }
+
   .wire-nav-section {
     @apply text-[var(--gray-mid)] mt-1.5 px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.07em] uppercase;
   }
 
   .wire-nav-item {
-    @apply text-[var(--star-text-muted)] flex items-center gap-2 border-l-[3px] border-transparent px-4 py-2 text-[13px] transition-colors;
+    @apply text-[var(--star-text-muted)] flex items-center gap-2 border-l-[3px] border-transparent px-4 py-2 text-[13px] font-medium transition-colors;
   }
 
   .wire-nav-item:hover {
@@ -421,7 +467,7 @@
   }
 
   .wire-asset-row {
-    @apply text-[var(--star-text-muted)] min-w-0 flex-1 truncate border-l-[3px] border-transparent py-1.5 pr-2 text-left text-[12px] transition-colors;
+    @apply text-[var(--star-text-muted)] min-w-0 flex-1 truncate border-l-[3px] border-transparent py-1.5 pr-2 text-left text-[12px] font-medium transition-colors;
   }
 
   .wire-asset-row:hover {
@@ -453,7 +499,7 @@
   }
 
   .wire-asset-detail-meta {
-    @apply text-[var(--gray-mid)] mt-0.5 text-[10px];
+    @apply mt-0.5 text-[10px] font-medium leading-normal text-[var(--gray-mid)];
   }
 
   .wire-asset-detail-action {
@@ -464,8 +510,186 @@
     @apply text-star-navy text-[10px] font-medium underline-offset-2 hover:underline;
   }
 
+  .wire-assets-layout {
+    @apply min-h-[min(70vh,640px)];
+  }
+
+  .wire-assets-card--tree {
+    @apply rounded-r-none border-r-0;
+  }
+
+  .wire-assets-card--graph {
+    @apply rounded-l-none;
+  }
+
+  .wire-asset-graph-toggle {
+    @apply text-star-navy border-star-navy/20 inline-flex items-center gap-1.5 rounded-sm border bg-white px-2 py-1 text-[10px] font-semibold hover:bg-star-blue-light;
+  }
+
+  .wire-asset-graph {
+    @apply relative min-h-0 flex-1 bg-[#f8f9fc];
+  }
+
+  .wire-asset-graph-canvas {
+    @apply relative overflow-hidden touch-none;
+    cursor: grab;
+  }
+
+  .wire-asset-graph-canvas:active {
+    cursor: grabbing;
+  }
+
+  .wire-asset-graph-svg {
+    @apply h-full w-full select-none;
+    transition: transform 0.05s ease-out;
+  }
+
+  .wire-asset-graph-edge {
+    stroke: var(--gray-border);
+    stroke-width: 1.25;
+    opacity: 0.85;
+  }
+
+  .wire-asset-graph-edge--active {
+    stroke: var(--star-red);
+    stroke-width: 2;
+    opacity: 1;
+  }
+
+  .wire-asset-graph-edge--dim {
+    opacity: 0.2;
+  }
+
+  .wire-asset-graph-bubble {
+    stroke: var(--star-navy);
+    stroke-width: 2;
+    filter: drop-shadow(0 2px 4px rgb(27 58 107 / 0.12));
+  }
+
+  .wire-asset-graph-node--sub .wire-asset-graph-bubble {
+    stroke: var(--star-blue);
+    stroke-width: 1.5;
+  }
+
+  .wire-asset-graph-node--selected .wire-asset-graph-bubble {
+    stroke: var(--star-red);
+    stroke-width: 3;
+  }
+
+  .wire-asset-graph-node--neighbor .wire-asset-graph-bubble {
+    stroke: var(--star-red);
+    stroke-width: 2;
+    stroke-dasharray: 4 2;
+  }
+
+  .wire-asset-graph-node--dim {
+    opacity: 0.35;
+  }
+
+  .wire-asset-graph-label {
+    fill: white;
+    font-size: 9px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .wire-asset-graph-node--sub .wire-asset-graph-label {
+    fill: var(--star-navy);
+    font-size: 8px;
+  }
+
+  .wire-asset-graph-hint {
+    @apply pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-sm border border-[var(--gray-border)] bg-white/90 px-2 py-1 text-[10px] text-[var(--gray-mid)];
+  }
+
+  .wire-asset-graph-zoom-btn {
+    @apply text-star-navy flex size-7 items-center justify-center rounded-sm hover:bg-star-blue-light;
+  }
+
+  .wire-asset-graph-reset {
+    @apply text-[var(--gray-mid)] rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide hover:bg-star-blue-light hover:text-star-navy;
+  }
+
+  .wire-asset-detail-panel {
+    @apply absolute top-0 right-0 z-10 flex h-full w-[min(100%,280px)] translate-x-full flex-col border-l border-[var(--gray-border)] bg-white shadow-[-4px_0_16px_rgb(0_0_0/0.06)] transition-transform duration-200 ease-out;
+  }
+
+  .wire-asset-detail-panel--open {
+    @apply translate-x-0;
+  }
+
+  .wire-asset-detail-panel-header {
+    @apply flex shrink-0 items-start gap-2 border-b border-[var(--gray-border)] px-3 py-2.5;
+    min-height: var(--wire-shell-header-h);
+  }
+
+  .wire-asset-detail-panel-kicker {
+    @apply text-[9px] font-bold tracking-wide text-[var(--gray-mid)] uppercase;
+  }
+
+  .wire-asset-detail-panel-title {
+    @apply text-star-navy text-[13px] leading-snug font-bold;
+  }
+
+  .wire-asset-detail-panel-close {
+    @apply text-[var(--gray-mid)] flex size-7 shrink-0 items-center justify-center rounded-sm hover:bg-star-blue-light hover:text-star-navy;
+  }
+
+  .wire-asset-detail-panel-body {
+    @apply min-h-0 flex-1 overflow-y-auto px-3 py-2;
+  }
+
+  .wire-asset-attr-list {
+    @apply m-0 grid gap-2 p-0;
+  }
+
+  .wire-asset-attr {
+    @apply grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-0.5 text-[11px];
+  }
+
+  .wire-asset-attr--block {
+    @apply grid-cols-1;
+  }
+
+  .wire-asset-attr dt {
+    @apply text-[var(--gray-mid)] m-0 font-semibold;
+  }
+
+  .wire-asset-attr dd {
+    @apply text-[var(--star-text)] m-0 font-medium;
+  }
+
+  .wire-asset-status {
+    @apply inline-block rounded-sm px-1.5 py-0.5 text-[9px] font-bold uppercase;
+  }
+
+  .wire-asset-status--live {
+    @apply bg-star-blue-light text-star-navy;
+  }
+
+  .wire-asset-status--planned {
+    @apply border border-[#f0d070] bg-[#fff3cd] text-[#7a4800];
+  }
+
+  .wire-asset-status--retired {
+    @apply bg-[#f0f0ec] text-[var(--gray-mid)];
+  }
+
+  .wire-asset-related-list {
+    @apply m-0 list-none space-y-1 p-0;
+  }
+
+  .wire-asset-related-link {
+    @apply text-star-navy text-left text-[11px] font-semibold underline-offset-2 hover:underline;
+  }
+
+  .wire-asset-detail-panel-footer {
+    @apply shrink-0 border-t border-[var(--gray-border)] px-3 py-2.5;
+  }
+
   .wire-topbar {
-    @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-[var(--gray-border)] bg-white px-5;
+    @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-[var(--gray-border)] bg-white px-4 sm:px-5;
     height: var(--wire-shell-header-h);
     min-height: var(--wire-shell-header-h);
     box-sizing: border-box;
@@ -473,11 +697,39 @@
   }
 
   .wire-topbar-title {
-    @apply text-star-navy text-[15px] font-bold tracking-tight;
+    @apply text-star-navy min-w-0 text-[15px] font-bold tracking-tight;
+  }
+
+  .wire-topbar-user {
+    @apply flex min-w-0 max-w-full items-center gap-2 sm:gap-3;
+  }
+
+  .wire-topbar-user-identity {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .wire-topbar-user-actions {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-0.5 border-l border-[var(--gray-border)] pl-2 sm:pl-3;
+  }
+
+  .wire-topbar-user-action {
+    @apply text-star-blue hover:text-star-navy whitespace-nowrap text-[10px] font-medium underline-offset-2 hover:underline disabled:opacity-50;
+  }
+
+  .wire-topbar-user-menu-trigger {
+    @apply text-[var(--gray-mid)] hover:text-star-navy flex size-8 items-center justify-center rounded-sm border border-[var(--gray-border)] bg-white transition-colors hover:bg-[var(--gray-bg)];
+  }
+
+  .wire-topbar-user-dropdown {
+    @apply absolute top-full right-0 z-30 mt-1 flex min-w-[10rem] flex-col gap-1 rounded-sm border border-[var(--gray-border)] bg-white p-2 shadow-md;
+  }
+
+  .wire-topbar-user-dropdown-action {
+    @apply block w-full text-left;
   }
 
   .wire-scroll-content {
-    @apply flex-1 overflow-y-auto px-5 py-4;
+    @apply flex-1 overflow-y-auto px-5 py-4 leading-normal;
   }
 
   /* Ticket detail: main column + sticky LLM rail (wireframe detail-layout) */
@@ -539,7 +791,7 @@
   }
 
   .wire-metric-sub {
-    @apply text-[var(--gray-mid)] mt-0.5 text-[11px];
+    @apply mt-0.5 text-[11px] font-medium leading-normal text-[var(--gray-mid)];
   }
 
   /* AI banner */
@@ -552,7 +804,7 @@
   }
 
   .wire-ai-text {
-    @apply flex-1 text-xs leading-relaxed text-[#2a2c7a];
+    @apply flex-1 text-xs font-medium leading-normal text-[#2a2c7a];
   }
 
   /* Table */
@@ -565,7 +817,7 @@
   }
 
   .wire-table-row {
-    @apply grid cursor-pointer gap-2 border-b border-[var(--gray-border)] px-3.5 py-2.5 text-xs transition-colors last:border-b-0 hover:bg-star-blue-light;
+    @apply grid cursor-pointer gap-2 border-b border-[var(--gray-border)] px-3.5 py-2.5 text-xs font-medium leading-normal transition-colors last:border-b-0 hover:bg-star-blue-light;
   }
 
   .wire-table-row--dragging {
@@ -680,11 +932,11 @@
   }
 
   .wire-form-input {
-    @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] outline-none focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
+    @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] font-medium outline-none focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
   }
 
   .wire-search-input {
-    @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] text-[var(--star-text)] outline-none placeholder:text-[var(--gray-mid)] focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
+    @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] font-medium text-[var(--star-text)] outline-none placeholder:font-normal placeholder:text-[var(--gray-mid)] focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
   }
 
   .wire-search-input--on-dark {
@@ -698,7 +950,8 @@
   }
 
   .wire-form-label {
-    @apply text-[var(--star-text-muted)] mb-1 block text-xs font-bold;
+    @apply mb-1 block text-xs font-semibold text-[var(--star-text-muted)];
+    font-weight: var(--wire-font-weight-label);
   }
 
   .wire-sec-title {
@@ -709,16 +962,8 @@
     @apply bg-star-red flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white;
   }
 
-  .wire-sidebar-user-footer {
-    @apply shrink-0 border-t border-[var(--gray-border)] px-3.5 py-2.5;
-  }
-
-  .wire-sidebar-user-actions {
-    @apply mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5;
-  }
-
-  .wire-sidebar-user-action {
-    @apply text-star-blue hover:text-star-navy text-[10px] font-medium underline-offset-2 hover:underline disabled:opacity-50;
+  .wire-sidebar-footer {
+    @apply shrink-0;
   }
 
   /* Bottom panel (v2) */

@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
+import {
+  DEFAULT_TICKET_SORT,
+  parseTicketSort,
+  TICKET_SORT_OPTIONS,
+} from "@/lib/ticket-sort";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import { dashboardFilterTitle } from "@/lib/tickets-api-query";
 import type { Ticket } from "@/types/ticket";
@@ -35,8 +41,28 @@ export function TicketsListClient({
   tickets: Ticket[];
   initialParams?: Record<string, string | string[] | undefined>;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const dashboardFilter = dashboardFilterTitle(initialParams);
   const fromDashboard = Boolean(dashboardFilter);
+
+  const sort = parseTicketSort(
+    pickParam(initialParams.sort) ?? searchParams.get("sort"),
+  );
+
+  const onSortChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value === DEFAULT_TICKET_SORT) {
+        params.delete("sort");
+      } else {
+        params.set("sort", value);
+      }
+      const qs = params.toString();
+      router.push(qs ? `/tickets?${qs}` : "/tickets");
+    },
+    [router, searchParams],
+  );
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(
@@ -150,6 +176,18 @@ export function TicketsListClient({
           {allTags.map((tag) => (
             <option key={tag} value={tag}>
               {tag}
+            </option>
+          ))}
+        </select>
+        <select
+          className="wire-form-input h-8 w-auto min-w-[140px] text-xs"
+          value={sort}
+          onChange={(e) => onSortChange(e.target.value)}
+          aria-label="Sorter sager"
+        >
+          {TICKET_SORT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>

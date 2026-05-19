@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stardesk-config
+  namespace: stardesk
+  labels:
+    app.kubernetes.io/part-of: stardesk
+data:
+  # Browser uses same-origin /api/proxy; SSR/BFF uses in-cluster API URL.
+  NEXT_PUBLIC_API_URL: "http://stardesk-api:8000"
+  # Comma-separated origins for API CORS (public ingress URL + local dev).
+  API_CORS_ORIGINS: "https://stardesk.example.com,http://localhost:3000"
+  FRONTEND_URL: "https://stardesk.example.com,http://localhost:3000"
+  APP_ENV: "production"
+  MAIL_FROM: "noreply@stardesk.example.com"
+  UPLOAD_DIR: "/tmp/stardesk-uploads"
+  PORT: "8000"

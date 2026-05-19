@@ -1,0 +1,62 @@
+namespace: stardesk
+
+images:
+  web:
+    repository: stardesk-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  api:
+    repository: stardesk-api
+    tag: latest
+    pullPolicy: IfNotPresent
+
+replicas:
+  web: 1
+  api: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  host: stardesk.example.com
+  tls:
+    enabled: true
+    secretName: stardesk-tls
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  exposeApi: false
+
+config:
+  nextPublicApiUrl: "http://stardesk-api:8000"
+  apiCorsOrigins: "https://stardesk.example.com,http://localhost:3000"
+  frontendUrl: "https://stardesk.example.com,http://localhost:3000"
+  appEnv: production
+  mailFrom: "noreply@stardesk.example.com"
+  uploadDir: "/tmp/stardesk-uploads"
+
+# Set via --set-file or external secrets operator in production
+secrets:
+  databaseUrl: ""
+  jwtSecret: ""
+  cronSecret: ""
+  webhookSecret: ""
+  resendApiKey: ""
+
+resources:
+  web:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  api:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+schemaSyncJob:
+  enabled: false

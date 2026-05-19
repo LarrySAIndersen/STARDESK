@@ -1,0 +1,35 @@
+# Local smoke test (external Neon DB — set DATABASE_URL in .env or shell).
+#   docker compose up --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      APP_ENV: ${APP_ENV:-development}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      PORT: "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # Server-side BFF proxy + SSR reach API by compose service name.
+      NEXT_PUBLIC_API_URL: http://api:8000
+      PORT: "3000"
+    depends_on:
+      api:
+        condition: service_healthy

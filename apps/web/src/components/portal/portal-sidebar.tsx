@@ -4,9 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Home, Plus } from "lucide-react";
 
-import { AgentSidebarUser } from "@/components/agent/agent-sidebar-user";
-import { getClientUser } from "@/lib/auth";
-import { resolveUserAvatar } from "@/lib/user-avatar";
+import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
+import { StarLogo } from "@/components/star-logo";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -22,14 +21,34 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function PortalSidebar() {
+export function PortalSidebar({
+  collapsed = false,
+  onToggle,
+}: {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) {
   const pathname = usePathname();
-  const user = resolveUserAvatar(getClientUser());
 
   return (
-    <aside className="wire-sidebar flex h-full flex-col">
+    <aside
+      className={cn("wire-sidebar flex h-full flex-col", collapsed && "wire-sidebar--collapsed")}
+      data-collapsed={collapsed ? "" : undefined}
+    >
+      {collapsed ? (
+        <div className="wire-sidebar-collapsed-brand">
+          <Link href="/portal" className="flex items-center justify-center" title="STARdesk portal">
+            <StarLogo priority inverted className="h-6 w-auto" />
+          </Link>
+        </div>
+      ) : (
+        <div className="wire-shell-col-header wire-shell-col-header--nav flex items-center justify-end px-1">
+          {onToggle ? <SidebarCollapseToggle collapsed={false} onToggle={onToggle} /> : null}
+        </div>
+      )}
+
       <nav className="flex flex-1 flex-col overflow-y-auto py-1" aria-label="Portalnavigation">
-        <p className="wire-nav-section">Selvbetjening</p>
+        {collapsed ? null : <p className="wire-nav-section">Selvbetjening</p>}
         {ITEMS.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item.href);
@@ -37,17 +56,22 @@ export function PortalSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={cn("wire-nav-item", active && "wire-nav-item--active")}
+              title={collapsed ? item.label : undefined}
+              className={cn(
+                "wire-nav-item",
+                active && "wire-nav-item--active",
+                collapsed && "wire-nav-item--icon-only",
+              )}
             >
               <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-              {item.label}
+              {collapsed ? <span className="sr-only">{item.label}</span> : item.label}
             </Link>
           );
         })}
       </nav>
-      {user ? (
-        <footer className="wire-sidebar-user-footer">
-          <AgentSidebarUser user={user} />
+      {collapsed && onToggle ? (
+        <footer className="wire-sidebar-footer flex justify-center border-t border-[var(--gray-border)] px-1.5 py-2">
+          <SidebarCollapseToggle collapsed onToggle={onToggle} />
         </footer>
       ) : null}
     </aside>

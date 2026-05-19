@@ -29,7 +29,17 @@ function resolveSelection(assetId: string): AssetSelection | null {
   return null;
 }
 
-export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
+export function AssetTree({
+  showHeader = true,
+  selectedId: controlledId,
+  onSelect,
+  compact = false,
+}: {
+  showHeader?: boolean;
+  selectedId?: string | null;
+  onSelect?: (assetId: string) => void;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,47 +54,67 @@ export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
   });
 
   const [selection, setSelection] = useState<AssetSelection | null>(() => {
+    if (controlledId) return resolveSelection(controlledId);
     if (!assetFromUrl) return null;
     return resolveSelection(assetFromUrl);
   });
 
-  const activeId = useMemo(
-    () => selectionKey(selection) ?? assetFromUrl,
-    [selection, assetFromUrl],
-  );
+  const activeId = useMemo(() => {
+    if (controlledId !== undefined) return controlledId ?? assetFromUrl;
+    return selectionKey(selection) ?? assetFromUrl;
+  }, [controlledId, selection, assetFromUrl]);
 
   const toggleExpanded = useCallback((systemId: string) => {
     setExpanded((prev) => ({ ...prev, [systemId]: !prev[systemId] }));
   }, []);
 
-  const selectSystem = useCallback((system: AssetSystem) => {
-    setSelection({ kind: "system", system });
-  }, []);
+  const selectSystem = useCallback(
+    (system: AssetSystem) => {
+      if (onSelect) {
+        onSelect(system.id);
+        return;
+      }
+      setSelection({ kind: "system", system });
+    },
+    [onSelect],
+  );
 
-  const selectSubsystem = useCallback((system: AssetSystem, subsystem: AssetSubsystem) => {
-    setSelection({ kind: "subsystem", system, subsystem });
-  }, []);
+  const selectSubsystem = useCallback(
+    (system: AssetSystem, subsystem: AssetSubsystem) => {
+      if (onSelect) {
+        onSelect(subsystem.id);
+        return;
+      }
+      setSelection({ kind: "subsystem", system, subsystem });
+    },
+    [onSelect],
+  );
 
   const applyAssetFilter = useCallback(() => {
-    const id = selectionKey(selection);
+    const id = activeId;
     if (!id) return;
     const params = new URLSearchParams();
     params.set("asset_id", id);
     router.push(`/tickets?${params.toString()}`);
-  }, [router, selection]);
+  }, [router, activeId]);
+
+  const resolvedSelection = useMemo(() => {
+    if (controlledId) return resolveSelection(controlledId);
+    return selection;
+  }, [controlledId, selection]);
 
   const detailLabel =
-    selection?.kind === "subsystem"
-      ? `${selection.system.name} › ${selection.subsystem.name}`
-      : selection?.kind === "system"
-        ? selection.system.name
+    resolvedSelection?.kind === "subsystem"
+      ? `${resolvedSelection.system.name} › ${resolvedSelection.subsystem.name}`
+      : resolvedSelection?.kind === "system"
+        ? resolvedSelection.system.name
         : null;
 
   const detailCode =
-    selection?.kind === "subsystem"
-      ? selection.subsystem.code
-      : selection?.kind === "system"
-        ? selection.system.code
+    resolvedSelection?.kind === "subsystem"
+      ? resolvedSelection.subsystem.code
+      : resolvedSelection?.kind === "system"
+        ? resolvedSelection.system.code
         : null;
 
   return (
@@ -99,9 +129,7 @@ export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
         <ul className="m-0 list-none p-0" role="tree">
           {MOCK_ASSET_SYSTEMS.map((system) => {
             const isOpen = expanded[system.id] ?? false;
-            const systemSelected =
-              activeId === system.id ||
-              (selection?.kind === "system" && selection.system.id === system.id);
+            const systemSelected = activeId === system.id;
 
             return (
               <li
@@ -160,7 +188,7 @@ export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
           })}
         </ul>
       </div>
-      {detailLabel ? (
+      {detailLabel && !compact ? (
         <footer className="wire-asset-detail">
           <p className="wire-asset-detail-label">{detailLabel}</p>
           {detailCode ? (
@@ -181,11 +209,11 @@ export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
             ) : null}
           </div>
         </footer>
-      ) : (
+      ) : !compact ? (
         <footer className="wire-asset-detail wire-asset-detail--empty">
           <p className="text-[10px] text-[var(--gray-mid)]">Vælg et system eller undersystem</p>
         </footer>
-      )}
+      ) : null}
     </div>
   );
 }

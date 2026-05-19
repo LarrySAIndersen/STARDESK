@@ -1,15 +1,19 @@
 "use client";
 
-import { type ReactNode } from "react";
-import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
+import { type ReactNode, useEffect } from "react";
+import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
+import { PortalTopBar } from "@/components/portal/portal-top-bar";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
+import { getClientUser, isStaff } from "@/lib/auth";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import {
   PORTAL_NAV,
   PORTAL_PANEL_MAIN,
   PORTAL_PANEL_NAV,
   PORTAL_SHELL_WIDTHS_STORAGE_KEY,
+  SHELL_NAV_COLLAPSED_WIDTH,
 } from "@/lib/shell-layout";
 
 type PortalShellColumnsProps = {
@@ -17,6 +21,9 @@ type PortalShellColumnsProps = {
 };
 
 export function PortalShellColumns({ children }: PortalShellColumnsProps) {
+  const { collapsed, toggle } = useSidebarCollapsed();
+  const showPortalTopBar = !isStaff(getClientUser());
+  const navPanelRef = usePanelRef();
   const panelIds = [PORTAL_PANEL_NAV, PORTAL_PANEL_MAIN];
 
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
@@ -29,6 +36,16 @@ export function PortalShellColumns({ children }: PortalShellColumnsProps) {
     [PORTAL_PANEL_NAV]: PORTAL_NAV.default,
   };
 
+  useEffect(() => {
+    const panel = navPanelRef.current;
+    if (!panel) return;
+    if (collapsed) {
+      panel.collapse();
+    } else {
+      panel.expand();
+    }
+  }, [collapsed, navPanelRef]);
+
   return (
     <Group
       id={PORTAL_SHELL_WIDTHS_STORAGE_KEY}
@@ -40,15 +57,19 @@ export function PortalShellColumns({ children }: PortalShellColumnsProps) {
     >
       <Panel
         id={PORTAL_PANEL_NAV}
+        panelRef={navPanelRef}
         defaultSize={PORTAL_NAV.default}
-        minSize={PORTAL_NAV.min}
-        maxSize={PORTAL_NAV.max}
+        minSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : PORTAL_NAV.min}
+        maxSize={collapsed ? SHELL_NAV_COLLAPSED_WIDTH : PORTAL_NAV.max}
+        collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
+        collapsible
+        disabled={collapsed}
         groupResizeBehavior="preserve-pixel-size"
         className="min-h-0 min-w-0"
       >
-        <PortalSidebar />
+        <PortalSidebar collapsed={collapsed} onToggle={toggle} />
       </Panel>
-      <ShellResizeSeparator />
+      {collapsed ? null : <ShellResizeSeparator />}
       <Panel id={PORTAL_PANEL_MAIN} minSize={280} className="min-h-0 min-w-0">
         <div className="wire-scroll-content h-full min-h-0 overflow-y-auto">{children}</div>
       </Panel>

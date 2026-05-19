@@ -1,0 +1,38 @@
+# Git & IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!apps/api/README.md
+
+# Dependencies & build artifacts
+**/node_modules
+**/.next
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.venv
+**/venv
+**/*.egg-info
+
+# Env & secrets (never bake into images)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local data & logs
+**/*.log
+**/dist
+**/coverage
+STARDESK/Background
+
+# K8s / deploy (not needed in image context)
+deploy/
+k8s/
+docs/
+
+# Tests
+**/tests
+**/*.test.ts
+**/*.spec.ts

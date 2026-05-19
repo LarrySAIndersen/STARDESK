@@ -1,4 +1,5 @@
 import { findAssetById } from "@/lib/mock-assets";
+import { parseTicketSort } from "@/lib/ticket-sort";
 
 /** Build GET /api/v1/tickets query string from dashboard drill-down search params. */
 
@@ -42,6 +43,8 @@ export function buildTicketsApiQuery(
     params.set("board", "true");
     params.set("open_only", "true");
   }
+
+  params.set("sort", parseTicketSort(pick(searchParams.sort)));
 
   return params.toString();
 }

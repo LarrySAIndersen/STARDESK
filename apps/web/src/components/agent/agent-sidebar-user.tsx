@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -17,10 +16,9 @@ import { UserAvatar } from "@/components/agent/user-avatar";
 import { Button } from "@/components/ui/button";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
-import { clearSession, writeUserCookie } from "@/lib/auth";
+import { clearSession } from "@/lib/auth";
 import {
   AVATAR_UPLOAD_MAX_BYTES,
-  resolveUserAvatar,
   selectUserAvatarPreset,
   uploadUserAvatarImage,
   userProfileHref,
@@ -32,7 +30,7 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 type ProfileTab = "heroes" | "upload";
 
-function ProfileModal({
+export function ProfileModal({
   user,
   onClose,
   onUserChange,
@@ -318,62 +316,5 @@ function LogoutButton({ onDone }: { onDone: () => void }) {
     >
       Log ud
     </Button>
-  );
-}
-
-export function AgentSidebarUser({ user: userFromServer }: { user: User }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [user, setUser] = useState(() => resolveUserAvatar(userFromServer) ?? userFromServer);
-
-  useEffect(() => {
-    setUser(resolveUserAvatar(userFromServer) ?? userFromServer);
-  }, [userFromServer]);
-
-  const onUserChange = useCallback((next: User) => {
-    writeUserCookie(next);
-    setUser(next);
-  }, []);
-
-  async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    clearSession();
-    router.push("/login");
-    router.refresh();
-  }
-
-  const profileHref = userProfileHref(user);
-
-  return (
-    <>
-      <div className="flex min-w-0 items-center gap-2">
-        <UserAvatar user={user} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-bold text-star-navy">{user.display_name}</p>
-          <p className="truncate text-[10px] text-[var(--gray-mid)]">{user.role_label}</p>
-        </div>
-      </div>
-
-      <nav className="wire-sidebar-user-actions" aria-label="Brugerkonto">
-        <Link href={profileHref} className="wire-sidebar-user-action">
-          Se mere
-        </Link>
-        <button
-          type="button"
-          className="wire-sidebar-user-action"
-          onClick={() => setOpen(true)}
-          aria-haspopup="dialog"
-        >
-          Skift billede
-        </button>
-        <button type="button" className="wire-sidebar-user-action" onClick={() => void logout()}>
-          Log ud
-        </button>
-      </nav>
-
-      {open ? (
-        <ProfileModal user={user} onClose={() => setOpen(false)} onUserChange={onUserChange} />
-      ) : null}
-    </>
   );
 }

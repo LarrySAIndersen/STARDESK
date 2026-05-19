@@ -7,6 +7,7 @@ export const INTERNAL_TEAM_NAMES = new Set([
   "North Star",
   "Virksomhed",
   "BI",
+  "Jobflow",
   // Legacy names (pre-rename migrations)
   "SF A North Star Series",
   "Es Trifft",
@@ -21,6 +22,7 @@ const INTERNAL_DISPLAY_ORDER = [
   "SF AI Operations",
   "Virksomhed",
   "North Star",
+  "Jobflow",
   "Sirius",
   "BI",
 ];

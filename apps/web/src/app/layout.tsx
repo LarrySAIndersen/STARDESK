@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="da" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${ibmPlexMono.variable} flex min-h-dvh flex-col overflow-x-hidden antialiased`}
+        className={`${inter.variable} ${ibmPlexMono.variable} font-sans flex min-h-dvh flex-col overflow-x-hidden antialiased`}
       >
         <ThemeProvider>
           <SkipLink />

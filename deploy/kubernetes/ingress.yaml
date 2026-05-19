@@ -1,0 +1,39 @@
+# Exposes only the Next.js app. Browser traffic uses /api/proxy (BFF) to reach the API
+# in-cluster at http://stardesk-api:8000 — no public /api path required.
+#
+# Optional direct API ingress (uncomment second rule + backend) if you need
+# webhooks/cron from outside without going through Next.js.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stardesk
+  namespace: stardesk
+  labels:
+    app.kubernetes.io/part-of: stardesk
+  annotations:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - stardesk.example.com
+      secretName: stardesk-tls
+  rules:
+    - host: stardesk.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stardesk-web
+                port:
+                  name: http
+          # - path: /api
+          #   pathType: Prefix
+          #   backend:
+          #     service:
+          #       name: stardesk-api
+          #       port:
+          #         name: http

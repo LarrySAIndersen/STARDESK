@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stardesk-api
+  namespace: stardesk
+  labels:
+    app: stardesk-api
+    app.kubernetes.io/name: stardesk-api
+    app.kubernetes.io/part-of: stardesk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stardesk-api
+  template:
+    metadata:
+      labels:
+        app: stardesk-api
+        app.kubernetes.io/name: stardesk-api
+    spec:
+      containers:
+        - name: api
+          image: stardesk-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: stardesk-config
+            - secretRef:
+                name: stardesk-secrets
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: stardesk-config
+                  key: PORT
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3

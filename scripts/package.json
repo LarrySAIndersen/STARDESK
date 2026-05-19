@@ -11,6 +11,7 @@
     "load-test:destructive:spike": "node ./load-test/run-k6-destructive.mjs spike.js",
     "load-test:destructive:spike:smoke": "node ./load-test/run-k6-destructive.mjs spike.js --smoke",
     "load-test:destructive:aggressive": "node ./load-test/run-k6-destructive.mjs aggressive-scenarios.js",
-    "test:destructive": "cd ../apps/api && pytest -m destructive tests/destructive -v"
+    "test:destructive": "cd ../apps/api && pytest -m destructive tests/destructive -v",
+    "security:audit": "node ./security-audit/run-audit.mjs"
   }
 }

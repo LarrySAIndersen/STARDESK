@@ -32,7 +32,7 @@ INSERT INTO teams (id, name, description, is_active) VALUES
     (
         'a1000001-0000-4000-8000-000000000005',
         'Jobflow',
-        'Jobflow — SF-gruppe',
+        'Jobflow — intern SF-gruppe',
         TRUE
     )
 ON CONFLICT (id) DO UPDATE SET

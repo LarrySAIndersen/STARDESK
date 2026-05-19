@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
     frontend_url: str = Field(
         default="http://localhost:3000",
-        validation_alias="FRONTEND_URL",
+        validation_alias=AliasChoices("FRONTEND_URL", "API_CORS_ORIGINS"),
     )
     resend_api_key: str | None = Field(default=None, validation_alias="RESEND_API_KEY")
     mail_from: str | None = Field(default=None, validation_alias="MAIL_FROM")

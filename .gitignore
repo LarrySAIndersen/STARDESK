@@ -66,6 +66,10 @@ scripts/debug-login.png
 # Local project notes (may contain credentials)
 Background/
 
+# Dependency / CVE audit reports (may reference local paths)
+reports/dependency-audit-latest.json
+reports/dependency-audit-*.json
+
 # Destructive/load test local artifacts
 scripts/load-test/load-test-users.json
 scripts/load-test/reports/

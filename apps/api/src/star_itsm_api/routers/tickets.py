@@ -88,6 +88,11 @@ from star_itsm_api.services.attachments import (
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_sort import (
+    DEFAULT_TICKET_SORT,
+    apply_ticket_sort,
+    parse_ticket_sort,
+)
 from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
     resolve_create_security_flag,
@@ -237,6 +242,13 @@ async def list_tickets(
         le=365,
         description="Tickets closed/resolved within N days",
     ),
+    sort: str = Query(
+        default=DEFAULT_TICKET_SORT,
+        description=(
+            "Sort order: created_desc, created_asc, priority_desc, "
+            "sla_asc, ticket_number_asc, title_asc"
+        ),
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
@@ -249,6 +261,10 @@ async def list_tickets(
             raise HTTPException(status_code=400, detail="Invalid scope")
         if sla is not None and sla not in ("overdue", "due_soon"):
             raise HTTPException(status_code=400, detail="Invalid sla filter")
+        try:
+            parsed_sort = parse_ticket_sort(sort)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid sort") from None
 
         stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
         stmt = exclude_knowledge_articles(stmt)
@@ -307,7 +323,7 @@ async def list_tickets(
         if open_only:
             stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
         stmt = apply_ticket_search_filter(stmt, q)
-        stmt = stmt.order_by(Ticket.created_at.desc()).limit(limit)
+        stmt = apply_ticket_sort(stmt, parsed_sort).limit(limit)
         result = await db.execute(stmt)
         tickets = list(result.scalars().all())
         if sla is not None:

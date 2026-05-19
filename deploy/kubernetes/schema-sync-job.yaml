@@ -1,0 +1,49 @@
+# Optional one-shot schema sync before rollout (API also migrates on startup).
+#   kubectl apply -f deploy/kubernetes/schema-sync-job.yaml -n stardesk
+#   kubectl wait --for=condition=complete job/schema-sync -n stardesk --timeout=120s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: schema-sync
+  namespace: stardesk
+  labels:
+    app.kubernetes.io/part-of: stardesk
+    app.kubernetes.io/component: schema-sync
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: schema-sync
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: schema-sync
+          image: stardesk-api:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: stardesk-config
+            - secretRef:
+                name: stardesk-secrets
+          command:
+            - python
+            - -c
+            - |
+              import asyncio
+              from star_itsm_api.core.config import settings
+              from star_itsm_api.db import engine
+              from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
+
+              if not settings.database_url:
+                  raise SystemExit("DATABASE_URL is required for schema-sync")
+              asyncio.run(ensure_ticket_schema_current(engine, settings.database_url))
+              print("schema-sync complete")
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

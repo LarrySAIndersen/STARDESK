@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stardesk-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "stardesk.labels" . | nindent 4 }}
+data:
+  NEXT_PUBLIC_API_URL: {{ .Values.config.nextPublicApiUrl | quote }}
+  API_CORS_ORIGINS: {{ .Values.config.apiCorsOrigins | quote }}
+  FRONTEND_URL: {{ .Values.config.frontendUrl | quote }}
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  MAIL_FROM: {{ .Values.config.mailFrom | quote }}
+  UPLOAD_DIR: {{ .Values.config.uploadDir | quote }}
+  PORT: "8000"
