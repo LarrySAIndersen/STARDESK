@@ -20,7 +20,7 @@ async function authHeaders(): Promise<HeadersInit> {
 }
 
 type ApiGetServerOptions = {
-  /** Seconds to cache read-only reference data (teams, categories). */
+  /** Seconds to cache read-only reference data (e.g. categories). Avoid for live counts. */
   revalidate?: number;
 };
 

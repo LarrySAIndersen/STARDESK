@@ -8,6 +8,8 @@ import { sortTeamsForDisplay } from "@/lib/team-categories";
 import { redirect } from "next/navigation";
 import type { Team } from "@/types/team";
 
+export const dynamic = "force-dynamic";
+
 export default async function GroupsPage() {
   const currentUser = await getServerUser();
 
@@ -18,7 +20,7 @@ export default async function GroupsPage() {
   let teams: Team[] = [];
   let error: string | null = null;
   try {
-    teams = await apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 });
+    teams = await apiGetServer<Team[]>("/api/v1/teams");
   } catch (err) {
     if (err instanceof ApiError) {
       error = err.message;

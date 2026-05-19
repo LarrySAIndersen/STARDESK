@@ -8,6 +8,8 @@ import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const cookieStore = await cookies();
   const token = cookieStore.get(TOKEN_COOKIE)?.value;

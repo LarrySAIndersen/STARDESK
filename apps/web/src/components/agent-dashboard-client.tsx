@@ -6,19 +6,43 @@ import { useEffect, useMemo, useState } from "react";
 import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
+import { apiGet } from "@/lib/api";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
 
 export function AgentDashboardClient({
-  tickets,
-  teams,
+  tickets: initialTickets,
+  teams: initialTeams,
 }: {
   tickets: Ticket[];
   teams: Team[];
 }) {
+  const [tickets, setTickets] = useState(initialTickets);
+  const [teams, setTeams] = useState(initialTeams);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [slackTabRequest, setSlackTabRequest] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [freshTickets, freshTeams] = await Promise.all([
+          apiGet<Ticket[]>("/api/v1/tickets?board=true&limit=500"),
+          apiGet<Team[]>("/api/v1/teams"),
+        ]);
+        if (!cancelled) {
+          setTickets(freshTickets);
+          setTeams(freshTeams);
+        }
+      } catch {
+        // keep SSR payload on failure
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const recentTickets = useMemo(
     () =>

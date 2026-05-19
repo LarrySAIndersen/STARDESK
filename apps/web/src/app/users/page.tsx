@@ -3,6 +3,8 @@ import { canManageUsers } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function UsersAdminPage() {
   const currentUser = await getServerUser();
 

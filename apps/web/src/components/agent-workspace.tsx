@@ -28,7 +28,7 @@ export async function AgentWorkspace() {
         `/api/v1/reports/dashboard?scope=${encodeURIComponent(initialScope)}`,
       ),
       apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500"),
-      apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 }),
+      apiGetServer<Team[]>("/api/v1/teams"),
     ]);
     dashboard = dashboardData;
     tickets = boardTickets;

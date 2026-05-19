@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentOperationsDashboard } from "@/components/agent-operations-dashboard";
 import { apiGet } from "@/lib/api";
@@ -29,24 +29,48 @@ export function AgentOperationsHome({
   const [dashboard, setDashboard] = useState(initialDashboard);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mountScopeRef = useRef(initialScope);
 
   const showAllScope = canManageUsers(user);
 
-  const loadScope = useCallback(async (nextScope: DashboardScope) => {
-    setScope(nextScope);
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiGet<OperationsDashboard>(
-        `/api/v1/reports/dashboard?scope=${encodeURIComponent(nextScope)}`,
-      );
-      setDashboard(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke hente dashboard");
-    } finally {
-      setLoading(false);
-    }
+  const fetchDashboard = useCallback(async (nextScope: DashboardScope) => {
+    return apiGet<OperationsDashboard>(
+      `/api/v1/reports/dashboard?scope=${encodeURIComponent(nextScope)}`,
+    );
   }, []);
+
+  const loadScope = useCallback(
+    async (nextScope: DashboardScope) => {
+      setScope(nextScope);
+      setLoading(true);
+      setError(null);
+      try {
+        setDashboard(await fetchDashboard(nextScope));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Kunne ikke hente dashboard");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchDashboard],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchDashboard(mountScopeRef.current);
+        if (!cancelled) {
+          setDashboard(data);
+        }
+      } catch {
+        // keep SSR payload on failure
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchDashboard]);
 
   const tabs: DashboardScope[] = showAllScope ? [...SCOPE_TABS, "all"] : SCOPE_TABS;
 

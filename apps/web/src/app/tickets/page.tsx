@@ -3,6 +3,8 @@ import { apiGetServer } from "@/lib/api-server";
 import { buildTicketsApiQuery, dashboardFilterTitle } from "@/lib/tickets-api-query";
 import type { Ticket } from "@/types/ticket";
 
+export const dynamic = "force-dynamic";
+
 export default async function TicketsListPage({
   searchParams,
 }: {

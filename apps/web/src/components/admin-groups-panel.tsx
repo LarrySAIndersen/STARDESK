@@ -163,6 +163,10 @@ export function AdminGroupsPanel({
   }, []);
 
   useEffect(() => {
+    void reloadTeams();
+  }, [reloadTeams]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       try {

@@ -19,7 +19,7 @@ export async function AgentGroupsPanel() {
   let teams: Team[] = [];
   let error: string | null = null;
   try {
-    teams = sortTeams(await apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 }));
+    teams = sortTeams(await apiGetServer<Team[]>("/api/v1/teams"));
   } catch {
     error = "Kunne ikke hente grupper";
   }

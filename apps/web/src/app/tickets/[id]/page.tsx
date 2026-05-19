@@ -24,7 +24,7 @@ export default async function TicketDetailPage({
     const [ticket, teams] = await Promise.all([
       apiGetServer<TicketDetail>(`/api/v1/tickets/${id}`),
       staff
-        ? apiGetServer<Team[]>("/api/v1/teams", { revalidate: 120 }).catch(() => [] as Team[])
+        ? apiGetServer<Team[]>("/api/v1/teams").catch(() => [] as Team[])
         : Promise.resolve([] as Team[]),
     ]);
     return (
