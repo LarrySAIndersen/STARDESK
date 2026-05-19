@@ -8,6 +8,11 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class AvatarUpdateRequest(BaseModel):
+    avatar_url: str | None = None
+    avatar_preset_id: str | None = None
+
+
 class ChangePasswordRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     current_password: str = Field(min_length=8, max_length=128)
@@ -25,6 +30,8 @@ class UserRead(BaseModel):
     organization_id: UUID | None = None
     organization_name: str | None = None
     must_change_password: bool = False
+    avatar_url: str | None = None
+    avatar_preset_id: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -56,4 +63,6 @@ def user_to_read(
         organization_id=org_id,
         organization_name=organization_name,
         must_change_password=bool(getattr(user, "must_change_password", False)),
+        avatar_url=getattr(user, "avatar_url", None),
+        avatar_preset_id=getattr(user, "avatar_preset_id", None),
     )

@@ -39,7 +39,7 @@ export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeAr
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Søg titel, indhold, emneord…"
-        className="border-input max-w-md rounded-sm border px-3 py-2 text-sm"
+        className="wire-search-input max-w-md"
         aria-label="Søg vidensartikler"
       />
       <div className="wire-table-wrap">

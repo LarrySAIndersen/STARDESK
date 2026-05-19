@@ -8,7 +8,15 @@ export interface User {
   role_label: string;
   organization_id?: string | null;
   organization_name?: string | null;
+  must_change_password?: boolean;
+  avatar_url?: string | null;
+  avatar_preset_id?: string | null;
 }
+
+export type AvatarSelection =
+  | { kind: "preset"; avatar_preset_id: string }
+  | { kind: "upload"; avatar_url: string }
+  | { kind: "none" };
 
 export interface LoginResponse {
   access_token: string;

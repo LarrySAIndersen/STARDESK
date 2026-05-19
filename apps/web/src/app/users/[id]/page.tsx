@@ -16,11 +16,12 @@ export default async function UserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const currentUser = await getServerUser();
-  if (!canManageUsers(currentUser)) {
+  const { id } = await params;
+  const isSelf = currentUser?.id === id;
+
+  if (!canManageUsers(currentUser) && !isSelf) {
     redirect("/");
   }
-
-  const { id } = await params;
 
   try {
     const [user, assignedTickets] = await Promise.all([

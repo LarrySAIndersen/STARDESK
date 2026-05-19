@@ -42,7 +42,7 @@ export function PortalKnowledgeSearch({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Søg på titel, indhold eller emneord…"
-          className="mt-3 w-full max-w-md rounded-[2px] border-2 border-white/30 bg-white/10 px-3.5 py-2 text-[13px] text-white outline-none placeholder:text-white/50 focus:border-white"
+          className="wire-search-input wire-search-input--on-dark mt-3 max-w-md"
           aria-label="Søg vidensartikler"
         />
       </section>

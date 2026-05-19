@@ -55,6 +55,10 @@
   --sidebar-accent-foreground: var(--star-primary);
   --sidebar-border: #d8e2ee;
   --sidebar-ring: var(--star-primary);
+
+  /* Shell column header row — aligns nav | main | panel dividers */
+  --wire-shell-header-h: 52px;
+  --wire-topbar-accent-h: 3px;
 }
 
 .dark {
@@ -335,11 +339,24 @@
   }
 
   .wire-topheader {
-    @apply bg-star-navy sticky top-0 z-50 flex h-[52px] shrink-0 items-center gap-4 px-5;
+    @apply bg-star-navy sticky top-0 z-50 flex shrink-0 items-center gap-4 px-5;
+    height: var(--wire-shell-header-h);
+    min-height: var(--wire-shell-header-h);
+  }
+
+  /* Shared height + bottom rule for nav column, page title bar, asset panel headers */
+  .wire-shell-col-header {
+    @apply box-border flex shrink-0 items-center border-b border-[var(--gray-border)] bg-white;
+    height: var(--wire-shell-header-h);
+    min-height: var(--wire-shell-header-h);
+  }
+
+  .wire-shell-col-header--nav {
+    @apply shrink-0;
   }
 
   .wire-sidebar {
-    @apply flex w-[210px] shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
+    @apply flex h-full min-h-0 w-full shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
   }
 
   .wire-nav-section {
@@ -378,12 +395,21 @@
     @apply border border-[#f0d070] bg-[#fff3cd] text-[#7a4800];
   }
 
+  .wire-assets-card {
+    @apply flex min-h-0 flex-col rounded-sm border border-[var(--gray-border)] bg-white;
+  }
+
   .wire-asset-panel {
-    @apply flex w-[188px] shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
+    @apply flex h-full min-h-0 w-full shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
   }
 
   .wire-asset-panel-header {
-    @apply text-star-navy flex shrink-0 items-center gap-2 border-b border-[var(--gray-border)] px-3 py-2.5 text-[11px] font-bold tracking-wide uppercase;
+    @apply text-star-navy flex items-center gap-2 px-3 text-[11px] font-bold tracking-wide uppercase;
+    height: var(--wire-shell-header-h);
+    min-height: var(--wire-shell-header-h);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--gray-border);
+    background-color: white;
   }
 
   .wire-asset-tree {
@@ -439,7 +465,11 @@
   }
 
   .wire-topbar {
-    @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-[var(--gray-border)] border-t-[3px] bg-white px-5 py-2.5;
+    @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center justify-between border-b border-[var(--gray-border)] bg-white px-5;
+    height: var(--wire-shell-header-h);
+    min-height: var(--wire-shell-header-h);
+    box-sizing: border-box;
+    border-top-width: var(--wire-topbar-accent-h);
   }
 
   .wire-topbar-title {
@@ -653,6 +683,20 @@
     @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] outline-none focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
   }
 
+  .wire-search-input {
+    @apply w-full rounded-[2px] border border-[var(--gray-border)] bg-white px-2.5 py-2 text-[13px] text-[var(--star-text)] outline-none placeholder:text-[var(--gray-mid)] focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
+  }
+
+  .wire-search-input--on-dark {
+    @apply border-white/50 bg-white text-[var(--star-text)] placeholder:text-[var(--gray-mid)] focus:border-star-navy focus:ring-star-navy/25;
+  }
+
+  .star-page input[type="search"],
+  .wire-scroll-content input[type="search"],
+  .wire-app input[type="search"] {
+    @apply rounded-[2px] border border-[var(--gray-border)] bg-white text-[var(--star-text)] outline-none placeholder:text-[var(--gray-mid)] focus:border-star-navy focus:ring-2 focus:ring-star-navy/20;
+  }
+
   .wire-form-label {
     @apply text-[var(--star-text-muted)] mb-1 block text-xs font-bold;
   }
@@ -663,6 +707,18 @@
 
   .wire-avatar-sm {
     @apply bg-star-red flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white;
+  }
+
+  .wire-sidebar-user-footer {
+    @apply shrink-0 border-t border-[var(--gray-border)] px-3.5 py-2.5;
+  }
+
+  .wire-sidebar-user-actions {
+    @apply mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5;
+  }
+
+  .wire-sidebar-user-action {
+    @apply text-star-blue hover:text-star-navy text-[10px] font-medium underline-offset-2 hover:underline disabled:opacity-50;
   }
 
   /* Bottom panel (v2) */

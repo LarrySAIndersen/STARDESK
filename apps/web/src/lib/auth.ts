@@ -74,6 +74,11 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
 
 /** @deprecated Use POST /api/auth/login — token is HttpOnly server-side. */
 export function setSession(_token: string, user: User) {
+  writeUserCookie(user);
+}
+
+/** Update `stardesk_user` after profile changes (avatar, etc.). */
+export function writeUserCookie(user: User) {
   const maxAge = 60 * 60 * 12;
   const secure = typeof window !== "undefined" && window.location.protocol === "https:";
   const secureFlag = secure ? "; Secure" : "";

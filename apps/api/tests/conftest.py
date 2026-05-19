@@ -17,6 +17,7 @@ FAKE_ADMIN = SimpleNamespace(
     is_active=True,
     password_hash=None,
     deleted_at=None,
+    must_change_password=False,
 )
 
 

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Home, Plus } from "lucide-react";
 
+import { AgentSidebarUser } from "@/components/agent/agent-sidebar-user";
+import { getClientUser } from "@/lib/auth";
+import { resolveUserAvatar } from "@/lib/user-avatar";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -21,10 +24,11 @@ function isActive(pathname: string, href: string): boolean {
 
 export function PortalSidebar() {
   const pathname = usePathname();
+  const user = resolveUserAvatar(getClientUser());
 
   return (
-    <aside className="wire-sidebar w-[200px] shrink-0 border-r border-[var(--gray-border)]">
-      <nav className="flex flex-col py-1" aria-label="Portalnavigation">
+    <aside className="wire-sidebar flex h-full flex-col">
+      <nav className="flex flex-1 flex-col overflow-y-auto py-1" aria-label="Portalnavigation">
         <p className="wire-nav-section">Selvbetjening</p>
         {ITEMS.map((item) => {
           const Icon = item.icon;
@@ -41,6 +45,11 @@ export function PortalSidebar() {
           );
         })}
       </nav>
+      {user ? (
+        <footer className="wire-sidebar-user-footer">
+          <AgentSidebarUser user={user} />
+        </footer>
+      ) : null}
     </aside>
   );
 }

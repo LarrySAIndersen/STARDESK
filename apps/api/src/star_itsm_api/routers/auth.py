@@ -17,6 +17,7 @@ from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.auth import (
+    AvatarUpdateRequest,
     ChangePasswordRequest,
     LoginRequest,
     TokenResponse,
@@ -97,5 +98,36 @@ async def me(
     current_user: User = Depends(get_current_user_session),
     db: AsyncSession = Depends(require_db),
 ) -> UserRead:
+    org_name = await _organization_name(db, current_user)
+    return user_to_read(current_user, organization_name=org_name)
+
+
+@router.patch("/me/avatar", response_model=UserRead)
+async def update_avatar(
+    payload: AvatarUpdateRequest,
+    current_user: User = Depends(get_current_user_session),
+    db: AsyncSession = Depends(require_db),
+) -> UserRead:
+    if payload.avatar_url is not None and payload.avatar_preset_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Angiv enten upload eller superhelt — ikke begge på én gang",
+        )
+    if payload.avatar_url is not None:
+        if len(payload.avatar_url) > 500_000:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Billedet er for stort",
+            )
+        current_user.avatar_url = payload.avatar_url
+        current_user.avatar_preset_id = None
+    elif payload.avatar_preset_id is not None:
+        current_user.avatar_preset_id = payload.avatar_preset_id
+        current_user.avatar_url = None
+    else:
+        current_user.avatar_url = None
+        current_user.avatar_preset_id = None
+    await db.commit()
+    await db.refresh(current_user)
     org_name = await _organization_name(db, current_user)
     return user_to_read(current_user, organization_name=org_name)

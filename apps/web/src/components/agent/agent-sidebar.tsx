@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Layers,
   LayoutDashboard,
   Library,
   Plus,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
+import { AgentSidebarUser } from "@/components/agent/agent-sidebar-user";
 import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -32,6 +34,9 @@ function isActive(pathname: string, href: string): boolean {
   }
   if (href === "/tickets/new") {
     return pathname === "/tickets/new";
+  }
+  if (href === "/aktiver") {
+    return pathname === "/aktiver";
   }
   if (href === "/knowledge") {
     return pathname === "/knowledge" || pathname.startsWith("/knowledge/");
@@ -56,17 +61,11 @@ export function AgentSidebar({
   const staff = isStaff(user);
   const showAdmin = showUsersNavFromServer ?? canManageUsers(user);
 
-  const initials = user?.display_name
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() ?? "?";
-
   const items: NavItem[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/tickets", label: "Alle sager", icon: Ticket },
     { href: "/tickets/new", label: "Ny sag", icon: Plus },
+    ...(staff ? [{ href: "/aktiver", label: "Aktiver", icon: Layers }] : []),
     ...(staff
       ? [{ href: "/knowledge", label: "Vidensartikler", icon: Library }]
       : []),
@@ -84,7 +83,8 @@ export function AgentSidebar({
   let lastSection: string | undefined;
 
   return (
-    <aside className="wire-sidebar">
+    <aside className="wire-sidebar flex flex-col">
+      <div className="wire-shell-col-header wire-shell-col-header--nav" aria-hidden />
       <nav className="flex flex-1 flex-col overflow-y-auto py-1" aria-label="Hovednavigation">
         {items.map((item) => {
           const showSection = item.section && item.section !== lastSection;
@@ -116,21 +116,8 @@ export function AgentSidebar({
       </nav>
 
       {user ? (
-        <footer className="flex items-center gap-2 border-t border-[var(--gray-border)] px-3.5 py-3">
-          <span
-            className="wire-avatar-sm bg-[var(--star-navy-dark)]"
-            aria-hidden
-          >
-            {initials}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-bold text-star-navy">
-              {user.display_name}
-            </p>
-            <p className="truncate text-[10px] text-[var(--gray-mid)]">
-              {user.role_label}
-            </p>
-            </div>
+        <footer className="wire-sidebar-user-footer">
+          <AgentSidebarUser user={resolveUserAvatar(user) ?? user} />
         </footer>
       ) : null}
     </aside>

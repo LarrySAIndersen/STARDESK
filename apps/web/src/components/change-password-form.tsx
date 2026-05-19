@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,19 +14,40 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getClientUser } from "@/lib/auth";
 import { DEMO_PASSWORD } from "@/lib/demo-users";
+import { PASSWORD_VALIDATION_MESSAGE, validatePassword } from "@/lib/password-policy";
 import { cn } from "@/lib/utils";
 
-export function ChangePasswordForm() {
+type ChangePasswordFormProps = {
+  required?: boolean;
+  initialEmail?: string;
+};
+
+export function ChangePasswordForm({
+  required = false,
+  initialEmail = "",
+}: ChangePasswordFormProps) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState(initialEmail);
+  const [currentPassword, setCurrentPassword] = useState(required ? "" : DEMO_PASSWORD);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initialEmail) {
+      setEmail(initialEmail);
+      return;
+    }
+    const sessionUser = getClientUser();
+    if (sessionUser?.email) {
+      setEmail(sessionUser.email);
+    }
+  }, [initialEmail]);
 
   const inputClass = cn(fieldError && "border-destructive ring-destructive/30");
 
@@ -35,6 +56,13 @@ export function ChangePasswordForm() {
     setError(null);
     setSuccess(null);
     setFieldError(false);
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      setError(passwordError);
+      setFieldError(true);
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError("De nye adgangskoder matcher ikke");
@@ -87,13 +115,30 @@ export function ChangePasswordForm() {
 
   return (
     <div className={cn("mx-auto w-full max-w-md", fieldError && "login-shake")}>
+      {required ? (
+        <div
+          className="border-star-blue/30 bg-star-blue/5 text-star-navy mb-4 rounded-md border px-4 py-3 text-sm"
+          role="status"
+        >
+          Du skal skifte adgangskode første gang du logger ind.
+        </div>
+      ) : null}
       <Card className="star-section-card overflow-hidden border-t-4 border-t-star-red shadow-lg">
         <CardHeader className="bg-star-navy text-white">
           <CardTitle className="text-white">Skift adgangskode</CardTitle>
           <CardDescription className="text-white/80">
-            Angiv din e-mail og prototype-adgangskoden{" "}
-            <span className="font-medium text-white">{DEMO_PASSWORD}</span> som nuværende
-            adgangskode — også hvis du allerede har skiftet den før.
+            {required ? (
+              <>
+                Angiv din nuværende adgangskode og vælg en ny. Den nye adgangskode skal være
+                mindst 8 tegn og må kun indeholde bogstaver og tal.
+              </>
+            ) : (
+              <>
+                Angiv din e-mail og prototype-adgangskoden{" "}
+                <span className="font-medium text-white">{DEMO_PASSWORD}</span> som nuværende
+                adgangskode — også hvis du allerede har skiftet den før.
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -106,6 +151,7 @@ export function ChangePasswordForm() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className={inputClass}
+                readOnly={required && Boolean(initialEmail || email)}
                 required
               />
             </PasswordField>
@@ -116,13 +162,15 @@ export function ChangePasswordForm() {
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder={DEMO_PASSWORD}
+                placeholder={required ? undefined : DEMO_PASSWORD}
                 className={inputClass}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                Brug altid <span className="font-medium">{DEMO_PASSWORD}</span> her i prototypen.
-              </p>
+              {!required ? (
+                <p className="text-muted-foreground text-xs">
+                  Brug altid <span className="font-medium">{DEMO_PASSWORD}</span> her i prototypen.
+                </p>
+              ) : null}
             </PasswordField>
             <PasswordField label="Ny adgangskode" htmlFor="new-password">
               <Input
@@ -133,6 +181,8 @@ export function ChangePasswordForm() {
                 onChange={(event) => setNewPassword(event.target.value)}
                 className={inputClass}
                 minLength={8}
+                pattern="[A-Za-z0-9]{8,}"
+                title={PASSWORD_VALIDATION_MESSAGE}
                 required
               />
             </PasswordField>
@@ -145,6 +195,8 @@ export function ChangePasswordForm() {
                 onChange={(event) => setConfirmPassword(event.target.value)}
                 className={inputClass}
                 minLength={8}
+                pattern="[A-Za-z0-9]{8,}"
+                title={PASSWORD_VALIDATION_MESSAGE}
                 required
               />
             </PasswordField>
@@ -165,11 +217,13 @@ export function ChangePasswordForm() {
             >
               {isSubmitting ? "Gemmer…" : "Gem adgangskode"}
             </Button>
-            <p className="text-center text-sm">
-              <Link href="/" className="text-star-blue hover:text-star-navy underline">
-                Tilbage til login
-              </Link>
-            </p>
+            {!required ? (
+              <p className="text-center text-sm">
+                <Link href="/" className="text-star-blue hover:text-star-navy underline">
+                  Tilbage til login
+                </Link>
+              </p>
+            ) : null}
           </form>
         </CardContent>
       </Card>

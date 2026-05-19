@@ -33,6 +33,7 @@ def larry_user() -> User:
         password_hash=LARRY_HASH,
         organization_id=None,
         deleted_at=None,
+        must_change_password=True,
     )
 
 
@@ -74,6 +75,7 @@ async def test_login_larry_sanders(login_client: AsyncClient) -> None:
     assert body["access_token"]
     assert body["user"]["email"] == LARRY_EMAIL
     assert body["user"]["role"] == "admin"
+    assert body["user"]["must_change_password"] is True
 
 
 @pytest.mark.asyncio

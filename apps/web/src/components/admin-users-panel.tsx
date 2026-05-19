@@ -559,6 +559,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           <div className="flex gap-2">
             <Input
               id="user-search"
+              type="search"
               placeholder="Navn, e-mail eller gruppe…"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -567,6 +568,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
                   setSearch(query);
                 }
               }}
+              className="wire-search-input"
             />
             <Button
               type="button"

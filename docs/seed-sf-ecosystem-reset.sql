@@ -82,6 +82,7 @@ ON CONFLICT (email) DO UPDATE SET
     organization_id = NULL,
     password_hash = EXCLUDED.password_hash,
     is_active = TRUE,
+    must_change_password = TRUE,
     deleted_at = NULL;
 
 -- Virksomheds-agenter (ikke admin)
@@ -110,6 +111,7 @@ ON CONFLICT (email) DO UPDATE SET
     organization_id = EXCLUDED.organization_id,
     password_hash = EXCLUDED.password_hash,
     is_active = TRUE,
+    must_change_password = TRUE,
     deleted_at = NULL;
 
 -- Ryd medlemskaber for aktive SF-brugere og genopbyg

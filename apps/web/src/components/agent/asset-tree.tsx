@@ -16,7 +16,20 @@ function selectionKey(selection: AssetSelection | null): string | null {
     : selection.subsystem.id;
 }
 
-export function AgentAssetPanel() {
+function resolveSelection(assetId: string): AssetSelection | null {
+  for (const system of MOCK_ASSET_SYSTEMS) {
+    if (system.id === assetId) {
+      return { kind: "system", system };
+    }
+    const subsystem = system.subsystems.find((s) => s.id === assetId);
+    if (subsystem) {
+      return { kind: "subsystem", system, subsystem };
+    }
+  }
+  return null;
+}
+
+export function AssetTree({ showHeader = true }: { showHeader?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -75,11 +88,13 @@ export function AgentAssetPanel() {
         : null;
 
   return (
-    <aside className="wire-asset-panel" aria-label="Aktiver">
-      <div className="wire-asset-panel-header">
-        <Layers className="size-3.5 shrink-0 opacity-70" aria-hidden />
-        <span>Aktiver</span>
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col" aria-label="Aktiver">
+      {showHeader ? (
+        <div className="wire-asset-panel-header">
+          <Layers className="size-3.5 shrink-0 opacity-70" aria-hidden />
+          <span>Aktiver</span>
+        </div>
+      ) : null}
       <div className="wire-asset-tree min-h-0 flex-1 overflow-y-auto">
         <ul className="m-0 list-none p-0" role="tree">
           {MOCK_ASSET_SYSTEMS.map((system) => {
@@ -145,7 +160,6 @@ export function AgentAssetPanel() {
           })}
         </ul>
       </div>
-
       {detailLabel ? (
         <footer className="wire-asset-detail">
           <p className="wire-asset-detail-label">{detailLabel}</p>
@@ -172,19 +186,6 @@ export function AgentAssetPanel() {
           <p className="text-[10px] text-[var(--gray-mid)]">Vælg et system eller undersystem</p>
         </footer>
       )}
-    </aside>
+    </div>
   );
-}
-
-function resolveSelection(assetId: string): AssetSelection | null {
-  for (const system of MOCK_ASSET_SYSTEMS) {
-    if (system.id === assetId) {
-      return { kind: "system", system };
-    }
-    const subsystem = system.subsystems.find((s) => s.id === assetId);
-    if (subsystem) {
-      return { kind: "subsystem", system, subsystem };
-    }
-  }
-  return null;
 }

@@ -12,7 +12,8 @@ from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 
 KNOWN_PASSWORD = "Stardesk2026!"
-NEW_PASSWORD = "NyAdgang2026!"
+NEW_PASSWORD = "nyadgang2026"
+INVALID_NEW_PASSWORD = "invalid1!"
 TEST_EMAIL = "sf01@example.dk"
 
 
@@ -51,6 +52,7 @@ async def test_change_password_success(
         password_hash=hash_password(KNOWN_PASSWORD),
         is_active=True,
         deleted_at=None,
+        must_change_password=True,
     )
 
     with patch(
@@ -69,6 +71,7 @@ async def test_change_password_success(
 
     assert response.status_code == 204
     assert verify_password(NEW_PASSWORD, user.password_hash)
+    assert user.must_change_password is False
     override_db.commit.assert_awaited_once()
 
 
@@ -84,6 +87,7 @@ async def test_change_password_with_prototype_bootstrap(
         password_hash=hash_password("password"),
         is_active=True,
         deleted_at=None,
+        must_change_password=True,
     )
 
     with patch(
@@ -135,4 +139,38 @@ async def test_change_password_wrong_current(
     assert response.status_code == 401
     assert response.json()["detail"] == "Forkert e-mail eller nuværende adgangskode"
     assert verify_password(KNOWN_PASSWORD, user.password_hash)
+    override_db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_change_password_rejects_invalid_new_password(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email=TEST_EMAIL,
+        password_hash=hash_password(KNOWN_PASSWORD),
+        is_active=True,
+        deleted_at=None,
+        must_change_password=True,
+    )
+
+    with patch(
+        "star_itsm_api.routers.auth.get_user_by_email",
+        new_callable=AsyncMock,
+        return_value=user,
+    ):
+        response = await api_client.post(
+            "/api/v1/auth/change-password",
+            json={
+                "email": TEST_EMAIL,
+                "current_password": KNOWN_PASSWORD,
+                "new_password": INVALID_NEW_PASSWORD,
+            },
+        )
+
+    assert response.status_code == 422
+    assert "bogstaver og tal" in response.json()["detail"]
+    assert user.must_change_password is True
     override_db.commit.assert_not_awaited()

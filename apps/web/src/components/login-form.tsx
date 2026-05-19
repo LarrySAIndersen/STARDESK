@@ -62,6 +62,12 @@ export function LoginForm() {
         setFieldError(true);
         throw new Error("Login mislykkedes — uventet svar fra serveren");
       }
+      const body = (await response.json()) as { user?: { must_change_password?: boolean } };
+      if (body.user?.must_change_password) {
+        router.replace("/skift-adgangskode?required=1");
+        router.refresh();
+        return;
+      }
       router.replace("/");
       router.refresh();
     } catch (err) {

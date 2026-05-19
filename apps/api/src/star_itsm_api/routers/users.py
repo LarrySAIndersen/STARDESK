@@ -1,11 +1,11 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
-from star_itsm_api.core.password_policy import validate_password
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_TOP_ADMIN, require_admin
+from star_itsm_api.core.security import ROLE_TOP_ADMIN, get_current_user, require_admin
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.user_admin import (
@@ -16,6 +16,13 @@ from star_itsm_api.schemas.user_admin import (
     UserAdminUpdate,
 )
 from star_itsm_api.services.permissions import can_manage_users
+from star_itsm_api.schemas.auth import UserRead, user_to_read
+from star_itsm_api.services.avatars import (
+    resolve_avatar_file,
+    resolve_avatar_media_type,
+    save_user_avatar,
+)
+from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.user_admin import (
     build_admin_meta,
     email_taken,
@@ -25,6 +32,7 @@ from star_itsm_api.services.user_admin import (
     set_user_password,
     sync_user_teams,
 )
+from star_itsm_api.models.organization import Organization
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -61,13 +69,41 @@ async def list_users(
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
 
 
+@router.post("/me/avatar", response_model=UserRead)
+async def upload_my_avatar(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> UserRead:
+    await save_user_avatar(db, current_user, file)
+    await db.refresh(current_user)
+    org_id = get_user_organization_id(current_user)
+    org_name = None
+    if org_id is not None:
+        org = await db.get(Organization, org_id)
+        org_name = org.name if org else None
+    return user_to_read(current_user, organization_name=org_name)
+
+
+@router.get("/{user_id}/avatar")
+async def get_user_avatar(
+    user_id: uuid.UUID,
+    _current_user: User = Depends(get_current_user),
+) -> FileResponse:
+    path = resolve_avatar_file(user_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail="Avatar not found")
+    return FileResponse(path, media_type=resolve_avatar_media_type(path))
+
+
 @router.get("/{user_id}", response_model=UserAdminRead)
 async def get_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_admin()),
+    current_user: User = Depends(get_current_user),
 ) -> UserAdminRead:
-    if not can_manage_users(current_user):
+    is_self = current_user.id == user_id
+    if not can_manage_users(current_user) and not is_self:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     user = await get_user_admin(db, user_id)
     if user is None:
@@ -144,11 +180,9 @@ async def reset_user_password(
         raise HTTPException(status_code=404, detail="User not found")
 
     try:
-        validate_password(payload.new_password)
+        await set_user_password(db, user, payload.new_password)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
-
-    await set_user_password(db, user, payload.new_password)

@@ -23,7 +23,7 @@ export function TicketSearchInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Søg på tags, titel eller sagsnr…"
-        className="max-w-md"
+        className="wire-search-input max-w-md"
       />
     </div>
   );
