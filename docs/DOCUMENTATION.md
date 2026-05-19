@@ -30,7 +30,7 @@ Brug den når noget skal genskabes i Neon, når adgang ikke matcher forventning,
 | [performance-testing.md](./performance-testing.md) | Headless load/soak/stress (20 VU) |
 | [destructive-testing.md](./destructive-testing.md) | k6 abuse + pytest destructive |
 
-Cursor Agent Skills (explicit invocation): `.cursor/skills/stardesk-performance-load-test/`, `.cursor/skills/stardesk-destructive-testing/`.
+Cursor Agent Skills (explicit invocation): `.cursor/skills/stardesk-anti-patterns/`, `.cursor/skills/stardesk-performance-load-test/`, `.cursor/skills/stardesk-destructive-testing/`.
 
 ## Kode ↔ dokumentation
 
