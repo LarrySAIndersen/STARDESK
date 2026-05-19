@@ -109,7 +109,7 @@ export function AgentSidebar({
       {collapsed ? (
         <div className="wire-sidebar-collapsed-brand">
           <Link href="/" className="flex items-center justify-center" title="STARdesk">
-            <StarLogo priority inverted className="h-6 w-auto" />
+            <StarLogo priority inverted className="size-7" />
           </Link>
         </div>
       ) : (

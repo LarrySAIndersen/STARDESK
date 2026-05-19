@@ -38,7 +38,7 @@ export function PortalSidebar({
       {collapsed ? (
         <div className="wire-sidebar-collapsed-brand">
           <Link href="/portal" className="flex items-center justify-center" title="STARdesk portal">
-            <StarLogo priority inverted className="h-6 w-auto" />
+            <StarLogo priority inverted className="size-7" />
           </Link>
         </div>
       ) : (

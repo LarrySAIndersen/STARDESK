@@ -101,7 +101,7 @@ export function LoginForm() {
     <div className="mx-auto w-full max-w-5xl space-y-8">
       <div className={cn("space-y-8", fieldError && "login-shake")}>
         <div className="flex flex-col items-center gap-4 text-center">
-          <StarLogo className="h-10" />
+          <StarLogo className="size-10" />
           <h1 className="text-star-navy text-2xl font-bold tracking-tight">
             Log ind på STARdesk
           </h1>

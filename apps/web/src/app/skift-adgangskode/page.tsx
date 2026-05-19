@@ -14,7 +14,7 @@ export default async function SkiftAdgangskodePage({
   return (
     <main className="star-page px-6 py-10">
       <div className="mb-8 flex flex-col items-center gap-4 text-center">
-        <StarLogo className="h-10" />
+        <StarLogo className="size-10" />
         <h1 className="text-star-navy text-2xl font-bold tracking-tight">STARdesk</h1>
         <p className="text-muted-foreground text-sm">
           {required ? "Første gangs adgangskodeskift" : "Skift din adgangskode"}
