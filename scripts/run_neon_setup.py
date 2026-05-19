@@ -28,6 +28,9 @@ MIGRATIONS = [
     "docs/ticket-shared-migration.sql",
     "docs/ticket-security-flag-migration.sql",
     "docs/ticket-routing-metadata-migration.sql",
+    "docs/knowledge-articles-migration.sql",
+    "docs/must-change-password-migration.sql",
+    "docs/user-avatar-url-migration.sql",
 ]
 
 SEEDS = [

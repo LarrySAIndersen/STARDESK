@@ -60,12 +60,11 @@ dump.sql
 
 # Local usability / debug screenshots
 scripts/*.png
+scripts/**/*.png
 scripts/debug-login.png
 
 # Local project notes (may contain credentials)
 Background/
-
-scripts/**/*.png
 
 # Destructive/load test local artifacts
 scripts/load-test/load-test-users.json
@@ -73,6 +72,5 @@ scripts/load-test/reports/
 scripts/load-test/results/
 
 # Load-testing local secrets/reports
-scripts/load-test/load-test-users.json
 scripts/load-test/.env.loadtest
 scripts/load-test/reports/*.json

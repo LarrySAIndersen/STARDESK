@@ -31,6 +31,13 @@ Kilde: `scripts/run_neon_setup.py`
 | 6 | `docs/ticket-assignment-fields-migration.sql` |
 | 7 | `docs/ticket-tags-emoji-migration.sql` |
 | 8 | `docs/ticket-intelligence-migration.sql` |
+| … | (comment reactions through security flag — see `run_neon_setup.py`) |
+| 15 | `docs/ticket-routing-metadata-migration.sql` |
+| 16 | `docs/knowledge-articles-migration.sql` |
+| 17 | `docs/must-change-password-migration.sql` |
+| 18 | `docs/user-avatar-url-migration.sql` |
+
+`run_neon_setup.py` is the source of truth for the full ordered list.
 
 ## Seeds (rækkefølge)
 

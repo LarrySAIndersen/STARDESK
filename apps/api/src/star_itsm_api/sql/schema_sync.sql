@@ -282,3 +282,29 @@ ALTER TABLE tickets
 
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Demo / prototype users (@example.dk) must change shared seed password on first login
+UPDATE users
+SET must_change_password = TRUE
+WHERE deleted_at IS NULL
+  AND email LIKE '%@example.dk'
+  AND must_change_password = FALSE;
+
+-- === docs/knowledge-articles-migration.sql ===
+
+ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS is_knowledge_article BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS knowledge_status VARCHAR(16),
+    ADD COLUMN IF NOT EXISTS knowledge_visibility VARCHAR(16);
+
+CREATE INDEX IF NOT EXISTS idx_tickets_knowledge_published
+    ON tickets (knowledge_status, knowledge_visibility)
+    WHERE deleted_at IS NULL AND is_knowledge_article = TRUE;
+
+-- === docs/user-avatar-url-migration.sql ===
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_preset_id VARCHAR(64);

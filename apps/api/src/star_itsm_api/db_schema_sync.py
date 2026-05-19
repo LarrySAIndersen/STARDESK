@@ -70,7 +70,10 @@ _REQUIRED_TICKET_COLUMNS = (
     "parent_ticket_id",
     "is_shared",
     "is_security_ticket",
+    "routing_metadata",
     "is_knowledge_article",
+    "knowledge_status",
+    "knowledge_visibility",
 )
 
 
@@ -86,6 +89,10 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
     if not await _table_exists(engine, "ticket_links"):
         return True
     if not await _schema_has_column(engine, "must_change_password", table_name="users"):
+        return True
+    if not await _schema_has_column(engine, "avatar_url", table_name="users"):
+        return True
+    if not await _schema_has_column(engine, "avatar_preset_id", table_name="users"):
         return True
     return False
 
