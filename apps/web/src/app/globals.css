@@ -363,12 +363,20 @@
     min-height: var(--wire-shell-header-h);
   }
 
-  /* Full-width red rule below brand bar — spans sidebar + main columns */
+  /* Full-width red rule below brand bar — single bar, no border stacking */
   .wire-shell-accent {
     flex-shrink: 0;
     width: 100%;
-    height: var(--wire-topbar-accent-h);
-    background: var(--star-red);
+    height: 3px;
+    min-height: 3px;
+    max-height: 3px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    line-height: 0;
+    background-color: var(--star-red);
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   /* Shared height + bottom rule for nav column, page title bar, asset panel headers */
@@ -689,11 +697,10 @@
   }
 
   .wire-topbar {
-    @apply border-star-red sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-[var(--gray-border)] bg-white px-4 sm:px-5;
+    @apply sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-[var(--gray-border)] bg-white px-4 sm:px-5;
     height: var(--wire-shell-header-h);
     min-height: var(--wire-shell-header-h);
     box-sizing: border-box;
-    border-top-width: var(--wire-topbar-accent-h);
   }
 
   .wire-topbar-title {
@@ -836,6 +843,16 @@
       minmax(7rem, 1fr)
       minmax(4.5rem, 4.5rem)
       minmax(5.5rem, 5.5rem);
+  }
+
+  .wire-table-grid-knowledge {
+    grid-template-columns:
+      minmax(6.5rem, 7rem)
+      minmax(12rem, 1fr)
+      minmax(5rem, 5.5rem)
+      minmax(5rem, 5.5rem)
+      minmax(8rem, 9rem)
+      minmax(4.5rem, 5rem);
   }
 
   .wire-table-row--compact {

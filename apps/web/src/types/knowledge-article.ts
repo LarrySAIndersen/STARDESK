@@ -3,6 +3,10 @@ export interface KnowledgeArticle {
   ticket_number: string;
   title: string;
   description: string;
+  summary: string;
+  symptoms: string;
+  solution: string;
+  related_topics: string;
   knowledge_status: "draft" | "published";
   knowledge_status_label_da: string;
   knowledge_visibility: "internal" | "external";
@@ -14,7 +18,11 @@ export interface KnowledgeArticle {
 
 export interface KnowledgeArticleCreatePayload {
   title: string;
-  description: string;
+  description?: string;
+  summary?: string;
+  symptoms?: string;
+  solution?: string;
+  related_topics?: string;
   knowledge_status: "draft" | "published";
   knowledge_visibility: "internal" | "external";
   tags: string[];
@@ -23,6 +31,10 @@ export interface KnowledgeArticleCreatePayload {
 export interface KnowledgeArticleUpdatePayload {
   title?: string;
   description?: string;
+  summary?: string;
+  symptoms?: string;
+  solution?: string;
+  related_topics?: string;
   knowledge_status?: "draft" | "published";
   knowledge_visibility?: "internal" | "external";
   tags?: string[];

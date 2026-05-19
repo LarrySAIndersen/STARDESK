@@ -1,9 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { Pencil } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { formatKnowledgeUpdatedAt } from "@/lib/knowledge-article-content";
 import type { KnowledgeArticle } from "@/types/knowledge-article";
+
+function KnowledgeStatusBadge({ status }: { status: KnowledgeArticle["knowledge_status"] }) {
+  if (status === "published") {
+    return <span className="wire-badge wire-badge--resolved">Udgivet</span>;
+  }
+  return <span className="wire-badge wire-badge--pending">Kladde</span>;
+}
+
+function KnowledgeVisibilityBadge({
+  visibility,
+}: {
+  visibility: KnowledgeArticle["knowledge_visibility"];
+}) {
+  if (visibility === "external") {
+    return <span className="wire-badge wire-badge--open">Ekstern</span>;
+  }
+  return <span className="wire-badge wire-badge--low">Intern</span>;
+}
 
 export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeArticle[] }) {
   const [query, setQuery] = useState("");
@@ -17,6 +37,7 @@ export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeAr
       (a) =>
         a.title.toLowerCase().includes(q) ||
         a.description.toLowerCase().includes(q) ||
+        a.ticket_number.toLowerCase().includes(q) ||
         a.tags.some((t) => t.toLowerCase().includes(q)),
     );
   }, [articles, query]);
@@ -42,25 +63,52 @@ export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeAr
         className="wire-search-input max-w-md"
         aria-label="Søg vidensartikler"
       />
-      <div className="wire-table-wrap">
+      <div className="wire-table-wrap min-w-0 overflow-x-auto">
+        <div
+          className="wire-table-head wire-table-grid-knowledge min-w-[44rem]"
+          role="row"
+        >
+          <span>KB-nr.</span>
+          <span>Titel</span>
+          <span>Status</span>
+          <span>Synlighed</span>
+          <span>Opdateret</span>
+          <span className="text-right">Handling</span>
+        </div>
         {filtered.length === 0 ? (
           <p className="text-[var(--gray-mid)] px-3.5 py-4 text-sm">Ingen vidensartikler.</p>
         ) : (
           filtered.map((article) => (
-            <Link
+            <div
               key={article.id}
-              href={`/knowledge/${article.id}`}
-              className="my-ticket-row flex flex-wrap items-center gap-2 border-b border-[var(--gray-border)] px-3.5 py-2.5 text-xs last:border-b-0 hover:bg-star-blue-light"
+              role="row"
+              className="wire-table-row wire-table-row--compact wire-table-grid-knowledge min-w-[44rem] items-center"
             >
-              <span className="font-mono font-semibold text-[var(--gray-mid)]">
+              <span className="font-mono text-[11px] font-semibold text-[var(--gray-mid)]">
                 {article.ticket_number}
               </span>
-              <span className="min-w-0 flex-1 font-medium">{article.title}</span>
-              <span className="text-[var(--gray-mid)]">{article.knowledge_status_label_da}</span>
-              <span className="text-[var(--gray-mid)]">
-                {article.knowledge_visibility_label_da}
+              <span className="text-star-navy min-w-0 truncate text-xs font-medium">
+                {article.title}
               </span>
-            </Link>
+              <span>
+                <KnowledgeStatusBadge status={article.knowledge_status} />
+              </span>
+              <span>
+                <KnowledgeVisibilityBadge visibility={article.knowledge_visibility} />
+              </span>
+              <span className="text-[var(--gray-mid)] text-[11px]">
+                {formatKnowledgeUpdatedAt(article.updated_at ?? article.created_at)}
+              </span>
+              <span className="flex justify-end">
+                <Link
+                  href={`/knowledge/${article.id}`}
+                  className="text-star-blue hover:text-star-navy inline-flex items-center gap-1 text-[11px] font-semibold underline underline-offset-2"
+                >
+                  <Pencil className="size-3" aria-hidden />
+                  Rediger
+                </Link>
+              </span>
+            </div>
           ))
         )}
       </div>

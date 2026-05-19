@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { KnowledgeArticleBody } from "@/components/knowledge-article-body";
 import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
 import { canAccessPortalKnowledge } from "@/lib/portal-access";
@@ -27,16 +28,20 @@ export default async function PortalKnowledgeDetailPage({
         <Link href="/portal/knowledge" className="text-star-blue text-sm underline">
           ← Tilbage til vidensartikler
         </Link>
-        <header>
+        <header className="space-y-2">
           <p className="font-mono text-xs text-[var(--gray-mid)]">{article.ticket_number}</p>
           <h1 className="text-star-navy text-xl font-bold tracking-tight">{article.title}</h1>
           {article.tags.length > 0 ? (
-            <p className="text-[var(--gray-mid)] mt-1 text-xs">{article.tags.join(" · ")}</p>
+            <p className="flex flex-wrap gap-1.5">
+              {article.tags.map((tag) => (
+                <span key={tag} className="wire-tag wire-tag--gray">
+                  {tag}
+                </span>
+              ))}
+            </p>
           ) : null}
         </header>
-        <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm">
-          {article.description}
-        </div>
+        <KnowledgeArticleBody article={article} />
       </article>
     );
   } catch (error) {

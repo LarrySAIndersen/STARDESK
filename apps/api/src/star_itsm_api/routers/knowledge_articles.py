@@ -13,6 +13,8 @@ from star_itsm_api.schemas.knowledge_article import (
     KnowledgeArticlePromote,
     KnowledgeArticleRead,
     KnowledgeArticleUpdate,
+    apply_create_sections,
+    apply_update_sections,
     knowledge_article_to_read,
 )
 from star_itsm_api.services.knowledge_articles import (
@@ -86,11 +88,12 @@ async def create_article(
             db,
             user=current_user,
             title=payload.title,
-            description=payload.description,
+            description=payload.description or "",
             tags=payload.tags,
             knowledge_status=payload.knowledge_status,
             knowledge_visibility=payload.knowledge_visibility,
         )
+        apply_create_sections(ticket, payload)
         await db.commit()
         await db.refresh(ticket)
         return knowledge_article_to_read(ticket)
@@ -111,7 +114,10 @@ async def update_article(
     if ticket is None:
         raise HTTPException(status_code=404, detail="Knowledge article not found")
     data = payload.model_dump(exclude_unset=True)
+    apply_update_sections(ticket, payload)
     for key, value in data.items():
+        if key in ("description", "summary", "symptoms", "solution", "related_topics"):
+            continue
         setattr(ticket, key, value)
     from datetime import UTC, datetime
 

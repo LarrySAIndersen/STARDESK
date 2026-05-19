@@ -9,6 +9,11 @@ from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_VISIBILITY_INTERNAL,
     can_read_knowledge_article,
 )
+from star_itsm_api.services.knowledge_content import (
+    build_knowledge_description,
+    get_knowledge_sections,
+    set_knowledge_sections,
+)
 
 
 def _article(*, status: str, visibility: str) -> MagicMock:
@@ -41,6 +46,25 @@ def test_end_user_cannot_read_published_internal() -> None:
     user = SimpleNamespace(role=ROLE_SUBMITTER)
     article = _article(status=KNOWLEDGE_STATUS_PUBLISHED, visibility=KNOWLEDGE_VISIBILITY_INTERNAL)
     assert can_read_knowledge_article(user, article) is False
+
+
+def test_knowledge_sections_roundtrip() -> None:
+    ticket = MagicMock()
+    ticket.routing_metadata = {}
+    ticket.description = ""
+    set_knowledge_sections(
+        ticket,
+        {
+            "summary": "Kort resumé her.",
+            "symptoms": "- Symptom A",
+            "solution": "Gør sådan.",
+            "related_topics": "Anden artikel",
+        },
+    )
+    sections = get_knowledge_sections(ticket)
+    assert sections["summary"] == "Kort resumé her."
+    assert "## Resumé" in ticket.description
+    assert "## Løsning" in build_knowledge_description(sections)
 
 
 async def test_list_knowledge_articles_without_database_returns_503(
