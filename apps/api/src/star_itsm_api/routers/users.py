@@ -5,7 +5,12 @@ from fastapi.responses import FileResponse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_TOP_ADMIN, get_current_user, require_admin
+from star_itsm_api.core.security import (
+    ROLE_TOP_ADMIN,
+    get_current_user,
+    require_admin,
+    require_admin_session,
+)
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.user_admin import (
@@ -116,7 +121,7 @@ async def update_user(
     user_id: uuid.UUID,
     payload: UserAdminUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_admin()),
+    current_user: User = Depends(require_admin_session()),
 ) -> UserAdminRead:
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
@@ -170,7 +175,7 @@ async def reset_user_password(
     user_id: uuid.UUID,
     payload: UserAdminPasswordReset,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_admin()),
+    current_user: User = Depends(require_admin_session()),
 ) -> None:
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")

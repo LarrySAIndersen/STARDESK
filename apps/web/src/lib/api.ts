@@ -4,6 +4,7 @@ import {
   isMustChangePasswordError,
   parseApiErrorDetail,
 } from "@/lib/api-errors";
+import { getClientUser } from "@/lib/auth";
 
 export class ApiError extends Error {
   constructor(
@@ -38,7 +39,12 @@ function redirectToChangePasswordClient(): void {
 
 async function throwApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  if (isMustChangePasswordError(response.status, detail)) {
+  // Only redirect when the logged-in session user must change password — not for
+  // unrelated 403s (e.g. admin user-management while cookie is stale).
+  if (
+    isMustChangePasswordError(response.status, detail) &&
+    getClientUser()?.must_change_password
+  ) {
     redirectToChangePasswordClient();
     throw new ApiError(response.status, apiErrorMessage(detail));
   }

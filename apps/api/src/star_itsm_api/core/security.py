@@ -128,6 +128,24 @@ def require_admin():
     return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN)
 
 
+def require_admin_session():
+    """Admin guard using session user only — skips must_change_password mutation gate.
+
+    Use for user-management endpoints so admins can manage other accounts before
+    completing their own first-time password change.
+    """
+
+    async def _checker(user: User = Depends(get_current_user_session)) -> User:
+        if user.role not in (ROLE_ADMIN, ROLE_TOP_ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return user
+
+    return _checker
+
+
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     result = await db.execute(
         select(User).where(

@@ -7,7 +7,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from star_itsm_api.core.security import ROLE_AGENT, ROLE_TOP_ADMIN, get_current_user
+from star_itsm_api.core.security import (
+    ROLE_AGENT,
+    ROLE_TOP_ADMIN,
+    get_current_user,
+    get_current_user_session,
+)
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.schemas.user_admin import (
@@ -162,6 +167,74 @@ async def test_update_user_assign_top_admin_forbidden_for_admin(
 
     assert response.status_code == 403
     override_db.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_update_user_is_active_false_with_admin_must_change_password(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    admin = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="admin@example.dk",
+        display_name="Admin",
+        role="admin",
+        is_active=True,
+        password_hash=None,
+        deleted_at=None,
+        organization_id=None,
+        must_change_password=True,
+    )
+    target = SimpleNamespace(
+        id=TARGET_USER_ID,
+        email="sf01@example.dk",
+        display_name="SF Operations Agent 1",
+        role="agent",
+        is_active=True,
+        password_hash=None,
+        deleted_at=None,
+        organization_id=None,
+        must_change_password=False,
+    )
+
+    async def _get(_model, pk):  # noqa: ANN001
+        if pk == TARGET_USER_ID:
+            return target
+        return None
+
+    override_db.get = AsyncMock(side_effect=_get)
+
+    async def _admin_session() -> SimpleNamespace:
+        return admin
+
+    app.dependency_overrides[get_current_user_session] = _admin_session
+    try:
+        detail = UserAdminRead(
+            id=TARGET_USER_ID,
+            email=target.email,
+            display_name=target.display_name,
+            role=target.role,
+            role_label="Agent",
+            is_active=False,
+            teams=[],
+            created_at=datetime(2024, 1, 15, 10, 0, tzinfo=UTC),
+        )
+        with patch(
+            "star_itsm_api.routers.users.get_user_admin",
+            new_callable=AsyncMock,
+            return_value=detail,
+        ):
+            response = await api_client.patch(
+                f"/api/v1/users/{TARGET_USER_ID}",
+                json={"is_active": False},
+            )
+    finally:
+        app.dependency_overrides.pop(get_current_user_session, None)
+
+    assert response.status_code == 200
+    assert response.json()["is_active"] is False
+    assert target.is_active is False
+    assert admin.must_change_password is True
 
 
 @pytest.mark.asyncio

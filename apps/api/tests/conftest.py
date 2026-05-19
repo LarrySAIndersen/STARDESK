@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 import star_itsm_api.db as db_module
-from star_itsm_api.core.security import get_current_user
+from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.main import app
 
 FAKE_ADMIN = SimpleNamespace(
@@ -25,6 +25,10 @@ async def _fake_admin_user() -> SimpleNamespace:
     return FAKE_ADMIN
 
 
+async def _fake_admin_session() -> SimpleNamespace:
+    return FAKE_ADMIN
+
+
 @pytest.fixture(autouse=True)
 def _disable_database_for_unit_tests(monkeypatch: pytest.MonkeyPatch) -> None:
     """Unit tests must not hit production Neon."""
@@ -36,8 +40,10 @@ def _disable_database_for_unit_tests(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.fixture(autouse=True)
 def _authenticated_requests() -> AsyncIterator[None]:
     app.dependency_overrides[get_current_user] = _fake_admin_user
+    app.dependency_overrides[get_current_user_session] = _fake_admin_session
     yield
     app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_session, None)
 
 
 @pytest.fixture
