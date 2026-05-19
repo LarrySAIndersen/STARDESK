@@ -1,0 +1,16 @@
+﻿{
+  "name": "stardesk-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "load-test": "node ./load-test/run-load-test.mjs baseline",
+    "load-test:soak": "node ./load-test/run-load-test.mjs soak",
+    "load-test:stress": "node ./load-test/run-load-test.mjs stress",
+    "load-test:agent": "node ./load-test/run-load-agent.mjs",
+    "load-test:destructive": "node ./load-test/run-destructive-agent.mjs",
+    "load-test:destructive:spike": "node ./load-test/run-k6-destructive.mjs spike.js",
+    "load-test:destructive:spike:smoke": "node ./load-test/run-k6-destructive.mjs spike.js --smoke",
+    "load-test:destructive:aggressive": "node ./load-test/run-k6-destructive.mjs aggressive-scenarios.js",
+    "test:destructive": "cd ../apps/api && pytest -m destructive tests/destructive -v"
+  }
+}

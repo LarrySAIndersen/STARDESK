@@ -55,6 +55,10 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "-m 'not destructive'"
+markers = [
+    "destructive: abuse/failure-mode tests; opt-in via -m destructive and ALLOW_DESTRUCTIVE=1",
+]
 
 [tool.ruff]
 line-length = 100

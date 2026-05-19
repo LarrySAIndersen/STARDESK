@@ -27,6 +27,10 @@ Brug den når noget skal genskabes i Neon, når adgang ikke matcher forventning,
 | [llm-ticket-evaluation.md](./llm-ticket-evaluation.md) | LLM-metadata og API til vurdering |
 | [deploy.md](./deploy.md) | Vercel/Railway deploy |
 | [frontend-structure.md](./frontend-structure.md) | Next.js ruter og komponenter |
+| [performance-testing.md](./performance-testing.md) | Headless load/soak/stress (20 VU) |
+| [destructive-testing.md](./destructive-testing.md) | k6 abuse + pytest destructive |
+
+Cursor Agent Skills (explicit invocation): `.cursor/skills/stardesk-performance-load-test/`, `.cursor/skills/stardesk-destructive-testing/`.
 
 ## Kode ↔ dokumentation
 

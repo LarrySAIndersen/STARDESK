@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
+from star_itsm_api.core.password_policy import validate_password
 from star_itsm_api.core.security import (
     create_access_token,
-    get_current_user,
+    get_current_user_session,
     get_user_by_email,
     hash_password,
     verify_password,
@@ -70,6 +71,14 @@ async def change_password(
             detail="Den nye adgangskode skal være forskellig fra den nuværende",
         )
 
+    try:
+        validate_password(payload.new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     user = await get_user_by_email(db, payload.email)
     if user is None or not _current_password_valid(user, payload.current_password):
         await asyncio.sleep(0.4)
@@ -79,12 +88,13 @@ async def change_password(
         )
 
     user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
     await db.commit()
 
 
 @router.get("/me", response_model=UserRead)
 async def me(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user_session),
     db: AsyncSession = Depends(require_db),
 ) -> UserRead:
     org_name = await _organization_name(db, current_user)

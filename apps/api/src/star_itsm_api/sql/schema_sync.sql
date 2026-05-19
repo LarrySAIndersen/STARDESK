@@ -277,3 +277,8 @@ CREATE INDEX IF NOT EXISTS idx_tickets_is_security
 
 ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS routing_metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- === docs/must-change-password-migration.sql ===
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;

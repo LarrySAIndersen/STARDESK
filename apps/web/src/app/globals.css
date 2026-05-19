@@ -358,6 +358,26 @@
     @apply bg-star-blue-light text-star-navy border-star-red border-l-[3px] font-semibold;
   }
 
+  .wire-nav-item--integration {
+    @apply pr-2.5 text-[12px];
+  }
+
+  .wire-integ-pill {
+    @apply inline-flex shrink-0 items-center rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide uppercase;
+  }
+
+  .wire-integ-pill--active {
+    @apply border border-[#a8d8bc] bg-[#e6f5ec] text-[#1a7a44];
+  }
+
+  .wire-integ-pill--inactive {
+    @apply border border-[#CCCCC8] bg-[#f0f0ec] text-[var(--gray-mid)];
+  }
+
+  .wire-integ-pill--draft {
+    @apply border border-[#f0d070] bg-[#fff3cd] text-[#7a4800];
+  }
+
   .wire-asset-panel {
     @apply flex w-[188px] shrink-0 flex-col border-r border-[var(--gray-border)] bg-white;
   }
@@ -524,6 +544,35 @@
 
   .wire-table-grid-tickets {
     grid-template-columns: 58px minmax(0, 1fr) 100px 90px 80px 90px;
+  }
+
+  .wire-table-grid-admin-users {
+    grid-template-columns:
+      minmax(10rem, 1.25fr)
+      minmax(11rem, 1.5fr)
+      minmax(5.5rem, 0.85fr)
+      minmax(7rem, 1fr)
+      minmax(4.5rem, 4.5rem)
+      minmax(5.5rem, 5.5rem);
+  }
+
+  .wire-table-row--compact {
+    @apply min-h-9 cursor-default items-center py-1.5;
+  }
+
+  .wire-table-group-head {
+    grid-template-columns:
+      minmax(10rem, 1.25fr)
+      minmax(11rem, 1.5fr)
+      minmax(5.5rem, 0.85fr)
+      minmax(7rem, 1fr)
+      minmax(4.5rem, 4.5rem)
+      minmax(5.5rem, 5.5rem);
+    @apply sticky top-0 z-[1] grid items-center gap-2 border-y border-[var(--gray-border)] bg-[#e8eef6] px-3.5 py-1 text-[11px] font-semibold text-star-navy;
+  }
+
+  .wire-avatar-xs {
+    @apply bg-star-navy flex size-6 shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white;
   }
 
   /* Tags & badges */

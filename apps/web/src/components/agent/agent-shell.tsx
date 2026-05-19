@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import { AgentAssetPanel } from "@/components/agent/agent-asset-panel";
@@ -24,14 +24,6 @@ export function AgentShell({
   showUsersNav?: boolean;
 }) {
   const pathname = usePathname();
-  const [slackTabRequest, setSlackTabRequest] = useState(0);
-
-  const handleSlackNav = useCallback(() => {
-    setSlackTabRequest((n) => n + 1);
-    if (pathname !== "/") {
-      window.location.href = "/#dispatch-panel";
-    }
-  }, [pathname]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -42,7 +34,7 @@ export function AgentShell({
     <div className="wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <AgentBrandHeader />
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <AgentSidebar user={user} showUsersNav={showUsersNav} onSlackClick={handleSlackNav} />
+        <AgentSidebar user={user} showUsersNav={showUsersNav} />
         <Suspense
           fallback={
             <aside className="wire-asset-panel" aria-hidden>
@@ -60,7 +52,6 @@ export function AgentShell({
             id="main-content"
             tabIndex={-1}
             className="flex min-h-0 flex-1 flex-col overflow-hidden outline-none"
-            data-slack-tab-request={slackTabRequest}
           >
             {children}
           </main>

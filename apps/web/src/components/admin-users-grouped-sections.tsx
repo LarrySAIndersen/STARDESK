@@ -1,20 +1,46 @@
 "use client";
 
+import { Pencil, UserMinus, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { displayNameInitials } from "@/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { cn, displayNameInitials } from "@/lib/utils";
 import type { GroupedAdminUsers, UsersByTeamSection } from "@/lib/admin-users-grouping";
 import type { UserAdminListItem } from "@/types/admin-user";
 
-function UserRow({
+type UsersTab = "internal" | "external" | "all";
+
+const TAB_LABELS: { id: UsersTab; label: string }[] = [
+  { id: "internal", label: "Interne" },
+  { id: "external", label: "Eksterne" },
+  { id: "all", label: "Alle" },
+];
+
+function AdminUsersTableHead() {
+  return (
+    <div
+      className="wire-table-head wire-table-grid-admin-users min-w-[40rem]"
+      role="row"
+    >
+      <span>Navn</span>
+      <span>E-mail</span>
+      <span>Rolle</span>
+      <span>Gruppe(r)</span>
+      <span>Status</span>
+      <span className="text-right">Handlinger</span>
+    </div>
+  );
+}
+
+function UserStatusBadge({ isActive }: { isActive: boolean }) {
+  if (isActive) {
+    return <span className="wire-badge wire-badge--resolved">Aktiv</span>;
+  }
+  return <span className="wire-badge wire-badge--critical">Inaktiv</span>;
+}
+
+function AdminUserTableRow({
   user,
   onEdit,
   onRemoveFromTeam,
@@ -28,99 +54,109 @@ function UserRow({
   teamId?: string;
 }) {
   const initials = displayNameInitials(user.display_name);
+  const groupsLabel =
+    user.team_names.length > 0 ? user.team_names.join(", ") : "—";
 
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 border-b py-2.5 last:border-0">
-      <div className="flex min-w-0 flex-1 items-start gap-3">
-        <span className="wire-avatar-sm bg-star-navy mt-0.5 shrink-0" aria-hidden>
+    <div
+      role="row"
+      className="wire-table-row wire-table-row--compact wire-table-grid-admin-users min-w-[40rem] items-center"
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="wire-avatar-xs" aria-hidden>
           {initials}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-star-navy font-medium">{user.display_name}</p>
+        <div className="min-w-0">
+          <p className="text-star-navy truncate text-xs font-medium leading-tight">
+            {user.display_name}
+          </p>
           <Link
             href={`/users/${user.id}`}
-            className="text-star-blue hover:text-star-navy text-xs underline underline-offset-2"
+            className="text-star-blue hover:text-star-navy text-[10px] underline underline-offset-2"
           >
             se mere
           </Link>
-          <p className="text-muted-foreground mt-1 truncate text-xs">{user.email}</p>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {user.role_label}
-            {user.organization_name ? ` · ${user.organization_name}` : null}
-            {user.team_names.length > 1 ? ` · ${user.team_names.join(", ")}` : null}
-          </p>
         </div>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {!user.is_active ? (
-          <span className="text-destructive text-xs font-medium">Inaktiv</span>
-        ) : null}
+
+      <span className="text-muted-foreground truncate" title={user.email}>
+        {user.email}
+      </span>
+
+      <span className="truncate" title={user.role_label}>
+        {user.role_label}
+      </span>
+
+      <span className="truncate" title={groupsLabel}>
+        {groupsLabel}
+      </span>
+
+      <span>
+        <UserStatusBadge isActive={user.is_active} />
+      </span>
+
+      <div className="flex items-center justify-end gap-0.5">
         {onAddToTeam ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => onAddToTeam(user)}>
-            Tilføj til gruppe
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-star-navy size-7"
+            aria-label={`Tilføj ${user.display_name} til gruppe`}
+            title="Tilføj til gruppe"
+            onClick={() => onAddToTeam(user)}
+          >
+            <UserPlus className="size-3.5" />
           </Button>
         ) : null}
         {onRemoveFromTeam && teamId ? (
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            className="text-destructive border-destructive/40 hover:bg-destructive/5"
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive size-7"
+            aria-label={`Fjern ${user.display_name} fra gruppe`}
+            title="Fjern fra gruppe"
             onClick={() => onRemoveFromTeam(user, teamId)}
           >
-            Fjern fra gruppe
+            <UserMinus className="size-3.5" />
           </Button>
         ) : null}
-        <Button type="button" variant="outline" size="sm" onClick={() => onEdit(user.id)}>
-          Rediger
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="text-star-navy size-7"
+          aria-label={`Rediger ${user.display_name}`}
+          title="Rediger"
+          onClick={() => onEdit(user.id)}
+        >
+          <Pencil className="size-3.5" />
         </Button>
       </div>
-    </li>
+    </div>
   );
 }
 
-function TeamUsersCard({
-  section,
-  onEdit,
-  onRemoveFromTeam,
-}: {
-  section: UsersByTeamSection;
-  onEdit: (userId: string) => void;
-  onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
-}) {
+function TeamGroupSubheader({ section }: { section: UsersByTeamSection }) {
+  const countLabel = section.users.length === 1 ? "bruger" : "brugere";
   return (
-    <Card className="star-section-card overflow-hidden">
-      <CardHeader className="bg-star-blue-light border-b py-4">
-        <CardTitle className="text-star-navy text-base">{section.team.name}</CardTitle>
-        {section.team.description ? (
-          <CardDescription>{section.team.description}</CardDescription>
-        ) : null}
-      </CardHeader>
-      <CardContent className="pt-4">
-        <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
-          Brugere ({section.users.length})
-        </p>
-        {section.users.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ingen brugere i denne gruppe.</p>
-        ) : (
-          <ul>
-            {section.users.map((user) => (
-              <UserRow
-                key={`${section.team.id}-${user.id}`}
-                user={user}
-                teamId={section.team.id}
-                onEdit={onEdit}
-                onRemoveFromTeam={onRemoveFromTeam}
-              />
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      role="row"
+      className="wire-table-group-head min-w-[40rem]"
+      aria-label={`${section.team.name}, ${section.users.length} ${countLabel}`}
+    >
+      <span className="col-span-full flex min-w-0 items-baseline gap-2">
+        <span className="truncate">{section.team.name}</span>
+        <span className="text-muted-foreground shrink-0 font-normal">
+          — {section.users.length} {countLabel}
+        </span>
+      </span>
+    </div>
   );
 }
 
-function TeamSectionGrid({
+function TeamSectionsBlock({
   sections,
   onEdit,
   onRemoveFromTeam,
@@ -129,22 +165,104 @@ function TeamSectionGrid({
   onEdit: (userId: string) => void;
   onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
 }) {
-  if (sections.length === 0) {
-    return <p className="text-muted-foreground text-sm">Ingen grupper i denne kategori.</p>;
-  }
+  const nonEmpty = sections.filter((section) => section.users.length > 0);
 
   return (
-    <ul className="grid gap-6">
-      {sections.map((section) => (
-        <li key={section.team.id}>
-          <TeamUsersCard
-            section={section}
-            onEdit={onEdit}
-            onRemoveFromTeam={onRemoveFromTeam}
-          />
-        </li>
+    <>
+      {nonEmpty.map((section) => (
+        <section key={section.team.id} aria-label={section.team.name}>
+          <TeamGroupSubheader section={section} />
+          {section.users.map((user) => (
+            <AdminUserTableRow
+              key={`${section.team.id}-${user.id}`}
+              user={user}
+              teamId={section.team.id}
+              onEdit={onEdit}
+              onRemoveFromTeam={onRemoveFromTeam}
+            />
+          ))}
+        </section>
       ))}
-    </ul>
+    </>
+  );
+}
+
+function UngroupedBlock({
+  users,
+  onEdit,
+  onAddToTeam,
+}: {
+  users: UserAdminListItem[];
+  onEdit: (userId: string) => void;
+  onAddToTeam: (user: UserAdminListItem) => void;
+}) {
+  if (users.length === 0) {
+    return null;
+  }
+
+  const countLabel = users.length === 1 ? "bruger" : "brugere";
+
+  return (
+    <section aria-label="Uden gruppe">
+      <div
+        role="row"
+        className="wire-table-group-head min-w-[40rem]"
+        aria-label={`Uden gruppe, ${users.length} ${countLabel}`}
+      >
+        <span className="col-span-full flex min-w-0 items-baseline gap-2">
+          <span>Uden gruppe</span>
+          <span className="text-muted-foreground shrink-0 font-normal">
+            — {users.length} {countLabel}
+          </span>
+        </span>
+      </div>
+      {users.map((user) => (
+        <AdminUserTableRow
+          key={user.id}
+          user={user}
+          onEdit={onEdit}
+          onAddToTeam={onAddToTeam}
+        />
+      ))}
+    </section>
+  );
+}
+
+function AdminUsersCompactTable({
+  sections,
+  ungrouped,
+  onEdit,
+  onRemoveFromTeam,
+  onAddToTeam,
+  showUngrouped,
+}: {
+  sections: UsersByTeamSection[];
+  ungrouped: UserAdminListItem[];
+  onEdit: (userId: string) => void;
+  onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
+  onAddToTeam: (user: UserAdminListItem) => void;
+  showUngrouped: boolean;
+}) {
+  const hasTeamRows = sections.some((section) => section.users.length > 0);
+  const hasUngrouped = showUngrouped && ungrouped.length > 0;
+
+  return (
+    <div className="overflow-x-auto">
+      <div className="wire-table-wrap min-w-0">
+        <AdminUsersTableHead />
+        <TeamSectionsBlock
+          sections={sections}
+          onEdit={onEdit}
+          onRemoveFromTeam={onRemoveFromTeam}
+        />
+        {hasUngrouped ? (
+          <UngroupedBlock users={ungrouped} onEdit={onEdit} onAddToTeam={onAddToTeam} />
+        ) : null}
+        {!hasTeamRows && !hasUngrouped ? (
+          <p className="text-muted-foreground px-3.5 py-4 text-sm">Ingen brugere i denne visning.</p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -159,66 +277,68 @@ export function AdminUsersGroupedSections({
   onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
   onAddToTeam: (user: UserAdminListItem) => void;
 }) {
-  return (
-    <div className="mt-8 space-y-10">
-      <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-8">
-        <section aria-labelledby="users-internal-heading">
-          <h2 id="users-internal-heading" className="text-star-navy text-lg font-semibold tracking-tight">
-            Interne grupper
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Brugere organiseret efter interne dispatch-grupper.
-          </p>
-          <div className="mt-4">
-            <TeamSectionGrid
-              sections={grouped.internal}
-              onEdit={onEdit}
-              onRemoveFromTeam={onRemoveFromTeam}
-            />
-          </div>
-        </section>
+  const [tab, setTab] = useState<UsersTab>("all");
 
-        <section aria-labelledby="users-external-heading">
-          <h2 id="users-external-heading" className="text-star-navy text-lg font-semibold tracking-tight">
-            Eksterne grupper
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">Brugere i øvrige support- og driftsgrupper.</p>
-          <div className="mt-4">
-            <TeamSectionGrid
-              sections={grouped.external}
-              onEdit={onEdit}
-              onRemoveFromTeam={onRemoveFromTeam}
-            />
-          </div>
-        </section>
+  const tabSections = useMemo(() => {
+    switch (tab) {
+      case "internal":
+        return grouped.internal;
+      case "external":
+        return grouped.external;
+      case "all":
+        return [...grouped.internal, ...grouped.external];
+    }
+  }, [grouped.external, grouped.internal, tab]);
+
+  const tabCounts = useMemo(
+    () => ({
+      internal: grouped.internal.reduce((n, s) => n + s.users.length, 0),
+      external: grouped.external.reduce((n, s) => n + s.users.length, 0),
+      all:
+        grouped.internal.reduce((n, s) => n + s.users.length, 0) +
+        grouped.external.reduce((n, s) => n + s.users.length, 0) +
+        grouped.ungrouped.length,
+    }),
+    [grouped.external, grouped.internal, grouped.ungrouped.length],
+  );
+
+  return (
+    <div className="mt-6 space-y-4">
+      <div
+        className="flex flex-wrap gap-1"
+        role="tablist"
+        aria-label="Filtrer brugere efter gruppekategori"
+      >
+        {TAB_LABELS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            className={cn(
+              "wire-btn wire-btn-sm",
+              tab === id && "wire-btn-primary",
+            )}
+            onClick={() => setTab(id)}
+          >
+            {label}
+            <span className="ml-1.5 font-normal tabular-nums opacity-80">
+              ({tabCounts[id]})
+            </span>
+          </button>
+        ))}
       </div>
 
-      <section aria-labelledby="users-ungrouped-heading">
-        <h2 id="users-ungrouped-heading" className="text-star-navy text-lg font-semibold tracking-tight">
-          Uden gruppe
-        </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Brugere der ikke er tilknyttet nogen dispatch-gruppe.
-        </p>
-        <Card className="star-section-card mt-4 overflow-hidden">
-          <CardContent className="pt-4">
-            {grouped.ungrouped.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Alle brugere er tilknyttet mindst én gruppe.</p>
-            ) : (
-              <ul>
-                {grouped.ungrouped.map((user) => (
-                  <UserRow
-                    key={user.id}
-                    user={user}
-                    onEdit={onEdit}
-                    onAddToTeam={onAddToTeam}
-                  />
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      <div role="tabpanel">
+        <AdminUsersCompactTable
+          sections={tabSections}
+          ungrouped={grouped.ungrouped}
+          onEdit={onEdit}
+          onRemoveFromTeam={onRemoveFromTeam}
+          onAddToTeam={onAddToTeam}
+          showUngrouped={tab === "all"}
+        />
+      </div>
     </div>
   );
 }

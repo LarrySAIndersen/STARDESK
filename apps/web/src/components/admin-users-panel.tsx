@@ -552,7 +552,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
   };
 
   return (
-    <section className="mt-8">
+    <section className="mt-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-md flex-1 space-y-2">
           <Label htmlFor="user-search">Søg</Label>

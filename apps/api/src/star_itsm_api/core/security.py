@@ -65,7 +65,15 @@ def decode_access_token(token: str) -> dict[str, Any]:
         ) from exc
 
 
-async def get_current_user(
+def ensure_password_changed(user: User) -> None:
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="must_change_password",
+        )
+
+
+async def get_current_user_session(
     credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
     db: AsyncSession = Depends(require_db),
 ) -> User:
@@ -82,6 +90,13 @@ async def get_current_user(
     user = await db.get(User, UUID(str(user_id)))
     if user is None or not user.is_active or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
+async def get_current_user(
+    user: User = Depends(get_current_user_session),
+) -> User:
+    ensure_password_changed(user)
     return user
 
 

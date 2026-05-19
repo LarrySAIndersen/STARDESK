@@ -1,6 +1,8 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from star_itsm_api.core.password_policy import validate_password
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import ROLE_TOP_ADMIN, require_admin
@@ -140,5 +142,13 @@ async def reset_user_password(
     user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    try:
+        validate_password(payload.new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
     await set_user_password(db, user, payload.new_password)

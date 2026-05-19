@@ -85,6 +85,8 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _table_exists(engine, "ticket_links"):
         return True
+    if not await _schema_has_column(engine, "must_change_password", table_name="users"):
+        return True
     return False
 
 

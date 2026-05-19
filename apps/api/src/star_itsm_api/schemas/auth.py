@@ -24,6 +24,7 @@ class UserRead(BaseModel):
     role_label: str
     organization_id: UUID | None = None
     organization_name: str | None = None
+    must_change_password: bool = False
 
 
 class TokenResponse(BaseModel):
@@ -54,4 +55,5 @@ def user_to_read(
         role_label=ROLE_LABELS.get(user.role, user.role),
         organization_id=org_id,
         organization_name=organization_name,
+        must_change_password=bool(getattr(user, "must_change_password", False)),
     )

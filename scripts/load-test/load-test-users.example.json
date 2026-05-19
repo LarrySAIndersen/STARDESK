@@ -1,0 +1,29 @@
+[
+  {
+    "label": "admin-example",
+    "email": "admin@example.dk",
+    "password": "replace-with-local-test-password"
+  },
+  {
+    "label": "agent-example",
+    "email": "agent@example.dk",
+    "password": "replace-with-local-test-password"
+  }
+]
+[
+  {
+    "email": "sf01@example.dk",
+    "password": "Stardesk2026!",
+    "label": "agent-01"
+  },
+  {
+    "email": "estrifft01@example.dk",
+    "password": "Stardesk2026!",
+    "label": "agent-02"
+  },
+  {
+    "email": "submitter@example.dk",
+    "password": "Stardesk2026!",
+    "label": "submitter-01"
+  }
+]

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.password_policy import validate_password
 from star_itsm_api.core.security import ROLE_TOP_ADMIN, hash_password
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.team import Team
@@ -176,5 +177,7 @@ async def sync_user_teams(
 
 
 async def set_user_password(db: AsyncSession, user: User, new_password: str) -> None:
+    validate_password(new_password)
     user.password_hash = hash_password(new_password)
+    user.must_change_password = True
     await db.commit()

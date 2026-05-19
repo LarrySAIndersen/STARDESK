@@ -6,7 +6,6 @@ import {
   BarChart3,
   LayoutDashboard,
   Library,
-  MessageSquare,
   Plus,
   Ticket,
   UserCog,
@@ -14,6 +13,7 @@ import {
   UserCircle,
 } from "lucide-react";
 
+import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -23,7 +23,6 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   section?: string;
-  onClick?: () => void;
 };
 
 function isActive(pathname: string, href: string): boolean {
@@ -37,19 +36,20 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/knowledge") {
     return pathname === "/knowledge" || pathname.startsWith("/knowledge/");
   }
+  if (href === "/integrations") {
+    return pathname === "/integrations" || pathname.startsWith("/integrations/");
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 export function AgentSidebar({
   user: userFromServer,
   showUsersNav: showUsersNavFromServer,
-  onSlackClick,
 }: {
   /** Server-parsed session user — avoids client cookie parse mismatches. */
   user?: User | null;
   /** When set by AgentShellWrapper, matches server admin check (JWT + cookie). */
   showUsersNav?: boolean;
-  onSlackClick?: () => void;
 }) {
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
@@ -64,11 +64,11 @@ export function AgentSidebar({
     .toUpperCase() ?? "?";
 
   const items: NavItem[] = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard, section: "Techniker" },
+    { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/tickets", label: "Alle sager", icon: Ticket },
     { href: "/tickets/new", label: "Ny sag", icon: Plus },
     ...(staff
-      ? [{ href: "/knowledge", label: "Vidensartikler", icon: Library, section: "Techniker" }]
+      ? [{ href: "/knowledge", label: "Vidensartikler", icon: Library }]
       : []),
     ...(staff ? [{ href: "/groups", label: "Grupper", icon: Users }] : []),
     ...(showAdmin ? [{ href: "/users", label: "Brugere", icon: UserCog }] : []),
@@ -78,13 +78,6 @@ export function AgentSidebar({
       label: "Selvbetjeningsportal",
       icon: UserCircle,
       section: "Slutbrugere",
-    },
-    {
-      href: "#slack",
-      label: "Slack",
-      icon: MessageSquare,
-      section: "Integration",
-      onClick: onSlackClick,
     },
   ];
 
@@ -97,7 +90,7 @@ export function AgentSidebar({
           const showSection = item.section && item.section !== lastSection;
           if (item.section) lastSection = item.section;
           const Icon = item.icon;
-          const active = !item.onClick && isActive(pathname, item.href);
+          const active = isActive(pathname, item.href);
 
           const className = cn("wire-nav-item", active && "wire-nav-item--active");
 
@@ -113,18 +106,13 @@ export function AgentSidebar({
               {showSection ? (
                 <p className="wire-nav-section">{item.section}</p>
               ) : null}
-              {item.onClick ? (
-                <button type="button" className={className} onClick={item.onClick}>
-                  {inner}
-                </button>
-              ) : (
-                <Link href={item.href} className={className}>
-                  {inner}
-                </Link>
-              )}
+              <Link href={item.href} className={className}>
+                {inner}
+              </Link>
             </div>
           );
         })}
+        {staff ? <IntegrationSidebarLinks pathname={pathname} /> : null}
       </nav>
 
       {user ? (

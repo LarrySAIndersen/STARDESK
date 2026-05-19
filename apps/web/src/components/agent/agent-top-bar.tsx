@@ -11,6 +11,10 @@ const TITLES: Record<string, string> = {
   "/users": "Brugere",
   "/reports": "Rapporter",
   "/portal": "Selvbetjeningsportal",
+  "/integrations": "Integrationer",
+  "/integrations/slack": "Slack",
+  "/integrations/jira": "Jira",
+  "/integrations/topdesk": "TOPdesk",
 };
 
 function titleForPath(pathname: string): string {
