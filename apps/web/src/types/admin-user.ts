@@ -1,4 +1,4 @@
-export interface UserTeamSummary {
+﻿export interface UserTeamSummary {
   id: string;
   name: string;
 }
@@ -57,4 +57,20 @@ export interface UserAdminUpdateInput {
   is_active?: boolean;
   organization_id?: string | null;
   team_ids?: string[];
+}
+
+export interface UserAdminCreateInput {
+  email: string;
+  display_name: string;
+  role: string;
+  is_active: boolean;
+  organization_id: string | null;
+  team_ids: string[];
+  initial_password?: string;
+  clone_from_user_id?: string | null;
+}
+
+export interface UserAdminCreated {
+  user: UserAdminRead;
+  temporary_password: string | null;
 }

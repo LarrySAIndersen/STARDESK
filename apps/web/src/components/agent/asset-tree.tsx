@@ -5,9 +5,41 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Layers } from "lucide-react";
 
+import { getAllAssetIds, getSystemVisibilityState } from "@/lib/asset-graph";
 import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
 import { cn } from "@/lib/utils";
 import type { AssetSelection, AssetSubsystem, AssetSystem } from "@/types/asset";
+
+function VisibilityCheckbox({
+  checked,
+  indeterminate,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  label: string;
+  onChange: () => void;
+}) {
+  return (
+    <label className="wire-asset-visibility" title={label}>
+      <input
+        type="checkbox"
+        className="wire-asset-visibility-input"
+        checked={checked}
+        ref={(el) => {
+          if (el) el.indeterminate = Boolean(indeterminate);
+        }}
+        onChange={(e) => {
+          e.stopPropagation();
+          onChange();
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label={label}
+      />
+    </label>
+  );
+}
 
 function selectionKey(selection: AssetSelection | null): string | null {
   if (!selection) return null;
@@ -34,11 +66,17 @@ export function AssetTree({
   selectedId: controlledId,
   onSelect,
   compact = false,
+  visibleIds,
+  onVisibilityChange,
+  allVisible = true,
 }: {
   showHeader?: boolean;
   selectedId?: string | null;
   onSelect?: (assetId: string) => void;
   compact?: boolean;
+  visibleIds?: Set<string>;
+  onVisibilityChange?: (next: Set<string>) => void;
+  allVisible?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -117,12 +155,55 @@ export function AssetTree({
         ? resolvedSelection.system.code
         : null;
 
+  const graphMode = Boolean(visibleIds && onVisibilityChange);
+
+  const toggleAssetVisibility = useCallback(
+    (assetId: string) => {
+      if (!visibleIds || !onVisibilityChange) return;
+      const next = new Set(visibleIds);
+      if (next.has(assetId)) next.delete(assetId);
+      else next.add(assetId);
+      onVisibilityChange(next);
+    },
+    [visibleIds, onVisibilityChange],
+  );
+
+  const toggleSystemVisibility = useCallback(
+    (system: AssetSystem) => {
+      if (!visibleIds || !onVisibilityChange) return;
+      const state = getSystemVisibilityState(system.id, visibleIds);
+      const next = new Set(visibleIds);
+      const ids = [system.id, ...system.subsystems.map((s) => s.id)];
+      if (state === "all") {
+        for (const id of ids) next.delete(id);
+      } else {
+        for (const id of ids) next.add(id);
+      }
+      onVisibilityChange(next);
+    },
+    [visibleIds, onVisibilityChange],
+  );
+
+  const showAllOnGraph = useCallback(() => {
+    onVisibilityChange?.(new Set(getAllAssetIds()));
+  }, [onVisibilityChange]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-label="Aktiver">
       {showHeader ? (
         <div className="wire-asset-panel-header">
           <Layers className="size-3.5 shrink-0 opacity-70" aria-hidden />
           <span>Aktiver</span>
+          {graphMode ? (
+            <button
+              type="button"
+              className="wire-asset-show-all ml-auto text-[9px] font-semibold uppercase tracking-wide"
+              onClick={showAllOnGraph}
+              disabled={allVisible}
+            >
+              Vis alle
+            </button>
+          ) : null}
         </div>
       ) : null}
       <div className="wire-asset-tree min-h-0 flex-1 overflow-y-auto">
@@ -130,6 +211,10 @@ export function AssetTree({
           {MOCK_ASSET_SYSTEMS.map((system) => {
             const isOpen = expanded[system.id] ?? false;
             const systemSelected = activeId === system.id;
+            const systemVis = graphMode
+              ? getSystemVisibilityState(system.id, visibleIds!)
+              : "all";
+            const systemOnGraph = systemVis !== "none";
 
             return (
               <li
@@ -151,11 +236,20 @@ export function AssetTree({
                       <ChevronRight className="size-3.5" aria-hidden />
                     )}
                   </button>
+                  {graphMode ? (
+                    <VisibilityCheckbox
+                      checked={systemVis === "all"}
+                      indeterminate={systemVis === "some"}
+                      label={`Vis ${system.name} på kortet`}
+                      onChange={() => toggleSystemVisibility(system)}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     className={cn(
                       "wire-asset-row wire-asset-row--system",
                       systemSelected && "wire-asset-row--active",
+                      graphMode && !systemOnGraph && "wire-asset-row--hidden",
                     )}
                     onClick={() => selectSystem(system)}
                   >
@@ -166,18 +260,32 @@ export function AssetTree({
                   <ul className="m-0 list-none p-0" role="group">
                     {system.subsystems.map((sub) => {
                       const subSelected = activeId === sub.id;
+                      const subVisible = !graphMode || visibleIds!.has(sub.id);
                       return (
                         <li key={sub.id} role="treeitem" aria-selected={subSelected}>
-                          <button
-                            type="button"
-                            className={cn(
-                              "wire-asset-row wire-asset-row--subsystem",
-                              subSelected && "wire-asset-row--active",
-                            )}
-                            onClick={() => selectSubsystem(system, sub)}
-                          >
-                            {sub.name}
-                          </button>
+                          <div className="flex min-w-0 items-stretch">
+                            {graphMode ? (
+                              <span className="wire-asset-expand-spacer" aria-hidden />
+                            ) : null}
+                            {graphMode ? (
+                              <VisibilityCheckbox
+                                checked={subVisible}
+                                label={`Vis ${sub.name} på kortet`}
+                                onChange={() => toggleAssetVisibility(sub.id)}
+                              />
+                            ) : null}
+                            <button
+                              type="button"
+                              className={cn(
+                                "wire-asset-row wire-asset-row--subsystem",
+                                subSelected && "wire-asset-row--active",
+                                graphMode && !subVisible && "wire-asset-row--hidden",
+                              )}
+                              onClick={() => selectSubsystem(system, sub)}
+                            >
+                              {sub.name}
+                            </button>
+                          </div>
                         </li>
                       );
                     })}

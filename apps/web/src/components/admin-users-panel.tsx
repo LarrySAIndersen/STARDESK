@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type ReactNode, type 
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { AdminUserCreateDialog } from "@/components/admin-user-create-dialog";
 import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -481,6 +482,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
   const [membershipBusy, setMembershipBusy] = useState(false);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [addingToTeamUser, setAddingToTeamUser] = useState<UserAdminListItem | null>(null);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -577,6 +579,14 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
             >
               Søg
             </Button>
+            <button
+              type="button"
+              className="wire-btn wire-btn-red shrink-0"
+              onClick={() => setCreatingUser(true)}
+              disabled={!meta}
+            >
+              + Opret bruger
+            </button>
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
@@ -617,6 +627,17 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           teams={teams}
           onClose={() => setAddingToTeamUser(null)}
           onSaved={() => void loadList()}
+        />
+      ) : null}
+
+      {creatingUser && meta ? (
+        <AdminUserCreateDialog
+          meta={meta}
+          teams={teams}
+          users={users}
+          currentUserRole={currentUserRole}
+          onClose={() => setCreatingUser(false)}
+          onCreated={() => void loadList()}
         />
       ) : null}
     </section>

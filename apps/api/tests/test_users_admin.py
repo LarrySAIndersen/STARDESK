@@ -22,6 +22,9 @@ from star_itsm_api.schemas.user_admin import (
     UserTeamSummary,
 )
 
+CLONE_SOURCE_ID = uuid.UUID("00000000-0000-0000-0000-000000000042")
+NEW_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000043")
+
 TARGET_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000041")
 
 
@@ -261,3 +264,150 @@ async def test_get_user_success(
 
     assert response.status_code == 200
     assert response.json()["display_name"] == "Anna"
+
+
+@pytest.mark.asyncio
+async def test_create_user_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    created_user = UserAdminRead(
+        id=NEW_USER_ID,
+        email="ny@example.dk",
+        display_name="Ny Bruger",
+        role="agent",
+        role_label="Agent",
+        is_active=True,
+        teams=[],
+        created_at=datetime(2024, 2, 1, 10, 0, tzinfo=UTC),
+    )
+    with patch(
+        "star_itsm_api.routers.users.create_user_admin",
+        new_callable=AsyncMock,
+        return_value=(created_user, "TempPass1234"),
+    ):
+        response = await api_client.post(
+            "/api/v1/users",
+            json={
+                "email": "ny@example.dk",
+                "display_name": "Ny Bruger",
+                "role": "agent",
+                "is_active": True,
+                "team_ids": [],
+            },
+        )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["user"]["email"] == "ny@example.dk"
+    assert body["temporary_password"] == "TempPass1234"
+
+
+@pytest.mark.asyncio
+async def test_create_user_email_conflict(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    with patch(
+        "star_itsm_api.routers.users.create_user_admin",
+        new_callable=AsyncMock,
+        side_effect=ValueError("email_taken"),
+    ):
+        response = await api_client.post(
+            "/api/v1/users",
+            json={
+                "email": "eksisterer@example.dk",
+                "display_name": "Dublet",
+                "role": "agent",
+                "is_active": True,
+                "team_ids": [],
+            },
+        )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "E-mail skal være unik"
+
+
+@pytest.mark.asyncio
+async def test_create_user_clone_applies_source_settings(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    team_id = uuid.uuid4()
+    source = UserAdminRead(
+        id=CLONE_SOURCE_ID,
+        email="kilde@example.dk",
+        display_name="Kilde",
+        role="admin",
+        role_label="Administrator",
+        is_active=True,
+        organization_id=uuid.uuid4(),
+        organization_name="STAR",
+        teams=[UserTeamSummary(id=team_id, name="SF")],
+        created_at=datetime(2024, 1, 1, 10, 0, tzinfo=UTC),
+    )
+    created_user = UserAdminRead(
+        id=NEW_USER_ID,
+        email="kopia-af-kilde@example.dk",
+        display_name="Kilde (kopi)",
+        role="admin",
+        role_label="Administrator",
+        is_active=True,
+        organization_id=source.organization_id,
+        organization_name="STAR",
+        teams=source.teams,
+        created_at=datetime(2024, 2, 1, 10, 0, tzinfo=UTC),
+    )
+
+    with (
+        patch(
+            "star_itsm_api.routers.users.get_user_admin",
+            new_callable=AsyncMock,
+            return_value=source,
+        ),
+        patch(
+            "star_itsm_api.routers.users.create_user_admin",
+            new_callable=AsyncMock,
+            return_value=(created_user, None),
+        ) as create_mock,
+    ):
+        response = await api_client.post(
+            "/api/v1/users",
+            json={
+                "email": "kopia-af-kilde@example.dk",
+                "display_name": "Kilde (kopi)",
+                "role": "agent",
+                "is_active": True,
+                "organization_id": None,
+                "team_ids": [],
+                "clone_from_user_id": str(CLONE_SOURCE_ID),
+                "initial_password": "NyAdgang2026",
+            },
+        )
+
+    assert response.status_code == 201
+    create_mock.assert_awaited_once()
+    kwargs = create_mock.await_args.kwargs
+    assert kwargs["role"] == "admin"
+    assert kwargs["organization_id"] == source.organization_id
+    assert kwargs["team_ids"] == [team_id]
+    assert kwargs["initial_password"] == "NyAdgang2026"
+
+
+@pytest.mark.asyncio
+async def test_create_user_assign_top_admin_forbidden_for_admin(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    response = await api_client.post(
+        "/api/v1/users",
+        json={
+            "email": "top@example.dk",
+            "display_name": "Top",
+            "role": "top_admin",
+            "is_active": True,
+            "team_ids": [],
+        },
+    )
+
+    assert response.status_code == 403

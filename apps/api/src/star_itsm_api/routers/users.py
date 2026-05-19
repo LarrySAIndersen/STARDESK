@@ -14,6 +14,8 @@ from star_itsm_api.core.security import (
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.user_admin import (
+    UserAdminCreate,
+    UserAdminCreated,
     UserAdminListResponse,
     UserAdminMeta,
     UserAdminPasswordReset,
@@ -30,6 +32,7 @@ from star_itsm_api.services.avatars import (
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.user_admin import (
     build_admin_meta,
+    create_user_admin,
     email_taken,
     get_user_admin,
     list_organizations,
@@ -72,6 +75,65 @@ async def list_users(
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
+
+
+@router.post("", response_model=UserAdminCreated, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    payload: UserAdminCreate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin_session()),
+) -> UserAdminCreated:
+    if not can_manage_users(current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    role = payload.role
+    organization_id = payload.organization_id
+    team_ids = list(payload.team_ids)
+
+    if payload.clone_from_user_id is not None:
+        source = await get_user_admin(db, payload.clone_from_user_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail="Kildebruger blev ikke fundet")
+        role = source.role
+        organization_id = source.organization_id
+        team_ids = [team.id for team in source.teams]
+
+    _assert_can_assign_role(current_user, role)
+
+    try:
+        created, temporary_password = await create_user_admin(
+            db,
+            email=payload.email,
+            display_name=payload.display_name,
+            role=role,
+            is_active=payload.is_active,
+            organization_id=organization_id,
+            team_ids=team_ids,
+            initial_password=payload.initial_password,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "email_taken":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="E-mail skal være unik",
+            ) from exc
+        if code == "clone_source_not_found":
+            raise HTTPException(
+                status_code=404,
+                detail="Kildebruger blev ikke fundet",
+            ) from exc
+        if code == "invalid_team":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ugyldig gruppe",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=code,
+        ) from exc
+
+    return UserAdminCreated(user=created, temporary_password=temporary_password)
 
 
 @router.post("/me/avatar", response_model=UserRead)

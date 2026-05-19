@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { BookOpen, Home, Plus } from "lucide-react";
 
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
-import { StarLogo } from "@/components/star-logo";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -35,17 +34,11 @@ export function PortalSidebar({
       className={cn("wire-sidebar flex h-full flex-col", collapsed && "wire-sidebar--collapsed")}
       data-collapsed={collapsed ? "" : undefined}
     >
-      {collapsed ? (
-        <div className="wire-sidebar-collapsed-brand">
-          <Link href="/portal" className="flex items-center justify-center" title="STARdesk portal">
-            <StarLogo priority inverted className="size-7" />
-          </Link>
-        </div>
-      ) : (
+      {!collapsed ? (
         <div className="wire-shell-col-header wire-shell-col-header--nav flex items-center justify-end px-1">
           {onToggle ? <SidebarCollapseToggle collapsed={false} onToggle={onToggle} /> : null}
         </div>
-      )}
+      ) : null}
 
       <nav className="flex flex-1 flex-col overflow-y-auto py-1" aria-label="Portalnavigation">
         {collapsed ? null : <p className="wire-nav-section">Selvbetjening</p>}

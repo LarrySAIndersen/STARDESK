@@ -398,12 +398,6 @@
     @apply px-1.5 py-2;
   }
 
-  .wire-sidebar-collapsed-brand {
-    @apply bg-star-navy flex shrink-0 items-center justify-center;
-    height: var(--wire-shell-header-h);
-    min-height: var(--wire-shell-header-h);
-  }
-
   .wire-nav-item--icon-only {
     @apply justify-center gap-0 border-l-0 px-0 py-2.5;
   }
@@ -492,6 +486,26 @@
 
   .wire-asset-row--active {
     @apply bg-star-blue-light text-star-navy border-star-red border-l-[3px] font-semibold;
+  }
+
+  .wire-asset-row--hidden {
+    @apply opacity-45;
+  }
+
+  .wire-asset-visibility {
+    @apply flex w-6 shrink-0 items-center justify-center;
+  }
+
+  .wire-asset-visibility-input {
+    @apply size-3 cursor-pointer accent-[var(--star-navy)];
+  }
+
+  .wire-asset-expand-spacer {
+    @apply w-7 shrink-0;
+  }
+
+  .wire-asset-show-all {
+    @apply text-[var(--gray-mid)] rounded-sm px-1.5 py-0.5 hover:bg-star-blue-light hover:text-star-navy disabled:cursor-default disabled:opacity-40;
   }
 
   .wire-asset-detail {
@@ -617,6 +631,18 @@
 
   .wire-asset-graph-reset {
     @apply text-[var(--gray-mid)] rounded-sm px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide hover:bg-star-blue-light hover:text-star-navy;
+  }
+
+  .wire-asset-graph-saved {
+    @apply text-star-navy ml-2 text-[9px] font-semibold normal-case tracking-normal;
+  }
+
+  .wire-asset-graph-node {
+    cursor: grab;
+  }
+
+  .wire-asset-graph-node:active {
+    cursor: grabbing;
   }
 
   .wire-asset-detail-panel {

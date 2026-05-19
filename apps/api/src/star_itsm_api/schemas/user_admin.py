@@ -66,6 +66,22 @@ class UserAdminPasswordReset(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class UserAdminCreate(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    display_name: str = Field(min_length=1, max_length=255)
+    role: str = Field(pattern="^(end_user|agent|admin|top_admin)$")
+    is_active: bool = True
+    organization_id: UUID | None = None
+    team_ids: list[UUID] = Field(default_factory=list)
+    initial_password: str | None = Field(default=None, min_length=8, max_length=128)
+    clone_from_user_id: UUID | None = None
+
+
+class UserAdminCreated(BaseModel):
+    user: UserAdminRead
+    temporary_password: str | None = None
+
+
 class OrganizationOption(BaseModel):
     id: UUID
     name: str

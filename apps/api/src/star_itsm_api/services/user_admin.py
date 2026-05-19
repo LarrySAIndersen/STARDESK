@@ -1,3 +1,5 @@
+import secrets
+import string
 import uuid
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -181,3 +183,57 @@ async def set_user_password(db: AsyncSession, user: User, new_password: str) -> 
     user.password_hash = hash_password(new_password)
     user.must_change_password = True
     await db.commit()
+
+
+def _generate_temporary_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+async def create_user_admin(
+    db: AsyncSession,
+    *,
+    email: str,
+    display_name: str,
+    role: str,
+    is_active: bool,
+    organization_id: uuid.UUID | None,
+    team_ids: list[uuid.UUID],
+    initial_password: str | None,
+) -> tuple[UserAdminRead, str | None]:
+    normalized_email = email.lower().strip()
+    if await email_taken(db, normalized_email, exclude_user_id=None):
+        raise ValueError("email_taken")
+
+    plain_password: str
+    generated: str | None = None
+    if initial_password:
+        validate_password(initial_password)
+        plain_password = initial_password
+    else:
+        plain_password = _generate_temporary_password()
+        generated = plain_password
+
+    user = User(
+        id=uuid.uuid4(),
+        email=normalized_email,
+        display_name=display_name.strip(),
+        role=role,
+        is_active=is_active,
+        password_hash=hash_password(plain_password),
+        must_change_password=True,
+        organization_id=organization_id,
+    )
+    db.add(user)
+    await db.flush()
+
+    try:
+        await sync_user_teams(db, user.id, team_ids)
+    except ValueError:
+        raise ValueError("invalid_team") from None
+
+    await db.commit()
+    created = await get_user_admin(db, user.id)
+    if created is None:
+        raise RuntimeError("user_create_failed")
+    return created, generated

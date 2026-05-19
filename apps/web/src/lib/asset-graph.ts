@@ -106,3 +106,97 @@ export function getGraphNeighborIds(assetId: string, edges = MOCK_ASSET_EDGES): 
   }
   return neighbors;
 }
+
+export const ASSET_GRAPH_LAYOUT_KEY = "stardesk_asset_graph_layout";
+
+export type AssetGraphLayout = Record<string, { x: number; y: number }>;
+
+export function getDefaultNodePositions(graph: AssetGraphData): AssetGraphLayout {
+  const positions: AssetGraphLayout = {};
+  for (const node of graph.nodes) {
+    positions[node.id] = { x: node.x, y: node.y };
+  }
+  return positions;
+}
+
+export function getAllAssetIds(): string[] {
+  const ids: string[] = [];
+  for (const system of MOCK_ASSET_SYSTEMS) {
+    ids.push(system.id);
+    for (const sub of system.subsystems) {
+      ids.push(sub.id);
+    }
+  }
+  return ids;
+}
+
+export function loadGraphLayout(): AssetGraphLayout | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(ASSET_GRAPH_LAYOUT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as AssetGraphLayout;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveGraphLayout(layout: AssetGraphLayout): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ASSET_GRAPH_LAYOUT_KEY, JSON.stringify(layout));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function clearGraphLayout(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(ASSET_GRAPH_LAYOUT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function mergeNodePositions(
+  graph: AssetGraphData,
+  saved: AssetGraphLayout | null,
+): AssetGraphLayout {
+  const defaults = getDefaultNodePositions(graph);
+  if (!saved) return defaults;
+  const merged = { ...defaults };
+  for (const node of graph.nodes) {
+    const pos = saved[node.id];
+    if (pos && Number.isFinite(pos.x) && Number.isFinite(pos.y)) {
+      merged[node.id] = { x: pos.x, y: pos.y };
+    }
+  }
+  return merged;
+}
+
+export function filterGraphByVisibility(
+  graph: AssetGraphData,
+  visibleIds: Set<string>,
+): AssetGraphData {
+  const nodes = graph.nodes.filter((n) => visibleIds.has(n.id));
+  const visible = visibleIds;
+  const edges = graph.edges.filter(
+    (e) => visible.has(e.source) && visible.has(e.target),
+  );
+  return { nodes, edges };
+}
+
+export function getSystemVisibilityState(
+  systemId: string,
+  visibleIds: Set<string>,
+): "all" | "some" | "none" {
+  const system = MOCK_ASSET_SYSTEMS.find((s) => s.id === systemId);
+  if (!system) return "none";
+  const ids = [system.id, ...system.subsystems.map((sub) => sub.id)];
+  const visibleCount = ids.filter((id) => visibleIds.has(id)).length;
+  if (visibleCount === 0) return "none";
+  if (visibleCount === ids.length) return "all";
+  return "some";
+}
