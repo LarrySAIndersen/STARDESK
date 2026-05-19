@@ -151,7 +151,6 @@ export function ChangePasswordForm({
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 className={inputClass}
-                readOnly={required && Boolean(initialEmail || email)}
                 required
               />
             </PasswordField>
