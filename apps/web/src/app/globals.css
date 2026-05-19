@@ -859,6 +859,22 @@
     @apply flex-1 text-xs font-medium leading-normal text-[#2a2c7a];
   }
 
+  .ticket-create-layout {
+    @apply grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-8;
+  }
+
+  .ticket-create-llm-panel {
+    @apply rounded-[2px] border border-[var(--gray-border)] bg-white p-4 lg:sticky lg:top-4;
+  }
+
+  .ticket-create-llm-chat {
+    @apply max-h-[min(16rem,40vh)] overflow-y-auto rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2;
+  }
+
+  .ticket-create-llm-draft {
+    @apply rounded-[2px] border border-[#6b6fd4]/40 bg-[var(--ai-purple-bg)]/40 p-3;
+  }
+
   /* Table */
   .wire-table-wrap {
     @apply overflow-hidden rounded-[2px] border border-[var(--gray-border)] bg-white;
@@ -878,6 +894,10 @@
 
   .wire-table-grid-tickets {
     grid-template-columns: 58px minmax(0, 1fr) 100px 90px 80px 90px;
+  }
+
+  .wire-table-grid-portal-tickets {
+    grid-template-columns: 58px minmax(0, 1fr) 90px minmax(7rem, 9rem);
   }
 
   .wire-table-grid-admin-users {

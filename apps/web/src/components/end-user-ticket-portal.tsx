@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { PortalMyTicketsTable } from "@/components/portal/portal-my-tickets-table";
 import { apiGetServer } from "@/lib/api-server";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
@@ -38,10 +39,13 @@ export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalPr
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
-            href="/portal/knowledge"
+            href="/portal/knowledge?focus=search"
             className="wire-btn border-2 border-white/40 bg-white/15 text-white hover:bg-white/25"
           >
             Søg vidensbase
+          </Link>
+          <Link href="/tickets/new" className="wire-btn wire-btn-red">
+            Opret sag
           </Link>
         </div>
       </section>
@@ -62,20 +66,7 @@ export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalPr
         ) : ownOrgOnly.length === 0 ? (
           <p className="text-[var(--gray-mid)] text-sm">Ingen sager endnu.</p>
         ) : (
-          <div className="wire-table-wrap">
-            {ownOrgOnly.map((ticket) => (
-              <Link
-                key={ticket.id}
-                href={`/tickets/${ticket.id}`}
-                className="my-ticket-row flex items-center gap-2 border-b border-[var(--gray-border)] px-3.5 py-2.5 text-xs last:border-b-0 hover:bg-star-blue-light"
-              >
-                <span className="font-mono font-semibold text-[var(--gray-mid)]">
-                  {ticket.ticket_number}
-                </span>
-                <span className="min-w-0 flex-1 truncate font-medium">{ticket.title}</span>
-              </Link>
-            ))}
-          </div>
+          <PortalMyTicketsTable tickets={ownOrgOnly} />
         )}
         <div className="mt-4">
           <Link href="/tickets/new" className="wire-btn wire-btn-red">

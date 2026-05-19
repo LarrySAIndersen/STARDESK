@@ -49,6 +49,7 @@ export function PortalSidebar({
             <Link
               key={item.href}
               href={item.href}
+              title={item.label}
               className={cn(
                 "wire-nav-item",
                 active && "wire-nav-item--active",
@@ -56,7 +57,13 @@ export function PortalSidebar({
               )}
             >
               <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-              <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
+              <span
+                className={cn(
+                  collapsed ? "min-w-0 flex-1 truncate" : "whitespace-nowrap",
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

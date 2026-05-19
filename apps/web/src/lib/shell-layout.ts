@@ -10,7 +10,7 @@ export const PORTAL_PANEL_NAV = "portal-nav";
 export const PORTAL_PANEL_MAIN = "portal-main";
 
 export const SHELL_NAV = { default: 210, min: 160, max: 280 } as const;
-export const PORTAL_NAV = { default: 200, min: 160, max: 280 } as const;
+export const PORTAL_NAV = { default: 220, min: 200, max: 280 } as const;
 
 /** Compact rail width when the left nav is collapsed (icon + truncated label). */
 export const SHELL_NAV_COLLAPSED_WIDTH = 140;

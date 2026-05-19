@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
 import { getClientUser } from "@/lib/auth";
+import { portalRoleLabel } from "@/lib/portal-access";
 import { resolveUserAvatar } from "@/lib/user-avatar";
 
 const TITLES: Record<string, string> = {
@@ -31,7 +32,7 @@ export function PortalTopBar() {
     <header className="wire-topbar">
       <h1 className="wire-topbar-title min-w-0 shrink">{titleForPath(pathname)}</h1>
       <div className="ml-auto flex min-w-0 shrink-0 items-center">
-        <TopBarUserMenu user={user} />
+        <TopBarUserMenu user={{ ...user, role_label: portalRoleLabel(user) }} />
       </div>
     </header>
   );
