@@ -107,6 +107,7 @@ from star_itsm_api.services.ticket_timestamps import (
     maybe_set_first_response,
     touch_ticket_updated,
 )
+from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
 from star_itsm_api.schemas.ticket_intelligence import (
     TicketIntelligenceRead,
     TicketIntelligenceUpdate,
@@ -119,6 +120,7 @@ from star_itsm_api.services.ticket_intelligence import (
     build_llm_context_batch,
     intelligence_from_ticket,
 )
+from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
 from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
 
 logger = logging.getLogger(__name__)
@@ -374,6 +376,15 @@ async def get_llm_eval_pack(
         count=len(items),
         items=items,
     )
+
+
+@router.post("/intake-assist", response_model=IntakeAssistResponse)
+async def ticket_intake_assist(
+    payload: IntakeAssistRequest,
+    _current_user: User = Depends(get_current_user),
+) -> IntakeAssistResponse:
+    """Rule-based mock intake assistant — no external LLM."""
+    return build_intake_assist_draft(payload.messages)
 
 
 @router.post("", response_model=TicketRead, status_code=201)

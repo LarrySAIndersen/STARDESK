@@ -9,6 +9,10 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  TicketCreateLlmAssistant,
+  type IntakeAssistDraft,
+} from "@/components/ticket-create-llm-assistant";
 import { TicketIntakeQuestions, type IntakeAnswers } from "@/components/ticket-intake-questions";
 import { TicketTagsEmojiFields } from "@/components/ticket-tags-emoji-fields";
 import { assertNoCprInFreeText, validateCprOptional } from "@/lib/cpr";
@@ -179,6 +183,16 @@ export function CreateTicketForm({
     );
   }
 
+  function applyIntakeDraft(draft: IntakeAssistDraft) {
+    setValue("title", draft.title);
+    setValue("description", draft.description);
+    setValue("priority", draft.suggested_priority);
+    setValue("ticket_type", draft.suggested_ticket_type);
+    setIntakeAnswers((prev) => ({ ...prev, ...draft.intake_answers }));
+    setTagsInput(draft.tags.join(", "));
+    setEmoji(draft.emoji);
+  }
+
   async function onSubmit(values: FormValues) {
     setError(null);
     const cpr = values.subject_cpr?.trim() || null;
@@ -222,9 +236,15 @@ export function CreateTicketForm({
     <section className="wire-card border-t-[3px] border-t-star-red">
       <h1 className="wire-card-title">Opret ny sag</h1>
       <p className="text-muted-foreground mb-6 text-sm">
-        Beskriv sagen først — personoplysninger og tags er valgfrie.
+        Brug AI-assistenten til et udkast, eller udfyld formularen direkte — personoplysninger og
+        tags er valgfrie.
       </p>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <div className="ticket-create-layout">
+        <TicketCreateLlmAssistant
+          onApplyDraft={applyIntakeDraft}
+          disabled={isSubmitting}
+        />
+        <form onSubmit={handleSubmit(onSubmit)} className="min-w-0 space-y-8">
         <section className="space-y-4" aria-labelledby="create-ticket-basics">
           <h2 id="create-ticket-basics" className="wire-card-title">
             Sagens indhold
@@ -482,6 +502,7 @@ export function CreateTicketForm({
             {isSubmitting ? "Opretter…" : "Opret sag"}
           </Button>
         </form>
+      </div>
     </section>
   );
 }
