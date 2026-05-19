@@ -17,6 +17,7 @@ import {
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { AgentSidebarUser } from "@/components/agent/agent-sidebar-user";
 import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
+import { resolveUserAvatar } from "@/lib/user-avatar";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
