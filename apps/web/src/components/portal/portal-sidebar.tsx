@@ -49,15 +49,14 @@ export function PortalSidebar({
             <Link
               key={item.href}
               href={item.href}
-              title={collapsed ? item.label : undefined}
               className={cn(
                 "wire-nav-item",
                 active && "wire-nav-item--active",
-                collapsed && "wire-nav-item--icon-only",
+                collapsed && "wire-nav-item--compact",
               )}
             >
               <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-              {collapsed ? <span className="sr-only">{item.label}</span> : item.label}
+              <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
             </Link>
           );
         })}

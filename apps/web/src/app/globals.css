@@ -395,16 +395,19 @@
   }
 
   .wire-sidebar--collapsed .wire-sidebar-footer {
-    @apply px-1.5 py-2;
+    @apply px-2 py-2;
   }
 
-  .wire-nav-item--icon-only {
-    @apply justify-center gap-0 border-l-0 px-0 py-2.5;
+  .wire-nav-item--compact {
+    @apply gap-1.5 px-2 py-1.5 text-[12px];
   }
 
-  .wire-nav-item--icon-only.wire-nav-item--active {
-    @apply border-l-0;
-    box-shadow: inset 3px 0 0 var(--star-red);
+  .wire-nav-item--compact.wire-nav-item--integration {
+    @apply pr-1.5;
+  }
+
+  .wire-integ-pill--compact {
+    @apply px-1 text-[8px];
   }
 
   .wire-nav-section {

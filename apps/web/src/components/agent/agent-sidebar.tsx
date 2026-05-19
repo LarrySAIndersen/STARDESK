@@ -124,7 +124,7 @@ export function AgentSidebar({
           const className = cn(
             "wire-nav-item",
             active && "wire-nav-item--active",
-            collapsed && "wire-nav-item--icon-only",
+            collapsed && "wire-nav-item--compact",
           );
 
           return (
@@ -132,13 +132,9 @@ export function AgentSidebar({
               {showSection ? (
                 <p className="wire-nav-section">{item.section}</p>
               ) : null}
-              <Link href={item.href} className={className} title={collapsed ? item.label : undefined}>
+              <Link href={item.href} className={className}>
                 <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-                {collapsed ? (
-                  <span className="sr-only">{item.label}</span>
-                ) : (
-                  item.label
-                )}
+                <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
               </Link>
             </div>
           );

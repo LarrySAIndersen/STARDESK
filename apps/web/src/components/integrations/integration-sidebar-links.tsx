@@ -45,26 +45,20 @@ export function IntegrationSidebarLinks({
           <Link
             key={meta.id}
             href={meta.href}
-            title={collapsed ? meta.name : undefined}
             className={cn(
               "wire-nav-item wire-nav-item--integration",
               active && "wire-nav-item--active",
-              collapsed && "wire-nav-item--icon-only",
+              collapsed && "wire-nav-item--compact",
             )}
           >
             <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-            {collapsed ? (
-              <span className="sr-only">{meta.name}</span>
-            ) : (
-              <>
-                <span className="min-w-0 flex-1 truncate">{meta.name}</span>
-                <IntegrationStatusPill
-                  status={status}
-                  label={pillLabel}
-                  className="ml-auto shrink-0"
-                />
-              </>
-            )}
+            <span className="min-w-0 flex-1 truncate">{meta.name}</span>
+            <IntegrationStatusPill
+              status={status}
+              label={pillLabel}
+              compact={collapsed}
+              className="ml-auto shrink-0"
+            />
           </Link>
         );
       })}

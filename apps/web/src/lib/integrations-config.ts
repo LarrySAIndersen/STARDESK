@@ -120,6 +120,19 @@ export function displayStatusLabel(status: IntegrationDisplayStatus): string {
   }
 }
 
+/** Short status label for the compact collapsed nav rail. */
+export function displayStatusAbbrev(status: IntegrationDisplayStatus): string {
+  switch (status) {
+    case "active":
+      return "Akt";
+    case "draft":
+      return "Kla";
+    case "inactive":
+    default:
+      return "Ina";
+  }
+}
+
 /** Slack mock: show Aktiv when enabled; otherwise Kladde/Konfigureret via draft. */
 export function slackSidebarLabel(config: IntegrationsState["slack"]): string {
   const status = getDisplayStatus("slack", config);
