@@ -65,6 +65,15 @@ const RAW_DEMO_USERS: DemoUser[] = [
   agent("bi01@example.dk", "BI Agent 1", "BI"),
   agent("bi02@example.dk", "BI Agent 2", "BI"),
   agent("bi03@example.dk", "BI Agent 3", "BI"),
+  agent("kmd01@example.dk", "KMD Agent 1", "KMD"),
+  agent("kmd02@example.dk", "KMD Agent 2", "KMD"),
+  agent("kmd03@example.dk", "KMD Agent 3", "KMD"),
+  agent("netcompany01@example.dk", "Netcompany Agent 1", "Netcompany"),
+  agent("netcompany02@example.dk", "Netcompany Agent 2", "Netcompany"),
+  agent("netcompany03@example.dk", "Netcompany Agent 3", "Netcompany"),
+  agent("schultz01@example.dk", "Schultz Agent 1", "Schultz"),
+  agent("schultz02@example.dk", "Schultz Agent 2", "Schultz"),
+  agent("schultz03@example.dk", "Schultz Agent 3", "Schultz"),
 ];
 
 export const DEMO_USERS = RAW_DEMO_USERS.filter((u) => !EXCLUDED_EMAILS.has(u.email));
@@ -85,6 +94,9 @@ export function groupDemoUsers(users: DemoUser[] = DEMO_USERS): DemoUserGroup[] 
     "Jobflow",
     "Sirius",
     "BI",
+    "KMD",
+    "Netcompany",
+    "Schultz",
   ];
   const map = new Map<string, DemoUser[]>();
   for (const user of users) {

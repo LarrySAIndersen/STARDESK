@@ -1,4 +1,4 @@
--- 10 indmelder-organisationer, 30 agenter (3 per gruppe)
+-- 9 indmelder-organisationer, 27 agenter (3 per gruppe; SF Koncern fjernet)
 -- Password for all: Stardesk2026!
 -- Run docs/org-migration.sql first, then this file in Neon
 
@@ -37,15 +37,6 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash, orga
 INSERT INTO team_members (team_id, user_id, joined_at) SELECT t.id, 'b2000001-0000-4000-8000-000000000011'::uuid, NOW() FROM teams t WHERE t.name = 'Jobflow' ON CONFLICT DO NOTHING;
 INSERT INTO users (id, email, display_name, role, is_active, password_hash, organization_id) VALUES ('b2000001-0000-4000-8000-000000000012', 'jobflow03@example.dk', 'Jobflow Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Jobflow')) ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, organization_id = EXCLUDED.organization_id, password_hash = EXCLUDED.password_hash;
 INSERT INTO team_members (team_id, user_id, joined_at) SELECT t.id, 'b2000001-0000-4000-8000-000000000012'::uuid, NOW() FROM teams t WHERE t.name = 'Jobflow' ON CONFLICT DO NOTHING;
-
-INSERT INTO organizations (id, name, description, is_active) VALUES ('e1000001-0000-4000-8000-000000000005', 'SF Koncern', 'Indmelder-organisation', TRUE) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active = TRUE;
-INSERT INTO teams (name, description, is_active, organization_id) VALUES ('SF Koncern', 'Gruppe for SF Koncern', TRUE, (SELECT id FROM organizations WHERE name = 'SF Koncern')) ON CONFLICT (name) DO UPDATE SET organization_id = EXCLUDED.organization_id, is_active = TRUE;
-INSERT INTO users (id, email, display_name, role, is_active, password_hash, organization_id) VALUES ('b2000001-0000-4000-8000-000000000013', 'sfkoncern01@example.dk', 'SF Koncern Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Koncern')) ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, organization_id = EXCLUDED.organization_id, password_hash = EXCLUDED.password_hash;
-INSERT INTO team_members (team_id, user_id, joined_at) SELECT t.id, 'b2000001-0000-4000-8000-000000000013'::uuid, NOW() FROM teams t WHERE t.name = 'SF Koncern' ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, display_name, role, is_active, password_hash, organization_id) VALUES ('b2000001-0000-4000-8000-000000000014', 'sfkoncern02@example.dk', 'SF Koncern Agent 2', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Koncern')) ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, organization_id = EXCLUDED.organization_id, password_hash = EXCLUDED.password_hash;
-INSERT INTO team_members (team_id, user_id, joined_at) SELECT t.id, 'b2000001-0000-4000-8000-000000000014'::uuid, NOW() FROM teams t WHERE t.name = 'SF Koncern' ON CONFLICT DO NOTHING;
-INSERT INTO users (id, email, display_name, role, is_active, password_hash, organization_id) VALUES ('b2000001-0000-4000-8000-000000000015', 'sfkoncern03@example.dk', 'SF Koncern Agent 3', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'SF Koncern')) ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name, organization_id = EXCLUDED.organization_id, password_hash = EXCLUDED.password_hash;
-INSERT INTO team_members (team_id, user_id, joined_at) SELECT t.id, 'b2000001-0000-4000-8000-000000000015'::uuid, NOW() FROM teams t WHERE t.name = 'SF Koncern' ON CONFLICT DO NOTHING;
 
 INSERT INTO organizations (id, name, description, is_active) VALUES ('e1000001-0000-4000-8000-000000000006', 'Nordisk Forsyning', 'Indmelder-organisation', TRUE) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active = TRUE;
 INSERT INTO teams (name, description, is_active, organization_id) VALUES ('Nordisk Forsyning', 'Gruppe for Nordisk Forsyning', TRUE, (SELECT id FROM organizations WHERE name = 'Nordisk Forsyning')) ON CONFLICT (name) DO UPDATE SET organization_id = EXCLUDED.organization_id, is_active = TRUE;

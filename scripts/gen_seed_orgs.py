@@ -8,7 +8,6 @@ ORGS = [
     ("Virksomhed", "estrifft"),
     ("North Star", "northstar"),
     ("Jobflow", "jobflow"),
-    ("SF Koncern", "sfkoncern"),
     ("Nordisk Forsyning", "forsyning"),
     ("Kommune IT Vest", "kommune"),
     ("ErhvervsPartner", "erhverv"),
