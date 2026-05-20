@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
+import { ClearFiltersButton } from "@/components/clear-filters-button";
+import { useListFilters } from "@/hooks/use-list-filters";
 import type { KnowledgeArticle } from "@/types/knowledge-article";
 
 export function PortalKnowledgeSearch({
@@ -15,7 +17,9 @@ export function PortalKnowledgeSearch({
 }) {
   const searchParams = useSearchParams();
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState("");
+  const { search: query, setSearch: setQuery, reset, hasActiveFilters } = useListFilters({
+    defaultFilters: {},
+  });
 
   useEffect(() => {
     if (searchParams.get("focus") === "search") {
@@ -46,15 +50,18 @@ export function PortalKnowledgeSearch({
         <p className="mt-1 text-[13px] text-white/75">
           Find vejledninger og løsninger fra STAR Service Desk.
         </p>
-        <input
-          ref={searchInputRef}
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Søg på titel, indhold eller emneord…"
-          className="wire-search-input wire-search-input--on-dark mt-3 max-w-md"
-          aria-label="Søg vidensartikler"
-        />
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            ref={searchInputRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Søg på titel, indhold eller emneord…"
+            className="wire-search-input wire-search-input--on-dark max-w-md"
+            aria-label="Søg vidensartikler"
+          />
+          <ClearFiltersButton onClick={reset} visible={hasActiveFilters} />
+        </div>
       </section>
 
       {filtered.length === 0 ? (

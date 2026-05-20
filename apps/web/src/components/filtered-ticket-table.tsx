@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { ItilTicketTable } from "@/components/itil-ticket-table";
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
+import { useListFilters } from "@/hooks/use-list-filters";
 import type { Ticket } from "@/types/ticket";
 
 export function FilteredTicketTable({
@@ -15,7 +17,10 @@ export function FilteredTicketTable({
   compact?: boolean;
   showSecurityFilter?: boolean;
 }) {
-  const [securityOnly, setSecurityOnly] = useState(false);
+  const { filters, setFilter, reset, hasActiveFilters } = useListFilters({
+    defaultFilters: { securityOnly: "false" },
+  });
+  const securityOnly = filters.securityOnly === "true";
 
   const visible = useMemo(() => {
     if (!securityOnly) {
@@ -27,7 +32,13 @@ export function FilteredTicketTable({
   return (
     <div className="space-y-3">
       {showSecurityFilter ? (
-        <SecurityTicketFilter checked={securityOnly} onChange={setSecurityOnly} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SecurityTicketFilter
+            checked={securityOnly}
+            onChange={(checked) => setFilter("securityOnly", checked ? "true" : "false")}
+          />
+          <ClearFiltersButton onClick={reset} visible={hasActiveFilters} />
+        </div>
       ) : null}
       <ItilTicketTable tickets={visible} compact={compact} />
     </div>

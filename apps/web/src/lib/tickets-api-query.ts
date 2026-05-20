@@ -1,5 +1,5 @@
 import { findAssetById } from "@/lib/mock-assets";
-import { parseTicketSort } from "@/lib/ticket-sort";
+import { DEFAULT_TICKET_SORT, parseTicketSort } from "@/lib/ticket-sort";
 
 /** Build GET /api/v1/tickets query string from dashboard drill-down search params. */
 
@@ -90,3 +90,35 @@ export function dashboardFilterTitle(
 
   return parts.length > 0 ? parts.join(" · ") : null;
 }
+
+const TICKETS_URL_FILTER_KEYS = [
+  "scope",
+  "open_only",
+  "bucket",
+  "sla",
+  "major_open",
+  "opened_since_days",
+  "closed_since_days",
+  "asset_id",
+  "status",
+  "sort",
+] as const;
+
+/** Whether /tickets has drill-down or list query params beyond the default board view. */
+export function hasTicketsUrlFilters(
+  searchParams: Record<string, string | string[] | undefined>,
+): boolean {
+  for (const key of TICKETS_URL_FILTER_KEYS) {
+    const raw = pick(searchParams[key]);
+    if (!raw) {
+      continue;
+    }
+    if (key === "sort" && parseTicketSort(raw) === DEFAULT_TICKET_SORT) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+export const CLEARED_TICKETS_PATH = "/tickets";

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { Pencil } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
+import { ClearFiltersButton } from "@/components/clear-filters-button";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { formatKnowledgeUpdatedAt } from "@/lib/knowledge-article-content";
 import type { KnowledgeArticle } from "@/types/knowledge-article";
 
@@ -26,7 +28,9 @@ function KnowledgeVisibilityBadge({
 }
 
 export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeArticle[] }) {
-  const [query, setQuery] = useState("");
+  const { search: query, setSearch: setQuery, reset, hasActiveFilters } = useListFilters({
+    defaultFilters: {},
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -55,14 +59,17 @@ export function KnowledgeArticlesStaffList({ articles }: { articles: KnowledgeAr
           + Ny vidensartikel
         </Link>
       </div>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Søg titel, indhold, emneord…"
-        className="wire-search-input max-w-md"
-        aria-label="Søg vidensartikler"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Søg titel, indhold, emneord…"
+          className="wire-search-input max-w-md"
+          aria-label="Søg vidensartikler"
+        />
+        <ClearFiltersButton onClick={reset} visible={hasActiveFilters} />
+      </div>
       <div className="wire-table-wrap min-w-0 overflow-x-auto">
         <div
           className="wire-table-head wire-table-grid-knowledge min-w-[44rem]"

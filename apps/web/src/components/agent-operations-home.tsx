@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentOperationsDashboard } from "@/components/agent-operations-dashboard";
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { apiGet } from "@/lib/api";
 import { canManageUsers } from "@/lib/auth";
 import {
@@ -83,31 +84,39 @@ export function AgentOperationsHome({
             {DASHBOARD_SCOPE_DESCRIPTIONS[scope]}
           </p>
         </div>
-        <div
-          className="flex flex-wrap gap-1 rounded-lg border border-[var(--gray-border)] bg-white p-1"
-          role="tablist"
-          aria-label="Dashboard omfang"
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={scope === tab}
-              disabled={loading}
-              onClick={() => {
-                if (tab !== scope) void loadScope(tab);
-              }}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
-                scope === tab
-                  ? "bg-star-navy text-white"
-                  : "text-star-navy hover:bg-secondary",
-              )}
-            >
-              {DASHBOARD_SCOPE_LABELS[tab]}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex flex-wrap gap-1 rounded-lg border border-[var(--gray-border)] bg-white p-1"
+            role="tablist"
+            aria-label="Dashboard omfang"
+          >
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={scope === tab}
+                disabled={loading}
+                onClick={() => {
+                  if (tab !== scope) void loadScope(tab);
+                }}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                  scope === tab
+                    ? "bg-star-navy text-white"
+                    : "text-star-navy hover:bg-secondary",
+                )}
+              >
+                {DASHBOARD_SCOPE_LABELS[tab]}
+              </button>
+            ))}
+          </div>
+          <ClearFiltersButton
+            visible={scope !== initialScope}
+            onClick={() => {
+              if (scope !== initialScope) void loadScope(initialScope);
+            }}
+          />
         </div>
       </div>
       {error ? <p className="text-star-red mb-3 text-sm">{error}</p> : null}

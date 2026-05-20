@@ -2,14 +2,14 @@
 
 import { Pencil, UserMinus, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn, displayNameInitials } from "@/lib/utils";
 import type { GroupedAdminUsers, UsersByTeamSection } from "@/lib/admin-users-grouping";
 import type { UserAdminListItem } from "@/types/admin-user";
 
-type UsersTab = "internal" | "external" | "all";
+export type UsersTab = "internal" | "external" | "all";
 
 const TAB_LABELS: { id: UsersTab; label: string }[] = [
   { id: "internal", label: "Interne" },
@@ -273,13 +273,16 @@ export function AdminUsersGroupedSections({
   onEdit,
   onRemoveFromTeam,
   onAddToTeam,
+  tab,
+  onTabChange,
 }: {
   grouped: GroupedAdminUsers;
   onEdit: (userId: string) => void;
   onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
   onAddToTeam: (user: UserAdminListItem) => void;
+  tab: UsersTab;
+  onTabChange: (tab: UsersTab) => void;
 }) {
-  const [tab, setTab] = useState<UsersTab>("all");
 
   const tabSections = useMemo(() => {
     switch (tab) {
@@ -321,7 +324,7 @@ export function AdminUsersGroupedSections({
               "wire-btn wire-btn-sm",
               tab === id && "wire-btn-primary",
             )}
-            onClick={() => setTab(id)}
+            onClick={() => onTabChange(id)}
           >
             {label}
             <span className="ml-1.5 font-normal tabular-nums opacity-80">

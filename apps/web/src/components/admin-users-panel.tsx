@@ -6,11 +6,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AdminUserCreateDialog } from "@/components/admin-user-create-dialog";
-import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
+import {
+  AdminUsersGroupedSections,
+  type UsersTab,
+} from "@/components/admin-users-grouped-sections";
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useListFilters } from "@/hooks/use-list-filters";
 import {
   filterAdminUsers,
   groupAdminUsersByTeam,
@@ -473,7 +478,17 @@ function UserEditDialogPanel({
 
 export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole }) {
   const [query, setQuery] = useState("");
-  const [search, setSearch] = useState("");
+  const {
+    search,
+    setSearch,
+    tab,
+    setTab,
+    reset: resetListFilters,
+    hasActiveFilters,
+  } = useListFilters<UsersTab, Record<string, never>>({
+    defaultTab: "all",
+    defaultFilters: {},
+  });
   const [users, setUsers] = useState<UserAdminListItem[]>([]);
   const [meta, setMeta] = useState<UserAdminMeta | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -579,6 +594,13 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
             >
               Søg
             </Button>
+            <ClearFiltersButton
+              visible={hasActiveFilters || query.trim().length > 0}
+              onClick={() => {
+                setQuery("");
+                resetListFilters();
+              }}
+            />
             <button
               type="button"
               className="wire-btn wire-btn-red shrink-0"
@@ -604,6 +626,8 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
       ) : (
         <AdminUsersGroupedSections
           grouped={grouped}
+          tab={tab}
+          onTabChange={setTab}
           onEdit={setEditingUserId}
           onRemoveFromTeam={onRemoveFromTeam}
           onAddToTeam={setAddingToTeamUser}

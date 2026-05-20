@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { TicketSearchInput } from "@/components/ticket-search-input";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import {
   DEFAULT_TICKET_SORT,
@@ -13,7 +15,11 @@ import {
   TICKET_SORT_OPTIONS,
 } from "@/lib/ticket-sort";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
-import { dashboardFilterTitle } from "@/lib/tickets-api-query";
+import {
+  CLEARED_TICKETS_PATH,
+  dashboardFilterTitle,
+  hasTicketsUrlFilters,
+} from "@/lib/tickets-api-query";
 import type { Ticket } from "@/types/ticket";
 
 function pickParam(
@@ -34,6 +40,13 @@ const STATUS_OPTIONS = [
 
 const PRIORITY_OPTIONS = ["", "critical", "high", "medium", "low"] as const;
 
+const DEFAULT_TICKET_FILTERS = {
+  status: "",
+  priority: "",
+  category: "",
+  tag: "",
+} as const;
+
 export function TicketsListClient({
   tickets,
   initialParams = {},
@@ -45,10 +58,12 @@ export function TicketsListClient({
   const searchParams = useSearchParams();
   const dashboardFilter = dashboardFilterTitle(initialParams);
   const fromDashboard = Boolean(dashboardFilter);
+  const urlFiltersActive = hasTicketsUrlFilters(initialParams);
 
   const sort = parseTicketSort(
     pickParam(initialParams.sort) ?? searchParams.get("sort"),
   );
+  const sortDiffersFromDefault = sort !== DEFAULT_TICKET_SORT;
 
   const onSortChange = useCallback(
     (value: string) => {
@@ -59,18 +74,26 @@ export function TicketsListClient({
         params.set("sort", value);
       }
       const qs = params.toString();
-      router.push(qs ? `/tickets?${qs}` : "/tickets");
+      router.push(qs ? `/tickets?${qs}` : CLEARED_TICKETS_PATH);
     },
     [router, searchParams],
   );
 
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(
-    () => pickParam(initialParams.status) ?? "",
-  );
-  const [priority, setPriority] = useState("");
-  const [category, setCategory] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilter,
+    reset: resetLocalFilters,
+    hasActiveFilters: hasLocalFilters,
+  } = useListFilters({
+    defaultFilters: {
+      ...DEFAULT_TICKET_FILTERS,
+      status: pickParam(initialParams.status) ?? "",
+    },
+  });
+
+  const { status, priority, category, tag: tagFilter } = filters;
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -114,6 +137,21 @@ export function TicketsListClient({
 
   const activeTags = [tagFilter].filter(Boolean);
 
+  const hasActiveFilters =
+    hasLocalFilters || sortDiffersFromDefault || urlFiltersActive;
+
+  const clearAllFilters = useCallback(() => {
+    resetLocalFilters();
+    if (urlFiltersActive || sortDiffersFromDefault) {
+      router.push(CLEARED_TICKETS_PATH);
+    }
+  }, [
+    resetLocalFilters,
+    router,
+    urlFiltersActive,
+    sortDiffersFromDefault,
+  ]);
+
   return (
     <div className="space-y-3">
       {fromDashboard ? (
@@ -124,13 +162,14 @@ export function TicketsListClient({
           <span className="text-muted-foreground text-xs">
             {filtered.length} sag{filtered.length === 1 ? "" : "er"}
           </span>
+          <ClearFiltersButton onClick={clearAllFilters} visible={hasActiveFilters} />
         </div>
       ) : null}
       <div className="flex flex-wrap items-center gap-2 max-sm:[&_select]:min-w-[calc(50%-0.25rem)] max-sm:[&_select]:flex-1">
         <select
           className="wire-form-input h-8 w-auto min-w-[7.5rem] text-xs"
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => setFilter("status", e.target.value)}
           aria-label="Filtrer status"
         >
           <option value="">Alle status</option>
@@ -143,7 +182,7 @@ export function TicketsListClient({
         <select
           className="wire-form-input h-8 w-auto min-w-[120px] text-xs"
           value={priority}
-          onChange={(e) => setPriority(e.target.value)}
+          onChange={(e) => setFilter("priority", e.target.value)}
           aria-label="Filtrer prioritet"
         >
           <option value="">Alle prioriteter</option>
@@ -156,7 +195,7 @@ export function TicketsListClient({
         <select
           className="wire-form-input h-8 w-auto min-w-[120px] text-xs"
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => setFilter("category", e.target.value)}
           aria-label="Filtrer kategori"
         >
           <option value="">Alle kategorier</option>
@@ -169,7 +208,7 @@ export function TicketsListClient({
         <select
           className="wire-form-input h-8 w-auto min-w-[100px] text-xs"
           value={tagFilter}
-          onChange={(e) => setTagFilter(e.target.value)}
+          onChange={(e) => setFilter("tag", e.target.value)}
           aria-label="Filtrer tag"
         >
           <option value="">Alle tags</option>
@@ -192,6 +231,10 @@ export function TicketsListClient({
           ))}
         </select>
         <TicketSearchInput value={search} onChange={setSearch} />
+        <ClearFiltersButton
+          onClick={clearAllFilters}
+          visible={hasActiveFilters && !fromDashboard}
+        />
       </div>
 
       {activeTags.length > 0 ? (
@@ -201,7 +244,7 @@ export function TicketsListClient({
               key={tag}
               type="button"
               className="wire-tag"
-              onClick={() => setTagFilter("")}
+              onClick={() => setFilter("tag", "")}
             >
               {tag} ×
             </button>

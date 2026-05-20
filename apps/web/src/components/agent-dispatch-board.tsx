@@ -16,7 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { ResizableSplit } from "@/components/ui/resizable-split";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { SlaCountdown } from "@/components/sla-countdown";
@@ -83,8 +85,19 @@ export function AgentDispatchBoard({
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [securityOnly, setSecurityOnly] = useState(false);
+  const {
+    search: searchQuery,
+    setSearch: setSearchQuery,
+    filters,
+    setFilter,
+    reset: resetFilters,
+    hasActiveFilters,
+  } = useListFilters({
+    defaultFilters: { securityOnly: "false" },
+  });
+  const securityOnly = filters.securityOnly === "true";
+  const setSecurityOnly = (checked: boolean) =>
+    setFilter("securityOnly", checked ? "true" : "false");
 
   const currentUser = getClientUser();
   const isOrgAgent =
@@ -214,7 +227,10 @@ export function AgentDispatchBoard({
           </div>
           <div className="star-section-body space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <TicketSearchInput value={searchQuery} onChange={setSearchQuery} />
+              <div className="flex flex-wrap items-center gap-2">
+                <TicketSearchInput value={searchQuery} onChange={setSearchQuery} />
+                <ClearFiltersButton onClick={resetFilters} visible={hasActiveFilters} />
+              </div>
               <SecurityTicketFilter
                 id="dispatch-security-only"
                 checked={securityOnly}
