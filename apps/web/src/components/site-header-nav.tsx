@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { PortalLoggedInAs } from "@/components/portal/portal-logged-in-as";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export function SiteHeaderNav({
           Opret sag
         </Button>
       ) : null}
+      <PortalLoggedInAs industrialChrome={industrialChrome} />
       <ThemeToggle />
       <UserMenu />
     </nav>

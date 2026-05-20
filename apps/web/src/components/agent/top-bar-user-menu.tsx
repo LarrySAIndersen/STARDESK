@@ -7,6 +7,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ProfileModal } from "@/components/agent/agent-sidebar-user";
 import { UserAvatar } from "@/components/agent/user-avatar";
+import { PortalLoggedInAs } from "@/components/portal/portal-logged-in-as";
 import { clearSession, writeUserCookie } from "@/lib/auth";
 import { confirmSfChatLogout } from "@/lib/sf-chat-logout";
 import { resolveUserAvatar, userProfileHref } from "@/lib/user-avatar";
@@ -93,10 +94,7 @@ export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
       <div className="wire-topbar-user" aria-label="Brugerkonto">
         <div className="wire-topbar-user-identity">
           <UserAvatar user={user} size="md" />
-          <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-[11px] font-bold text-star-navy">{user.display_name}</p>
-            <p className="truncate text-[10px] text-[var(--gray-mid)]">{user.role_label}</p>
-          </div>
+          <PortalLoggedInAs user={user} variant="topbar" showAvatar={false} />
         </div>
 
         <nav
