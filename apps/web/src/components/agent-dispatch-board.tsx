@@ -28,6 +28,7 @@ import { apiPatch } from "@/lib/api";
 import { partitionTeamsByCategory } from "@/lib/team-categories";
 import {
   serviceDeskTeamIds,
+  teamsForServiceDeskRail,
   ticketsForServiceDeskTable,
   ticketsForServiceDeskTeamRail,
 } from "@/lib/service-desk-queue";
@@ -126,6 +127,10 @@ export function AgentDispatchBoard({
   );
   const sortedTeams = useMemo(() => sortTeams(internalTeams), [internalTeams]);
   const deskTeamIds = useMemo(() => serviceDeskTeamIds(sortedTeams), [sortedTeams]);
+  const railTeams = useMemo(
+    () => teamsForServiceDeskRail(sortedTeams, deskTeamIds),
+    [sortedTeams, deskTeamIds],
+  );
 
   const openTickets = useMemo(
     () =>
@@ -407,7 +412,7 @@ export function AgentDispatchBoard({
             </h2>
             <p className="star-section-desc">Slip en sag her for at tildele</p>
           </div>
-          {sortedTeams.map((team) => {
+          {railTeams.map((team) => {
             const allTeamTickets = ticketsByTeam.get(team.id) ?? [];
             const totalCount = allTeamTickets.length;
             const teamTickets = allTeamTickets.slice(0, TEAM_RAIL_TICKET_PREVIEW);

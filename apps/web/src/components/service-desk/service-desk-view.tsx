@@ -28,6 +28,7 @@ import {
   isOpenTicket,
   paginateTickets,
   serviceDeskTeamIds,
+  teamsForServiceDeskRail,
   ticketsForServiceDeskTable,
   ticketsForServiceDeskTeamRail,
   type ServiceDeskQueueFilter,
@@ -112,6 +113,11 @@ export function ServiceDeskView({
   }, [teams]);
 
   const deskTeamIds = useMemo(() => serviceDeskTeamIds(internalTeams), [internalTeams]);
+
+  const railTeams = useMemo(
+    () => teamsForServiceDeskRail(internalTeams, deskTeamIds),
+    [internalTeams, deskTeamIds],
+  );
 
   const queueTickets = useMemo(
     () => filterByServiceDeskQueue(localTickets, queue, deskTeamIds),
@@ -256,7 +262,7 @@ export function ServiceDeskView({
             value={deskCount}
             max={Math.max(deskCount, 1)}
             accent="navy"
-            hint="Åbne sager uden tildelt gruppe"
+            hint="Åbne sager uden gruppe eller på SF Service Desk"
           />
         </div>
         <div className="wire-card flex min-h-[140px] flex-col justify-center py-4">
@@ -324,7 +330,7 @@ export function ServiceDeskView({
           <p className="text-muted-foreground shrink-0 text-xs">
             {queue === "teams"
               ? "Sager tildelt en gruppe vises kun under den pågældende gruppe til højre."
-              : "Venstre liste: kun sager uden gruppe. Træk til en gruppe — sagen forsvinder her og vises under gruppen til højre."}
+              : "Venstre liste: sager uden gruppe eller på SF Service Desk. Træk til en anden gruppe — sagen forsvinder her og vises under gruppen til højre."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -393,7 +399,7 @@ export function ServiceDeskView({
         </section>
 
         <DispatchTeamsRail
-          teams={internalTeams}
+          teams={railTeams}
           ticketsByTeam={ticketsByTeam}
           dragOverTeamId={dragOverTeamId}
           onDragOverTeam={(teamId, event) => {

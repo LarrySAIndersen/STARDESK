@@ -21,21 +21,45 @@ export function serviceDeskTeamIds(teams: Team[]): Set<string> {
   return new Set(
     teams
       .filter((t) => t.name === SERVICE_DESK_TEAM_NAME || t.name === "Service Desk")
-      .map((t) => t.id),
+      .map((t) => t.id.toLowerCase()),
   );
 }
 
-/**
- * Venstre tabel / service desk-kø: kun sager uden tildelt gruppe.
- * Når en sag får assigned_team_id, vises den kun under den gruppe i rail.
- */
-export function isInServiceDeskQueue(ticket: Ticket, _deskTeamIds?: Set<string>): boolean {
-  return !ticket.assigned_team_id;
+function isAssignedToDeskTeam(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
+  const teamId = ticket.assigned_team_id?.toLowerCase();
+  if (!teamId) {
+    return false;
+  }
+  if (deskTeamIds && deskTeamIds.size > 0) {
+    return deskTeamIds.has(teamId);
+  }
+  const name = ticket.assigned_team_name?.trim() ?? "";
+  return name === SERVICE_DESK_TEAM_NAME || name === "Service Desk";
 }
 
-/** Tildelt en gruppe (vises i højre rail, inkl. SF Service Desk). */
-export function isInTeamsQueue(ticket: Ticket, _deskTeamIds?: Set<string>): boolean {
-  return Boolean(ticket.assigned_team_id);
+/**
+ * Venstre tabel / service desk-kø: ingen gruppe, eller kun SF Service Desk.
+ * Andre grupper (SF, Infrastruktur, osv.) vises kun i gruppe-rail til højre.
+ */
+export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
+  if (!ticket.assigned_team_id) {
+    return true;
+  }
+  return isAssignedToDeskTeam(ticket, deskTeamIds);
+}
+
+/** Tildelt en operativ gruppe (vises i højre rail — ikke desk-kø). */
+export function isInTeamsQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
+  if (!ticket.assigned_team_id) {
+    return false;
+  }
+  return !isInServiceDeskQueue(ticket, deskTeamIds);
+}
+
+/** Interne grupper der kan modtage sager i højre rail (uden SF Service Desk). */
+export function teamsForServiceDeskRail(teams: Team[], deskTeamIds?: Set<string>): Team[] {
+  const deskIds = deskTeamIds ?? serviceDeskTeamIds(teams);
+  return teams.filter((team) => !deskIds.has(team.id.toLowerCase()));
 }
 
 /** Main table: distribution queue only. */
