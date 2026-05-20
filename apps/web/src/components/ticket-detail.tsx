@@ -27,6 +27,7 @@ import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketStatusForm } from "@/components/ticket-status-form";
 
 import { TicketComments } from "@/components/ticket-comments";
+import { TicketEmailThread } from "@/components/ticket-email-thread";
 
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 
@@ -537,6 +538,17 @@ export function TicketDetailView({
             </div>
 
           </WireDetailCard>
+
+          {(staff || (ticket.ticket_emails?.length ?? 0) > 0) ? (
+            <WireDetailCard title="E-mail tråd">
+              <TicketEmailThread
+                ticketId={ticket.id}
+                ticketNumber={ticket.ticket_number}
+                linkedAddress={ticket.linked_gmail_email}
+                emails={ticket.ticket_emails ?? []}
+              />
+            </WireDetailCard>
+          ) : null}
 
 
 

@@ -81,6 +81,16 @@ export interface TicketIntelligence {
   updated_at: string | null;
 }
 
+export interface TicketEmail {
+  id: string;
+  direction: "inbound" | "outbound";
+  subject?: string | null;
+  from_email?: string | null;
+  to_email?: string | null;
+  body_text?: string | null;
+  received_at: string;
+}
+
 export interface TicketLlmContext {
   schema_version: string;
   ticket_id: string;
@@ -121,6 +131,8 @@ export interface TicketDetail extends Ticket {
   subject_cpr: string | null;
   attachments: Attachment[];
   comments: Comment[];
+  ticket_emails?: TicketEmail[];
+  linked_gmail_email?: string | null;
   timestamps?: TicketTimestamps;
   activity?: TicketActivityItem[];
 }

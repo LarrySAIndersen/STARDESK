@@ -15,6 +15,7 @@ from star_itsm_api.routers import (
     auth,
     categories,
     cron,
+    gmail,
     health,
     knowledge_articles,
     reports,
@@ -62,6 +63,7 @@ app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
 app.include_router(slack.router, prefix="/api/v1")
+app.include_router(gmail.router, prefix="/api/v1")
 app.include_router(knowledge_articles.router, prefix="/api/v1")
 app.include_router(teams.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")

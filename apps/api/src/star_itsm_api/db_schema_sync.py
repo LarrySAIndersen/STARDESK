@@ -96,6 +96,10 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _table_exists(engine, "organization_integrations"):
         return True
+    if not await _table_exists(engine, "email_integrations"):
+        return True
+    if not await _table_exists(engine, "ticket_emails"):
+        return True
     return False
 
 

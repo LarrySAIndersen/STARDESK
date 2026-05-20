@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { patchServerIntegration } from "@/lib/integrations-mock-store";
 import type { IntegrationId } from "@/types/integration";
 
-const VALID_IDS: IntegrationId[] = ["slack", "jira", "topdesk"];
+const VALID_IDS: IntegrationId[] = ["slack", "gmail", "jira", "topdesk"];
 
 function isIntegrationId(value: string): value is IntegrationId {
   return VALID_IDS.includes(value as IntegrationId);

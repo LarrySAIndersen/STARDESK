@@ -29,6 +29,16 @@ class TicketSummaryRead(BaseModel):
     is_security_ticket: bool = False
 
 
+class TicketEmailRead(BaseModel):
+    id: UUID
+    direction: Literal["inbound", "outbound"]
+    subject: str | None = None
+    from_email: str | None = None
+    to_email: str | None = None
+    body_text: str | None = None
+    received_at: datetime
+
+
 class TicketRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,6 +99,8 @@ class TicketDetailRead(TicketRead):
     subject_cpr: str | None = None
     attachments: list[AttachmentRead] = Field(default_factory=list)
     comments: list[CommentRead] = Field(default_factory=list)
+    ticket_emails: list[TicketEmailRead] = Field(default_factory=list)
+    linked_gmail_email: str | None = None
     timestamps: TicketTimestampsRead
     activity: list[TicketActivityItemRead] = Field(default_factory=list)
 
@@ -194,3 +206,8 @@ class TicketAssignmentUpdate(BaseModel):
     assigned_user_id: UUID | None = None
     assignment_reason: str | None = Field(default=None, max_length=2000)
     fault_displayed: bool | None = None
+
+
+class TicketEmailReplyRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=20000)
+    to_email: str | None = Field(default=None, max_length=320)

@@ -33,6 +33,26 @@ class Settings(BaseSettings):
     slack_signing_secret: str | None = Field(default=None, validation_alias="SLACK_SIGNING_SECRET")
     slack_redirect_uri: str | None = Field(default=None, validation_alias="SLACK_REDIRECT_URI")
     slack_mock: bool = Field(default=False, validation_alias="SLACK_MOCK")
+    google_client_id: str | None = Field(default=None, validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str | None = Field(default=None, validation_alias="GOOGLE_CLIENT_SECRET")
+    gmail_redirect_uri: str | None = Field(default=None, validation_alias="GMAIL_REDIRECT_URI")
+    gmail_mock: bool = Field(default=False, validation_alias="GMAIL_MOCK")
+    gmail_token_encryption_key: str | None = Field(
+        default=None,
+        validation_alias="GMAIL_TOKEN_ENCRYPTION_KEY",
+    )
+    gmail_allow_plaintext_tokens: bool = Field(
+        default=False,
+        validation_alias="GMAIL_ALLOW_PLAINTEXT_TOKENS",
+    )
+    gmail_sync_from_email: str | None = Field(
+        default=None,
+        validation_alias="GMAIL_SYNC_FROM_EMAIL",
+    )
+    gmail_default_from: str | None = Field(
+        default=None,
+        validation_alias="GMAIL_DEFAULT_FROM",
+    )
 
     @property
     def is_production(self) -> bool:

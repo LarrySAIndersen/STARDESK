@@ -39,6 +39,7 @@ from star_itsm_api.schemas.ticket import (
     TicketAssignmentUpdate,
     TicketCreate,
     TicketDetailRead,
+    TicketEmailReplyRequest,
     TicketMetadataUpdate,
     TicketParentUpdate,
     TicketPriorityUpdate,
@@ -100,6 +101,8 @@ from star_itsm_api.services.ticket_security import (
     resolve_create_security_flag,
 )
 from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket_timestamps_read
+from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
+from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
 from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,
@@ -536,6 +539,23 @@ async def _get_ticket_detail(
         current_user,
         reporter_user_id=ticket.reporter_user_id,
     )
+    ticket_emails_rows = await list_ticket_emails(db, ticket_id=ticket_id)
+    ticket_emails = [
+        {
+            "id": row.id,
+            "direction": row.direction,
+            "subject": row.subject,
+            "from_email": row.from_email,
+            "to_email": row.to_email,
+            "body_text": row.body_text,
+            "received_at": row.received_at,
+        }
+        for row in ticket_emails_rows
+    ]
+    integration_email = None
+    if ticket.organization_id:
+        integration = await get_gmail_integration(db, organization_id=ticket.organization_id)
+        integration_email = integration.connected_email if integration else None
     activity = await build_ticket_activity(db, ticket, current_user)
     intelligence = None
     if is_staff(current_user):
@@ -566,6 +586,8 @@ async def _get_ticket_detail(
             "fault_displayed": ticket.fault_displayed,
             "attachments": attachments,
             "comments": comments,
+            "ticket_emails": ticket_emails,
+            "linked_gmail_email": integration_email,
             "timestamps": ticket_timestamps_read(ticket),
             "activity": activity,
             **ticket_sensitive_fields(ticket, current_user),
@@ -1154,6 +1176,30 @@ async def create_comment(
     summaries = await load_reaction_summaries(db, [read.id], current_user_id=current_user.id)
     enriched = apply_reaction_summaries([read], summaries)
     return enriched[0]
+
+
+@router.post("/{ticket_id}/email-reply", response_model=TicketDetailRead)
+async def reply_ticket_email(
+    ticket_id: uuid.UUID,
+    payload: TicketEmailReplyRequest,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        await send_ticket_email_reply(
+            db,
+            ticket=ticket,
+            actor=current_user,
+            body=payload.body,
+            to_email_override=payload.to_email,
+        )
+    except GmailApiError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return await get_ticket(ticket_id, db, current_user)
 
 
 @router.put(

@@ -91,6 +91,12 @@ def _event_label(event_type: str, payload: dict) -> tuple[str, str, str | None]:
     if event_type == "ticket.slack_pushed":
         channel_name = payload.get("channel_name") or payload.get("channel_id") or "ukendt"
         return f"Sag delt i Slack (#{channel_name})", "internal", None
+    if event_type == "email.received":
+        sender = payload.get("from") or "ukendt afsender"
+        return f"E-mail modtaget fra {sender}", "external", payload.get("subject")
+    if event_type == "email.sent":
+        recipient = payload.get("to") or "ukendt modtager"
+        return f"E-mail sendt til {recipient}", "external", payload.get("subject")
     return event_type, "internal", None
 
 

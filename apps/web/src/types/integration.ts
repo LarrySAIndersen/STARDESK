@@ -1,4 +1,4 @@
-export type IntegrationId = "slack" | "jira" | "topdesk";
+export type IntegrationId = "slack" | "gmail" | "jira" | "topdesk";
 
 /** Display status for sidebar and overview. */
 export type IntegrationDisplayStatus = "active" | "inactive" | "draft";
@@ -19,6 +19,11 @@ export interface JiraIntegrationConfig {
   enabled: boolean;
 }
 
+export interface GmailIntegrationConfig {
+  connected_email: string;
+  enabled: boolean;
+}
+
 export interface TopdeskIntegrationConfig {
   topdesk_url: string;
   application_key: string;
@@ -28,6 +33,7 @@ export interface TopdeskIntegrationConfig {
 
 export type IntegrationConfigById = {
   slack: SlackIntegrationConfig;
+  gmail: GmailIntegrationConfig;
   jira: JiraIntegrationConfig;
   topdesk: TopdeskIntegrationConfig;
 };

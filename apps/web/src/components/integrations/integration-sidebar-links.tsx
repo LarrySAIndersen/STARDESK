@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MessageSquare, Ticket, Wrench } from "lucide-react";
+import { Mail, MessageSquare, Ticket, Wrench } from "lucide-react";
 
 import { IntegrationStatusPill } from "@/components/integrations/integration-status-pill";
 import {
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const ICONS = {
   slack: MessageSquare,
+  gmail: Mail,
   jira: Ticket,
   topdesk: Wrench,
 } as const;

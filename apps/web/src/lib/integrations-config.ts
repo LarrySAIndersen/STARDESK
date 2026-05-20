@@ -16,6 +16,12 @@ export const INTEGRATION_META = [
     href: "/integrations/slack",
   },
   {
+    id: "gmail" as const,
+    name: "Gmail",
+    description: "Forbind support-mailboks med OAuth, trådning og svar i samme sag.",
+    href: "/integrations/gmail",
+  },
+  {
     id: "jira" as const,
     name: "Jira",
     description: "Synkroniser sager med Jira (kommer snart).",
@@ -35,6 +41,10 @@ export const DEFAULT_INTEGRATIONS: IntegrationsState = {
     bot_token: "",
     default_channel: "",
     webhook_url: "",
+    enabled: false,
+  },
+  gmail: {
+    connected_email: "",
     enabled: false,
   },
   jira: {
@@ -58,6 +68,7 @@ function mergeState(partial: Partial<IntegrationsState> | null | undefined): Int
   }
   return {
     slack: { ...DEFAULT_INTEGRATIONS.slack, ...partial.slack },
+    gmail: { ...DEFAULT_INTEGRATIONS.gmail, ...partial.gmail },
     jira: { ...DEFAULT_INTEGRATIONS.jira, ...partial.jira },
     topdesk: { ...DEFAULT_INTEGRATIONS.topdesk, ...partial.topdesk },
   };
@@ -86,6 +97,7 @@ const hasDraftConfigById: {
         config.default_channel.trim() ||
         config.webhook_url.trim(),
     ),
+  gmail: (config) => Boolean(config.connected_email.trim()),
   jira: (config) =>
     Boolean(
       config.jira_url.trim() ||
@@ -182,5 +194,5 @@ export function saveIntegrationPartial<K extends IntegrationId>(
 }
 
 export function canEnableIntegration(id: IntegrationId): boolean {
-  return id === "slack";
+  return id === "slack" || id === "gmail";
 }
