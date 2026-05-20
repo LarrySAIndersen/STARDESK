@@ -1,6 +1,7 @@
 # Deploy STARdesk (cloud prototype)
 
-> Fuld dokumentation til genskabelse og fejlsøgning: [DOCUMENTATION.md](./DOCUMENTATION.md)
+> Fuld dokumentation til genskabelse og fejlsøgning: [DOCUMENTATION.md](./DOCUMENTATION.md)  
+> **Test vs. prod vs. prod-klon:** [environments.md](./environments.md) — Neon-grene, Vercel Preview, duplikerede projekter.
 
 Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 

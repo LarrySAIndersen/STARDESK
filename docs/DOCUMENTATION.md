@@ -26,6 +26,7 @@ Brug den når noget skal genskabes i Neon, når adgang ikke matcher forventning,
 | [database-rebuild.md](./database-rebuild.md) | Genskab schema + seed fra bunden |
 | [llm-ticket-evaluation.md](./llm-ticket-evaluation.md) | LLM-metadata og API til vurdering |
 | [deploy.md](./deploy.md) | Vercel/Railway deploy |
+| [environments.md](./environments.md) | Test, produktion og prod-klon (Neon + Vercel) |
 | [frontend-structure.md](./frontend-structure.md) | Next.js ruter og komponenter |
 | [performance-testing.md](./performance-testing.md) | Headless load/soak/stress (20 VU) |
 | [destructive-testing.md](./destructive-testing.md) | k6 abuse + pytest destructive |

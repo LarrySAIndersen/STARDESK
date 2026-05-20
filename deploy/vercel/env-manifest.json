@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "STARdesk Vercel environment variable NAMES only (no secrets). See docs/environments.md.",
+  "targets": {
+    "production": {
+      "gitBranch": "main",
+      "vercelProjects": { "web": "prj_yp7rtTY7itzDFBuJqfMrL0urNybx", "api": "prj_TG8sOhHjUBMrcSmTVEDpr1rydHP0" },
+      "neonBranch": "main"
+    },
+    "test": {
+      "gitBranch": "staging",
+      "vercelProjects": { "web": "web-test (optional duplicate)", "api": "api-test (optional duplicate)" },
+      "vercelScope": "preview",
+      "neonBranch": "test"
+    },
+    "prodClone": {
+      "gitBranch": "main",
+      "vercelProjects": { "web": "web-prodclone", "api": "api-prodclone" },
+      "vercelScope": "production",
+      "neonBranch": "prod-clone",
+      "note": "Copy prod secret VALUES except DATABASE_URL and URL pair"
+    }
+  },
+  "apps/api": {
+    "required": ["DATABASE_URL", "FRONTEND_URL", "JWT_SECRET"],
+    "productionRecommended": ["APP_ENV", "CRON_SECRET", "WEBHOOK_SECRET", "RESEND_API_KEY", "MAIL_FROM"],
+    "optional": [
+      "UPLOAD_DIR",
+      "SLACK_CLIENT_ID",
+      "SLACK_CLIENT_SECRET",
+      "SLACK_SIGNING_SECRET",
+      "SLACK_REDIRECT_URI",
+      "SLACK_MOCK",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "GMAIL_REDIRECT_URI",
+      "GMAIL_MOCK",
+      "GMAIL_TOKEN_ENCRYPTION_KEY",
+      "GMAIL_ALLOW_PLAINTEXT_TOKENS",
+      "GMAIL_SYNC_FROM_EMAIL",
+      "GMAIL_DEFAULT_FROM"
+    ]
+  },
+  "apps/web": {
+    "required": ["NEXT_PUBLIC_API_URL"],
+    "optional": [
+      "NEXT_PUBLIC_ENABLE_DEMO_LOGIN",
+      "BASIC_AUTH_USER",
+      "BASIC_AUTH_PASSWORD"
+    ],
+    "misplacedOnWebInProd": ["FRONTEND_URL"]
+  }
+}
