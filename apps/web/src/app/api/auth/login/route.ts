@@ -4,7 +4,8 @@ import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
 import type { LoginResponse } from "@/types/user";
 
-const SESSION_MAX_AGE = 60 * 60 * 12;
+/** Shorter session — re-login required after idle window (no long-lived client tokens). */
+const SESSION_MAX_AGE = 60 * 60 * 2;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
     maxAge: SESSION_MAX_AGE,
   });
   response.cookies.set(USER_COOKIE, JSON.stringify(data.user), {
-    httpOnly: false,
+    httpOnly: true,
     secure,
     sameSite: "lax",
     path: "/",

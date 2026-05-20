@@ -5,7 +5,7 @@ import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
 import type { User } from "@/types/user";
 
-const SESSION_MAX_AGE = 60 * 60 * 12;
+const SESSION_MAX_AGE = 60 * 60 * 2;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       const user = (await meResponse.json()) as User;
       const secure = process.env.NODE_ENV === "production";
       response.cookies.set(USER_COOKIE, JSON.stringify(user), {
-        httpOnly: false,
+        httpOnly: true,
         secure,
         sameSite: "lax",
         path: "/",

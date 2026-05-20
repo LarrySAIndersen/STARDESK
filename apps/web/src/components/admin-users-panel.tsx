@@ -6,10 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AdminUserCreateDialog } from "@/components/admin-user-create-dialog";
-import {
-  AdminUsersGroupedSections,
-  type UsersTab,
-} from "@/components/admin-users-grouped-sections";
+import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,8 +14,11 @@ import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useListFilters } from "@/hooks/use-list-filters";
 import {
+  applyAdminUsersListFilters,
+  DEFAULT_ADMIN_USERS_FILTERS,
   filterAdminUsers,
-  groupAdminUsersByTeam,
+  type AdminUsersListFilters,
+  type UsersTab,
 } from "@/lib/admin-users-grouping";
 import { apiGet, apiPatch, apiPostNoContent } from "@/lib/api";
 import type {
@@ -483,11 +483,13 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
     setSearch,
     tab,
     setTab,
+    filters,
+    setFilters,
     reset: resetListFilters,
     hasActiveFilters,
-  } = useListFilters<UsersTab, Record<string, never>>({
+  } = useListFilters<UsersTab, AdminUsersListFilters>({
     defaultTab: "all",
-    defaultFilters: {},
+    defaultFilters: DEFAULT_ADMIN_USERS_FILTERS,
   });
   const [users, setUsers] = useState<UserAdminListItem[]>([]);
   const [meta, setMeta] = useState<UserAdminMeta | null>(null);
@@ -539,10 +541,13 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
     };
   }, []);
 
-  const filteredUsers = useMemo(() => filterAdminUsers(users, search), [users, search]);
-  const grouped = useMemo(
-    () => groupAdminUsersByTeam(filteredUsers, teams),
-    [filteredUsers, teams],
+  const searchFilteredUsers = useMemo(
+    () => filterAdminUsers(users, search),
+    [users, search],
+  );
+  const displayedUsers = useMemo(
+    () => applyAdminUsersListFilters(searchFilteredUsers, teams, tab, filters),
+    [searchFilteredUsers, teams, tab, filters],
   );
 
   const updateMembership = async (user: UserAdminListItem, teamIds: string[]) => {
@@ -612,7 +617,9 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           </div>
         </div>
         <p className="text-muted-foreground text-sm">
-          {loading ? "Henter…" : `${filteredUsers.length} bruger${filteredUsers.length === 1 ? "" : "e"}`}
+          {loading
+            ? "Henter…"
+            : `${displayedUsers.length} af ${searchFilteredUsers.length} bruger${searchFilteredUsers.length === 1 ? "" : "e"}`}
           {!loading ? " · API henter op til 100 pr. side (alle sider ved søgning)" : null}
         </p>
       </div>
@@ -621,11 +628,18 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
 
       {loading ? (
         <p className="text-muted-foreground mt-8 text-sm">Henter brugere…</p>
-      ) : filteredUsers.length === 0 ? (
+      ) : searchFilteredUsers.length === 0 ? (
         <p className="text-muted-foreground mt-8 text-sm">Ingen brugere fundet.</p>
       ) : (
         <AdminUsersGroupedSections
-          grouped={grouped}
+          users={displayedUsers}
+          usersForTabCounts={searchFilteredUsers}
+          teams={teams}
+          roleOptions={meta?.roles ?? []}
+          filters={filters}
+          onFiltersChange={(patch) =>
+            setFilters((prev) => ({ ...prev, ...patch }))
+          }
           tab={tab}
           onTabChange={setTab}
           onEdit={setEditingUserId}

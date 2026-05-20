@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
-import { writeUserCookie } from "@/lib/auth";
 import { CHANGE_PASSWORD_PATH } from "@/lib/must-change-password";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -66,9 +65,6 @@ export function LoginForm() {
       const body = (await response.json()) as {
         user?: User & { must_change_password?: boolean };
       };
-      if (body.user) {
-        writeUserCookie(body.user);
-      }
       if (body.user?.must_change_password) {
         window.location.replace(CHANGE_PASSWORD_PATH);
         return;

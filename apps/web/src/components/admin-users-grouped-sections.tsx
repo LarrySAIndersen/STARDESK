@@ -1,15 +1,21 @@
 "use client";
 
 import { Pencil, UserMinus, UserPlus } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn, displayNameInitials } from "@/lib/utils";
-import type { GroupedAdminUsers, UsersByTeamSection } from "@/lib/admin-users-grouping";
+import {
+  ADMIN_USERS_NO_TEAM_FILTER,
+  type AdminUsersListFilters,
+} from "@/lib/admin-users-grouping";
+import type { UsersTab } from "@/lib/admin-users-grouping";
+import { countUsersByTab } from "@/lib/admin-users-grouping";
 import type { UserAdminListItem } from "@/types/admin-user";
+import type { RoleOption } from "@/types/admin-user";
+import type { Team } from "@/types/team";
 
-export type UsersTab = "internal" | "external" | "all";
+export type { UsersTab };
 
 const TAB_LABELS: { id: UsersTab; label: string }[] = [
   { id: "internal", label: "Interne" },
@@ -19,10 +25,7 @@ const TAB_LABELS: { id: UsersTab; label: string }[] = [
 
 function AdminUsersTableHead() {
   return (
-    <div
-      className="wire-table-head wire-table-grid-admin-users"
-      role="row"
-    >
+    <div className="wire-table-head wire-table-grid-admin-users" role="row">
       <span>Navn</span>
       <span>E-mail</span>
       <span>Rolle</span>
@@ -45,13 +48,13 @@ function AdminUserTableRow({
   onEdit,
   onRemoveFromTeam,
   onAddToTeam,
-  teamId,
+  removeTeamId,
 }: {
   user: UserAdminListItem;
   onEdit: (userId: string) => void;
   onRemoveFromTeam?: (user: UserAdminListItem, teamId: string) => void;
   onAddToTeam?: (user: UserAdminListItem) => void;
-  teamId?: string;
+  removeTeamId?: string;
 }) {
   const initials = displayNameInitials(user.display_name);
   const groupsLabel =
@@ -67,15 +70,20 @@ function AdminUserTableRow({
           {initials}
         </span>
         <div className="min-w-0">
-          <p className="text-star-navy truncate text-xs font-medium leading-tight">
+          <button
+            type="button"
+            className="text-star-navy hover:text-star-blue truncate text-left text-xs font-medium leading-tight underline-offset-2 hover:underline"
+            onClick={() => onEdit(user.id)}
+          >
             {user.display_name}
-          </p>
-          <Link
-            href={`/users/${user.id}`}
-            className="text-star-blue hover:text-star-navy text-[10px] underline underline-offset-2"
+          </button>
+          <button
+            type="button"
+            className="text-star-blue hover:text-star-navy block text-[10px] underline underline-offset-2"
+            onClick={() => onEdit(user.id)}
           >
             se mere
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -109,7 +117,7 @@ function AdminUserTableRow({
             <UserPlus className="size-3.5" />
           </Button>
         ) : null}
-        {onRemoveFromTeam && teamId ? (
+        {onRemoveFromTeam && removeTeamId && user.team_ids.includes(removeTeamId) ? (
           <Button
             type="button"
             variant="ghost"
@@ -117,7 +125,7 @@ function AdminUserTableRow({
             className="text-destructive hover:text-destructive size-7"
             aria-label={`Fjern ${user.display_name} fra gruppe`}
             title="Fjern fra gruppe"
-            onClick={() => onRemoveFromTeam(user, teamId)}
+            onClick={() => onRemoveFromTeam(user, removeTeamId)}
           >
             <UserMinus className="size-3.5" />
           </Button>
@@ -138,174 +146,43 @@ function AdminUserTableRow({
   );
 }
 
-function TeamGroupSubheader({ section }: { section: UsersByTeamSection }) {
-  const countLabel = section.users.length === 1 ? "bruger" : "brugere";
-  return (
-    <div
-      role="row"
-      className="wire-table-group-head"
-      aria-label={`${section.team.name}, ${section.users.length} ${countLabel}`}
-    >
-      <span className="col-span-full flex min-w-0 items-baseline gap-2">
-        <span className="truncate">{section.team.name}</span>
-        <span className="text-muted-foreground shrink-0 font-normal">
-          — {section.users.length} {countLabel}
-        </span>
-      </span>
-    </div>
-  );
-}
-
-function TeamSectionsBlock({
-  sections,
-  onEdit,
-  onRemoveFromTeam,
-}: {
-  sections: UsersByTeamSection[];
-  onEdit: (userId: string) => void;
-  onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
-}) {
-  const nonEmpty = sections.filter((section) => section.users.length > 0);
-
-  return (
-    <>
-      {nonEmpty.map((section) => (
-        <section key={section.team.id} aria-label={section.team.name}>
-          <TeamGroupSubheader section={section} />
-          {section.users.map((user) => (
-            <AdminUserTableRow
-              key={`${section.team.id}-${user.id}`}
-              user={user}
-              teamId={section.team.id}
-              onEdit={onEdit}
-              onRemoveFromTeam={onRemoveFromTeam}
-            />
-          ))}
-        </section>
-      ))}
-    </>
-  );
-}
-
-function UngroupedBlock({
-  users,
-  onEdit,
-  onAddToTeam,
-}: {
-  users: UserAdminListItem[];
-  onEdit: (userId: string) => void;
-  onAddToTeam: (user: UserAdminListItem) => void;
-}) {
-  if (users.length === 0) {
-    return null;
-  }
-
-  const countLabel = users.length === 1 ? "bruger" : "brugere";
-
-  return (
-    <section aria-label="Uden gruppe">
-      <div
-        role="row"
-        className="wire-table-group-head"
-        aria-label={`Uden gruppe, ${users.length} ${countLabel}`}
-      >
-        <span className="col-span-full flex min-w-0 items-baseline gap-2">
-          <span>Uden gruppe</span>
-          <span className="text-muted-foreground shrink-0 font-normal">
-            — {users.length} {countLabel}
-          </span>
-        </span>
-      </div>
-      {users.map((user) => (
-        <AdminUserTableRow
-          key={user.id}
-          user={user}
-          onEdit={onEdit}
-          onAddToTeam={onAddToTeam}
-        />
-      ))}
-    </section>
-  );
-}
-
-function AdminUsersCompactTable({
-  sections,
-  ungrouped,
-  onEdit,
-  onRemoveFromTeam,
-  onAddToTeam,
-  showUngrouped,
-}: {
-  sections: UsersByTeamSection[];
-  ungrouped: UserAdminListItem[];
-  onEdit: (userId: string) => void;
-  onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
-  onAddToTeam: (user: UserAdminListItem) => void;
-  showUngrouped: boolean;
-}) {
-  const hasTeamRows = sections.some((section) => section.users.length > 0);
-  const hasUngrouped = showUngrouped && ungrouped.length > 0;
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="wire-table-wrap min-w-0 overflow-x-auto">
-        <div className="wire-table-scroll min-w-[40rem]">
-        <AdminUsersTableHead />
-        <TeamSectionsBlock
-          sections={sections}
-          onEdit={onEdit}
-          onRemoveFromTeam={onRemoveFromTeam}
-        />
-        {hasUngrouped ? (
-          <UngroupedBlock users={ungrouped} onEdit={onEdit} onAddToTeam={onAddToTeam} />
-        ) : null}
-        {!hasTeamRows && !hasUngrouped ? (
-          <p className="text-muted-foreground px-3.5 py-4 text-sm">Ingen brugere i denne visning.</p>
-        ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function AdminUsersGroupedSections({
-  grouped,
+  users,
+  usersForTabCounts,
+  teams,
+  roleOptions,
+  filters,
+  onFiltersChange,
   onEdit,
   onRemoveFromTeam,
   onAddToTeam,
   tab,
   onTabChange,
 }: {
-  grouped: GroupedAdminUsers;
+  users: UserAdminListItem[];
+  usersForTabCounts: UserAdminListItem[];
+  teams: Team[];
+  roleOptions: RoleOption[];
+  filters: AdminUsersListFilters;
+  onFiltersChange: (patch: Partial<AdminUsersListFilters>) => void;
   onEdit: (userId: string) => void;
   onRemoveFromTeam: (user: UserAdminListItem, teamId: string) => void;
   onAddToTeam: (user: UserAdminListItem) => void;
   tab: UsersTab;
   onTabChange: (tab: UsersTab) => void;
 }) {
-
-  const tabSections = useMemo(() => {
-    switch (tab) {
-      case "internal":
-        return grouped.internal;
-      case "external":
-        return grouped.external;
-      case "all":
-        return [...grouped.internal, ...grouped.external];
-    }
-  }, [grouped.external, grouped.internal, tab]);
-
   const tabCounts = useMemo(
-    () => ({
-      internal: grouped.internal.reduce((n, s) => n + s.users.length, 0),
-      external: grouped.external.reduce((n, s) => n + s.users.length, 0),
-      all:
-        grouped.internal.reduce((n, s) => n + s.users.length, 0) +
-        grouped.external.reduce((n, s) => n + s.users.length, 0) +
-        grouped.ungrouped.length,
-    }),
-    [grouped.external, grouped.internal, grouped.ungrouped.length],
+    () => countUsersByTab(usersForTabCounts, teams),
+    [usersForTabCounts, teams],
   );
+
+  const removeTeamId =
+    filters.teamId && filters.teamId !== ADMIN_USERS_NO_TEAM_FILTER
+      ? filters.teamId
+      : undefined;
+
+  const showAddToTeam =
+    filters.teamId === ADMIN_USERS_NO_TEAM_FILTER || tab === "all";
 
   return (
     <div className="mt-6 space-y-4">
@@ -320,10 +197,7 @@ export function AdminUsersGroupedSections({
             type="button"
             role="tab"
             aria-selected={tab === id}
-            className={cn(
-              "wire-btn wire-btn-sm",
-              tab === id && "wire-btn-primary",
-            )}
+            className={cn("wire-btn wire-btn-sm", tab === id && "wire-btn-primary")}
             onClick={() => onTabChange(id)}
           >
             {label}
@@ -334,15 +208,82 @@ export function AdminUsersGroupedSections({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-2 max-sm:[&_select]:min-w-[calc(50%-0.25rem)] max-sm:[&_select]:flex-1">
+        <select
+          className="wire-form-input h-8 w-auto min-w-[8.5rem] text-xs"
+          value={filters.role}
+          onChange={(event) => onFiltersChange({ role: event.target.value })}
+          aria-label="Filtrer rolle"
+        >
+          <option value="">Alle roller</option>
+          {roleOptions.map((role) => (
+            <option key={role.value} value={role.value}>
+              {role.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="wire-form-input h-8 w-auto min-w-[9rem] text-xs"
+          value={filters.teamId}
+          onChange={(event) => onFiltersChange({ teamId: event.target.value })}
+          aria-label="Filtrer gruppe"
+        >
+          <option value="">Alle grupper</option>
+          <option value={ADMIN_USERS_NO_TEAM_FILTER}>Uden gruppe</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="wire-form-input h-8 w-auto min-w-[7.5rem] text-xs"
+          value={filters.status}
+          onChange={(event) => onFiltersChange({ status: event.target.value })}
+          aria-label="Filtrer status"
+        >
+          <option value="">Alle status</option>
+          <option value="active">Aktiv</option>
+          <option value="inactive">Inaktiv</option>
+        </select>
+        <select
+          className="wire-form-input h-8 w-auto min-w-[8rem] text-xs"
+          value={filters.sort}
+          onChange={(event) => onFiltersChange({ sort: event.target.value })}
+          aria-label="Sorter brugere"
+        >
+          <option value="name_asc">Navn (A–Å)</option>
+          <option value="name_desc">Navn (Å–A)</option>
+          <option value="email">E-mail</option>
+          <option value="role">Rolle</option>
+          <option value="status">Status</option>
+        </select>
+      </div>
+
       <div role="tabpanel">
-        <AdminUsersCompactTable
-          sections={tabSections}
-          ungrouped={grouped.ungrouped}
-          onEdit={onEdit}
-          onRemoveFromTeam={onRemoveFromTeam}
-          onAddToTeam={onAddToTeam}
-          showUngrouped={tab === "all"}
-        />
+        <div className="overflow-x-auto">
+          <div className="wire-table-wrap min-w-0 overflow-x-auto">
+            <div className="wire-table-scroll min-w-[40rem]">
+              <AdminUsersTableHead />
+              {users.length === 0 ? (
+                <p className="text-muted-foreground px-3.5 py-4 text-sm">
+                  Ingen brugere matcher filtrene.
+                </p>
+              ) : (
+                users.map((user) => (
+                  <AdminUserTableRow
+                    key={user.id}
+                    user={user}
+                    onEdit={onEdit}
+                    onRemoveFromTeam={onRemoveFromTeam}
+                    onAddToTeam={showAddToTeam ? onAddToTeam : undefined}
+                    removeTeamId={removeTeamId}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

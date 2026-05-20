@@ -179,6 +179,11 @@ class TicketPriorityUpdate(BaseModel):
     reason: str = Field(min_length=10, max_length=2000)
 
 
+class TicketTypeUpdate(BaseModel):
+    ticket_type: Literal["service_request", "incident", "problem"]
+    reason: str = Field(min_length=10, max_length=2000)
+
+
 class TicketMetadataUpdate(BaseModel):
     is_major: bool | None = None
     is_security_ticket: bool | None = None

@@ -72,48 +72,60 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
   return null;
 }
 
-/** @deprecated Use POST /api/auth/login — token is HttpOnly server-side. */
-export function setSession(_token: string, user: User) {
-  writeUserCookie(user);
+let clientSessionCache: User | null = null;
+
+/** In-memory display cache after `/api/auth/session` (roles come from API only). */
+export function setClientSessionCache(user: User | null) {
+  clientSessionCache = user;
 }
 
-/** Update `stardesk_user` after profile changes (avatar, etc.). */
-export function writeUserCookie(user: User) {
-  const maxAge = 60 * 60 * 12;
-  const secure = typeof window !== "undefined" && window.location.protocol === "https:";
-  const secureFlag = secure ? "; Secure" : "";
-  document.cookie = `${USER_COOKIE}=${encodeURIComponent(JSON.stringify(user))}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
+/** Fetch session from BFF (HttpOnly cookies). Call once on client mount where needed. */
+export async function hydrateClientSession(): Promise<User | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    const response = await fetch("/api/auth/session", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      clientSessionCache = null;
+      return null;
+    }
+    const body = (await response.json()) as { user?: User };
+    clientSessionCache = body.user ?? null;
+    return clientSessionCache;
+  } catch {
+    clientSessionCache = null;
+    return null;
+  }
 }
 
-export function clearSession() {
-  document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0`;
-  document.cookie = `${USER_COOKIE}=; path=/; max-age=0`;
-}
-
+/** @deprecated Token is HttpOnly — always null in the browser. */
 export function getClientToken(): string | null {
-  if (typeof document === "undefined") {
-    return null;
-  }
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${TOKEN_COOKIE}=`));
-  if (!match) {
-    return null;
-  }
-  return decodeURIComponent(match.split("=").slice(1).join("="));
+  return null;
 }
 
+/** Best-effort client user from hydrated cache; prefer `serverUser` props when available. */
 export function getClientUser(): User | null {
-  if (typeof document === "undefined") {
-    return null;
+  return clientSessionCache;
+}
+
+/** @deprecated Server sets HttpOnly cookies on login — use cache hydrate after profile API. */
+export function writeUserCookie(user: User) {
+  setClientSessionCache(user);
+}
+
+export async function clearSession() {
+  clientSessionCache = null;
+  if (typeof window !== "undefined") {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // ignore
+    }
   }
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${USER_COOKIE}=`));
-  if (!match) {
-    return null;
-  }
-  return parseUserFromCookie(match.split("=").slice(1).join("="));
 }
 
 export function isStaff(user: User | null): boolean {

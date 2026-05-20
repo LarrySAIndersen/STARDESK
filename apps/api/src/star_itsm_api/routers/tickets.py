@@ -43,6 +43,7 @@ from star_itsm_api.schemas.ticket import (
     TicketMetadataUpdate,
     TicketParentUpdate,
     TicketPriorityUpdate,
+    TicketTypeUpdate,
     TicketRead,
     TicketRelatedMajorCreate,
     TicketStatusUpdate,
@@ -835,6 +836,58 @@ async def update_ticket_priority(
             reason=reason,
         ),
     )
+    return await get_ticket(ticket_id, db, current_user)
+
+
+@router.patch("/{ticket_id}/ticket-type", response_model=TicketDetailRead)
+async def update_ticket_type(
+    ticket_id: uuid.UUID,
+    payload: TicketTypeUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketDetailRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+
+    previous_type = ticket.ticket_type
+    if payload.ticket_type == previous_type:
+        raise HTTPException(
+            status_code=400,
+            detail="Sagstype er uændret; angiv en ny type for at gemme.",
+        )
+
+    reason = payload.reason.strip()
+    if len(reason) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Begrundelse skal være mindst 10 tegn.",
+        )
+
+    now = datetime.now(UTC)
+    ticket.ticket_type = payload.ticket_type
+    await apply_sla_to_ticket(
+        db,
+        ticket,
+        start_at=ticket.created_at,
+    )
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=current_user.id,
+            event_type="ticket.type_changed",
+            payload={
+                "ticket_type": payload.ticket_type,
+                "previous_ticket_type": previous_type,
+                "reason": reason,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
     return await get_ticket(ticket_id, db, current_user)
 
 

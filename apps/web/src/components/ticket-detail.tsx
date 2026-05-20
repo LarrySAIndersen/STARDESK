@@ -17,6 +17,7 @@ import { TicketDetailActions } from "@/components/ticket-detail-actions";
 import { TicketSlackPush } from "@/components/ticket-slack-push";
 
 import { TicketHierarchySection } from "@/components/ticket-hierarchy-section";
+import { TicketDetailTopBand } from "@/components/ticket/ticket-detail-top-band";
 
 import { RoutingReadinessBanner } from "@/components/routing-readiness-banner";
 import { TicketIntelligencePanel } from "@/components/ticket-intelligence-panel";
@@ -128,13 +129,7 @@ function TicketMetadataCard({ ticket }: { ticket: TicketDetail }) {
 
   return (
 
-    <WireDetailCard title="Metadata">
-
-      <p className="text-star-navy mb-3 text-base font-semibold">
-
-        {ticket.reporter_display_name ?? "Ukendt"}
-
-      </p>
+    <WireDetailCard title="Detaljer">
 
       <dl>
 
@@ -358,7 +353,7 @@ export function TicketDetailView({
 
       ) : null}
 
-
+      {staff ? <TicketDetailTopBand ticket={ticket} /> : null}
 
       <header className="wire-card mb-0">
 
@@ -572,31 +567,23 @@ export function TicketDetailView({
 
           <TicketHierarchySection ticket={ticket} staffView={staff} />
 
-
-
-          {showLlmRail ? sidebarBlocks : null}
-
         </div>
 
-
-
-        {showLlmRail ? (
-
-          <aside className="detail-layout-rail" aria-label="Semantik og lethed">
-
+        <aside
+          className={
+            showLlmRail ? "detail-layout-rail space-y-4" : "space-y-4"
+          }
+          aria-label={showLlmRail ? "Semantik og tildeling" : "Sag metadata"}
+        >
+          {showLlmRail ? (
             <TicketIntelligencePanel
               ticketId={ticket.id}
               intelligence={ticket.intelligence!}
               routing={ticket.routing}
             />
-
-          </aside>
-
-        ) : (
-
-          <aside className="space-y-4">{sidebarBlocks}</aside>
-
-        )}
+          ) : null}
+          {sidebarBlocks}
+        </aside>
 
       </div>
 

@@ -23,7 +23,7 @@ export function SearchInput({
   return (
     <div className={cn("relative max-w-[360px]", className)}>
       <Search
-        className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+        className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-white/70"
         aria-hidden
       />
       <Input
@@ -33,7 +33,7 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
-        className="border-[var(--gray-border)] bg-white pl-9 shadow-none focus-visible:ring-star-blue/30"
+        className="wire-search-input border-star-navy bg-star-navy pl-9 text-white shadow-none placeholder:text-white/65 focus-visible:border-white/40 focus-visible:ring-white/20"
       />
     </div>
   );

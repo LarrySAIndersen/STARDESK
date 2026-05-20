@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Headset,
   Layers,
   LayoutDashboard,
   Library,
@@ -32,6 +33,9 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   if (href === "/tickets") {
     return pathname === "/tickets";
+  }
+  if (href === "/service-desk") {
+    return pathname === "/service-desk" || pathname.startsWith("/service-desk/");
   }
   if (href === "/tickets/new") {
     return pathname === "/tickets/new";
@@ -74,6 +78,9 @@ export function AgentSidebar({
 
   const items: NavItem[] = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    ...(staff
+      ? [{ href: "/service-desk", label: "Service Desk", icon: Headset }]
+      : []),
     { href: "/tickets", label: "Alle sager", icon: Ticket },
     { href: "/tickets/new", label: "Ny sag", icon: Plus },
     ...(staff ? [{ href: "/aktiver", label: "Aktiver", icon: Layers }] : []),

@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AgentShell } from "@/components/agent/agent-shell";
+import { ClientSessionHydrator } from "@/components/client-session-hydrator";
 import { CaseAssistantShellClient } from "@/components/portal/case-assistant-shell-client";
 import { SfChatShellClient } from "@/components/sf-chat/sf-chat-shell-client";
 import { SiteFooter } from "@/components/site-footer";
@@ -63,6 +64,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   if (isStaff(currentUser)) {
     return (
       <div className="flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <ClientSessionHydrator />
         <AgentShell user={currentUser} showUsersNav={showUsersNav}>
           {children}
         </AgentShell>
@@ -73,6 +75,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   return (
     <>
+      <ClientSessionHydrator />
       <SiteHeader user={currentUser} />
       <main id="main-content" tabIndex={-1} className="bg-background flex-1 outline-none">
         {children}
