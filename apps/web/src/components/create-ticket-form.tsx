@@ -17,8 +17,12 @@ import { TicketIntakeQuestions, type IntakeAnswers } from "@/components/ticket-i
 import { TicketTagsEmojiFields } from "@/components/ticket-tags-emoji-fields";
 import { assertNoCprInFreeText, validateCprOptional } from "@/lib/cpr";
 import { parseTagsInput } from "@/lib/ticket-tags";
-import { apiGet, apiPost, apiPostForm } from "@/lib/api";
-import type { Attachment } from "@/types/attachment";
+import {
+  PendingImageAttachments,
+  usePendingImageAttachments,
+} from "@/components/pending-image-attachments";
+import { apiGet, apiPost } from "@/lib/api";
+import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Category } from "@/types/category";
 import type { SubCause } from "@/types/sub-cause";
 import type { Ticket, TicketCreateInput } from "@/types/ticket";
@@ -90,7 +94,13 @@ export function CreateTicketForm({
   const [error, setError] = useState<string | null>(null);
   const [subCauses, setSubCauses] = useState<SubCause[]>([]);
   const [selectedSubCauseIds, setSelectedSubCauseIds] = useState<string[]>([]);
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const {
+    files: pendingAttachments,
+    onPaste: onDescriptionPaste,
+    removeAt: removeAttachmentAt,
+    addFiles: addAttachments,
+    clear: clearAttachments,
+  } = usePendingImageAttachments();
   const [tagsInput, setTagsInput] = useState("");
   const [emoji, setEmoji] = useState<string | null>(null);
   const [intakeAnswers, setIntakeAnswers] = useState<IntakeAnswers>({});
@@ -238,13 +248,8 @@ export function CreateTicketForm({
     };
     try {
       const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);
-      if (attachmentFile) {
-        const formData = new FormData();
-        formData.append("file", attachmentFile);
-        await apiPostForm<Attachment>(
-          `/api/v1/tickets/${ticket.id}/attachments`,
-          formData,
-        );
+      if (pendingAttachments.length > 0) {
+        await uploadTicketAttachments(ticket.id, pendingAttachments);
       }
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
@@ -313,6 +318,13 @@ export function CreateTicketForm({
                 rows={6}
                 className={textareaClassName}
                 {...register("description")}
+                onPaste={(event) => {
+                  onDescriptionPaste(event);
+                }}
+              />
+              <PendingImageAttachments
+                files={pendingAttachments}
+                onRemove={removeAttachmentAt}
               />
               {errors.description ? (
                 <p className="text-destructive text-sm">{errors.description.message}</p>
@@ -523,13 +535,19 @@ export function CreateTicketForm({
               <Input
                 id="attachment"
                 type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx"
+                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.doc,.docx,image/*"
+                multiple
                 onChange={(event) => {
-                  setAttachmentFile(event.target.files?.[0] ?? null);
+                  const chosen = event.target.files;
+                  if (chosen?.length) {
+                    addAttachments([...chosen]);
+                  }
+                  event.target.value = "";
                 }}
               />
               <p className="text-muted-foreground text-xs">
-                Filen virusscannes før sagsbehandlere kan åbne den. Max 10 MB.
+                Vælg filer eller indsæt billeder med Ctrl+V i beskrivelsen. Filer virusscannes
+                før sagsbehandlere kan åbne dem. Max 10 MB pr. fil.
               </p>
             </div>
           </section>

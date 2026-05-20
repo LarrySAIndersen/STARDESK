@@ -3,8 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import {
+  PendingImageAttachments,
+  usePendingImageAttachments,
+} from "@/components/pending-image-attachments";
 import { Button } from "@/components/ui/button";
 import { apiPost } from "@/lib/api";
+import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { TicketEmail } from "@/types/ticket";
 
 function formatDate(iso: string): string {
@@ -28,7 +33,10 @@ export function TicketEmailThread({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { files: pendingImages, onPaste, removeAt, clear, hasFiles } =
+    usePendingImageAttachments();
   const canReply = emails.length > 0;
+  const canSend = body.trim().length > 0 || hasFiles;
 
   const defaultRecipient = useMemo(() => {
     const lastInbound = [...emails].reverse().find((email) => email.direction === "inbound");
@@ -36,16 +44,26 @@ export function TicketEmailThread({
   }, [emails]);
 
   async function sendReply() {
+    if (!canSend) {
+      return;
+    }
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
+      const replyBody =
+        body.trim() ||
+        "(Vedhæftede billeder — se vedhæftninger på sagen)";
       await apiPost(`/api/v1/tickets/${ticketId}/email-reply`, {
-        body,
+        body: replyBody,
         to_email: toEmail.trim() || undefined,
       });
+      if (pendingImages.length > 0) {
+        await uploadTicketAttachments(ticketId, pendingImages);
+      }
       setBody("");
       setToEmail("");
+      clear();
       setNotice(`Svar sendt med sagsnummer ${ticketNumber}.`);
       router.refresh();
     } catch (err) {
@@ -98,12 +116,14 @@ export function TicketEmailThread({
           className="wire-form-input min-h-28"
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onPaste={onPaste}
           placeholder="Skriv svar til kunden..."
         />
+        <PendingImageAttachments files={pendingImages} onRemove={removeAt} />
         <Button
           type="button"
           className="wire-btn wire-btn-primary"
-          disabled={busy || !body.trim() || !canReply}
+          disabled={busy || !canSend || !canReply}
           onClick={() => void sendReply()}
         >
           {busy ? "Sender..." : "Send e-mail svar"}

@@ -27,6 +27,7 @@ ALLOWED_CONTENT_TYPES = frozenset(
         "image/jpeg",
         "image/png",
         "image/gif",
+        "image/webp",
         "text/plain",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

@@ -3,11 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  PendingImageAttachments,
+  usePendingImageAttachments,
+} from "@/components/pending-image-attachments";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiPost } from "@/lib/api";
+import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Comment, CommentVisibility } from "@/types/comment";
+
+const IMAGE_ONLY_COMMENT_BODY = "(Vedhæftede billeder)";
 
 export function CommentForm({
   ticketId,
@@ -31,24 +38,33 @@ export function CommentForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const showBroadcast = canBroadcastToChildren && childCount > 0;
+  const { files: pendingImages, onPaste, removeAt, clear, hasFiles } =
+    usePendingImageAttachments();
+
+  const canSubmit = body.trim().length > 0 || hasFiles;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!body.trim()) {
+    if (!canSubmit) {
       return;
     }
     setIsSubmitting(true);
     setError(null);
     try {
+      const commentBody = body.trim() || IMAGE_ONLY_COMMENT_BODY;
       await apiPost<Comment>(`/api/v1/tickets/${ticketId}/comments`, {
-        body,
+        body: commentBody,
         visibility: staffMode ? visibility : "external",
         is_internal: staffMode ? visibility === "internal" : false,
         broadcast_to_children: showBroadcast && broadcastToChildren,
       });
+      if (pendingImages.length > 0) {
+        await uploadTicketAttachments(ticketId, pendingImages);
+      }
       setBody("");
       setVisibility("external");
       setBroadcastToChildren(false);
+      clear();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme kommentar");
@@ -124,6 +140,7 @@ export function CommentForm({
           rows={4}
           value={body}
           onChange={(event) => setBody(event.target.value)}
+          onPaste={onPaste}
           placeholder={
             staffMode
               ? visibility === "internal"
@@ -132,6 +149,7 @@ export function CommentForm({
               : "Skriv en opdatering…"
           }
         />
+        <PendingImageAttachments files={pendingImages} onRemove={removeAt} />
       </div>
 
       {showBroadcast ? (
@@ -158,7 +176,7 @@ export function CommentForm({
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button
         type="submit"
-        disabled={isSubmitting || !body.trim()}
+        disabled={isSubmitting || !canSubmit}
         className={primaryNavy ? "bg-star-navy hover:bg-star-blue w-full rounded-sm" : undefined}
       >
         {isSubmitting ? "Gemmer…" : staffMode ? "Gem opdatering" : "Tilføj besked"}
