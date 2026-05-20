@@ -104,6 +104,13 @@ from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket
 from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
 from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
 from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
+from star_itsm_api.services.ticket_notifications import (
+    build_assignment_notification,
+    build_comment_notification,
+    build_priority_notification,
+    build_status_notification,
+    notify_reporter_of_ticket_update,
+)
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,
     maybe_set_assigned_at,
@@ -691,6 +698,15 @@ async def update_ticket_status(
     )
     await db.commit()
     await db.refresh(ticket)
+    await notify_reporter_of_ticket_update(
+        db,
+        ticket=ticket,
+        actor=current_user,
+        notification=build_status_notification(
+            previous_status=previous_status,
+            new_status=payload.status,
+        ),
+    )
     return await ticket_to_read(db, ticket)
 
 
@@ -801,6 +817,16 @@ async def update_ticket_priority(
         )
     )
     await db.commit()
+    await notify_reporter_of_ticket_update(
+        db,
+        ticket=ticket,
+        actor=current_user,
+        notification=build_priority_notification(
+            previous_priority=previous_priority,
+            new_priority=payload.priority,
+            reason=reason,
+        ),
+    )
     return await get_ticket(ticket_id, db, current_user)
 
 
@@ -1067,8 +1093,19 @@ async def assign_ticket(
             created_at=now,
         )
     )
+    assignment_changed = previous != {
+        "assigned_team_id": str(team_id) if team_id else None,
+        "assigned_user_id": str(user_id) if user_id else None,
+    }
     await db.commit()
     await db.refresh(ticket)
+    if assignment_changed:
+        await notify_reporter_of_ticket_update(
+            db,
+            ticket=ticket,
+            actor=current_user,
+            notification=build_assignment_notification(),
+        )
     return await get_ticket(ticket_id, db, current_user)
 
 
@@ -1171,6 +1208,14 @@ async def create_comment(
     )
     await db.commit()
     await db.refresh(comment)
+    if not is_internal:
+        actor_name = current_user.display_name or "STARdesk"
+        await notify_reporter_of_ticket_update(
+            db,
+            ticket=ticket,
+            actor=current_user,
+            notification=build_comment_notification(actor_name=actor_name),
+        )
     read = await _comment_to_read(db, comment, hide_internal=False)
     assert read is not None
     summaries = await load_reaction_summaries(db, [read.id], current_user_id=current_user.id)
