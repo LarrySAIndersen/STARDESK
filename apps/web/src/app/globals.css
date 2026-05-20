@@ -73,6 +73,26 @@
   --wire-font-weight-display: 700;
   --wire-line-height-body: 1.5;
   --wire-lead-max-width: 42rem;
+
+  /* Aktiver / Verdenskort — category accents (STAR palette) */
+  --asset-cat-platform: #1b3a6b;
+  --asset-cat-platform-light: #3b5a95;
+  --asset-cat-platform-muted: #e8eef7;
+  --asset-cat-infra: #4a6278;
+  --asset-cat-infra-light: #7a94ab;
+  --asset-cat-infra-muted: #e8ecef;
+  --asset-cat-integration: #1a7a72;
+  --asset-cat-integration-light: #3da89e;
+  --asset-cat-integration-muted: #e6f5f3;
+  --asset-cat-business: #5a4a8c;
+  --asset-cat-business-light: #8b7bb8;
+  --asset-cat-business-muted: #eeeaf5;
+  --asset-cat-security: #c8102e;
+  --asset-cat-security-light: #e85a6f;
+  --asset-cat-security-muted: #fdeaed;
+  --asset-cat-ops: #1a7a44;
+  --asset-cat-ops-light: #3da86a;
+  --asset-cat-ops-muted: #e6f5ec;
 }
 
 .dark {
@@ -519,7 +539,19 @@
   }
 
   .wire-asset-row--active {
-    @apply bg-star-blue-light text-star-navy border-star-red border-l-[3px] font-semibold;
+    @apply font-semibold;
+    background-color: var(--wire-asset-category-muted, var(--star-blue-light));
+    color: var(--wire-asset-category-color, var(--star-navy));
+    border-left-color: var(--wire-asset-category-color, var(--star-red));
+    border-left-width: 3px;
+  }
+
+  .wire-asset-category-group .wire-asset-row--system {
+    border-left-color: transparent;
+  }
+
+  .wire-asset-category-group .wire-asset-row--active.wire-asset-row--system {
+    border-left-color: var(--wire-asset-category-color, var(--star-red));
   }
 
   .wire-asset-row--hidden {
@@ -566,16 +598,42 @@
     @apply text-star-navy text-[10px] font-medium underline-offset-2 hover:underline;
   }
 
+  .wire-assets-page {
+    @apply gap-0;
+  }
+
   .wire-assets-layout {
-    @apply min-h-[min(70vh,640px)];
+    @apply min-h-[min(70vh,640px)] flex-1;
   }
 
   .wire-assets-card--tree {
-    @apply rounded-r-none border-r-0;
+    @apply shadow-sm;
   }
 
   .wire-assets-card--graph {
-    @apply rounded-l-none;
+    @apply shadow-sm;
+  }
+
+  .wire-asset-category-group {
+    border-left: 3px solid var(--wire-asset-category-color, var(--gray-border));
+  }
+
+  .wire-asset-category-marker {
+    @apply my-1.5 ml-1 mr-0.5 inline-block size-2 rounded-full;
+    background-color: var(--wire-asset-category-color, var(--star-navy));
+  }
+
+  .wire-asset-category-chip {
+    @apply inline-flex max-w-full items-center gap-1 truncate rounded-sm border border-[var(--gray-border)] bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[var(--star-text-muted)];
+  }
+
+  .wire-asset-category-chip-dot {
+    @apply size-1.5 shrink-0 rounded-full;
+    background-color: var(--wire-asset-category-color, var(--star-navy));
+  }
+
+  .wire-asset-graph-legend {
+    @apply flex shrink-0 flex-wrap gap-1 border-t border-[var(--gray-border)] bg-[var(--gray-bg)] px-2 py-2;
   }
 
   .wire-asset-graph-toggle {
@@ -583,11 +641,11 @@
   }
 
   .wire-asset-graph {
-    @apply relative min-h-0 flex-1 bg-[#f8f9fc];
+    @apply relative min-h-0 flex-1 bg-[var(--gray-bg)];
   }
 
   .wire-asset-graph-canvas {
-    @apply relative overflow-hidden touch-none;
+    @apply relative overflow-hidden touch-none px-1 pb-1;
     cursor: grab;
   }
 
@@ -607,8 +665,6 @@
   }
 
   .wire-asset-graph-edge--active {
-    stroke: var(--star-red);
-    stroke-width: 2;
     opacity: 1;
   }
 
@@ -617,25 +673,7 @@
   }
 
   .wire-asset-graph-bubble {
-    stroke: var(--star-navy);
-    stroke-width: 2;
-    filter: drop-shadow(0 2px 4px rgb(27 58 107 / 0.12));
-  }
-
-  .wire-asset-graph-node--sub .wire-asset-graph-bubble {
-    stroke: var(--star-blue);
-    stroke-width: 1.5;
-  }
-
-  .wire-asset-graph-node--selected .wire-asset-graph-bubble {
-    stroke: var(--star-red);
-    stroke-width: 3;
-  }
-
-  .wire-asset-graph-node--neighbor .wire-asset-graph-bubble {
-    stroke: var(--star-red);
-    stroke-width: 2;
-    stroke-dasharray: 4 2;
+    filter: drop-shadow(0 2px 4px rgb(27 58 107 / 0.14));
   }
 
   .wire-asset-graph-node--dim {
@@ -643,7 +681,6 @@
   }
 
   .wire-asset-graph-label {
-    fill: white;
     font-size: 9px;
     font-weight: 600;
     pointer-events: none;
@@ -651,7 +688,6 @@
   }
 
   .wire-asset-graph-node--sub .wire-asset-graph-label {
-    fill: var(--star-navy);
     font-size: 8px;
   }
 

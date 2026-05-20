@@ -1,5 +1,65 @@
 import type { AssetSystem } from "@/types/asset";
 
+/** Top-level CMDB category — drives graph + tree accent colors. */
+export type AssetCategorySystemId =
+  | "sys-star-platform"
+  | "sys-infrastruktur"
+  | "sys-integration"
+  | "sys-forretning"
+  | "sys-sikkerhed"
+  | "sys-drift";
+
+export interface AssetCategoryColor {
+  /** CSS color for system nodes and active accents */
+  base: string;
+  /** Lighter fill for subsystem nodes */
+  light: string;
+  /** Sidebar chip / marker background */
+  muted: string;
+  /** Human-readable category label */
+  label: string;
+}
+
+/** STAR palette — one distinct hue per top-level category. */
+export const ASSET_CATEGORY_COLORS: Record<AssetCategorySystemId, AssetCategoryColor> = {
+  "sys-star-platform": {
+    label: "STAR Platform",
+    base: "var(--asset-cat-platform)",
+    light: "var(--asset-cat-platform-light)",
+    muted: "var(--asset-cat-platform-muted)",
+  },
+  "sys-infrastruktur": {
+    label: "Infrastruktur",
+    base: "var(--asset-cat-infra)",
+    light: "var(--asset-cat-infra-light)",
+    muted: "var(--asset-cat-infra-muted)",
+  },
+  "sys-integration": {
+    label: "Integration",
+    base: "var(--asset-cat-integration)",
+    light: "var(--asset-cat-integration-light)",
+    muted: "var(--asset-cat-integration-muted)",
+  },
+  "sys-forretning": {
+    label: "Forretningsapplikationer",
+    base: "var(--asset-cat-business)",
+    light: "var(--asset-cat-business-light)",
+    muted: "var(--asset-cat-business-muted)",
+  },
+  "sys-sikkerhed": {
+    label: "Sikkerhed",
+    base: "var(--asset-cat-security)",
+    light: "var(--asset-cat-security-light)",
+    muted: "var(--asset-cat-security-muted)",
+  },
+  "sys-drift": {
+    label: "Drift & overvågning",
+    base: "var(--asset-cat-ops)",
+    light: "var(--asset-cat-ops-light)",
+    muted: "var(--asset-cat-ops-muted)",
+  },
+};
+
 /** Static CMDB hierarchy until assets are persisted in the database. */
 export const MOCK_ASSET_SYSTEMS: AssetSystem[] = [
   {
@@ -63,6 +123,23 @@ export const MOCK_ASSET_SYSTEMS: AssetSystem[] = [
     ],
   },
 ];
+
+export function getAssetCategorySystemId(assetId: string): AssetCategorySystemId | null {
+  if (assetId in ASSET_CATEGORY_COLORS) {
+    return assetId as AssetCategorySystemId;
+  }
+  for (const system of MOCK_ASSET_SYSTEMS) {
+    if (system.subsystems.some((s) => s.id === assetId)) {
+      return system.id as AssetCategorySystemId;
+    }
+  }
+  return null;
+}
+
+export function getAssetCategoryColor(assetId: string): AssetCategoryColor | null {
+  const categoryId = getAssetCategorySystemId(assetId);
+  return categoryId ? ASSET_CATEGORY_COLORS[categoryId] : null;
+}
 
 export function findAssetById(assetId: string): { label: string; system: AssetSystem } | null {
   for (const system of MOCK_ASSET_SYSTEMS) {

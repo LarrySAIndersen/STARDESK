@@ -13,6 +13,10 @@ import {
   mergeNodePositions,
   saveGraphLayout,
 } from "@/lib/asset-graph";
+import {
+  ASSET_CATEGORY_COLORS,
+  type AssetCategorySystemId,
+} from "@/lib/mock-assets";
 import { cn } from "@/lib/utils";
 import type { AssetGraphLayout } from "@/lib/asset-graph";
 import type { AssetGraphNode } from "@/types/asset";
@@ -35,6 +39,10 @@ function truncateLabel(label: string, maxLen: number): string {
 
 function nodeById(nodes: AssetGraphNode[], id: string): AssetGraphNode | undefined {
   return nodes.find((n) => n.id === id);
+}
+
+function categoryTheme(categorySystemId: string) {
+  return ASSET_CATEGORY_COLORS[categorySystemId as AssetCategorySystemId];
 }
 
 function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } {
@@ -263,17 +271,6 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
             transformOrigin: "center center",
           }}
         >
-          <defs>
-            <radialGradient id="wire-bubble-system" cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="var(--star-blue-light)" />
-              <stop offset="100%" stopColor="var(--star-navy)" />
-            </radialGradient>
-            <radialGradient id="wire-bubble-sub" cx="35%" cy="30%" r="70%">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="var(--star-blue)" />
-            </radialGradient>
-          </defs>
-
           <g className="wire-asset-graph-edges">
             {graph.edges.map((edge) => {
               const source = nodeById(positionedNodes, edge.source);
@@ -284,6 +281,13 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
                 selectedId && (edge.source === selectedId || edge.target === selectedId);
 
               const dimmed = selectedId && !active;
+              const accentNode =
+                edge.source === selectedId
+                  ? target
+                  : edge.target === selectedId
+                    ? source
+                    : source;
+              const accentTheme = categoryTheme(accentNode.categorySystemId);
 
               return (
                 <line
@@ -297,6 +301,11 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
                     active && "wire-asset-graph-edge--active",
                     dimmed && "wire-asset-graph-edge--dim",
                   )}
+                  style={
+                    active
+                      ? { stroke: accentTheme.base, strokeWidth: 2, opacity: 1 }
+                      : undefined
+                  }
                 />
               );
             })}
@@ -309,6 +318,10 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
               const dimmed = selectedId && !highlightIds.has(node.id);
               const isSystem = node.kind === "system";
               const maxLabel = isSystem ? 14 : 11;
+              const theme = categoryTheme(node.categorySystemId);
+              const fill = isSystem ? theme.base : theme.light;
+              const stroke = theme.base;
+              const labelFill = isSystem ? "#ffffff" : theme.base;
 
               return (
                 <g
@@ -343,13 +356,17 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
                   <circle
                     r={node.radius}
                     className="wire-asset-graph-bubble"
-                    fill={isSystem ? "url(#wire-bubble-system)" : "url(#wire-bubble-sub)"}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={isSelected ? 3 : isNeighbor ? 2 : isSystem ? 2 : 1.5}
+                    strokeDasharray={isNeighbor ? "4 2" : undefined}
                   />
                   <text
                     className="wire-asset-graph-label"
                     textAnchor="middle"
                     dominantBaseline="middle"
                     y={isSystem ? 1 : 0}
+                    fill={labelFill}
                   >
                     {truncateLabel(node.label, maxLabel)}
                   </text>

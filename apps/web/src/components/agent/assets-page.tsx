@@ -36,7 +36,7 @@ export function AssetsPage() {
   );
 
   return (
-    <div className="wire-scroll-content flex min-h-0 flex-1 flex-col p-5">
+    <div className="wire-scroll-content wire-assets-page flex min-h-0 flex-1 flex-col p-5">
       <p className="wire-page-lead mb-4">
         Udforsk STAR&apos;s aktiver som et verdenskort — træk bobler, skjul kategorier i listen,
         og klik for CMDB-detaljer. Data er midlertidigt statisk, indtil aktiver er gemt i databasen.
@@ -62,9 +62,9 @@ export function AssetsPage() {
         </span>
       </div>
 
-      <div className="wire-assets-layout flex min-h-0 flex-1 gap-0 overflow-hidden">
+      <div className="wire-assets-layout flex min-h-0 flex-1 gap-3 overflow-hidden">
         {showTree ? (
-          <div className="wire-assets-card wire-assets-card--tree flex w-full max-w-[240px] shrink-0 flex-col">
+          <div className="wire-assets-card wire-assets-card--tree flex w-full max-w-[260px] shrink-0 flex-col">
             <Suspense fallback={<div className="wire-asset-panel-header">Aktiver</div>}>
               <AssetTree
                 showHeader
@@ -81,7 +81,7 @@ export function AssetsPage() {
 
         <div
           className={cn(
-            "wire-assets-card wire-assets-card--graph relative flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden",
+            "wire-assets-card wire-assets-card--graph relative flex min-h-[min(70vh,640px)] min-w-0 flex-1 flex-col overflow-hidden",
           )}
         >
           <AssetGraphNetwork

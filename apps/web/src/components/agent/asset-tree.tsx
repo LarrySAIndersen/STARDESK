@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Layers } from "lucide-react";
 
 import { getAllAssetIds, getSystemVisibilityState } from "@/lib/asset-graph";
-import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
+import {
+  ASSET_CATEGORY_COLORS,
+  MOCK_ASSET_SYSTEMS,
+  type AssetCategorySystemId,
+} from "@/lib/mock-assets";
 import { cn } from "@/lib/utils";
 import type { AssetSelection, AssetSubsystem, AssetSystem } from "@/types/asset";
 
@@ -215,6 +219,8 @@ export function AssetTree({
               ? getSystemVisibilityState(system.id, visibleIds!)
               : "all";
             const systemOnGraph = systemVis !== "none";
+            const categoryTheme =
+              ASSET_CATEGORY_COLORS[system.id as AssetCategorySystemId];
 
             return (
               <li
@@ -222,8 +228,16 @@ export function AssetTree({
                 role="treeitem"
                 aria-expanded={isOpen}
                 aria-selected={systemSelected}
+                className="wire-asset-category-group"
+                style={
+                  {
+                    "--wire-asset-category-color": categoryTheme.base,
+                    "--wire-asset-category-muted": categoryTheme.muted,
+                  } as CSSProperties
+                }
               >
                 <div className="flex min-w-0 items-stretch">
+                  <span className="wire-asset-category-marker" aria-hidden />
                   <button
                     type="button"
                     className="wire-asset-expand"
@@ -296,6 +310,23 @@ export function AssetTree({
           })}
         </ul>
       </div>
+      {graphMode && compact ? (
+        <div className="wire-asset-graph-legend" aria-label="Kategorifarver">
+          {MOCK_ASSET_SYSTEMS.map((system) => {
+            const theme = ASSET_CATEGORY_COLORS[system.id as AssetCategorySystemId];
+            return (
+              <span
+                key={system.id}
+                className="wire-asset-category-chip"
+                style={{ "--wire-asset-category-color": theme.base } as CSSProperties}
+              >
+                <span className="wire-asset-category-chip-dot" aria-hidden />
+                {theme.label}
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
       {detailLabel && !compact ? (
         <footer className="wire-asset-detail">
           <p className="wire-asset-detail-label">{detailLabel}</p>

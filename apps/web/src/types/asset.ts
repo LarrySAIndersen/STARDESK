@@ -42,6 +42,8 @@ export interface AssetGraphNode {
   id: string;
   label: string;
   kind: AssetKind;
+  /** Top-level system id for category coloring */
+  categorySystemId: string;
   x: number;
   y: number;
   radius: number;
