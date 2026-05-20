@@ -86,7 +86,7 @@ from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
 from star_itsm_api.services.teams import user_in_team
-from star_itsm_api.services.reports import is_reopen_transition
+from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.services.attachments import (
     list_ticket_attachments_for_detail,
@@ -337,7 +337,8 @@ async def list_tickets(
             if not is_staff_role(current_user):
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
             stmt = stmt.where(Ticket.is_major.is_(True))
-            stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+            # Match dashboard major_open_count (OPEN_STATUSES, not merely non-closed).
+            stmt = stmt.where(Ticket.status.in_(tuple(OPEN_STATUSES)))
         elif store_sager and current_user.role != ROLE_SUBMITTER:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         elif current_user.role == ROLE_AGENT and not dashboard_filters:

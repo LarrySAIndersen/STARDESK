@@ -22,6 +22,7 @@ import {
   dashboardFilterTitle,
   hasTicketsUrlFilters,
 } from "@/lib/tickets-api-query";
+import { isOpenTicketStatus } from "@/lib/ticket-open-status";
 import type { Ticket } from "@/types/ticket";
 
 function pickParam(
@@ -128,7 +129,7 @@ export function TicketsListClient({
       if (openOnly && ["resolved", "closed", "cancelled"].includes(t.status)) {
         return false;
       }
-      if (majorOpen && !t.is_major) return false;
+      if (majorOpen && (!t.is_major || !isOpenTicketStatus(t.status))) return false;
       if (sla === "overdue" && !t.sla_breached) return false;
       if (sla === "due_soon") {
         const remaining = t.sla_remaining_seconds;
