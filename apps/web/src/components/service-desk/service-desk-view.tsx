@@ -23,6 +23,7 @@ import {
   filterByServiceDeskQueue,
   isOpenTicket,
   paginateTickets,
+  serviceDeskTeamIds,
   ticketsForServiceDeskTable,
   ticketsForServiceDeskTeamRail,
   type ServiceDeskQueueFilter,
@@ -95,20 +96,10 @@ export function ServiceDeskView({
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [ticketOverrides, setTicketOverrides] = useState<Record<string, Partial<Ticket>>>({});
-
-  const effectiveTickets = useMemo(() => {
-    if (Object.keys(ticketOverrides).length === 0) {
-      return tickets;
-    }
-    return tickets.map((ticket) => {
-      const patch = ticketOverrides[ticket.id];
-      return patch ? { ...ticket, ...patch } : ticket;
-    });
-  }, [tickets, ticketOverrides]);
+  const [localTickets, setLocalTickets] = useState<Ticket[]>(tickets);
 
   useEffect(() => {
-    setTicketOverrides({});
+    setLocalTickets(tickets);
   }, [tickets]);
 
   const internalTeams = useMemo(() => {
@@ -116,9 +107,11 @@ export function ServiceDeskView({
     return sortTeamsForDisplay(internal);
   }, [teams]);
 
+  const deskTeamIds = useMemo(() => serviceDeskTeamIds(internalTeams), [internalTeams]);
+
   const queueTickets = useMemo(
-    () => filterByServiceDeskQueue(effectiveTickets, queue),
-    [effectiveTickets, queue],
+    () => filterByServiceDeskQueue(localTickets, queue, deskTeamIds),
+    [localTickets, queue, deskTeamIds],
   );
 
   const openTickets = useMemo(() => {
@@ -127,10 +120,10 @@ export function ServiceDeskView({
     return sortServiceDeskTable(filtered, tableFilters.sort);
   }, [queueTickets, search, tableFilters]);
 
-  /** Venstre tabel: kun kø/desk — tildelte teams vises kun i gruppe-rail. */
+  /** Venstre tabel: kun kø/desk — aldrig samme sag som i gruppe-rail. */
   const tableTickets = useMemo(
-    () => ticketsForServiceDeskTable(openTickets),
-    [openTickets],
+    () => ticketsForServiceDeskTable(openTickets, deskTeamIds),
+    [openTickets, deskTeamIds],
   );
 
   const filterOptions = useMemo(
@@ -146,15 +139,15 @@ export function ServiceDeskView({
   );
 
   const railTeamTickets = useMemo(() => {
-    const open = effectiveTickets.filter(isOpenTicket);
+    const open = localTickets.filter(isOpenTicket);
     const searched = open.filter((t) => ticketMatchesSearch(t, search));
     const pool =
       queue === "teams"
-        ? filterByServiceDeskQueue(searched, "teams")
-        : ticketsForServiceDeskTeamRail(searched);
+        ? filterByServiceDeskQueue(searched, "teams", deskTeamIds)
+        : ticketsForServiceDeskTeamRail(searched, deskTeamIds);
     const filtered = applyServiceDeskTableFilters(pool, tableFilters);
     return sortServiceDeskTable(filtered, tableFilters.sort);
-  }, [effectiveTickets, search, tableFilters, queue]);
+  }, [localTickets, search, tableFilters, queue, deskTeamIds]);
 
   const ticketsByTeam = useMemo(
     () => buildTicketsByTeam(railTeamTickets),
@@ -162,22 +155,22 @@ export function ServiceDeskView({
   );
 
   const deskCount = useMemo(
-    () => filterByServiceDeskQueue(effectiveTickets, "desk").length,
-    [effectiveTickets],
+    () => filterByServiceDeskQueue(localTickets, "desk", deskTeamIds).length,
+    [localTickets, deskTeamIds],
   );
   const overdueDesk = useMemo(
     () =>
-      filterByServiceDeskQueue(effectiveTickets, "desk").filter((t) =>
+      filterByServiceDeskQueue(localTickets, "desk", deskTeamIds).filter((t) =>
         Boolean(t.sla_breached),
       ).length,
-    [effectiveTickets],
+    [localTickets, deskTeamIds],
   );
   const criticalHighDesk = useMemo(
     () =>
-      filterByServiceDeskQueue(effectiveTickets, "desk").filter((t) =>
+      filterByServiceDeskQueue(localTickets, "desk", deskTeamIds).filter((t) =>
         ["critical", "high"].includes(t.priority),
       ).length,
-    [effectiveTickets],
+    [localTickets, deskTeamIds],
   );
 
   const total = tableTickets.length;
@@ -228,14 +221,20 @@ export function ServiceDeskView({
         fault_displayed: data.faultDisplayed,
       });
       const team = internalTeams.find((t) => t.id === data.teamId);
-      setTicketOverrides((prev) => ({
-        ...prev,
-        [pending.ticketId]: {
-          assigned_team_id: data.teamId,
-          assigned_team_name: team?.name ?? pending.teamName ?? null,
-          assigned_user_id: null,
-        },
-      }));
+      const teamName = team?.name ?? pending.teamName ?? null;
+      setLocalTickets((prev) =>
+        prev.map((ticket) =>
+          ticket.id === pending.ticketId
+            ? {
+                ...ticket,
+                assigned_team_id: data.teamId,
+                assigned_team_name: teamName,
+                assigned_user_id: null,
+                status: ticket.status === "new" ? "assigned" : ticket.status,
+              }
+            : ticket,
+        ),
+      );
       setPending(null);
       router.refresh();
     } catch (err) {
@@ -329,8 +328,8 @@ export function ServiceDeskView({
 
           <p className="text-muted-foreground shrink-0 text-xs">
             {queue === "teams"
-              ? "Sager ude i teams vises kun under den pågældende gruppe til højre — brug søgning og kolonne-filtre der."
-              : "Listen viser kun sager i service desk-køen. Efter tildeling til en gruppe forsvinder sagen her og vises kun under gruppen til højre."}
+              ? "Sager tildelt en gruppe vises kun under den pågældende gruppe til højre."
+              : "Venstre liste: sager uden gruppe (eller på SF Service Desk). Træk til en gruppe — sagen forsvinder her og vises under gruppen til højre."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -344,7 +343,7 @@ export function ServiceDeskView({
             ) : null}
             <WireframeTicketTable
               tickets={pageTickets}
-              draggable={queue !== "teams"}
+              draggable={queue !== "teams" && tableTickets.length > 0}
               columnFilters={
                 <TicketTableColumnFilters
                   filters={tableFilters}

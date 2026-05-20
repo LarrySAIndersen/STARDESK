@@ -1,4 +1,5 @@
 import type { Ticket } from "@/types/ticket";
+import type { Team } from "@/types/team";
 
 export const SERVICE_DESK_TEAM_NAME = "SF Service Desk";
 
@@ -15,51 +16,77 @@ export function isOpenTicket(ticket: Ticket): boolean {
   return !["closed", "cancelled"].includes(ticket.status);
 }
 
-/** In service desk queue: unassigned or explicitly on SF Service Desk team. */
-export function isInServiceDeskQueue(ticket: Ticket): boolean {
+/** IDs for teams that count as the service-desk queue (not a distribution target). */
+export function serviceDeskTeamIds(teams: Team[]): Set<string> {
+  return new Set(
+    teams
+      .filter((t) => t.name === SERVICE_DESK_TEAM_NAME || t.name === "Service Desk")
+      .map((t) => t.id),
+  );
+}
+
+/**
+ * Venstre tabel / service desk-kø: ingen gruppe, eller kun SF Service Desk.
+ * Alle andre grupper (SF, Infrastruktur, osv.) vises kun i gruppe-rail.
+ */
+export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
   if (!ticket.assigned_team_id) {
     return true;
+  }
+  if (deskTeamIds && deskTeamIds.size > 0) {
+    return deskTeamIds.has(ticket.assigned_team_id);
   }
   const name = ticket.assigned_team_name?.trim() ?? "";
   return name === SERVICE_DESK_TEAM_NAME || name === "Service Desk";
 }
 
-export function isInTeamsQueue(ticket: Ticket): boolean {
+/** Tildelt en operativ gruppe (vises i højre rail). */
+export function isInTeamsQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
   if (!ticket.assigned_team_id) {
     return false;
   }
-  return !isInServiceDeskQueue(ticket);
+  return !isInServiceDeskQueue(ticket, deskTeamIds);
 }
 
-/** Main table: distribution queue only (not assigned to an operational team). */
-export function ticketsForServiceDeskTable(tickets: Ticket[]): Ticket[] {
-  return tickets.filter(isInServiceDeskQueue);
+/** Main table: distribution queue only. */
+export function ticketsForServiceDeskTable(
+  tickets: Ticket[],
+  deskTeamIds?: Set<string>,
+): Ticket[] {
+  return tickets.filter((t) => isInServiceDeskQueue(t, deskTeamIds));
 }
 
 /** Right rail: tickets assigned to internal teams (excludes desk queue). */
-export function ticketsForServiceDeskTeamRail(tickets: Ticket[]): Ticket[] {
-  return tickets.filter(isInTeamsQueue);
+export function ticketsForServiceDeskTeamRail(
+  tickets: Ticket[],
+  deskTeamIds?: Set<string>,
+): Ticket[] {
+  return tickets.filter((t) => isInTeamsQueue(t, deskTeamIds));
 }
 
 export function filterByServiceDeskQueue(
   tickets: Ticket[],
   queue: ServiceDeskQueueFilter,
+  deskTeamIds?: Set<string>,
 ): Ticket[] {
   const open = tickets.filter(isOpenTicket);
   if (queue === "all") {
     return open;
   }
   if (queue === "desk") {
-    return open.filter(isInServiceDeskQueue);
+    return open.filter((t) => isInServiceDeskQueue(t, deskTeamIds));
   }
-  return open.filter(isInTeamsQueue);
+  return open.filter((t) => isInTeamsQueue(t, deskTeamIds));
 }
 
 /** Undistributed desk first, then P1/P2, then oldest created_at. */
-export function sortServiceDeskQueue(tickets: Ticket[]): Ticket[] {
+export function sortServiceDeskQueue(
+  tickets: Ticket[],
+  deskTeamIds?: Set<string>,
+): Ticket[] {
   return [...tickets].sort((a, b) => {
-    const aDesk = isInServiceDeskQueue(a) ? 0 : 1;
-    const bDesk = isInServiceDeskQueue(b) ? 0 : 1;
+    const aDesk = isInServiceDeskQueue(a, deskTeamIds) ? 0 : 1;
+    const bDesk = isInServiceDeskQueue(b, deskTeamIds) ? 0 : 1;
     if (aDesk !== bDesk) {
       return aDesk - bDesk;
     }
