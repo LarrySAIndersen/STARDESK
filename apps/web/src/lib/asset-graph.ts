@@ -1,8 +1,9 @@
 import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
 import type { AssetGraphData, AssetGraphEdge, AssetGraphNode } from "@/types/asset";
+import type { AssetSystem } from "@/types/asset";
 
 /** World-map region anchors (viewBox 0–1000 × 760). */
-const SYSTEM_ANCHORS: Record<string, { x: number; y: number }> = {
+export const SYSTEM_ANCHORS: Record<string, { x: number; y: number }> = {
   "sys-star-platform": { x: 500, y: 360 },
   "sys-infrastruktur": { x: 185, y: 400 },
   "sys-integration": { x: 815, y: 400 },
@@ -68,10 +69,36 @@ function subsystemPosition(
   };
 }
 
-export function buildAssetGraph(): AssetGraphData {
+function edgesForSystems(
+  systems: AssetSystem[],
+  extraEdges: AssetGraphEdge[] = [],
+): AssetGraphEdge[] {
+  const nodeIds = new Set<string>();
+  for (const system of systems) {
+    nodeIds.add(system.id);
+    for (const sub of system.subsystems) nodeIds.add(sub.id);
+  }
+  const base = MOCK_ASSET_EDGES.filter(
+    (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
+  );
+  const custom = extraEdges.filter(
+    (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
+  );
+  const seen = new Set<string>();
+  return [...base, ...custom].filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
+}
+
+export function buildAssetGraph(
+  systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
+  extraEdges: AssetGraphEdge[] = [],
+): AssetGraphData {
   const nodes: AssetGraphNode[] = [];
 
-  for (const system of MOCK_ASSET_SYSTEMS) {
+  for (const system of systems) {
     const anchor = SYSTEM_ANCHORS[system.id] ?? { x: 500, y: 400 };
     nodes.push({
       id: system.id,
@@ -97,7 +124,7 @@ export function buildAssetGraph(): AssetGraphData {
     });
   }
 
-  return { nodes, edges: MOCK_ASSET_EDGES };
+  return { nodes, edges: edgesForSystems(systems, extraEdges) };
 }
 
 export function getGraphNeighborIds(assetId: string, edges = MOCK_ASSET_EDGES): Set<string> {
@@ -121,9 +148,9 @@ export function getDefaultNodePositions(graph: AssetGraphData): AssetGraphLayout
   return positions;
 }
 
-export function getAllAssetIds(): string[] {
+export function getAllAssetIds(systems: AssetSystem[] = MOCK_ASSET_SYSTEMS): string[] {
   const ids: string[] = [];
-  for (const system of MOCK_ASSET_SYSTEMS) {
+  for (const system of systems) {
     ids.push(system.id);
     for (const sub of system.subsystems) {
       ids.push(sub.id);
@@ -193,8 +220,9 @@ export function filterGraphByVisibility(
 export function getSystemVisibilityState(
   systemId: string,
   visibleIds: Set<string>,
+  systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
 ): "all" | "some" | "none" {
-  const system = MOCK_ASSET_SYSTEMS.find((s) => s.id === systemId);
+  const system = systems.find((s) => s.id === systemId);
   if (!system) return "none";
   const ids = [system.id, ...system.subsystems.map((sub) => sub.id)];
   const visibleCount = ids.filter((id) => visibleIds.has(id)).length;

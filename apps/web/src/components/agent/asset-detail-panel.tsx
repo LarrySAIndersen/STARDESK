@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 
+import { useAssetCatalog } from "@/components/agent/asset-catalog-context";
+import { MOCK_ASSET_EDGES } from "@/lib/asset-graph";
 import { getAssetDetail, getAssetLabel } from "@/lib/asset-details";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +21,10 @@ function statusClass(status: string): string {
 }
 
 export function AssetDetailPanel({ assetId, onClose, onNavigate }: AssetDetailPanelProps) {
-  const detail = assetId ? getAssetDetail(assetId) : null;
+  const { systems, extraEdges } = useAssetCatalog();
+  const detail = assetId
+    ? getAssetDetail(assetId, systems, [...MOCK_ASSET_EDGES, ...extraEdges])
+    : null;
   const open = Boolean(detail);
 
   return (
@@ -112,7 +117,7 @@ export function AssetDetailPanel({ assetId, onClose, onNavigate }: AssetDetailPa
                             className="wire-asset-related-link"
                             onClick={() => onNavigate(relatedId)}
                           >
-                            {getAssetLabel(relatedId)}
+                            {getAssetLabel(relatedId, systems)}
                           </button>
                         </li>
                       ))}

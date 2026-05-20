@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Globe2, ZoomIn, ZoomOut } from "lucide-react";
+import { Globe2, Plus, ZoomIn, ZoomOut } from "lucide-react";
+
+import { useAssetCatalog } from "@/components/agent/asset-catalog-context";
 
 import {
   buildAssetGraph,
@@ -13,10 +15,7 @@ import {
   mergeNodePositions,
   saveGraphLayout,
 } from "@/lib/asset-graph";
-import {
-  ASSET_CATEGORY_COLORS,
-  type AssetCategorySystemId,
-} from "@/lib/mock-assets";
+import { getCategoryTheme } from "@/lib/mock-assets";
 import { cn } from "@/lib/utils";
 import type { AssetGraphLayout } from "@/lib/asset-graph";
 import type { AssetGraphNode } from "@/types/asset";
@@ -30,6 +29,7 @@ interface AssetGraphNetworkProps {
   selectedId: string | null;
   onSelect: (assetId: string) => void;
   visibleIds: Set<string>;
+  onAddClick?: () => void;
 }
 
 function truncateLabel(label: string, maxLen: number): string {
@@ -39,10 +39,6 @@ function truncateLabel(label: string, maxLen: number): string {
 
 function nodeById(nodes: AssetGraphNode[], id: string): AssetGraphNode | undefined {
   return nodes.find((n) => n.id === id);
-}
-
-function categoryTheme(categorySystemId: string) {
-  return ASSET_CATEGORY_COLORS[categorySystemId as AssetCategorySystemId];
 }
 
 function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } {
@@ -55,8 +51,17 @@ function clientToSvg(svg: SVGSVGElement, clientX: number, clientY: number): { x:
   return { x: svgPt.x, y: svgPt.y };
 }
 
-export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGraphNetworkProps) {
-  const baseGraph = useMemo(() => buildAssetGraph(), []);
+export function AssetGraphNetwork({
+  selectedId,
+  onSelect,
+  visibleIds,
+  onAddClick,
+}: AssetGraphNetworkProps) {
+  const { systems, extraEdges } = useAssetCatalog();
+  const baseGraph = useMemo(
+    () => buildAssetGraph(systems, extraEdges),
+    [systems, extraEdges],
+  );
   const graph = useMemo(
     () => filterGraphByVisibility(baseGraph, visibleIds),
     [baseGraph, visibleIds],
@@ -214,7 +219,13 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
             Layout gemt
           </span>
         ) : null}
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+          {onAddClick ? (
+            <button type="button" className="wire-asset-graph-toggle" onClick={onAddClick}>
+              <Plus className="size-3.5" aria-hidden />
+              Tilføj aktiv
+            </button>
+          ) : null}
           <button
             type="button"
             className="wire-asset-graph-zoom-btn"
@@ -287,7 +298,7 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
                   : edge.target === selectedId
                     ? source
                     : source;
-              const accentTheme = categoryTheme(accentNode.categorySystemId);
+              const accentTheme = getCategoryTheme(accentNode.categorySystemId);
 
               return (
                 <line
@@ -318,7 +329,7 @@ export function AssetGraphNetwork({ selectedId, onSelect, visibleIds }: AssetGra
               const dimmed = selectedId && !highlightIds.has(node.id);
               const isSystem = node.kind === "system";
               const maxLabel = isSystem ? 14 : 11;
-              const theme = categoryTheme(node.categorySystemId);
+              const theme = getCategoryTheme(node.categorySystemId);
               const fill = isSystem ? theme.base : theme.light;
               const stroke = theme.base;
               const labelFill = isSystem ? "#ffffff" : theme.base;

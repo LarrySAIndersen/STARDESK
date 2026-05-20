@@ -614,6 +614,10 @@
     @apply shadow-sm;
   }
 
+  .wire-assets-graph-row {
+    @apply flex-row;
+  }
+
   .wire-asset-category-group {
     border-left: 3px solid var(--wire-asset-category-color, var(--gray-border));
   }
@@ -716,11 +720,20 @@
   }
 
   .wire-asset-detail-panel {
-    @apply absolute top-0 right-0 z-10 flex h-full w-[min(100%,280px)] translate-x-full flex-col border-l border-[var(--gray-border)] bg-white shadow-[-4px_0_16px_rgb(0_0_0/0.06)] transition-transform duration-200 ease-out;
+    @apply flex h-full shrink-0 flex-col overflow-hidden border-l border-[var(--gray-border)] bg-white shadow-[-4px_0_16px_rgb(0_0_0/0.06)];
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      width 200ms ease-out,
+      opacity 150ms ease-out;
   }
 
   .wire-asset-detail-panel--open {
-    @apply translate-x-0;
+    width: min(300px, 38vw);
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .wire-asset-detail-panel-header {

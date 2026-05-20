@@ -1,16 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Layers } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, Plus } from "lucide-react";
 
+import { useAssetCatalog } from "@/components/agent/asset-catalog-context";
 import { getAllAssetIds, getSystemVisibilityState } from "@/lib/asset-graph";
-import {
-  ASSET_CATEGORY_COLORS,
-  MOCK_ASSET_SYSTEMS,
-  type AssetCategorySystemId,
-} from "@/lib/mock-assets";
+import { getCategoryTheme } from "@/lib/mock-assets";
 import { cn } from "@/lib/utils";
 import type { AssetSelection, AssetSubsystem, AssetSystem } from "@/types/asset";
 
@@ -52,8 +49,11 @@ function selectionKey(selection: AssetSelection | null): string | null {
     : selection.subsystem.id;
 }
 
-function resolveSelection(assetId: string): AssetSelection | null {
-  for (const system of MOCK_ASSET_SYSTEMS) {
+function resolveSelection(
+  assetId: string,
+  systems: AssetSystem[],
+): AssetSelection | null {
+  for (const system of systems) {
     if (system.id === assetId) {
       return { kind: "system", system };
     }
@@ -73,6 +73,7 @@ export function AssetTree({
   visibleIds,
   onVisibilityChange,
   allVisible = true,
+  onAddClick,
 }: {
   showHeader?: boolean;
   selectedId?: string | null;
@@ -81,7 +82,9 @@ export function AssetTree({
   visibleIds?: Set<string>;
   onVisibilityChange?: (next: Set<string>) => void;
   allVisible?: boolean;
+  onAddClick?: () => void;
 }) {
+  const { systems } = useAssetCatalog();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -89,22 +92,32 @@ export function AssetTree({
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
-    for (const system of MOCK_ASSET_SYSTEMS) {
+    for (const system of systems) {
       initial[system.id] = true;
     }
     return initial;
   });
 
   const [selection, setSelection] = useState<AssetSelection | null>(() => {
-    if (controlledId) return resolveSelection(controlledId);
+    if (controlledId) return resolveSelection(controlledId, systems);
     if (!assetFromUrl) return null;
-    return resolveSelection(assetFromUrl);
+    return resolveSelection(assetFromUrl, systems);
   });
 
   const activeId = useMemo(() => {
     if (controlledId !== undefined) return controlledId ?? assetFromUrl;
     return selectionKey(selection) ?? assetFromUrl;
   }, [controlledId, selection, assetFromUrl]);
+
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = { ...prev };
+      for (const system of systems) {
+        if (!(system.id in next)) next[system.id] = true;
+      }
+      return next;
+    });
+  }, [systems]);
 
   const toggleExpanded = useCallback((systemId: string) => {
     setExpanded((prev) => ({ ...prev, [systemId]: !prev[systemId] }));
@@ -141,9 +154,9 @@ export function AssetTree({
   }, [router, activeId]);
 
   const resolvedSelection = useMemo(() => {
-    if (controlledId) return resolveSelection(controlledId);
+    if (controlledId) return resolveSelection(controlledId, systems);
     return selection;
-  }, [controlledId, selection]);
+  }, [controlledId, selection, systems]);
 
   const detailLabel =
     resolvedSelection?.kind === "subsystem"
@@ -175,7 +188,7 @@ export function AssetTree({
   const toggleSystemVisibility = useCallback(
     (system: AssetSystem) => {
       if (!visibleIds || !onVisibilityChange) return;
-      const state = getSystemVisibilityState(system.id, visibleIds);
+      const state = getSystemVisibilityState(system.id, visibleIds, systems);
       const next = new Set(visibleIds);
       const ids = [system.id, ...system.subsystems.map((s) => s.id)];
       if (state === "all") {
@@ -185,12 +198,12 @@ export function AssetTree({
       }
       onVisibilityChange(next);
     },
-    [visibleIds, onVisibilityChange],
+    [visibleIds, onVisibilityChange, systems],
   );
 
   const showAllOnGraph = useCallback(() => {
-    onVisibilityChange?.(new Set(getAllAssetIds()));
-  }, [onVisibilityChange]);
+    onVisibilityChange?.(new Set(getAllAssetIds(systems)));
+  }, [onVisibilityChange, systems]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" aria-label="Aktiver">
@@ -198,29 +211,40 @@ export function AssetTree({
         <div className="wire-asset-panel-header">
           <Layers className="size-3.5 shrink-0 opacity-70" aria-hidden />
           <span>Aktiver</span>
-          {graphMode ? (
-            <button
-              type="button"
-              className="wire-asset-show-all ml-auto text-[9px] font-semibold uppercase tracking-wide"
-              onClick={showAllOnGraph}
-              disabled={allVisible}
-            >
-              Vis alle
-            </button>
-          ) : null}
+          <div className="ml-auto flex items-center gap-1">
+            {onAddClick ? (
+              <button
+                type="button"
+                className="wire-asset-graph-toggle px-1.5 py-0.5 text-[9px]"
+                onClick={onAddClick}
+              >
+                <Plus className="size-3" aria-hidden />
+                Tilføj
+              </button>
+            ) : null}
+            {graphMode ? (
+              <button
+                type="button"
+                className="wire-asset-show-all text-[9px] font-semibold uppercase tracking-wide"
+                onClick={showAllOnGraph}
+                disabled={allVisible}
+              >
+                Vis alle
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
       <div className="wire-asset-tree min-h-0 flex-1 overflow-y-auto">
         <ul className="m-0 list-none p-0" role="tree">
-          {MOCK_ASSET_SYSTEMS.map((system) => {
+          {systems.map((system) => {
             const isOpen = expanded[system.id] ?? false;
             const systemSelected = activeId === system.id;
             const systemVis = graphMode
-              ? getSystemVisibilityState(system.id, visibleIds!)
+              ? getSystemVisibilityState(system.id, visibleIds!, systems)
               : "all";
             const systemOnGraph = systemVis !== "none";
-            const categoryTheme =
-              ASSET_CATEGORY_COLORS[system.id as AssetCategorySystemId];
+            const categoryTheme = getCategoryTheme(system.id);
 
             return (
               <li
@@ -312,8 +336,8 @@ export function AssetTree({
       </div>
       {graphMode && compact ? (
         <div className="wire-asset-graph-legend" aria-label="Kategorifarver">
-          {MOCK_ASSET_SYSTEMS.map((system) => {
-            const theme = ASSET_CATEGORY_COLORS[system.id as AssetCategorySystemId];
+          {systems.map((system) => {
+            const theme = getCategoryTheme(system.id);
             return (
               <span
                 key={system.id}

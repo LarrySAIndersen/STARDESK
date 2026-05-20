@@ -1,6 +1,12 @@
 import { getGraphNeighborIds, MOCK_ASSET_EDGES } from "@/lib/asset-graph";
 import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
-import type { AssetDetail, AssetEnvironment, AssetStatus } from "@/types/asset";
+import type {
+  AssetDetail,
+  AssetEnvironment,
+  AssetGraphEdge,
+  AssetStatus,
+  AssetSystem,
+} from "@/types/asset";
 
 const OWNER_TEAMS = [
   "Platform Engineering",
@@ -57,12 +63,16 @@ function lastUpdatedFor(id: string): string {
   return `2026-04-${String(day).padStart(2, "0")}`;
 }
 
-export function getAssetDetail(assetId: string): AssetDetail | null {
-  for (let i = 0; i < MOCK_ASSET_SYSTEMS.length; i++) {
-    const system = MOCK_ASSET_SYSTEMS[i];
+export function getAssetDetail(
+  assetId: string,
+  systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
+  edges: AssetGraphEdge[] = MOCK_ASSET_EDGES,
+): AssetDetail | null {
+  for (let i = 0; i < systems.length; i++) {
+    const system = systems[i];
     if (system.id === assetId) {
       const related = [
-        ...getGraphNeighborIds(assetId, MOCK_ASSET_EDGES),
+        ...getGraphNeighborIds(assetId, edges),
         ...system.subsystems.map((s) => s.id),
       ];
       return {
@@ -84,7 +94,7 @@ export function getAssetDetail(assetId: string): AssetDetail | null {
 
     const sub = system.subsystems.find((s) => s.id === assetId);
     if (sub) {
-      const related = getGraphNeighborIds(assetId, MOCK_ASSET_EDGES);
+      const related = getGraphNeighborIds(assetId, edges);
       return {
         id: sub.id,
         name: sub.name,
@@ -106,7 +116,10 @@ export function getAssetDetail(assetId: string): AssetDetail | null {
   return null;
 }
 
-export function getAssetLabel(assetId: string): string {
-  const detail = getAssetDetail(assetId);
+export function getAssetLabel(
+  assetId: string,
+  systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
+): string {
+  const detail = getAssetDetail(assetId, systems);
   return detail?.name ?? assetId;
 }

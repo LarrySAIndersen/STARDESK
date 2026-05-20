@@ -141,6 +141,19 @@ export function getAssetCategoryColor(assetId: string): AssetCategoryColor | nul
   return categoryId ? ASSET_CATEGORY_COLORS[categoryId] : null;
 }
 
+/** Theme for graph/tree — falls back for user-added systems. */
+export function getCategoryTheme(categorySystemId: string): AssetCategoryColor {
+  if (categorySystemId in ASSET_CATEGORY_COLORS) {
+    return ASSET_CATEGORY_COLORS[categorySystemId as AssetCategorySystemId];
+  }
+  return {
+    label: "Tilføjet aktiv",
+    base: "var(--star-navy)",
+    light: "var(--star-blue-light)",
+    muted: "var(--star-blue-light)",
+  };
+}
+
 export function findAssetById(assetId: string): { label: string; system: AssetSystem } | null {
   for (const system of MOCK_ASSET_SYSTEMS) {
     if (system.id === assetId) {
