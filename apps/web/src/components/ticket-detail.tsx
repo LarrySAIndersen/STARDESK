@@ -533,7 +533,15 @@ export function TicketDetailView({
 
               <p className="wire-form-label mb-2">Ny kommentar</p>
 
-              <CommentForm ticketId={ticket.id} staffMode={staff} primaryNavy />
+              <CommentForm
+                ticketId={ticket.id}
+                staffMode={staff}
+                primaryNavy
+                canBroadcastToChildren={Boolean(
+                  ticket.is_major && !ticket.parent_ticket_id,
+                )}
+                childCount={ticket.children?.length ?? ticket.child_count ?? 0}
+              />
 
             </div>
 

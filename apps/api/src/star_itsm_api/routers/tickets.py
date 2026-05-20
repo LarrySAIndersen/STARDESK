@@ -53,6 +53,9 @@ from star_itsm_api.services.slack import SlackApiError, get_slack_integration, p
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
+    broadcast_comment_to_children,
+    count_children,
+    is_store_sag,
     remove_related_major_link,
     set_parent_ticket_id,
 )
@@ -1206,6 +1209,26 @@ async def create_comment(
             created_at=now,
         )
     )
+    if payload.broadcast_to_children:
+        if not is_store_sag(ticket):
+            raise HTTPException(
+                status_code=400,
+                detail="Broadcast is only allowed on store sager",
+            )
+        if await count_children(db, ticket.id) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="No child tickets to broadcast to",
+            )
+        await broadcast_comment_to_children(
+            db,
+            parent=ticket,
+            author=current_user,
+            body=payload.body,
+            is_internal=is_internal,
+            is_staff_author=is_staff(current_user),
+            now=now,
+        )
     await db.commit()
     await db.refresh(comment)
     if not is_internal:

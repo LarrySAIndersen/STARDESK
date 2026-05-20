@@ -32,3 +32,4 @@ class CommentCreate(BaseModel):
     body: str = Field(min_length=1)
     is_internal: bool = False
     visibility: Literal["internal", "external"] | None = None
+    broadcast_to_children: bool = False

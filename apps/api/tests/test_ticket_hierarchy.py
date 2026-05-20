@@ -5,6 +5,7 @@ import pytest
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
+    is_store_sag,
     normalize_link_pair,
     validate_major_link,
     validate_parent_assignment,
@@ -86,3 +87,9 @@ def test_validate_major_link_requires_store_sager() -> None:
     target = _ticket(is_major=False)
     with pytest.raises(HierarchyValidationError, match="store sag"):
         validate_major_link(source=source, target=target)
+
+
+def test_is_store_sag() -> None:
+    assert is_store_sag(_ticket(is_major=True)) is True
+    assert is_store_sag(_ticket(is_major=True, parent_ticket_id=uuid.uuid4())) is False
+    assert is_store_sag(_ticket(is_major=False)) is False

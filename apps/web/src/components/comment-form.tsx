@@ -13,17 +13,24 @@ export function CommentForm({
   ticketId,
   staffMode = false,
   primaryNavy = false,
+  canBroadcastToChildren = false,
+  childCount = 0,
 }: {
   ticketId: string;
   /** Agent/admin: choose internal vs external (customer portal). */
   staffMode?: boolean;
   primaryNavy?: boolean;
+  /** Store sag with undersager: optional broadcast of the same comment. */
+  canBroadcastToChildren?: boolean;
+  childCount?: number;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
   const [visibility, setVisibility] = useState<CommentVisibility>("external");
+  const [broadcastToChildren, setBroadcastToChildren] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const showBroadcast = canBroadcastToChildren && childCount > 0;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -37,9 +44,11 @@ export function CommentForm({
         body,
         visibility: staffMode ? visibility : "external",
         is_internal: staffMode ? visibility === "internal" : false,
+        broadcast_to_children: showBroadcast && broadcastToChildren,
       });
       setBody("");
       setVisibility("external");
+      setBroadcastToChildren(false);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme kommentar");
@@ -124,6 +133,27 @@ export function CommentForm({
           }
         />
       </div>
+
+      {showBroadcast ? (
+        <div className="flex items-start gap-3 rounded-md border border-star-blue/20 bg-star-blue/5 p-3">
+          <input
+            id="broadcast-to-children"
+            type="checkbox"
+            checked={broadcastToChildren}
+            onChange={(event) => setBroadcastToChildren(event.target.checked)}
+            className="border-input mt-1 size-4 shrink-0 rounded border"
+          />
+          <div className="space-y-1">
+            <Label htmlFor="broadcast-to-children" className="cursor-pointer font-medium">
+              Send besked til alle undersager
+            </Label>
+            <p className="text-muted-foreground text-xs">
+              Samme opdatering kopieres til {childCount}{" "}
+              {childCount === 1 ? "undersag" : "undersager"} (kun dem du har adgang til).
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button

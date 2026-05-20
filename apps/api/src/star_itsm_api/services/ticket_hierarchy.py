@@ -1,11 +1,17 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.ticket import Ticket
+from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.ticket_link import TicketLink
+from star_itsm_api.models.user import User
 from star_itsm_api.schemas.ticket import TicketSummaryRead
+from star_itsm_api.services.org_access import user_can_access_ticket
+from star_itsm_api.services.ticket_timestamps import maybe_set_first_response, touch_ticket_updated
 
 
 class HierarchyValidationError(ValueError):
@@ -91,6 +97,63 @@ async def get_child_tickets(db: AsyncSession, parent_id: uuid.UUID) -> list[Tick
         .order_by(Ticket.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+def is_store_sag(ticket: Ticket) -> bool:
+    return bool(ticket.is_major and ticket.parent_ticket_id is None)
+
+
+async def broadcast_comment_to_children(
+    db: AsyncSession,
+    *,
+    parent: Ticket,
+    author: User,
+    body: str,
+    is_internal: bool,
+    is_staff_author: bool,
+    now: datetime,
+) -> int:
+    """Duplicate a comment onto all child tickets the author may access."""
+    if not is_store_sag(parent):
+        return 0
+    children = await get_child_tickets(db, parent.id)
+    posted = 0
+    for child in children:
+        if not await user_can_access_ticket(db, author, child):
+            continue
+        comment = TicketComment(
+            id=uuid.uuid4(),
+            ticket_id=child.id,
+            author_user_id=author.id,
+            body=body,
+            is_internal=is_internal,
+            created_at=now,
+            deleted_at=None,
+        )
+        db.add(comment)
+        maybe_set_first_response(
+            child,
+            is_staff=is_staff_author,
+            is_internal=is_internal,
+            now=now,
+        )
+        touch_ticket_updated(child, now)
+        db.add(
+            TicketEvent(
+                id=uuid.uuid4(),
+                ticket_id=child.id,
+                actor_user_id=author.id,
+                event_type="comment.created",
+                payload={
+                    "comment_id": str(comment.id),
+                    "is_internal": is_internal,
+                    "broadcast_from_ticket_id": str(parent.id),
+                },
+                created_at=now,
+            )
+        )
+        posted += 1
+    return posted
 
 
 async def tickets_to_summaries(tickets: list[Ticket]) -> list[TicketSummaryRead]:
