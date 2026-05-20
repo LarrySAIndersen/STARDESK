@@ -36,6 +36,12 @@ I backend miljo (`apps/api/.env`):
 - `POST /api/v1/integrations/slack/disconnect`
 - `POST /api/v1/tickets/{id}/slack-push`
 
+## SF-administratorer uden organisation
+
+Brugere med rolle `admin` / `top_admin` og `organization_id = NULL` (fx Larry) kan stadig forbinde Slack:
+API bruger automatisk organisationen **SF Operations** (eller første aktive org) til integration-scoping.
+Valgfri datafix: `docs/fix-integration-org-for-admins.sql`.
+
 ## Sikkerhed
 
 - Slack bot-token gemmes kun i backend database (`organization_integrations`).

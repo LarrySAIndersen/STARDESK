@@ -1,17 +1,71 @@
 import uuid
 
-from sqlalchemy import Select, or_
+from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
+from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.services.permissions import has_full_ticket_visibility, is_admin
 from star_itsm_api.services.teams import get_user_team_ids
 
+# Preferred org for SF central admins (organization_id NULL) when scoping integrations.
+INTEGRATION_DEFAULT_ORG_NAMES: tuple[str, ...] = (
+    "SF Operations",
+    "Virksomhed",
+)
+
+
+class IntegrationOrganizationError(Exception):
+    """Org could not be resolved for org-scoped integration APIs."""
+
 
 def get_user_organization_id(user: User) -> uuid.UUID | None:
     return getattr(user, "organization_id", None)
+
+
+async def resolve_integration_organization_id(
+    db: AsyncSession,
+    user: User,
+) -> uuid.UUID:
+    """Resolve org for Slack/Gmail integration endpoints.
+
+    Virksomheds-agents use their organization_id. SF admins without an org use the
+    first matching default org (typically SF Operations).
+    """
+    org_id = get_user_organization_id(user)
+    if org_id is not None:
+        return org_id
+
+    if not is_admin(user):
+        raise IntegrationOrganizationError(
+            "Bruger er ikke knyttet til en organisation. Kontakt en administrator."
+        )
+
+    for name in INTEGRATION_DEFAULT_ORG_NAMES:
+        row = await db.execute(
+            select(Organization.id).where(
+                Organization.name == name,
+                Organization.is_active.is_(True),
+            )
+        )
+        found = row.scalar_one_or_none()
+        if found is not None:
+            return found
+
+    row = await db.execute(
+        select(Organization.id)
+        .where(Organization.is_active.is_(True))
+        .order_by(Organization.name.asc())
+        .limit(1)
+    )
+    found = row.scalar_one_or_none()
+    if found is None:
+        raise IntegrationOrganizationError(
+            "Ingen aktiv organisation fundet. Opret mindst én organisation før integration."
+        )
+    return found
 
 
 def is_sf_virksomhed_agent(user: User) -> bool:

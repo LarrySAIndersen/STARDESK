@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { IntegrationStatusPill } from "@/components/integrations/integration-status-pill";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { formatIntegrationError } from "@/lib/format-integration-error";
 import { saveIntegrationPartial } from "@/lib/integrations-config";
 import type { GmailStatus, GmailSyncResult, GmailTestResult } from "@/types/gmail";
 
@@ -54,7 +55,11 @@ export function GmailIntegrationSettings() {
         enabled: next.connected && next.enabled,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke hente Gmail-status");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke hente Gmail-status",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -90,7 +95,11 @@ export function GmailIntegrationSettings() {
       });
       setNotice("Gmail-indstillinger gemt.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke gemme Gmail-indstillinger");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke gemme Gmail-indstillinger",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -107,7 +116,11 @@ export function GmailIntegrationSettings() {
         `Sync fuldført: ${result.processed} behandlet, ${result.created_tickets} nye sager, ${result.appended_to_threads} på eksisterende tråde.`,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke synkronisere Gmail");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke synkronisere Gmail",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -121,7 +134,11 @@ export function GmailIntegrationSettings() {
       const result = await apiGet<GmailTestResult>("/api/v1/integrations/gmail/test");
       setNotice(`${result.detail}${result.connected_email ? ` (${result.connected_email})` : ""}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke teste Gmail-forbindelsen");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke teste Gmail-forbindelsen",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -137,7 +154,11 @@ export function GmailIntegrationSettings() {
       saveIntegrationPartial("gmail", { connected_email: "", enabled: false });
       setNotice("Gmail er frakoblet.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke frakoble Gmail");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke frakoble Gmail",
+        ),
+      );
     } finally {
       setBusy(false);
     }

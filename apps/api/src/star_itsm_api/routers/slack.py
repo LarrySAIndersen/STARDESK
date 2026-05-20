@@ -1,5 +1,3 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +11,7 @@ from star_itsm_api.schemas.slack import (
     SlackSettingsUpdate,
     SlackStatusRead,
 )
-from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.routers.integration_org import require_integration_org_id
 from star_itsm_api.services.slack import (
     SlackApiError,
     build_oauth_authorize_url,
@@ -32,18 +30,12 @@ from star_itsm_api.core.config import settings
 router = APIRouter(prefix="/integrations/slack", tags=["slack"])
 
 
-def _require_org_id(user: User) -> uuid.UUID:
-    org_id = get_user_organization_id(user)
-    if org_id is None:
-        raise HTTPException(status_code=400, detail="Bruger er ikke knyttet til en organisation.")
-    return org_id
-
-
 @router.get("/oauth/start", response_model=SlackOAuthStartResponse)
 async def start_slack_oauth(
     current_user: User = Depends(require_admin()),
+    db: AsyncSession = Depends(require_db),
 ) -> SlackOAuthStartResponse:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     try:
         state = create_oauth_state(org_id=org_id, user_id=current_user.id)
         authorize_url = build_oauth_authorize_url(state=state)
@@ -87,7 +79,7 @@ async def slack_status(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),
 ) -> SlackStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await get_slack_integration(db, organization_id=org_id)
     if integration is None or not integration.slack_bot_token:
         return SlackStatusRead(
@@ -112,7 +104,7 @@ async def update_slack_settings(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> SlackStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await save_slack_preferences(
         db,
         organization_id=org_id,
@@ -137,7 +129,7 @@ async def disconnect_slack_integration(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> SlackStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     await disconnect_slack(db, organization_id=org_id)
     return SlackStatusRead(
         connected=False,
@@ -151,7 +143,7 @@ async def list_slack_channels(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),
 ) -> list[SlackChannelRead]:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await get_slack_integration(db, organization_id=org_id)
     if integration is None or not integration.slack_bot_token:
         if settings.slack_mock:

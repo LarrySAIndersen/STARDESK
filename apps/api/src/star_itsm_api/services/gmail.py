@@ -22,7 +22,12 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_email import TicketEmail
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
-from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.services.org_access import (
+    IntegrationOrganizationError,
+    get_user_organization_id,
+    resolve_integration_organization_id,
+)
+from star_itsm_api.services.permissions import is_admin
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
@@ -801,7 +806,12 @@ async def send_ticket_email_reply(
     body: str,
     to_email_override: str | None = None,
 ) -> TicketEmail:
-    org_id = get_user_organization_id(actor)
+    org_id = get_user_organization_id(actor) or ticket.organization_id
+    if org_id is None and is_admin(actor):
+        try:
+            org_id = await resolve_integration_organization_id(db, actor)
+        except IntegrationOrganizationError as exc:
+            raise GmailApiError(str(exc)) from exc
     if org_id is None:
         raise GmailApiError("Bruger er ikke knyttet til en organisation.")
     integration = await get_email_integration(db, organization_id=org_id)

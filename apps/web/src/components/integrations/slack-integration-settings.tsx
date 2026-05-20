@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { IntegrationStatusPill } from "@/components/integrations/integration-status-pill";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { formatIntegrationError } from "@/lib/format-integration-error";
 import type { SlackChannel, SlackStatus } from "@/types/slack";
 
 function channelLabel(channel: SlackChannel): string {
@@ -60,7 +61,11 @@ export function SlackIntegrationSettings() {
       setSelectedChannelId(next.default_channel_id ?? "");
       setWebhookUrl(next.webhook_url ?? "");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke hente Slack-status");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke hente Slack-status",
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -74,7 +79,11 @@ export function SlackIntegrationSettings() {
         setSelectedChannelId(list[0]!.channel_id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke hente Slack-kanaler");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke hente Slack-kanaler",
+        ),
+      );
     }
   }, [selectedChannelId]);
 
@@ -113,7 +122,11 @@ export function SlackIntegrationSettings() {
       setStatus(next);
       setNotice("Slack-indstillinger gemt.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke gemme Slack-indstillinger");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke gemme Slack-indstillinger",
+        ),
+      );
     } finally {
       setBusy(false);
     }
@@ -130,7 +143,11 @@ export function SlackIntegrationSettings() {
       setSelectedChannelId("");
       setNotice("Slack er frakoblet.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke frakoble Slack");
+      setError(
+        formatIntegrationError(
+          err instanceof Error ? err.message : "Kunne ikke frakoble Slack",
+        ),
+      );
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,3 @@
-import uuid
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,21 +28,17 @@ from star_itsm_api.services.gmail import (
     upsert_email_integration,
 )
 from star_itsm_api.services.gmail_mock import MOCK_GMAIL_EMAIL
-from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.routers.integration_org import require_integration_org_id
 
 router = APIRouter(prefix="/integrations/gmail", tags=["gmail"])
 
 
-def _require_org_id(user: User) -> uuid.UUID:
-    org_id = get_user_organization_id(user)
-    if org_id is None:
-        raise HTTPException(status_code=400, detail="Bruger er ikke knyttet til en organisation.")
-    return org_id
-
-
 @router.get("/oauth/start", response_model=GmailOAuthStartResponse)
-async def start_gmail_oauth(current_user: User = Depends(require_admin())) -> GmailOAuthStartResponse:
-    org_id = _require_org_id(current_user)
+async def start_gmail_oauth(
+    current_user: User = Depends(require_admin()),
+    db: AsyncSession = Depends(require_db),
+) -> GmailOAuthStartResponse:
+    org_id = await require_integration_org_id(db, current_user)
     try:
         state = create_oauth_state(org_id=org_id, user_id=current_user.id)
         authorize_url = build_oauth_authorize_url(state=state)
@@ -86,7 +80,7 @@ async def gmail_status(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),
 ) -> GmailStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await get_email_integration(db, organization_id=org_id)
     if integration is None or not integration.refresh_token_encrypted:
         return GmailStatusRead(
@@ -111,7 +105,7 @@ async def update_gmail_settings(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> GmailStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await save_gmail_preferences(
         db,
         organization_id=org_id,
@@ -133,7 +127,7 @@ async def gmail_sync(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> GmailSyncResponse:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     try:
         stats = await sync_gmail_inbox(
             db,
@@ -156,7 +150,7 @@ async def gmail_test_connection(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> GmailTestResponse:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     integration = await get_email_integration(db, organization_id=org_id)
     if integration is None or not integration.refresh_token_encrypted:
         if settings.gmail_mock:
@@ -175,7 +169,7 @@ async def disconnect_gmail_integration(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
 ) -> GmailStatusRead:
-    org_id = _require_org_id(current_user)
+    org_id = await require_integration_org_id(db, current_user)
     await disconnect_gmail(db, organization_id=org_id)
     return GmailStatusRead(
         connected=False,
