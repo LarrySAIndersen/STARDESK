@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Ticket } from "@/types/ticket";
 
-const DRAG_TYPE = "application/x-stardesk-ticket";
+import { TICKET_DRAG_TYPE, setTicketDragData } from "@/lib/ticket-drag";
 
 export function WireframeTicketTable({
   tickets,
@@ -55,9 +55,7 @@ export function WireframeTicketTable({
           )}
           draggable={draggable}
           onDragStart={(e) => {
-            e.dataTransfer.setData(DRAG_TYPE, ticket.id);
-            e.dataTransfer.setData("text/plain", ticket.id);
-            e.dataTransfer.effectAllowed = "move";
+            setTicketDragData(e, ticket.id);
             onDragStart?.(ticket, e);
           }}
           onClick={() => {
@@ -109,4 +107,4 @@ export function WireframeTicketTable({
   );
 }
 
-export { DRAG_TYPE };
+export { TICKET_DRAG_TYPE as DRAG_TYPE };
