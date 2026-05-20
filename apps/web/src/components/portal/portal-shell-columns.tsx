@@ -19,6 +19,7 @@ import {
   PORTAL_SHELL_WIDTHS_STORAGE_KEY,
   SHELL_NAV_COLLAPSED_WIDTH,
 } from "@/lib/shell-layout";
+import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 import type { User } from "@/types/user";
 
 type PortalShellColumnsProps = {
@@ -47,7 +48,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: PORTAL_SHELL_WIDTHS_STORAGE_KEY,
     panelIds,
-    storage: localStorage,
+    storage: getPanelLayoutStorage(),
   });
 
   const initialLayout = defaultLayout ?? {

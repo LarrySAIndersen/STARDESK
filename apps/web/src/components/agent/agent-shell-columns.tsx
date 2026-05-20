@@ -13,6 +13,7 @@ import {
   SHELL_PANEL_NAV,
   SHELL_WIDTHS_STORAGE_KEY,
 } from "@/lib/shell-layout";
+import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 import { cn } from "@/lib/utils";
 
 type AgentShellColumnsProps = {
@@ -39,7 +40,7 @@ export function AgentShellColumns({
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: SHELL_WIDTHS_STORAGE_KEY,
     panelIds,
-    storage: localStorage,
+    storage: getPanelLayoutStorage(),
   });
 
   const initialLayout = defaultLayout ?? FALLBACK_LAYOUT;

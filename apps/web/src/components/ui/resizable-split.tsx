@@ -10,6 +10,7 @@ import {
   useDefaultLayout,
 } from "react-resizable-panels";
 
+import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 import { cn } from "@/lib/utils";
 
 const PANEL_IDS = ["panel-a", "panel-b"] as const;
@@ -45,7 +46,7 @@ export function ResizableSplit({
   const { defaultLayout, onLayoutChanged } = useDefaultLayout({
     id: layoutId,
     panelIds: [...PANEL_IDS],
-    ...(storageKey ? { storage: localStorage } : {}),
+    storage: getPanelLayoutStorage(),
   });
 
   const initialLayout = defaultLayout ?? {
