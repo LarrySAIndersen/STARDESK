@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { User } from "lucide-react";
 
 import { SlaCountdown } from "@/components/sla-countdown";
-import { TicketMetadataAssignment } from "@/components/ticket/ticket-metadata-assignment";
+import { TicketMetadataEditablePanel } from "@/components/ticket/ticket-metadata-editable-panel";
 import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
+import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -38,13 +39,16 @@ function reporterInitials(name: string | null | undefined): string {
 export function TicketDetailTopBand({
   ticket,
   teams = [],
-  editableAssignment = false,
+  categories = [],
+  editableMetadata = false,
 }: {
   ticket: TicketDetail;
   teams?: Team[];
-  editableAssignment?: boolean;
+  categories?: Category[];
+  editableMetadata?: boolean;
 }) {
   const reporter = ticket.reporter_display_name ?? "Ukendt indmelder";
+  const canEdit = editableMetadata && teams.length > 0 && categories.length > 0;
 
   return (
     <div className="ticket-detail-top-band mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
@@ -74,41 +78,38 @@ export function TicketDetailTopBand({
       <section className="wire-card mb-0 lg:text-right">
         <h2 className="wire-card-title">Metadata</h2>
         <dl>
-          <DetailRow label="Kategori" value={ticket.category_name_da ?? "—"} />
-          <DetailRow label="Underkategori" value={ticket.subcategory_name_da ?? "—"} />
-          <DetailRow label="Prioritet" value={priorityLabel(ticket.priority)} />
-          <DetailRow label="Type" value={ticketTypeLabel(ticket.ticket_type)} />
-          <DetailRow
-            label="Kilde"
-            value={ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
-          />
-          {editableAssignment && teams.length > 0 ? (
-            <TicketMetadataAssignment
-              ticketId={ticket.id}
+          {canEdit ? (
+            <TicketMetadataEditablePanel
+              ticket={ticket}
               teams={teams}
-              currentTeamId={ticket.assigned_team_id}
-              currentTeamName={ticket.assigned_team_name}
-              currentUserId={ticket.assigned_user_id}
-              currentUserName={ticket.assigned_user_name}
+              categories={categories}
             />
           ) : (
             <>
+              <DetailRow label="Kategori" value={ticket.category_name_da ?? "—"} />
+              <DetailRow label="Underkategori" value={ticket.subcategory_name_da ?? "—"} />
+              <DetailRow label="Prioritet" value={priorityLabel(ticket.priority)} />
+              <DetailRow label="Type" value={ticketTypeLabel(ticket.ticket_type)} />
+              <DetailRow
+                label="Kilde"
+                value={ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+              />
               <DetailRow label="Gruppe" value={ticket.assigned_team_name ?? "—"} />
               <DetailRow label="Sagsbehandler" value={ticket.assigned_user_name ?? "—"} />
+              <DetailRow
+                label="SLA"
+                value={
+                  <SlaCountdown
+                    status={ticket.status}
+                    resolutionDueAt={ticket.resolution_due_at}
+                    slaRemainingSeconds={ticket.sla_remaining_seconds}
+                    slaBreached={ticket.sla_breached}
+                    compact
+                  />
+                }
+              />
             </>
           )}
-          <DetailRow
-            label="SLA"
-            value={
-              <SlaCountdown
-                status={ticket.status}
-                resolutionDueAt={ticket.resolution_due_at}
-                slaRemainingSeconds={ticket.sla_remaining_seconds}
-                slaBreached={ticket.sla_breached}
-                compact
-              />
-            }
-          />
         </dl>
       </section>
     </div>

@@ -6,6 +6,7 @@ import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff } from "@/lib/auth";
+import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -21,15 +22,23 @@ export default async function TicketDetailPage({
   const staff = isStaff(currentUser);
 
   try {
-    const [ticket, teams] = await Promise.all([
+    const [ticket, teams, categories] = await Promise.all([
       apiGetServer<TicketDetail>(`/api/v1/tickets/${id}`),
       staff
         ? apiGetServer<Team[]>("/api/v1/teams").catch(() => [] as Team[])
         : Promise.resolve([] as Team[]),
+      staff
+        ? apiGetServer<Category[]>("/api/v1/categories").catch(() => [] as Category[])
+        : Promise.resolve([] as Category[]),
     ]);
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <TicketDetailView ticket={ticket} currentUser={currentUser} teams={teams} />
+        <TicketDetailView
+          ticket={ticket}
+          currentUser={currentUser}
+          teams={teams}
+          categories={categories}
+        />
       </div>
     );
   } catch (error) {

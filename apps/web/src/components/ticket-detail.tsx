@@ -44,6 +44,7 @@ import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 
 import { isStaff } from "@/lib/auth";
 
+import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
 
 import type { TicketDetail } from "@/types/ticket";
@@ -247,6 +248,8 @@ export function TicketDetailView({
 
   teams = [],
 
+  categories = [],
+
 }: {
 
   ticket: TicketDetail;
@@ -255,9 +258,14 @@ export function TicketDetailView({
 
   teams?: Team[];
 
+  categories?: Category[];
+
 }) {
 
   const staff = isStaff(currentUser);
+
+  const metadataEditable =
+    staff && teams.length > 0 && categories.length > 0;
 
   const showLlmRail = staff && ticket.intelligence;
 
@@ -283,22 +291,30 @@ export function TicketDetailView({
 
             <TicketMetadataForm ticket={ticket} staff={staff} />
 
-            <TicketPriorityForm
-              ticketId={ticket.id}
-              currentPriority={ticket.priority}
-              routing={ticket.routing}
-            />
+            {metadataEditable ? (
+              <p className="text-muted-foreground text-xs">
+                Kategori, prioritet, gruppe og sagsbehandler redigeres under Metadata
+                ovenfor.
+              </p>
+            ) : (
+              <>
+                <TicketPriorityForm
+                  ticketId={ticket.id}
+                  currentPriority={ticket.priority}
+                  routing={ticket.routing}
+                />
+                {teams.length === 0 ? (
+                  <TicketAssignmentForm
+                    ticketId={ticket.id}
+                    teams={teams}
+                    currentTeamId={ticket.assigned_team_id}
+                    currentUserId={ticket.assigned_user_id}
+                  />
+                ) : null}
+              </>
+            )}
 
             <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
-
-            {teams.length === 0 ? (
-              <TicketAssignmentForm
-                ticketId={ticket.id}
-                teams={teams}
-                currentTeamId={ticket.assigned_team_id}
-                currentUserId={ticket.assigned_user_id}
-              />
-            ) : null}
 
           </div>
 
@@ -350,7 +366,8 @@ export function TicketDetailView({
         <TicketDetailTopBand
           ticket={ticket}
           teams={teams}
-          editableAssignment={teams.length > 0}
+          categories={categories}
+          editableMetadata={metadataEditable}
         />
       ) : null}
 

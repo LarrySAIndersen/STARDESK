@@ -17,6 +17,7 @@ export function SearchableSelect({
   onSelect,
   className,
   listId,
+  allowClear = true,
 }: {
   valueId: string | null;
   displayValue: string;
@@ -28,6 +29,8 @@ export function SearchableSelect({
   onSelect: (option: SearchableOption) => void;
   className?: string;
   listId?: string;
+  /** When false, the list has no "clear" row (for required fields like prioritet). */
+  allowClear?: boolean;
 }) {
   const inputId = useId();
   const listboxId = listId ?? `${inputId}-listbox`;
@@ -55,9 +58,12 @@ export function SearchableSelect({
   }, []);
 
   const visibleOptions = useMemo(() => {
+    if (!allowClear) {
+      return options;
+    }
     const clearOption: SearchableOption = { id: "", label: emptyLabel };
     return [clearOption, ...options];
-  }, [emptyLabel, options]);
+  }, [allowClear, emptyLabel, options]);
 
   return (
     <div ref={rootRef} className={cn("relative min-w-0", className)}>

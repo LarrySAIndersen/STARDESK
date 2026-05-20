@@ -96,6 +96,10 @@ from star_itsm_api.services.attachments import (
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_classification import (
+    validate_ticket_classification,
+    validate_ticket_source_value,
+)
 from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
 from star_itsm_api.services.ticket_sort import (
     DEFAULT_TICKET_SORT,
@@ -766,6 +770,29 @@ async def update_ticket_metadata(
         ticket.tags = updates["tags"]
     if "emoji" in updates:
         ticket.emoji = updates["emoji"]
+    if "category_id" in updates or "subcategory_id" in updates:
+        if not is_staff(current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        next_category_id = (
+            updates["category_id"] if "category_id" in updates else ticket.category_id
+        )
+        next_subcategory_id = (
+            updates["subcategory_id"]
+            if "subcategory_id" in updates
+            else ticket.subcategory_id
+        )
+        await validate_ticket_classification(
+            db,
+            category_id=next_category_id,
+            subcategory_id=next_subcategory_id,
+        )
+        ticket.category_id = next_category_id
+        ticket.subcategory_id = next_subcategory_id
+    if "source" in updates and updates["source"] is not None:
+        if not is_staff(current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        validate_ticket_source_value(updates["source"])
+        ticket.source = updates["source"]
 
     if updates:
         now = datetime.now(UTC)

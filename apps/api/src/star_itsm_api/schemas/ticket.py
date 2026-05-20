@@ -191,6 +191,9 @@ class TicketMetadataUpdate(BaseModel):
     sub_cause_ids: list[UUID] | None = None
     tags: list[str] | None = None
     emoji: str | None = Field(default=None, max_length=16)
+    category_id: UUID | None = None
+    subcategory_id: UUID | None = None
+    source: Literal["portal", "email", "phone", "chat", "api", "knowledge"] | None = None
 
     @field_validator("tags")
     @classmethod
