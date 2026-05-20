@@ -19,6 +19,7 @@ import {
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
 import { useListFilters } from "@/hooks/use-list-filters";
+import { TEAM_RAIL_TICKET_PREVIEW } from "@/components/dispatch/dispatch-teams-rail";
 import { ResizableSplit } from "@/components/ui/resizable-split";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { SlaCountdown } from "@/components/sla-countdown";
@@ -368,7 +369,9 @@ export function AgentDispatchBoard({
             <p className="star-section-desc">Slip en sag her for at tildele</p>
           </div>
           {sortedTeams.map((team) => {
-            const teamTickets = ticketsByTeam.get(team.id) ?? [];
+            const allTeamTickets = ticketsByTeam.get(team.id) ?? [];
+            const totalCount = allTeamTickets.length;
+            const teamTickets = allTeamTickets.slice(0, TEAM_RAIL_TICKET_PREVIEW);
             const isOver = dragOverTeamId === team.id;
             return (
               <div
@@ -398,29 +401,36 @@ export function AgentDispatchBoard({
                     ) : null}
                   </div>
                   <Badge variant="outline">
-                    {teamTickets.length} sag{teamTickets.length === 1 ? "" : "er"}
+                    {totalCount} sag{totalCount === 1 ? "" : "er"}
                   </Badge>
                 </div>
                 <p className="text-muted-foreground mt-2 text-xs">
                   {team.members.length} medlemmer
                 </p>
-                {teamTickets.length > 0 ? (
-                  <ul className="mt-3 space-y-1.5 border-t border-star-blue/15 pt-3">
-                    {teamTickets.map((ticket) => (
-                      <li key={ticket.id}>
-                        <Link
-                          href={`/tickets/${ticket.id}`}
-                          className="text-star-blue hover:text-star-navy block text-xs leading-snug font-medium hover:underline"
-                          draggable={false}
-                        >
-                          <span className="font-mono">{ticket.ticket_number}</span>
-                          <span className="text-foreground ml-1 font-normal">
-                            {ticket.title}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+                {totalCount > 0 ? (
+                  <>
+                    <ul className="mt-3 space-y-1.5 border-t border-star-blue/15 pt-3">
+                      {teamTickets.map((ticket) => (
+                        <li key={ticket.id}>
+                          <Link
+                            href={`/tickets/${ticket.id}`}
+                            className="text-star-blue hover:text-star-navy block text-xs leading-snug font-medium hover:underline"
+                            draggable={false}
+                          >
+                            <span className="font-mono">{ticket.ticket_number}</span>
+                            <span className="text-foreground ml-1 font-normal">
+                              {ticket.title}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                    {totalCount > TEAM_RAIL_TICKET_PREVIEW ? (
+                      <p className="text-muted-foreground mt-2 text-[11px]">
+                        Viser {TEAM_RAIL_TICKET_PREVIEW} nyeste af {totalCount}
+                      </p>
+                    ) : null}
+                  </>
                 ) : (
                   <p className="text-muted-foreground mt-2 text-xs">Ingen tildelte sager</p>
                 )}
