@@ -4,14 +4,6 @@ export const SERVICE_DESK_TEAM_NAME = "SF Service Desk";
 
 export type ServiceDeskQueueFilter = "all" | "desk" | "teams";
 
-const OPEN_STATUSES = new Set([
-  "new",
-  "assigned",
-  "in_progress",
-  "on_hold",
-  "resolved",
-]);
-
 const PRIORITY_RANK: Record<string, number> = {
   critical: 0,
   high: 1,

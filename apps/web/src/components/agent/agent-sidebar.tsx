@@ -49,6 +49,9 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/integrations") {
     return pathname === "/integrations" || pathname.startsWith("/integrations/");
   }
+  if (href === "/admin/sla") {
+    return pathname === "/admin/sla" || pathname.startsWith("/admin/sla/");
+  }
   if (href === "/admin/dependencies") {
     return pathname === "/admin/dependencies" || pathname.startsWith("/admin/dependencies/");
   }
@@ -92,6 +95,12 @@ export function AgentSidebar({
     { href: "/reports", label: "Rapporter", icon: BarChart3 },
     ...(showAdmin
       ? [
+          {
+            href: "/admin/sla",
+            label: "SLA-indstillinger",
+            icon: Shield,
+            section: "Administration",
+          },
           {
             href: "/admin/dependencies",
             label: "Afhængigheder & sikkerhed",

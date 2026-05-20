@@ -15,7 +15,7 @@ class SlaPolicyRead(BaseModel):
 
 class SlaPolicyUpdate(BaseModel):
     description: str | None = None
-    response_time_minutes: int | None = Field(default=None, ge=1, le= 60 * 24 * 30)
+    response_time_minutes: int | None = Field(default=None, ge=1, le=60 * 24 * 30)
     resolution_time_minutes: int | None = Field(default=None, ge=1, le=60 * 24 * 30)
     business_hours_only: bool | None = None
     is_active: bool | None = None
