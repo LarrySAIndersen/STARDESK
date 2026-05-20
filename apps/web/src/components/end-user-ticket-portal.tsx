@@ -2,14 +2,9 @@ import Link from "next/link";
 
 import { PortalMyTicketsTable } from "@/components/portal/portal-my-tickets-table";
 import { apiGetServer } from "@/lib/api-server";
+import { PORTAL_V2_CATEGORY_TILES } from "@/lib/portal-category";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
-
-const PORTAL_CATEGORIES = [
-  { title: "IT-support", sub: "Computer, software, adgang" },
-  { title: "HR & personale", sub: "Onboarding, adgang, politikker" },
-  { title: "Faciliteter", sub: "Lokaler, udstyr, print" },
-] as const;
 
 type EndUserTicketPortalProps = {
   currentUser: User | null;
@@ -51,10 +46,19 @@ export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalPr
       </section>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {PORTAL_CATEGORIES.map((cat) => (
-          <Link key={cat.title} href="/tickets/new" className="wire-portal-card block">
-            <p className="text-star-navy text-[13px] font-bold">{cat.title}</p>
-            <p className="text-[var(--gray-mid)] mt-0.5 text-[11px]">{cat.sub}</p>
+        {PORTAL_V2_CATEGORY_TILES.map((cat) => (
+          <Link
+            key={cat.slug}
+            href={`/portal-v2/kategori/${cat.slug}`}
+            className="wire-portal-card block"
+          >
+            <p className="text-star-navy text-[13px] font-bold">{cat.nameDa}</p>
+            <p className="text-[var(--gray-mid)] mt-0.5 line-clamp-2 text-[11px]">
+              {cat.description}
+            </p>
+            <span className="text-star-red mt-2 inline-block text-[10px] font-semibold uppercase tracking-wide">
+              Ny version
+            </span>
           </Link>
         ))}
       </div>

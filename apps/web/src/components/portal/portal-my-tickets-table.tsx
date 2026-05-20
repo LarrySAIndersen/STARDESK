@@ -24,7 +24,7 @@ export function PortalMyTicketsTable({ tickets }: { tickets: Ticket[] }) {
         {tickets.map((ticket) => (
           <Link
             key={ticket.id}
-            href={`/tickets/${ticket.id}`}
+            href={`/portal-v2/sag/${ticket.id}`}
             className="wire-table-row wire-table-grid-portal-tickets items-center"
             role="row"
           >

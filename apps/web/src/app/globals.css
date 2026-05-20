@@ -1313,4 +1313,42 @@
   .sf-chat-agent-thread {
     @apply flex min-w-0 flex-1 flex-col p-2;
   }
+
+  /* Portal v2 — Industrial Precision (light) */
+  .portal-v2-page {
+    @apply text-star-navy;
+  }
+
+  .portal-v2-section {
+    @apply space-y-3;
+  }
+
+  .portal-v2-section-title {
+    @apply text-star-navy text-[15px] font-bold tracking-tight;
+  }
+
+  .portal-v2-card {
+    @apply rounded-[2px] border border-[var(--gray-border)] bg-white;
+  }
+
+  .portal-v2-breadcrumb {
+    @apply text-[var(--gray-mid)] flex flex-wrap items-center gap-1.5;
+  }
+
+  .portal-v2-breadcrumb-link {
+    @apply hover:text-star-red transition-colors;
+  }
+
+  .portal-v2-list-row {
+    @apply hover:bg-star-navy/[0.03] block rounded-[2px] transition-colors;
+  }
+
+  .portal-v2-empty {
+    @apply rounded-[2px] border border-[var(--gray-border)] bg-white p-6 text-center;
+  }
+
+  .portal-v2-timeline .portal-v2-timeline-step:not(:last-child)::before {
+    content: "";
+    @apply bg-[var(--gray-border)] absolute top-4 left-[18px] h-[calc(100%-1rem)] w-0.5 sm:hidden;
+  }
 }
