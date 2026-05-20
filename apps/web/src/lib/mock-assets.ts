@@ -154,8 +154,11 @@ export function getCategoryTheme(categorySystemId: string): AssetCategoryColor {
   };
 }
 
-export function findAssetById(assetId: string): { label: string; system: AssetSystem } | null {
-  for (const system of MOCK_ASSET_SYSTEMS) {
+export function findAssetById(
+  assetId: string,
+  systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
+): { label: string; system: AssetSystem } | null {
+  for (const system of systems) {
     if (system.id === assetId) {
       return { label: system.name, system };
     }

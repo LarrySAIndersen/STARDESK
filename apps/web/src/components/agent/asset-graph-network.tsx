@@ -57,10 +57,10 @@ export function AssetGraphNetwork({
   visibleIds,
   onAddClick,
 }: AssetGraphNetworkProps) {
-  const { systems, extraEdges } = useAssetCatalog();
+  const { systems, allEdges } = useAssetCatalog();
   const baseGraph = useMemo(
-    () => buildAssetGraph(systems, extraEdges),
-    [systems, extraEdges],
+    () => buildAssetGraph(systems, [], allEdges),
+    [systems, allEdges],
   );
   const graph = useMemo(
     () => filterGraphByVisibility(baseGraph, visibleIds),

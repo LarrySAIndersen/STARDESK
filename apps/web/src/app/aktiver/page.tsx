@@ -10,5 +10,5 @@ export default async function AktiverPage() {
     redirect("/");
   }
 
-  return <AssetsPage />;
+  return <AssetsPage serverUser={currentUser} />;
 }

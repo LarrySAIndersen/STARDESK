@@ -31,6 +31,16 @@ export function isInTeamsQueue(ticket: Ticket): boolean {
   return !isInServiceDeskQueue(ticket);
 }
 
+/** Main table: distribution queue only (not assigned to an operational team). */
+export function ticketsForServiceDeskTable(tickets: Ticket[]): Ticket[] {
+  return tickets.filter(isInServiceDeskQueue);
+}
+
+/** Right rail: tickets assigned to internal teams (excludes desk queue). */
+export function ticketsForServiceDeskTeamRail(tickets: Ticket[]): Ticket[] {
+  return tickets.filter(isInTeamsQueue);
+}
+
 export function filterByServiceDeskQueue(
   tickets: Ticket[],
   queue: ServiceDeskQueueFilter,

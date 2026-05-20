@@ -14,6 +14,8 @@ import {
   parseTicketSort,
   TICKET_SORT_OPTIONS,
 } from "@/lib/ticket-sort";
+import { ticketMatchesAsset } from "@/lib/asset-tickets";
+import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import {
   CLEARED_TICKETS_PATH,
@@ -111,12 +113,18 @@ export function TicketsListClient({
     return Array.from(set).sort((a, b) => a.localeCompare(b, "da"));
   }, [tickets]);
 
+  const assetIdFilter =
+    pickParam(initialParams.asset_id) ?? searchParams.get("asset_id") ?? undefined;
+
   const filtered = useMemo(() => {
     const sla = pickParam(initialParams.sla);
     const openOnly = pickParam(initialParams.open_only) === "true";
     const majorOpen = pickParam(initialParams.major_open) === "true";
 
     return tickets.filter((t) => {
+      if (assetIdFilter && !ticketMatchesAsset(t, assetIdFilter, MOCK_ASSET_SYSTEMS)) {
+        return false;
+      }
       if (openOnly && ["resolved", "closed", "cancelled"].includes(t.status)) {
         return false;
       }
@@ -133,7 +141,7 @@ export function TicketsListClient({
       if (!ticketMatchesSearch(t, search)) return false;
       return true;
     });
-  }, [tickets, status, priority, category, tagFilter, search, initialParams]);
+  }, [tickets, status, priority, category, tagFilter, search, initialParams, assetIdFilter]);
 
   const activeTags = [tagFilter].filter(Boolean);
 

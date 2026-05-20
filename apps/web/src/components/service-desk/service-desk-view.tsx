@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
@@ -21,7 +21,10 @@ import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import {
   filterByServiceDeskQueue,
+  isOpenTicket,
   paginateTickets,
+  ticketsForServiceDeskTable,
+  ticketsForServiceDeskTeamRail,
   type ServiceDeskQueueFilter,
 } from "@/lib/service-desk-queue";
 import {
@@ -92,6 +95,21 @@ export function ServiceDeskView({
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [ticketOverrides, setTicketOverrides] = useState<Record<string, Partial<Ticket>>>({});
+
+  const effectiveTickets = useMemo(() => {
+    if (Object.keys(ticketOverrides).length === 0) {
+      return tickets;
+    }
+    return tickets.map((ticket) => {
+      const patch = ticketOverrides[ticket.id];
+      return patch ? { ...ticket, ...patch } : ticket;
+    });
+  }, [tickets, ticketOverrides]);
+
+  useEffect(() => {
+    setTicketOverrides({});
+  }, [tickets]);
 
   const internalTeams = useMemo(() => {
     const { internal } = partitionTeamsByCategory(teams);
@@ -99,13 +117,8 @@ export function ServiceDeskView({
   }, [teams]);
 
   const queueTickets = useMemo(
-    () => filterByServiceDeskQueue(tickets, queue),
-    [tickets, queue],
-  );
-
-  const filterOptions = useMemo(
-    () => collectServiceDeskFilterOptions(queueTickets),
-    [queueTickets],
+    () => filterByServiceDeskQueue(effectiveTickets, queue),
+    [effectiveTickets, queue],
   );
 
   const openTickets = useMemo(() => {
@@ -114,39 +127,65 @@ export function ServiceDeskView({
     return sortServiceDeskTable(filtered, tableFilters.sort);
   }, [queueTickets, search, tableFilters]);
 
+  /** Venstre tabel: kun kø/desk — tildelte teams vises kun i gruppe-rail. */
+  const tableTickets = useMemo(
+    () => ticketsForServiceDeskTable(openTickets),
+    [openTickets],
+  );
+
+  const filterOptions = useMemo(
+    () => collectServiceDeskFilterOptions(tableTickets),
+    [tableTickets],
+  );
+
   const columnFiltersActive = hasActiveServiceDeskTableFilters(tableFilters);
 
   const pageTickets = useMemo(
-    () => paginateTickets(openTickets, offset, PAGE_SIZE),
-    [openTickets, offset],
+    () => paginateTickets(tableTickets, offset, PAGE_SIZE),
+    [tableTickets, offset],
   );
 
-  const ticketsByTeam = useMemo(() => buildTicketsByTeam(openTickets), [openTickets]);
+  const railTeamTickets = useMemo(() => {
+    const open = effectiveTickets.filter(isOpenTicket);
+    const searched = open.filter((t) => ticketMatchesSearch(t, search));
+    const pool =
+      queue === "teams"
+        ? filterByServiceDeskQueue(searched, "teams")
+        : ticketsForServiceDeskTeamRail(searched);
+    const filtered = applyServiceDeskTableFilters(pool, tableFilters);
+    return sortServiceDeskTable(filtered, tableFilters.sort);
+  }, [effectiveTickets, search, tableFilters, queue]);
+
+  const ticketsByTeam = useMemo(
+    () => buildTicketsByTeam(railTeamTickets),
+    [railTeamTickets],
+  );
 
   const deskCount = useMemo(
-    () => filterByServiceDeskQueue(tickets, "desk").length,
-    [tickets],
+    () => filterByServiceDeskQueue(effectiveTickets, "desk").length,
+    [effectiveTickets],
   );
   const overdueDesk = useMemo(
     () =>
-      filterByServiceDeskQueue(tickets, "desk").filter((t) => Boolean(t.sla_breached))
-        .length,
-    [tickets],
+      filterByServiceDeskQueue(effectiveTickets, "desk").filter((t) =>
+        Boolean(t.sla_breached),
+      ).length,
+    [effectiveTickets],
   );
   const criticalHighDesk = useMemo(
     () =>
-      filterByServiceDeskQueue(tickets, "desk").filter((t) =>
+      filterByServiceDeskQueue(effectiveTickets, "desk").filter((t) =>
         ["critical", "high"].includes(t.priority),
       ).length,
-    [tickets],
+    [effectiveTickets],
   );
 
-  const total = openTickets.length;
+  const total = tableTickets.length;
   const rangeEnd = Math.min(offset + PAGE_SIZE, total);
 
   const resolveTicketForDrop = useCallback(
-    (ticketId: string) => openTickets.find((t) => t.id === ticketId),
-    [openTickets],
+    (ticketId: string) => tableTickets.find((t) => t.id === ticketId),
+    [tableTickets],
   );
 
   const handleDropTeam = useCallback(
@@ -188,6 +227,15 @@ export function ServiceDeskView({
         assignment_reason: data.reason,
         fault_displayed: data.faultDisplayed,
       });
+      const team = internalTeams.find((t) => t.id === data.teamId);
+      setTicketOverrides((prev) => ({
+        ...prev,
+        [pending.ticketId]: {
+          assigned_team_id: data.teamId,
+          assigned_team_name: team?.name ?? pending.teamName ?? null,
+          assigned_user_id: null,
+        },
+      }));
       setPending(null);
       router.refresh();
     } catch (err) {
@@ -280,14 +328,23 @@ export function ServiceDeskView({
           </div>
 
           <p className="text-muted-foreground shrink-0 text-xs">
-            Brug kolonne-filtrene til at sortere og indsnævre listen. Træk en sag til en gruppe
-            til højre.
+            {queue === "teams"
+              ? "Sager ude i teams vises kun under den pågældende gruppe til højre — brug søgning og kolonne-filtre der."
+              : "Listen viser kun sager i service desk-køen. Efter tildeling til en gruppe forsvinder sagen her og vises kun under gruppen til højre."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
+            {queue === "teams" && tableTickets.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                Ingen sager i kø-tabellen — se tildelte sager under interne grupper til højre
+                {railTeamTickets.length > 0
+                  ? ` (${railTeamTickets.length} matcher filtrene).`
+                  : "."}
+              </p>
+            ) : null}
             <WireframeTicketTable
               tickets={pageTickets}
-              draggable
+              draggable={queue !== "teams"}
               columnFilters={
                 <TicketTableColumnFilters
                   filters={tableFilters}

@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { attachmentDownloadUrl } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment";
 
 function formatDate(iso: string | null): string {
@@ -32,34 +31,8 @@ export function TicketAttachments({
   attachments: Attachment[];
   staffView: boolean;
 }) {
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
   if (attachments.length === 0) {
     return null;
-  }
-
-  async function download(attachment: Attachment) {
-    if (!attachment.download_available) {
-      return;
-    }
-    setDownloadingId(attachment.id);
-    try {
-      const response = await fetch(attachmentDownloadUrl(ticketId, attachment.id), {
-        credentials: "same-origin",
-      });
-      if (!response.ok) {
-        throw new Error("Kunne ikke hente filen");
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = attachment.filename;
-      anchor.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloadingId(null);
-    }
   }
 
   return (
@@ -87,15 +60,14 @@ export function TicketAttachments({
                 </p>
               </div>
               {staffView && file.download_available ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={downloadingId === file.id}
-                  onClick={() => download(file)}
+                <a
+                  href={attachmentDownloadUrl(ticketId, file.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
                 >
-                  {downloadingId === file.id ? "Henter…" : "Åbn"}
-                </Button>
+                  Åbn
+                </a>
               ) : null}
             </li>
           ))}

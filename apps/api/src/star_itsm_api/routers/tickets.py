@@ -664,10 +664,17 @@ async def download_ticket_attachment(
         raise HTTPException(status_code=404, detail="Attachment not found")
 
     path = resolve_download_path(attachment)
+    disposition = (
+        "inline"
+        if attachment.content_type.startswith("image/")
+        or attachment.content_type == "application/pdf"
+        else "attachment"
+    )
     return FileResponse(
         path,
         media_type=attachment.content_type,
         filename=attachment.filename,
+        content_disposition_type=disposition,
     )
 
 

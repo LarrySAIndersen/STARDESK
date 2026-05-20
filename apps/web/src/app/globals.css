@@ -805,6 +805,48 @@
     @apply shrink-0 border-t border-[var(--gray-border)] px-3 py-2.5;
   }
 
+  .wire-asset-detail-panel--with-tickets {
+    border-right: none;
+  }
+
+  .wire-asset-tickets-panel {
+    @apply flex h-full shrink-0 flex-col overflow-hidden border-l border-[var(--gray-border)] bg-[var(--gray-bg)] shadow-[-6px_0_20px_rgb(0_0_0/0.08)];
+    width: 0;
+    min-width: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      width 220ms ease-out,
+      opacity 160ms ease-out;
+  }
+
+  .wire-asset-tickets-panel--open {
+    width: min(320px, 42vw);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .wire-asset-tickets-panel-header {
+    @apply flex shrink-0 items-start gap-2 border-b border-[var(--gray-border)] bg-white px-3 py-2.5;
+    min-height: var(--wire-shell-header-h);
+  }
+
+  .wire-asset-tickets-panel-body {
+    @apply min-h-0 flex-1 overflow-y-auto px-2 py-2;
+  }
+
+  .wire-asset-tickets-list {
+    @apply m-0 list-none space-y-2 p-0;
+  }
+
+  .wire-asset-ticket-link {
+    @apply block rounded-sm border border-[var(--gray-border)] bg-white px-2.5 py-2 transition-colors hover:border-star-navy/40 hover:bg-star-blue-light/40;
+  }
+
+  .wire-asset-tickets-panel-footer {
+    @apply shrink-0 border-t border-[var(--gray-border)] bg-white px-3 py-2;
+  }
+
   .wire-topbar {
     @apply sticky top-0 z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--gray-border)] bg-white px-3 py-2 sm:gap-4 sm:px-5 sm:py-0;
     min-height: var(--wire-shell-header-h);
