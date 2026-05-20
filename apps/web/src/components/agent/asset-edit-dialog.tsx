@@ -36,7 +36,7 @@ export function AssetEditDialog({
 }: AssetEditDialogProps) {
   const titleId = useId();
   const panelRef = useFocusTrap(open, onClose);
-  const { updateAsset, deleteAsset, isCustomAsset } = useAssetCatalog();
+  const { updateAsset, deleteAsset } = useAssetCatalog();
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -59,8 +59,6 @@ export function AssetEditDialog({
 
   if (!open || !detail) return null;
 
-  const canDelete = isCustomAsset(detail.id);
-
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -81,9 +79,14 @@ export function AssetEditDialog({
   };
 
   const handleDelete = () => {
-    if (!canDelete) return;
-    if (!window.confirm(`Slet aktivet «${detail.name}»?`)) return;
-    if (deleteAsset(detail.id)) {
+    if (
+      !window.confirm(
+        `Slet aktivet «${detail.name}»? Handlingen logges og kan ikke fortrydes fra grafen.`,
+      )
+    ) {
+      return;
+    }
+    if (deleteAsset(detail.id, detail.name)) {
       onDeleted?.(detail.id);
       onClose();
     }
@@ -109,7 +112,7 @@ export function AssetEditDialog({
             Rediger aktiv
           </h2>
           <p className="text-[var(--gray-mid)] mt-0.5 text-[11px]">
-            Kun administratorer. Ændringer gemmes i browseren indtil CMDB er i databasen.
+            Kun administratorer. Ændringer gemmes i databasen og logges med hvem, hvad og hvornår.
           </p>
         </div>
 
@@ -211,17 +214,13 @@ export function AssetEditDialog({
           ) : null}
 
           <div className="flex flex-wrap justify-between gap-2 border-t border-[var(--gray-border)] pt-3">
-            {canDelete ? (
-              <button
-                type="button"
-                className="text-star-red text-[11px] font-semibold hover:underline"
-                onClick={handleDelete}
-              >
-                Slet aktiv
-              </button>
-            ) : (
-              <span className="text-[var(--gray-mid)] text-[10px]">Standardaktiver kan ikke slettes</span>
-            )}
+            <button
+              type="button"
+              className="text-star-red text-[11px] font-semibold hover:underline"
+              onClick={handleDelete}
+            >
+              Slet aktiv
+            </button>
             <div className="flex gap-2">
               <button type="button" className="wire-asset-graph-reset px-3 py-1.5" onClick={onClose}>
                 Annuller

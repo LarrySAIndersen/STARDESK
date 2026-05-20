@@ -4,6 +4,7 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { ListTree, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 
 import { AssetAddDialog } from "@/components/agent/asset-add-dialog";
+import { AssetAuditLogPanel } from "@/components/agent/asset-audit-log-panel";
 import { AssetCatalogProvider, useAssetCatalog } from "@/components/agent/asset-catalog-context";
 import { AssetDetailPanel } from "@/components/agent/asset-detail-panel";
 import { AssetGraphNetwork } from "@/components/agent/asset-graph-network";
@@ -110,6 +111,7 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
       </div>
 
       <div className="wire-assets-layout flex min-h-0 flex-1 gap-3 overflow-hidden">
+        {admin ? <AssetAuditLogPanel /> : null}
         {showTree ? (
           <div className="wire-assets-card wire-assets-card--tree flex w-full max-w-[260px] shrink-0 flex-col">
             <Suspense fallback={<div className="wire-asset-panel-header">Aktiver</div>}>
@@ -167,8 +169,9 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
 }
 
 export function AssetsPage({ serverUser }: { serverUser: User | null }) {
+  const admin = isAdmin(serverUser ?? getClientUser());
   return (
-    <AssetCatalogProvider>
+    <AssetCatalogProvider syncToDb={admin}>
       <AssetsPageContent serverUser={serverUser} />
     </AssetCatalogProvider>
   );

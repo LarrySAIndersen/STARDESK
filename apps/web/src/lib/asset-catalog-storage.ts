@@ -7,6 +7,7 @@ export type PersistedAssetCatalog = {
   systems: AssetSystem[];
   extraEdges: AssetGraphEdge[];
   removedEdgeIds: string[];
+  deletedAssetIds: string[];
   metadata: Record<string, AssetMetadataOverride>;
 };
 
@@ -21,6 +22,7 @@ export function loadPersistedCatalog(): PersistedAssetCatalog | null {
       systems: parsed.systems,
       extraEdges: Array.isArray(parsed.extraEdges) ? parsed.extraEdges : [],
       removedEdgeIds: Array.isArray(parsed.removedEdgeIds) ? parsed.removedEdgeIds : [],
+      deletedAssetIds: Array.isArray(parsed.deletedAssetIds) ? parsed.deletedAssetIds : [],
       metadata: parsed.metadata && typeof parsed.metadata === "object" ? parsed.metadata : {},
     };
   } catch {

@@ -104,6 +104,10 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _schema_has_column(engine, "is_system", table_name="sf_chat_messages"):
         return True
+    if not await _table_exists(engine, "cmdb_catalog"):
+        return True
+    if not await _table_exists(engine, "cmdb_audit_log"):
+        return True
     return False
 
 

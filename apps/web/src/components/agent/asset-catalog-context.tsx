@@ -6,16 +6,22 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
 import { MOCK_ASSET_EDGES, SYSTEM_ANCHORS } from "@/lib/asset-graph";
 import {
+  assetEntityType,
+  filterDeletedAssets,
+} from "@/lib/asset-catalog-filter";
+import {
   loadPersistedCatalog,
   savePersistedCatalog,
   type PersistedAssetCatalog,
 } from "@/lib/asset-catalog-storage";
+import { fetchCmdbCatalog, postCmdbAuditEntry, saveCmdbCatalog } from "@/lib/cmdb-api";
 import { MOCK_ASSET_SYSTEMS } from "@/lib/mock-assets";
 import type {
   AssetGraphEdge,
@@ -24,6 +30,7 @@ import type {
   AssetEnvironment,
 } from "@/types/asset";
 import type { AssetSubsystem, AssetSystem } from "@/types/asset";
+import type { CmdbAuditAction, CmdbEntityType } from "@/types/cmdb-audit";
 
 export type AddAssetInput = {
   kind: "system" | "subsystem";
@@ -55,10 +62,12 @@ interface AssetCatalogContextValue {
   allEdges: AssetGraphEdge[];
   addAsset: (input: AddAssetInput) => string | null;
   updateAsset: (assetId: string, input: UpdateAssetInput) => boolean;
-  deleteAsset: (assetId: string) => boolean;
+  deleteAsset: (assetId: string, label?: string) => boolean;
   addConnection: (sourceId: string, targetId: string) => string | null;
   removeConnection: (edgeId: string) => void;
   isCustomAsset: (assetId: string) => boolean;
+  refreshAuditLog: () => void;
+  auditLogVersion: number;
 }
 
 const AssetCatalogContext = createContext<AssetCatalogContextValue | null>(null);
@@ -114,33 +123,130 @@ function persistState(state: PersistedAssetCatalog) {
   savePersistedCatalog(state);
 }
 
-export function AssetCatalogProvider({ children }: { children: ReactNode }) {
-  const [systems, setSystems] = useState<AssetSystem[]>(() => cloneSystems(MOCK_ASSET_SYSTEMS));
+function toPersisted(
+  systems: AssetSystem[],
+  extraEdges: AssetGraphEdge[],
+  removedEdgeIds: Set<string>,
+  deletedAssetIds: Set<string>,
+  metadata: Record<string, AssetMetadataOverride>,
+): PersistedAssetCatalog {
+  return {
+    systems,
+    extraEdges,
+    removedEdgeIds: [...removedEdgeIds],
+    deletedAssetIds: [...deletedAssetIds],
+    metadata,
+  };
+}
+
+export function AssetCatalogProvider({
+  children,
+  syncToDb = false,
+}: {
+  children: ReactNode;
+  syncToDb?: boolean;
+}) {
+  const [rawSystems, setRawSystems] = useState<AssetSystem[]>(() =>
+    cloneSystems(MOCK_ASSET_SYSTEMS),
+  );
   const [extraEdges, setExtraEdges] = useState<AssetGraphEdge[]>([]);
   const [removedEdgeIds, setRemovedEdgeIds] = useState<Set<string>>(() => new Set());
+  const [deletedAssetIds, setDeletedAssetIds] = useState<Set<string>>(() => new Set());
   const [metadata, setMetadata] = useState<Record<string, AssetMetadataOverride>>({});
   const [hydrated, setHydrated] = useState(false);
+  const [auditLogVersion, setAuditLogVersion] = useState(0);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const systems = useMemo(
+    () => filterDeletedAssets(rawSystems, deletedAssetIds),
+    [rawSystems, deletedAssetIds],
+  );
+
+  const refreshAuditLog = useCallback(() => {
+    setAuditLogVersion((v) => v + 1);
+  }, []);
+
+  const recordAudit = useCallback(
+    async (
+      action: CmdbAuditAction,
+      entityType: CmdbEntityType,
+      entityId: string,
+      entityLabel: string,
+      changes: Record<string, unknown> = {},
+      summaryDa?: string,
+    ) => {
+      if (!syncToDb) return;
+      try {
+        await postCmdbAuditEntry({
+          action,
+          entity_type: entityType,
+          entity_id: entityId,
+          entity_label: entityLabel,
+          changes,
+          summary_da: summaryDa,
+        });
+        refreshAuditLog();
+      } catch {
+        // API unavailable — local state still updated
+      }
+    },
+    [syncToDb, refreshAuditLog],
+  );
+
+  const scheduleDbSave = useCallback(() => {
+    if (!syncToDb || !hydrated) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      void saveCmdbCatalog(
+        toPersisted(rawSystems, extraEdges, removedEdgeIds, deletedAssetIds, metadata),
+      ).catch(() => undefined);
+    }, 600);
+  }, [syncToDb, hydrated, rawSystems, extraEdges, removedEdgeIds, deletedAssetIds, metadata]);
 
   useEffect(() => {
-    const saved = loadPersistedCatalog();
-    if (saved) {
-      setSystems(cloneSystems(saved.systems));
-      setExtraEdges(saved.extraEdges);
-      setRemovedEdgeIds(new Set(saved.removedEdgeIds));
-      setMetadata(saved.metadata);
+    let cancelled = false;
+    async function hydrate() {
+      if (syncToDb) {
+        const remote = await fetchCmdbCatalog();
+        if (!cancelled && remote) {
+          setRawSystems(cloneSystems(remote.systems.length ? remote.systems : MOCK_ASSET_SYSTEMS));
+          setExtraEdges(remote.extraEdges);
+          setRemovedEdgeIds(new Set(remote.removedEdgeIds));
+          setDeletedAssetIds(new Set(remote.deletedAssetIds));
+          setMetadata(remote.metadata);
+          setHydrated(true);
+          return;
+        }
+      }
+      const saved = loadPersistedCatalog();
+      if (!cancelled && saved) {
+        setRawSystems(cloneSystems(saved.systems));
+        setExtraEdges(saved.extraEdges);
+        setRemovedEdgeIds(new Set(saved.removedEdgeIds));
+        setDeletedAssetIds(new Set(saved.deletedAssetIds ?? []));
+        setMetadata(saved.metadata);
+      }
+      if (!cancelled) setHydrated(true);
     }
-    setHydrated(true);
-  }, []);
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [syncToDb]);
 
   useEffect(() => {
     if (!hydrated) return;
-    persistState({
-      systems,
-      extraEdges,
-      removedEdgeIds: [...removedEdgeIds],
-      metadata,
-    });
-  }, [systems, extraEdges, removedEdgeIds, metadata, hydrated]);
+    persistState(toPersisted(rawSystems, extraEdges, removedEdgeIds, deletedAssetIds, metadata));
+    scheduleDbSave();
+  }, [
+    rawSystems,
+    extraEdges,
+    removedEdgeIds,
+    deletedAssetIds,
+    metadata,
+    hydrated,
+    scheduleDbSave,
+  ]);
 
   const allEdges = useMemo(() => {
     const nodeIds = new Set<string>();
@@ -152,7 +258,9 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       (e) =>
         nodeIds.has(e.source) &&
         nodeIds.has(e.target) &&
-        !removedEdgeIds.has(e.id),
+        !removedEdgeIds.has(e.id) &&
+        !deletedAssetIds.has(e.source) &&
+        !deletedAssetIds.has(e.target),
     );
     const custom = extraEdges.filter(
       (e) => nodeIds.has(e.source) && nodeIds.has(e.target),
@@ -163,7 +271,7 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       seen.add(e.id);
       return true;
     });
-  }, [systems, extraEdges, removedEdgeIds]);
+  }, [systems, extraEdges, removedEdgeIds, deletedAssetIds]);
 
   const isCustomAsset = useCallback((assetId: string) => !INITIAL_MOCK_IDS.has(assetId), []);
 
@@ -174,7 +282,7 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       if (!name || !code) return null;
 
       const existingIds = new Set<string>();
-      for (const system of systems) {
+      for (const system of rawSystems) {
         existingIds.add(system.id);
         for (const sub of system.subsystems) existingIds.add(sub.id);
       }
@@ -182,7 +290,7 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       if (input.kind === "subsystem") {
         const parentId = input.parentSystemId;
         if (!parentId) return null;
-        const parentIndex = systems.findIndex((s) => s.id === parentId);
+        const parentIndex = rawSystems.findIndex((s) => s.id === parentId);
         if (parentIndex < 0) return null;
 
         const subId = uniqueId("sub", code, existingIds);
@@ -193,7 +301,7 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
           code,
         };
 
-        setSystems((prev) =>
+        setRawSystems((prev) =>
           prev.map((s) =>
             s.id === parentId ? { ...s, subsystems: [...s.subsystems, subsystem] } : s,
           ),
@@ -202,11 +310,15 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
           ...prev,
           { id: `e-custom-${subId}`, source: parentId, target: subId },
         ]);
+        void recordAudit("create", "subsystem", subId, name, {
+          code,
+          parent_system_id: parentId,
+        });
         return subId;
       }
 
       const sysId = uniqueId("sys", code, existingIds);
-      SYSTEM_ANCHORS[sysId] = defaultAnchorForNewSystem(systems);
+      SYSTEM_ANCHORS[sysId] = defaultAnchorForNewSystem(rawSystems);
 
       const system: AssetSystem = {
         id: sysId,
@@ -215,73 +327,119 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
         subsystems: [],
       };
 
-      setSystems((prev) => [...prev, system]);
+      setRawSystems((prev) => [...prev, system]);
+      void recordAudit("create", "system", sysId, name, { code });
       return sysId;
     },
-    [systems],
+    [rawSystems, recordAudit],
   );
 
-  const updateAsset = useCallback((assetId: string, input: UpdateAssetInput): boolean => {
-    let found = false;
-    setSystems((prev) =>
-      prev.map((system) => {
-        if (system.id === assetId) {
-          found = true;
+  const updateAsset = useCallback(
+    (assetId: string, input: UpdateAssetInput): boolean => {
+      let found = false;
+      let label = assetId;
+      const before: Record<string, unknown> = {};
+      const after: Record<string, unknown> = {};
+
+      setRawSystems((prev) =>
+        prev.map((system) => {
+          if (system.id === assetId) {
+            found = true;
+            label = system.name;
+            before.name = system.name;
+            before.code = system.code;
+            after.name = input.name?.trim() || system.name;
+            after.code = input.code?.trim().toUpperCase() || system.code;
+            return {
+              ...system,
+              name: after.name as string,
+              code: after.code as string,
+            };
+          }
           return {
             ...system,
-            name: input.name?.trim() || system.name,
-            code: input.code?.trim().toUpperCase() || system.code,
+            subsystems: system.subsystems.map((sub) => {
+              if (sub.id !== assetId) return sub;
+              found = true;
+              label = sub.name;
+              before.name = sub.name;
+              before.code = sub.code;
+              after.name = input.name?.trim() || sub.name;
+              after.code = input.code?.trim().toUpperCase() || sub.code;
+              return {
+                ...sub,
+                name: after.name as string,
+                code: after.code as string,
+              };
+            }),
           };
+        }),
+      );
+
+      if (
+        input.status ||
+        input.ownerTeam ||
+        input.environment ||
+        input.description !== undefined
+      ) {
+        const prevMeta = metadata[assetId];
+        if (input.status) {
+          before.status = prevMeta?.status;
+          after.status = input.status;
         }
-        return {
-          ...system,
-          subsystems: system.subsystems.map((sub) => {
-            if (sub.id !== assetId) return sub;
-            found = true;
-            return {
-              ...sub,
-              name: input.name?.trim() || sub.name,
-              code: input.code?.trim().toUpperCase() || sub.code,
-            };
-          }),
-        };
-      }),
-    );
+        if (input.ownerTeam) {
+          before.ownerTeam = prevMeta?.ownerTeam;
+          after.ownerTeam = input.ownerTeam;
+        }
+        if (input.environment) {
+          before.environment = prevMeta?.environment;
+          after.environment = input.environment;
+        }
+        if (input.description !== undefined) {
+          before.description = prevMeta?.description;
+          after.description = input.description;
+        }
+        setMetadata((prev) => ({
+          ...prev,
+          [assetId]: {
+            ...prev[assetId],
+            ...(input.status ? { status: input.status } : {}),
+            ...(input.ownerTeam ? { ownerTeam: input.ownerTeam } : {}),
+            ...(input.environment ? { environment: input.environment } : {}),
+            ...(input.description !== undefined ? { description: input.description } : {}),
+            lastUpdated: new Date().toISOString().slice(0, 10),
+          },
+        }));
+      }
 
-    if (
-      input.status ||
-      input.ownerTeam ||
-      input.environment ||
-      input.description !== undefined
-    ) {
-      setMetadata((prev) => ({
-        ...prev,
-        [assetId]: {
-          ...prev[assetId],
-          ...(input.status ? { status: input.status } : {}),
-          ...(input.ownerTeam ? { ownerTeam: input.ownerTeam } : {}),
-          ...(input.environment ? { environment: input.environment } : {}),
-          ...(input.description !== undefined ? { description: input.description } : {}),
-          lastUpdated: new Date().toISOString().slice(0, 10),
-        },
-      }));
-    }
-
-    return found;
-  }, []);
+      if (found) {
+        void recordAudit("update", assetEntityType(assetId), assetId, label, {
+          before,
+          after,
+        });
+      }
+      return found;
+    },
+    [metadata, recordAudit],
+  );
 
   const deleteAsset = useCallback(
-    (assetId: string): boolean => {
-      if (!isCustomAsset(assetId)) return false;
+    (assetId: string, label?: string): boolean => {
+      const entityLabel = label ?? assetId;
+      const isStandard = INITIAL_MOCK_IDS.has(assetId);
 
-      setSystems((prev) => {
-        const withoutSystem = prev.filter((s) => s.id !== assetId);
-        if (withoutSystem.length !== prev.length) return withoutSystem;
-        return prev.map((s) => ({
-          ...s,
-          subsystems: s.subsystems.filter((sub) => sub.id !== assetId),
-        }));
-      });
+      if (isStandard) {
+        setDeletedAssetIds((prev) => new Set(prev).add(assetId));
+      } else {
+        setRawSystems((prev) => {
+          const withoutSystem = prev.filter((s) => s.id !== assetId);
+          if (withoutSystem.length !== prev.length) return withoutSystem;
+          return prev.map((s) => ({
+            ...s,
+            subsystems: s.subsystems.filter((sub) => sub.id !== assetId),
+          }));
+        });
+      }
 
       setExtraEdges((prev) =>
         prev.filter((e) => e.source !== assetId && e.target !== assetId),
@@ -300,9 +458,13 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
         delete next[assetId];
         return next;
       });
+
+      void recordAudit("delete", assetEntityType(assetId), assetId, entityLabel, {
+        standard: isStandard,
+      });
       return true;
     },
-    [isCustomAsset],
+    [recordAudit],
   );
 
   const addConnection = useCallback(
@@ -321,18 +483,26 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
         next.delete(edgeId);
         return next;
       });
+      void recordAudit("connection_add", "edge", edgeId, `${sourceId} → ${targetId}`, {
+        source: sourceId,
+        target: targetId,
+      });
       return edgeId;
     },
-    [allEdges],
+    [allEdges, recordAudit],
   );
 
-  const removeConnection = useCallback((edgeId: string) => {
-    if (MOCK_ASSET_EDGES.some((e) => e.id === edgeId)) {
-      setRemovedEdgeIds((prev) => new Set(prev).add(edgeId));
-      return;
-    }
-    setExtraEdges((prev) => prev.filter((e) => e.id !== edgeId));
-  }, []);
+  const removeConnection = useCallback(
+    (edgeId: string) => {
+      if (MOCK_ASSET_EDGES.some((e) => e.id === edgeId)) {
+        setRemovedEdgeIds((prev) => new Set(prev).add(edgeId));
+      } else {
+        setExtraEdges((prev) => prev.filter((e) => e.id !== edgeId));
+      }
+      void recordAudit("connection_remove", "edge", edgeId, edgeId);
+    },
+    [recordAudit],
+  );
 
   const value = useMemo(
     () => ({
@@ -347,6 +517,8 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       addConnection,
       removeConnection,
       isCustomAsset,
+      refreshAuditLog,
+      auditLogVersion,
     }),
     [
       systems,
@@ -360,6 +532,8 @@ export function AssetCatalogProvider({ children }: { children: ReactNode }) {
       addConnection,
       removeConnection,
       isCustomAsset,
+      refreshAuditLog,
+      auditLogVersion,
     ],
   );
 

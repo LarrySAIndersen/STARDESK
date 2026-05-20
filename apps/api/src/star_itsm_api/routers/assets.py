@@ -1,8 +1,20 @@
-from fastapi import APIRouter, Depends
+import uuid
 
-from star_itsm_api.core.security import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from star_itsm_api.core.security import get_current_user, require_admin, require_db, require_staff
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.asset import AssetSubsystemRead, AssetSystemRead
+from star_itsm_api.schemas.cmdb import (
+    CmdbAuditCreate,
+    CmdbAuditEntryRead,
+    CmdbAuditLogPage,
+    CmdbCatalogRead,
+    CmdbCatalogWrite,
+)
+from star_itsm_api.services.cmdb_audit import append_audit_entry, list_audit_log
+from star_itsm_api.services.cmdb_catalog import get_catalog, save_catalog
 
 router = APIRouter(prefix="/assets", tags=["assets"])
 
@@ -74,5 +86,62 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
 async def list_assets(
     _current_user: User = Depends(get_current_user),
 ) -> list[AssetSystemRead]:
-    """Mock CMDB hierarchy until assets are stored in the database."""
+    """Default CMDB hierarchy (merged with /catalog on the client)."""
     return _MOCK_ASSETS
+
+
+@router.get("/catalog", response_model=CmdbCatalogRead)
+async def read_cmdb_catalog(
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(require_staff()),
+) -> CmdbCatalogRead:
+    return await get_catalog(db)
+
+
+@router.put("/catalog", response_model=CmdbCatalogRead)
+async def write_cmdb_catalog(
+    body: CmdbCatalogWrite,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> CmdbCatalogRead:
+    return await save_catalog(db, actor=current_user, body=body)
+
+
+@router.post("/audit-log", response_model=CmdbAuditEntryRead, status_code=201)
+async def create_cmdb_audit_entry(
+    body: CmdbAuditCreate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> CmdbAuditEntryRead:
+    row = await append_audit_entry(db, actor=current_user, payload=body)
+    return CmdbAuditEntryRead(
+        id=row.id,
+        created_at=row.created_at,
+        actor_user_id=row.actor_user_id,
+        actor_display_name=row.actor_display_name,
+        action=row.action,
+        entity_type=row.entity_type,
+        entity_id=row.entity_id,
+        entity_label=row.entity_label,
+        changes=row.changes,
+        summary_da=row.summary_da,
+    )
+
+
+@router.get("/audit-log", response_model=CmdbAuditLogPage)
+async def read_cmdb_audit_log(
+    before_id: uuid.UUID | None = None,
+    byte_budget: int = Query(default=1_048_576, ge=64_000, le=4_194_304),
+    q: str | None = Query(default=None, max_length=200),
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(require_admin()),
+) -> CmdbAuditLogPage:
+    try:
+        return await list_audit_log(
+            db,
+            before_id=before_id,
+            byte_budget=byte_budget,
+            search=q,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Could not load audit log") from exc

@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import { User } from "lucide-react";
 
 import { SlaCountdown } from "@/components/sla-countdown";
+import { TicketDetailTopBandCenter } from "@/components/ticket/ticket-detail-top-band-center";
 import { TicketMetadataEditablePanel } from "@/components/ticket/ticket-metadata-editable-panel";
-import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
@@ -41,18 +42,20 @@ export function TicketDetailTopBand({
   teams = [],
   categories = [],
   editableMetadata = false,
+  staffView = true,
 }: {
   ticket: TicketDetail;
   teams?: Team[];
   categories?: Category[];
   editableMetadata?: boolean;
+  staffView?: boolean;
 }) {
   const reporter = ticket.reporter_display_name ?? "Ukendt indmelder";
   const canEdit = editableMetadata && teams.length > 0 && categories.length > 0;
 
   return (
-    <div className="ticket-detail-top-band mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
-      <section className="wire-card mb-0">
+    <div className="ticket-detail-top-band mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(280px,340px)] lg:items-stretch">
+      <section className="wire-card mb-0 lg:min-h-[280px]">
         <h2 className="wire-card-title">Indmelder</h2>
         <div className="flex items-start gap-3">
           <div
@@ -75,7 +78,9 @@ export function TicketDetailTopBand({
         </div>
       </section>
 
-      <section className="wire-card mb-0 lg:text-right">
+      <TicketDetailTopBandCenter ticket={ticket} staffView={staffView} />
+
+      <section className="wire-card mb-0 lg:min-h-[280px] lg:text-right">
         <h2 className="wire-card-title">Metadata</h2>
         <dl>
           {canEdit ? (
@@ -86,6 +91,7 @@ export function TicketDetailTopBand({
             />
           ) : (
             <>
+              <DetailRow label="Status" value={statusLabel(ticket.status)} />
               <DetailRow label="Kategori" value={ticket.category_name_da ?? "—"} />
               <DetailRow label="Underkategori" value={ticket.subcategory_name_da ?? "—"} />
               <DetailRow label="Prioritet" value={priorityLabel(ticket.priority)} />

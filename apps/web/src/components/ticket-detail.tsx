@@ -368,6 +368,7 @@ export function TicketDetailView({
           teams={teams}
           categories={categories}
           editableMetadata={metadataEditable}
+          staffView={staff}
         />
       ) : null}
 
@@ -496,17 +497,13 @@ export function TicketDetailView({
 
         <div className="min-w-0 space-y-4">
 
-          <WireDetailCard title="Beskrivelse">
-
-            <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
-
-              {ticket.description}
-
-            </p>
-
-          </WireDetailCard>
-
-
+          {!staff ? (
+            <WireDetailCard title="Beskrivelse">
+              <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                {ticket.description}
+              </p>
+            </WireDetailCard>
+          ) : null}
 
           {(ticket.tags?.length ?? 0) > 0 ? (
 
@@ -520,53 +517,36 @@ export function TicketDetailView({
 
 
 
-          {showAttachments ? (
-
+          {!staff && showAttachments ? (
             <TicketAttachments
-
               ticketId={ticket.id}
-
               attachments={ticket.attachments ?? []}
-
               staffView={staff}
-
             />
-
           ) : null}
 
-
-
-          <WireDetailCard title="Kommentarer">
-
-            <TicketComments
-
-              ticketId={ticket.id}
-
-              comments={ticket.comments}
-
-              staffView={staff}
-
-              embedded
-
-            />
-
-            <div className="border-star-navy/10 mt-4 border-t pt-4">
-
-              <p className="wire-form-label mb-2">Ny kommentar</p>
-
-              <CommentForm
+          {!staff ? (
+            <WireDetailCard title="Kommentarer">
+              <TicketComments
                 ticketId={ticket.id}
-                staffMode={staff}
-                primaryNavy
-                canBroadcastToChildren={Boolean(
-                  ticket.is_major && !ticket.parent_ticket_id,
-                )}
-                childCount={ticket.children?.length ?? ticket.child_count ?? 0}
+                comments={ticket.comments}
+                staffView={staff}
+                embedded
               />
-
-            </div>
-
-          </WireDetailCard>
+              <div className="border-star-navy/10 mt-4 border-t pt-4">
+                <p className="wire-form-label mb-2">Ny kommentar</p>
+                <CommentForm
+                  ticketId={ticket.id}
+                  staffMode={staff}
+                  primaryNavy
+                  canBroadcastToChildren={Boolean(
+                    ticket.is_major && !ticket.parent_ticket_id,
+                  )}
+                  childCount={ticket.children?.length ?? ticket.child_count ?? 0}
+                />
+              </div>
+            </WireDetailCard>
+          ) : null}
 
           {(staff || (ticket.ticket_emails?.length ?? 0) > 0) ? (
             <WireDetailCard title="E-mail tråd">

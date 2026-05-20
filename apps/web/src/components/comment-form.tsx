@@ -22,6 +22,11 @@ export function CommentForm({
   primaryNavy = false,
   canBroadcastToChildren = false,
   childCount = 0,
+  hidePendingPreview = false,
+  compact = false,
+  onPaste: onPasteProp,
+  externalPending,
+  onSubmitted,
 }: {
   ticketId: string;
   /** Agent/admin: choose internal vs external (customer portal). */
@@ -30,6 +35,16 @@ export function CommentForm({
   /** Store sag with undersager: optional broadcast of the same comment. */
   canBroadcastToChildren?: boolean;
   childCount?: number;
+  /** Image previews rendered elsewhere (e.g. top-band strip). */
+  hidePendingPreview?: boolean;
+  compact?: boolean;
+  onPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  externalPending?: {
+    files: File[];
+    hasFiles: boolean;
+    clear: () => void;
+  };
+  onSubmitted?: () => void;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -38,8 +53,11 @@ export function CommentForm({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const showBroadcast = canBroadcastToChildren && childCount > 0;
-  const { files: pendingImages, onPaste, removeAt, clear, hasFiles } =
-    usePendingImageAttachments();
+  const internalPending = usePendingImageAttachments();
+  const pendingImages = externalPending?.files ?? internalPending.files;
+  const hasFiles = externalPending?.hasFiles ?? internalPending.hasFiles;
+  const clear = externalPending?.clear ?? internalPending.clear;
+  const onPaste = onPasteProp ?? internalPending.onPaste;
 
   const canSubmit = body.trim().length > 0 || hasFiles;
 
@@ -65,6 +83,7 @@ export function CommentForm({
       setVisibility("external");
       setBroadcastToChildren(false);
       clear();
+      onSubmitted?.();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme kommentar");
@@ -74,8 +93,8 @@ export function CommentForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {staffMode ? (
+    <form onSubmit={handleSubmit} className={compact ? "space-y-3" : "space-y-4"}>
+      {staffMode && !compact ? (
         <fieldset className="space-y-2">
           <legend className="text-sm font-medium">Opdateringstype</legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -127,17 +146,45 @@ export function CommentForm({
         </fieldset>
       ) : null}
 
+      {staffMode && compact ? (
+        <fieldset className="flex flex-wrap gap-3 text-xs">
+          <legend className="sr-only">Opdateringstype</legend>
+          <label className="flex cursor-pointer items-center gap-1.5">
+            <input
+              type="radio"
+              name="visibility"
+              value="external"
+              checked={visibility === "external"}
+              onChange={() => setVisibility("external")}
+            />
+            Ekstern
+          </label>
+          <label className="flex cursor-pointer items-center gap-1.5">
+            <input
+              type="radio"
+              name="visibility"
+              value="internal"
+              checked={visibility === "internal"}
+              onChange={() => setVisibility("internal")}
+            />
+            Intern
+          </label>
+        </fieldset>
+      ) : null}
+
       <div className="space-y-2">
-        <Label htmlFor="comment-body">
-          {staffMode
-            ? visibility === "internal"
-              ? "Intern note"
-              : "Ekstern opdatering"
-            : "Din besked"}
-        </Label>
+        {!compact ? (
+          <Label htmlFor="comment-body">
+            {staffMode
+              ? visibility === "internal"
+                ? "Intern note"
+                : "Ekstern opdatering"
+              : "Din besked"}
+          </Label>
+        ) : null}
         <Textarea
           id="comment-body"
-          rows={4}
+          rows={compact ? 3 : 4}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           onPaste={onPaste}
@@ -149,7 +196,9 @@ export function CommentForm({
               : "Skriv en opdatering…"
           }
         />
-        <PendingImageAttachments files={pendingImages} onRemove={removeAt} />
+        {hidePendingPreview ? null : (
+          <PendingImageAttachments files={pendingImages} onRemove={internalPending.removeAt} />
+        )}
       </div>
 
       {showBroadcast ? (

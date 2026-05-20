@@ -1,6 +1,6 @@
 import type { Category, Subcategory } from "@/types/category";
 import type { SearchableOption } from "@/lib/assignment-search";
-import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 
 function normalizeQuery(query: string): string {
@@ -34,6 +34,16 @@ export function filterSubcategoriesForSearch(
     .map((sub) => ({ id: sub.id, label: sub.name_da }));
 }
 
+export const TICKET_STATUS_VALUES = [
+  "new",
+  "assigned",
+  "in_progress",
+  "on_hold",
+  "resolved",
+  "closed",
+  "cancelled",
+] as const;
+
 export const TICKET_PRIORITY_VALUES = ["critical", "high", "medium", "low"] as const;
 export const TICKET_TYPE_VALUES = ["incident", "service_request", "problem"] as const;
 export const TICKET_SOURCE_VALUES = [
@@ -44,6 +54,13 @@ export const TICKET_SOURCE_VALUES = [
   "api",
   "knowledge",
 ] as const;
+
+export function filterStatusesForSearch(query: string): SearchableOption[] {
+  const q = normalizeQuery(query);
+  return TICKET_STATUS_VALUES.filter((value) =>
+    matchesQuery(statusLabel(value), q),
+  ).map((value) => ({ id: value, label: statusLabel(value) }));
+}
 
 export function filterPrioritiesForSearch(query: string): SearchableOption[] {
   const q = normalizeQuery(query);

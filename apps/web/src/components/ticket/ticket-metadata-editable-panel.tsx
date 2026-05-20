@@ -16,6 +16,7 @@ import {
 import {
   filterCategoriesForSearch,
   filterPrioritiesForSearch,
+  filterStatusesForSearch,
   filterSourcesForSearch,
   filterSubcategoriesForSearch,
   filterTicketTypesForSearch,
@@ -23,11 +24,11 @@ import {
 } from "@/lib/metadata-search";
 import { apiPatch } from "@/lib/api";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
-import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
-import type { TicketDetail } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 function MetadataRow({
   label,
@@ -58,6 +59,7 @@ export function TicketMetadataEditablePanel({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [statusQuery, setStatusQuery] = useState("");
   const [categoryQuery, setCategoryQuery] = useState("");
   const [subcategoryQuery, setSubcategoryQuery] = useState("");
   const [priorityQuery, setPriorityQuery] = useState("");
@@ -84,6 +86,10 @@ export function TicketMetadataEditablePanel({
     return category?.subcategories ?? [];
   }, [categories, ticket.category_id]);
 
+  const statusOptions = useMemo(
+    () => filterStatusesForSearch(statusQuery),
+    [statusQuery],
+  );
   const categoryOptions = useMemo(
     () => filterCategoriesForSearch(categories, categoryQuery),
     [categories, categoryQuery],
@@ -119,6 +125,18 @@ export function TicketMetadataEditablePanel({
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleStatusSelect(option: SearchableOption) {
+    if (isUnassignedOption(option.id) || option.id === ticket.status) {
+      return;
+    }
+    await runSave(async () => {
+      const updated = await apiPatch<Ticket>(`/api/v1/tickets/${ticket.id}`, {
+        status: option.id,
+      });
+      return { ...ticket, ...updated };
+    });
   }
 
   async function handleCategorySelect(option: SearchableOption) {
@@ -228,6 +246,19 @@ export function TicketMetadataEditablePanel({
 
   return (
     <>
+      <MetadataRow label="Status">
+        <SearchableSelect
+          valueId={ticket.status}
+          displayValue={statusLabel(ticket.status)}
+          options={statusOptions}
+          placeholder="Søg status…"
+          emptyLabel="—"
+          allowClear={false}
+          disabled={isSaving}
+          onQueryChange={setStatusQuery}
+          onSelect={handleStatusSelect}
+        />
+      </MetadataRow>
       <MetadataRow label="Kategori">
         <SearchableSelect
           valueId={ticket.category_id}
