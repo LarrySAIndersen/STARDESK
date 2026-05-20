@@ -91,6 +91,7 @@ export function CreateTicketForm({
   const [intakeAnswers, setIntakeAnswers] = useState<IntakeAnswers>({});
   const [storeTickets, setStoreTickets] = useState<Ticket[]>([]);
   const [parentTicketId, setParentTicketId] = useState("");
+  const [ticketSource, setTicketSource] = useState<"portal" | "email" | "phone" | "chat">("phone");
   const {
     register,
     handleSubmit,
@@ -214,6 +215,7 @@ export function CreateTicketForm({
       intake_answers: Object.fromEntries(
         Object.entries(intakeAnswers).filter(([, v]) => v.trim()),
       ),
+      ...(staffOnly ? { source: ticketSource } : {}),
     };
     try {
       const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);
@@ -297,6 +299,31 @@ export function CreateTicketForm({
                 <p className="text-destructive text-sm">{errors.description.message}</p>
               ) : null}
             </div>
+
+            {staffOnly ? (
+              <div className="space-y-2">
+                <label className="wire-form-label" htmlFor="ticket_source">
+                  Kilde
+                </label>
+                <select
+                  id="ticket_source"
+                  className={selectClassName}
+                  value={ticketSource}
+                  onChange={(e) =>
+                    setTicketSource(e.target.value as "portal" | "email" | "phone" | "chat")
+                  }
+                  disabled={isSubmitting}
+                >
+                  <option value="phone">Telefon</option>
+                  <option value="email">E-mail</option>
+                  <option value="chat">Chat</option>
+                  <option value="portal">Selvbetjening</option>
+                </select>
+                <p className="text-muted-foreground text-xs">
+                  Angiv hvordan sagen kom ind — synlig som &quot;Kilde&quot; på sagen.
+                </p>
+              </div>
+            ) : null}
 
             <TicketIntakeQuestions
               title={watchedTitle}

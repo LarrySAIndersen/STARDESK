@@ -26,6 +26,7 @@ import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { apiPatch } from "@/lib/api";
 import { getClientUser } from "@/lib/auth";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
@@ -249,6 +250,7 @@ export function AgentDispatchBoard({
                   <TableRow>
                     <TableHead scope="col">Sagsnr.</TableHead>
                     <TableHead scope="col">Titel</TableHead>
+                    <TableHead scope="col">Kilde</TableHead>
                     <TableHead scope="col">Tags / emoji</TableHead>
                     <TableHead scope="col">Status</TableHead>
                     <TableHead scope="col">Prioritet</TableHead>
@@ -302,6 +304,11 @@ export function AgentDispatchBoard({
                             {ticket.title}
                           </Link>
                         </div>
+                      </TableCell>
+                      <TableCell className="max-w-[6rem]">
+                        <Badge variant="outline" className="whitespace-nowrap text-[10px]">
+                          {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="max-w-[8rem]">
                         <TicketTagBadges tags={ticket.tags} emoji={ticket.emoji} />

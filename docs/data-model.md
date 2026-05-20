@@ -45,7 +45,7 @@ erDiagram
 
 ### `tickets.source`
 
-`portal` | `email` | `api` | `phone`
+Hvordan sagen kom ind: `portal` (selvbetjening) | `email` | `api` | `phone` | `chat` | `knowledge` (vidensartikel).
 
 ### `tickets.intelligence_source`
 

@@ -12,6 +12,7 @@ import {
 import { SlaCountdown } from "@/components/sla-countdown";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Ticket } from "@/types/ticket";
 
 function formatDate(iso: string | null | undefined): string {
@@ -66,6 +67,7 @@ export function ItilTicketTable({
             <TableHead>Status</TableHead>
             <TableHead>Prioritet</TableHead>
             <TableHead>Type</TableHead>
+            <TableHead>Kilde</TableHead>
             <TableHead>Kategori</TableHead>
             <TableHead>Tildelt gruppe</TableHead>
             <TableHead>Sagsbehandler</TableHead>
@@ -135,6 +137,11 @@ export function ItilTicketTable({
                 </Badge>
               </TableCell>
               <TableCell className="text-xs">{ticketTypeLabel(ticket.ticket_type)}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="whitespace-nowrap text-[10px] font-semibold">
+                  {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+                </Badge>
+              </TableCell>
               <TableCell className="text-muted-foreground max-w-[8rem] truncate text-xs">
                 {ticket.category_name_da ?? "—"}
               </TableCell>

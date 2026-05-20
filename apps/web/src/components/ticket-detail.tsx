@@ -39,6 +39,7 @@ import { SlaCountdown } from "@/components/sla-countdown";
 
 import { hasTicketConnections, ticketOverviewHref } from "@/lib/ticket-connections";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 
 import { isStaff } from "@/lib/auth";
 
@@ -163,6 +164,11 @@ function TicketMetadataCard({ ticket }: { ticket: TicketDetail }) {
         ) : null}
 
         <DetailField label="Type" value={ticketTypeLabel(ticket.ticket_type)} />
+
+        <DetailField
+          label="Kilde"
+          value={ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+        />
 
         <DetailField
 
@@ -395,6 +401,10 @@ export function TicketDetailView({
             slaBreached={ticket.sla_breached}
 
           />
+
+          <Badge variant="outline" className="text-xs font-semibold">
+            Kilde: {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+          </Badge>
 
         </div>
 

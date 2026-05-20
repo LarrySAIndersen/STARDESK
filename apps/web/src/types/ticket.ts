@@ -49,6 +49,9 @@ export interface Ticket {
   knowledge_status_label_da?: string | null;
   knowledge_visibility?: string | null;
   knowledge_visibility_label_da?: string | null;
+  /** DB: portal | email | api | phone | chat | knowledge */
+  source?: string;
+  source_label_da?: string;
 }
 
 export interface TicketIntake {
@@ -153,4 +156,6 @@ export interface TicketCreateInput {
   tags?: string[];
   emoji?: string | null;
   intake_answers?: Record<string, string>;
+  /** Kun agenter — sendes til API; slutbrugere ignorerer feltet (portal). */
+  source?: "portal" | "email" | "phone" | "chat";
 }

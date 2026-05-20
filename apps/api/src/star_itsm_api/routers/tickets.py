@@ -94,6 +94,7 @@ from star_itsm_api.services.attachments import (
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
 from star_itsm_api.services.ticket_sort import (
     DEFAULT_TICKET_SORT,
     apply_ticket_sort,
@@ -428,6 +429,10 @@ async def create_ticket(
             detail="Store sager cannot have a parent ticket",
         )
     now = datetime.now(UTC)
+    resolved_source = resolve_ticket_source_on_create(
+        is_staff_user=is_staff(current_user),
+        requested=payload.source,
+    )
     ticket = Ticket(
         id=uuid.uuid4(),
         ticket_number=await generate_ticket_number(db, payload.ticket_type),
@@ -442,7 +447,7 @@ async def create_ticket(
         assigned_user_id=routing.assigned_user_id,
         category_id=payload.category_id,
         subcategory_id=payload.subcategory_id,
-        source="portal",
+        source=resolved_source,
         escalation_level=0,
         gdpr_consent=payload.gdpr_consent,
         gdpr_consent_at=now if payload.gdpr_consent else None,
@@ -481,7 +486,7 @@ async def create_ticket(
             ticket_id=ticket.id,
             actor_user_id=current_user.id,
             event_type="ticket.created",
-            payload={"ticket_number": ticket.ticket_number},
+            payload={"ticket_number": ticket.ticket_number, "source": resolved_source},
             created_at=now,
         )
     )

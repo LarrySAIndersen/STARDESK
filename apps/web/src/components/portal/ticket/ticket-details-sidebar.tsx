@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { SlaCountdown } from "@/components/sla-countdown";
 import { priorityLabel } from "@/lib/ticket-labels";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { TicketDetail } from "@/types/ticket";
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
@@ -34,6 +35,10 @@ export function TicketDetailsSidebar({ ticket }: { ticket: TicketDetail }) {
           value={ticket.assigned_user_name ?? "—"}
         />
         <DetailRow label="Prioritet" value={priorityLabel(ticket.priority)} />
+        <DetailRow
+          label="Kilde"
+          value={ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+        />
         <DetailRow
           label="Indmelder"
           value={ticket.reporter_display_name ?? "—"}

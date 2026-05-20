@@ -167,6 +167,28 @@ async def _needs_sf_groups_migration(engine: AsyncEngine) -> bool:
         return result.scalar() is not None
 
 
+async def _needs_ticket_source_chat_migration(engine: AsyncEngine) -> bool:
+    """True when tickets.source CHECK must be widened to allow chat (and knowledge)."""
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT pg_get_constraintdef(c.oid) AS def
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                JOIN pg_namespace n ON t.relnamespace = n.oid
+                WHERE n.nspname = 'public'
+                  AND t.relname = 'tickets'
+                  AND c.conname = 'tickets_source_check'
+                """
+            )
+        )
+        row = result.fetchone()
+        if row is None or row[0] is None:
+            return False
+        return "chat" not in str(row[0]).lower()
+
+
 async def ensure_ticket_schema_current(
     engine: AsyncEngine | None,
     database_url: str | None,
@@ -188,6 +210,9 @@ async def ensure_ticket_schema_current(
             await asyncio.to_thread(
                 _run_single_migration, database_url, "14_sf-operations-master-group.sql"
             )
+        if await _needs_ticket_source_chat_migration(engine):
+            logger.warning("tickets.source constraint outdated — applying ticket source migration")
+            await asyncio.to_thread(_run_single_migration, database_url, "22_ticket-source-chat.sql")
     except Exception:
         logger.exception("Schema sync failed — some endpoints may return 500")
 

@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 
 import { ticketStatusBarColor } from "@/components/portal/ticket/ticket-status-colors";
 import { WireStatusBadge } from "@/components/wireframe/wire-badge";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import { formatDateTimeDa } from "@/lib/utils";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -42,6 +43,9 @@ export function TicketHeader({ ticket }: { ticket: TicketDetail }) {
               </h1>
               <div className="flex flex-wrap items-center gap-2">
                 <WireStatusBadge status={ticket.status} />
+                <span className="rounded border border-star-blue/25 bg-star-blue/5 px-2 py-0.5 text-[11px] font-semibold text-star-navy">
+                  Kilde: {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
+                </span>
                 <span className="text-[var(--gray-mid)] text-[12px]">
                   Oprettet {formatDateTimeDa(ticket.created_at)}
                 </span>

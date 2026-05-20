@@ -6,6 +6,7 @@ import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-
 import { WireTags } from "@/components/wireframe/wire-tags";
 import { SlaCountdown } from "@/components/sla-countdown";
 import { cn } from "@/lib/utils";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Ticket } from "@/types/ticket";
 
 const DRAG_TYPE = "application/x-stardesk-ticket";
@@ -38,6 +39,7 @@ export function WireframeTicketTable({
       >
         <span>Sagsnr</span>
         <span>Titel og tags</span>
+        <span>Kilde</span>
         <span>Kategori</span>
         <span>Status</span>
         <span>Prioritet</span>
@@ -77,6 +79,9 @@ export function WireframeTicketTable({
           <span className="min-w-0">
             <p className="truncate text-[13px] font-medium">{ticket.title}</p>
             <WireTags tags={ticket.tags} />
+          </span>
+          <span className="truncate text-[11px] font-semibold text-star-navy">
+            {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
           </span>
           <span className="truncate text-xs">
             {ticket.category_name_da ?? "—"}

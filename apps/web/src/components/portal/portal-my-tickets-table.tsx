@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { WireStatusBadge } from "@/components/wireframe/wire-badge";
+import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import { formatDateTimeDa } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 
@@ -18,6 +19,7 @@ export function PortalMyTicketsTable({ tickets }: { tickets: Ticket[] }) {
         >
           <span>Sagsnr</span>
           <span>Titel</span>
+          <span>Kilde</span>
           <span>Status</span>
           <span>Oprettet</span>
         </div>
@@ -33,6 +35,9 @@ export function PortalMyTicketsTable({ tickets }: { tickets: Ticket[] }) {
             </span>
             <span className="min-w-0 truncate text-[13px] font-medium" title={ticket.title}>
               {ticket.title}
+            </span>
+            <span className="truncate text-[11px] font-semibold text-star-navy">
+              {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
             </span>
             <span>
               <WireStatusBadge status={ticket.status} />

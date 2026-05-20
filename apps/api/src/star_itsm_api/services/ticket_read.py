@@ -177,6 +177,7 @@ def _ticket_to_read(
         )
         if ka_visibility
         else None,
+        source=getattr(ticket, "source", None) or "portal",
     )
 
 
@@ -248,6 +249,7 @@ def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
         fault_displayed=getattr(ticket, "fault_displayed", False),
         tags=list(getattr(ticket, "tags", None) or []),
         emoji=getattr(ticket, "emoji", None),
+        source=getattr(ticket, "source", None) or "portal",
     )
 
 

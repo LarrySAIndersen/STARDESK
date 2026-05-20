@@ -160,7 +160,7 @@ CREATE TABLE tickets (
     category_id                 UUID REFERENCES categories(id) ON DELETE RESTRICT,
     subcategory_id              UUID REFERENCES subcategories(id) ON DELETE RESTRICT,
     source                      VARCHAR(32) NOT NULL DEFAULT 'portal'
-                                CHECK (source IN ('portal', 'email', 'api', 'phone')),
+                                CHECK (source IN ('portal', 'email', 'api', 'phone', 'chat', 'knowledge')),
     source_email_message_id     VARCHAR(512),
     sla_policy_id               UUID REFERENCES sla_policies(id) ON DELETE SET NULL,
     response_due_at             TIMESTAMPTZ,

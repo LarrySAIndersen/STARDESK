@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.schemas.comment import CommentRead
@@ -11,6 +11,7 @@ from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, Ticket
 from star_itsm_api.schemas.ticket_intelligence import TicketIntelligenceRead
 from star_itsm_api.schemas.ticket_routing import TicketRoutingRead
 from star_itsm_api.services.cpr import assert_no_cpr_outside_field, validate_cpr
+from star_itsm_api.services.ticket_source import ticket_source_label_da
 from star_itsm_api.services.ticket_tags import normalize_tags, validate_emoji
 
 
@@ -76,6 +77,12 @@ class TicketRead(BaseModel):
     knowledge_status_label_da: str | None = None
     knowledge_visibility: str | None = None
     knowledge_visibility_label_da: str | None = None
+    source: str = "portal"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def source_label_da(self) -> str:
+        return ticket_source_label_da(self.source)
 
 
 class TicketDetailRead(TicketRead):
@@ -121,6 +128,10 @@ class TicketCreate(BaseModel):
     tags: list[str] = Field(default_factory=list, max_length=10)
     emoji: str | None = Field(default=None, max_length=16)
     intake_answers: dict[str, str] = Field(default_factory=dict, max_length=20)
+    source: Literal["portal", "email", "phone", "chat"] | None = Field(
+        default=None,
+        description="Kun for agenter: hvordan sagen kom ind (selvbetjening/e-mail/telefon/chat).",
+    )
 
     @field_validator("tags")
     @classmethod
