@@ -35,7 +35,18 @@ export interface AssetDetail {
   parentSystemName: string | null;
   description: string;
   relatedAssetIds: string[];
+  /** Graph edge ids touching this asset (for admin connection management). */
+  connectionEdgeIds: string[];
   lastUpdated: string;
+}
+
+/** Admin-editable fields layered on top of generated CMDB defaults. */
+export interface AssetMetadataOverride {
+  status?: AssetStatus;
+  ownerTeam?: string;
+  environment?: AssetEnvironment;
+  description?: string;
+  lastUpdated?: string;
 }
 
 export interface AssetGraphNode {

@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
+import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { DispatchTeamsRail } from "@/components/dispatch/dispatch-teams-rail";
+import {
+  collectServiceDeskFilterOptions,
+  TicketTableColumnFilters,
+} from "@/components/service-desk/ticket-table-column-filters";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { ResizableSplit } from "@/components/ui/resizable-split";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
@@ -17,9 +22,15 @@ import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import {
   filterByServiceDeskQueue,
   paginateTickets,
-  sortServiceDeskQueue,
   type ServiceDeskQueueFilter,
 } from "@/lib/service-desk-queue";
+import {
+  applyServiceDeskTableFilters,
+  DEFAULT_SERVICE_DESK_TABLE_FILTERS,
+  hasActiveServiceDeskTableFilters,
+  sortServiceDeskTable,
+  type ServiceDeskTableFilters,
+} from "@/lib/service-desk-table-filters";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
@@ -73,6 +84,9 @@ export function ServiceDeskView({
   const router = useRouter();
   const [queue, setQueue] = useState<ServiceDeskQueueFilter>("desk");
   const [search, setSearch] = useState("");
+  const [tableFilters, setTableFilters] = useState<ServiceDeskTableFilters>(
+    DEFAULT_SERVICE_DESK_TABLE_FILTERS,
+  );
   const [offset, setOffset] = useState(0);
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingDrop | null>(null);
@@ -84,11 +98,23 @@ export function ServiceDeskView({
     return sortTeamsForDisplay(internal);
   }, [teams]);
 
+  const queueTickets = useMemo(
+    () => filterByServiceDeskQueue(tickets, queue),
+    [tickets, queue],
+  );
+
+  const filterOptions = useMemo(
+    () => collectServiceDeskFilterOptions(queueTickets),
+    [queueTickets],
+  );
+
   const openTickets = useMemo(() => {
-    const q = filterByServiceDeskQueue(tickets, queue);
-    const searched = q.filter((t) => ticketMatchesSearch(t, search));
-    return sortServiceDeskQueue(searched);
-  }, [tickets, queue, search]);
+    const searched = queueTickets.filter((t) => ticketMatchesSearch(t, search));
+    const filtered = applyServiceDeskTableFilters(searched, tableFilters);
+    return sortServiceDeskTable(filtered, tableFilters.sort);
+  }, [queueTickets, search, tableFilters]);
+
+  const columnFiltersActive = hasActiveServiceDeskTableFilters(tableFilters);
 
   const pageTickets = useMemo(
     () => paginateTickets(openTickets, offset, PAGE_SIZE),
@@ -241,16 +267,38 @@ export function ServiceDeskView({
                 </button>
               ))}
             </div>
-            <TicketSearchInput value={search} onChange={setSearch} id="service-desk-search" />
+            <div className="flex flex-wrap items-center gap-2">
+              <TicketSearchInput value={search} onChange={setSearch} id="service-desk-search" />
+              <ClearFiltersButton
+                visible={columnFiltersActive}
+                onClick={() => {
+                  setTableFilters(DEFAULT_SERVICE_DESK_TABLE_FILTERS);
+                  setOffset(0);
+                }}
+              />
+            </div>
           </div>
 
           <p className="text-muted-foreground shrink-0 text-xs">
-            Træk en sag fra listen og slip den på en gruppe til højre. Sager i den aktive
-            filtrering kan tildeles.
+            Brug kolonne-filtrene til at sortere og indsnævre listen. Træk en sag til en gruppe
+            til højre.
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <WireframeTicketTable tickets={pageTickets} draggable />
+            <WireframeTicketTable
+              tickets={pageTickets}
+              draggable
+              columnFilters={
+                <TicketTableColumnFilters
+                  filters={tableFilters}
+                  options={filterOptions}
+                  onChange={(patch) => {
+                    setTableFilters((prev) => ({ ...prev, ...patch }));
+                    setOffset(0);
+                  }}
+                />
+              }
+            />
           </div>
 
           <div className="flex shrink-0 flex-col items-center justify-between gap-2 sm:flex-row">

@@ -95,6 +95,7 @@ function edgesForSystems(
 export function buildAssetGraph(
   systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
   extraEdges: AssetGraphEdge[] = [],
+  edgesOverride?: AssetGraphEdge[],
 ): AssetGraphData {
   const nodes: AssetGraphNode[] = [];
 
@@ -124,7 +125,8 @@ export function buildAssetGraph(
     });
   }
 
-  return { nodes, edges: edgesForSystems(systems, extraEdges) };
+  const edges = edgesOverride ?? edgesForSystems(systems, extraEdges);
+  return { nodes, edges };
 }
 
 export function getGraphNeighborIds(assetId: string, edges = MOCK_ASSET_EDGES): Set<string> {

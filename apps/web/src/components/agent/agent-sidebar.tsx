@@ -52,6 +52,9 @@ function isActive(pathname: string, href: string): boolean {
   if (href === "/admin/sla") {
     return pathname === "/admin/sla" || pathname.startsWith("/admin/sla/");
   }
+  if (href === "/admin/categories") {
+    return pathname === "/admin/categories" || pathname.startsWith("/admin/categories/");
+  }
   if (href === "/admin/dependencies") {
     return pathname === "/admin/dependencies" || pathname.startsWith("/admin/dependencies/");
   }
@@ -98,6 +101,12 @@ export function AgentSidebar({
           {
             href: "/admin/sla",
             label: "SLA-indstillinger",
+            icon: Shield,
+            section: "Administration",
+          },
+          {
+            href: "/admin/categories",
+            label: "Kategorier",
             icon: Shield,
             section: "Administration",
           },

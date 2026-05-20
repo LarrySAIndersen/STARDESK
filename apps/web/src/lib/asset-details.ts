@@ -4,6 +4,7 @@ import type {
   AssetDetail,
   AssetEnvironment,
   AssetGraphEdge,
+  AssetMetadataOverride,
   AssetStatus,
   AssetSystem,
 } from "@/types/asset";
@@ -63,10 +64,32 @@ function lastUpdatedFor(id: string): string {
   return `2026-04-${String(day).padStart(2, "0")}`;
 }
 
+function connectionEdgeIdsFor(assetId: string, edges: AssetGraphEdge[]): string[] {
+  return edges
+    .filter((e) => e.source === assetId || e.target === assetId)
+    .map((e) => e.id);
+}
+
+function applyMetadataOverride(
+  detail: AssetDetail,
+  override: AssetMetadataOverride | undefined,
+): AssetDetail {
+  if (!override) return detail;
+  return {
+    ...detail,
+    status: override.status ?? detail.status,
+    ownerTeam: override.ownerTeam ?? detail.ownerTeam,
+    environment: override.environment ?? detail.environment,
+    description: override.description ?? detail.description,
+    lastUpdated: override.lastUpdated ?? detail.lastUpdated,
+  };
+}
+
 export function getAssetDetail(
   assetId: string,
   systems: AssetSystem[] = MOCK_ASSET_SYSTEMS,
   edges: AssetGraphEdge[] = MOCK_ASSET_EDGES,
+  metadataOverrides: Record<string, AssetMetadataOverride> = {},
 ): AssetDetail | null {
   for (let i = 0; i < systems.length; i++) {
     const system = systems[i];
@@ -75,42 +98,50 @@ export function getAssetDetail(
         ...getGraphNeighborIds(assetId, edges),
         ...system.subsystems.map((s) => s.id),
       ];
-      return {
-        id: system.id,
-        name: system.name,
-        code: system.code,
-        kind: "system",
-        status: hashStatus(system.id),
-        ownerTeam: OWNER_TEAMS[i % OWNER_TEAMS.length],
-        environment: hashEnvironment(system.id),
-        parentSystemId: null,
-        parentSystemName: null,
-        description:
-          DESCRIPTIONS[system.id] ?? `Overordnet system: ${system.name}.`,
-        relatedAssetIds: [...new Set(related)].filter((id) => id !== assetId),
-        lastUpdated: lastUpdatedFor(system.id),
-      };
+      return applyMetadataOverride(
+        {
+          id: system.id,
+          name: system.name,
+          code: system.code,
+          kind: "system",
+          status: hashStatus(system.id),
+          ownerTeam: OWNER_TEAMS[i % OWNER_TEAMS.length],
+          environment: hashEnvironment(system.id),
+          parentSystemId: null,
+          parentSystemName: null,
+          description:
+            DESCRIPTIONS[system.id] ?? `Overordnet system: ${system.name}.`,
+          relatedAssetIds: [...new Set(related)].filter((id) => id !== assetId),
+          connectionEdgeIds: connectionEdgeIdsFor(assetId, edges),
+          lastUpdated: lastUpdatedFor(system.id),
+        },
+        metadataOverrides[assetId],
+      );
     }
 
     const sub = system.subsystems.find((s) => s.id === assetId);
     if (sub) {
       const related = getGraphNeighborIds(assetId, edges);
-      return {
-        id: sub.id,
-        name: sub.name,
-        code: sub.code,
-        kind: "undersystem",
-        status: hashStatus(sub.id),
-        ownerTeam: OWNER_TEAMS[i % OWNER_TEAMS.length],
-        environment: hashEnvironment(sub.id),
-        parentSystemId: system.id,
-        parentSystemName: system.name,
-        description:
-          DESCRIPTIONS[sub.id] ??
-          `Undersystem under ${system.name} (${sub.code}).`,
-        relatedAssetIds: [...related].filter((id) => id !== assetId),
-        lastUpdated: lastUpdatedFor(sub.id),
-      };
+      return applyMetadataOverride(
+        {
+          id: sub.id,
+          name: sub.name,
+          code: sub.code,
+          kind: "undersystem",
+          status: hashStatus(sub.id),
+          ownerTeam: OWNER_TEAMS[i % OWNER_TEAMS.length],
+          environment: hashEnvironment(sub.id),
+          parentSystemId: system.id,
+          parentSystemName: system.name,
+          description:
+            DESCRIPTIONS[sub.id] ??
+            `Undersystem under ${system.name} (${sub.code}).`,
+          relatedAssetIds: [...related].filter((id) => id !== assetId),
+          connectionEdgeIds: connectionEdgeIdsFor(assetId, edges),
+          lastUpdated: lastUpdatedFor(sub.id),
+        },
+        metadataOverrides[sub.id],
+      );
     }
   }
   return null;

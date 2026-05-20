@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
@@ -17,12 +18,15 @@ export function WireframeTicketTable({
   onRowClick,
   onDragStart,
   className,
+  columnFilters,
 }: {
   tickets: Ticket[];
   draggable?: boolean;
   onRowClick?: (ticket: Ticket) => void;
   onDragStart?: (ticket: Ticket, event: React.DragEvent) => void;
   className?: string;
+  /** Replaces static column headers (e.g. filter/sort row). */
+  columnFilters?: ReactNode;
 }) {
   const router = useRouter();
 
@@ -33,18 +37,17 @@ export function WireframeTicketTable({
   return (
     <div className={cn("wire-table-wrap", className)}>
       <div className="wire-table-scroll wire-table-scroll--tickets">
-      <div
-        className="wire-table-head wire-table-grid-tickets"
-        role="row"
-      >
-        <span>Sagsnr</span>
-        <span>Titel og tags</span>
-        <span>Kilde</span>
-        <span>Kategori</span>
-        <span>Status</span>
-        <span>Prioritet</span>
-        <span>SLA</span>
-      </div>
+      {columnFilters ?? (
+        <div className="wire-table-head wire-table-grid-tickets" role="row">
+          <span>Sagsnr</span>
+          <span>Titel og tags</span>
+          <span>Kilde</span>
+          <span>Kategori</span>
+          <span>Status</span>
+          <span>Prioritet</span>
+          <span>SLA</span>
+        </div>
+      )}
       {tickets.map((ticket) => (
         <div
           key={ticket.id}

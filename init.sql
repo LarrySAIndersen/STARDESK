@@ -289,4 +289,13 @@ INSERT INTO categories (name, name_da, sort_order) VALUES
     ('software', 'Software', 20),
     ('access', 'Adgang og rettigheder', 30),
     ('network', 'Netværk og internet', 40),
+    ('security', 'Sikkerhed', 50),
+    ('email_collaboration', 'E-mail og samarbejde', 60),
+    ('cloud_services', 'Cloud og SaaS', 70),
+    ('telephony', 'Telefoni og møder', 80),
+    ('it_support', 'IT-support generelt', 90),
+    ('hr_personnel', 'HR og personale', 100),
+    ('facilities', 'Faciliteter og lokaler', 110),
+    ('procurement', 'Indkøb og licenser', 120),
+    ('training', 'Oplæring og vejledning', 130),
     ('other', 'Andet', 999);
