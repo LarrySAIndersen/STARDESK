@@ -19,6 +19,8 @@ from star_itsm_api.models.sf_chat_session import (
 )
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
+from star_itsm_api.models.ticket import Ticket
+from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sf_chat import (
     SfChatAgentInboxItem,
@@ -29,6 +31,12 @@ from star_itsm_api.schemas.sf_chat import (
     SfChatSessionRead,
     SfChatStatusRead,
 )
+from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.services.routing import apply_routing
+from star_itsm_api.services.sla import apply_sla_to_ticket
+from star_itsm_api.services.ticket_numbers import generate_ticket_number
+from star_itsm_api.services.ticket_security import resolve_create_security_flag
+from star_itsm_api.services.ticket_timestamps import maybe_set_assigned_at
 
 SF_TEAM_NAME = "SF"
 PRESENCE_STALE_SECONDS = 90
@@ -41,6 +49,22 @@ MSG_QUEUE_REJECTED = (
     "Prøv venligst igen senere."
 )
 MSG_CHAT_OPEN = "SF er klar til at chatte."
+
+# System events (persisted in sf_chat_messages, is_system=true)
+MSG_SYS_AGENT_LEFT_CUSTOMER = (
+    "Agenten har forladt chatten eller er gået offline. Chatten er afsluttet."
+)
+MSG_SYS_USER_LEFT_AGENT = "Kunden har forladt chatten."
+
+
+def format_sf_chat_transcript_da(messages: list[SfChatMessageRead]) -> str:
+    """Build a plain-text transcript for ticket description (Danish labels)."""
+    lines: list[str] = []
+    for m in messages:
+        ts = m.created_at.strftime("%Y-%m-%d %H:%M")
+        who = "System" if m.is_system else m.sender_display_name
+        lines.append(f"[{ts}] {who}: {m.body}")
+    return "\n".join(lines)
 
 
 def _now() -> datetime:
@@ -65,6 +89,48 @@ async def is_sf_team_member(db: AsyncSession, user_id: uuid.UUID) -> bool:
         )
     )
     return result.scalar_one_or_none() is not None
+
+
+async def _agent_presence_is_fresh(db: AsyncSession, agent_id: uuid.UUID) -> bool:
+    cutoff = _now() - timedelta(seconds=PRESENCE_STALE_SECONDS)
+    row = await db.get(SfChatPresence, agent_id)
+    if row is None or not row.is_online:
+        return False
+    return row.last_seen_at >= cutoff
+
+
+async def maybe_reconcile_stale_agent_sessions(db: AsyncSession) -> None:
+    """Close active chats whose assigned agent is offline or presence heartbeat is stale."""
+    result = await db.execute(
+        select(SfChatSession).where(
+            SfChatSession.status == SESSION_ACTIVE,
+            SfChatSession.assigned_agent_id.is_not(None),
+        )
+    )
+    changed = False
+    now = _now()
+    for session in result.scalars().all():
+        agent_id = session.assigned_agent_id
+        if agent_id is None or await _agent_presence_is_fresh(db, agent_id):
+            continue
+        db.add(
+            SfChatMessage(
+                session_id=session.id,
+                sender_user_id=None,
+                body=MSG_SYS_AGENT_LEFT_CUSTOMER,
+                is_system=True,
+                created_at=now,
+            )
+        )
+        session.status = SESSION_CLOSED
+        session.updated_at = now
+        presence = await db.get(SfChatPresence, agent_id)
+        if presence is not None and presence.active_session_id == session.id:
+            presence.active_session_id = None
+            presence.updated_at = now
+        changed = True
+    if changed:
+        await db.commit()
 
 
 async def _fresh_online_agent_ids(db: AsyncSession) -> list[uuid.UUID]:
@@ -94,6 +160,7 @@ async def count_waiting_sessions(db: AsyncSession) -> int:
 
 
 async def get_chat_status(db: AsyncSession) -> SfChatStatusRead:
+    await maybe_reconcile_stale_agent_sessions(db)
     agents = await _fresh_online_agent_ids(db)
     open_ = len(agents) > 0
     return SfChatStatusRead(
@@ -134,22 +201,31 @@ async def _message_reads(
 ) -> list[SfChatMessageRead]:
     result = await db.execute(
         select(SfChatMessage, User)
-        .join(User, SfChatMessage.sender_user_id == User.id)
+        .outerjoin(User, SfChatMessage.sender_user_id == User.id)
         .where(SfChatMessage.session_id == session_id)
         .order_by(SfChatMessage.created_at.asc())
     )
-    return [
-        SfChatMessageRead(
-            id=msg.id,
-            session_id=msg.session_id,
-            sender_user_id=msg.sender_user_id,
-            sender_display_name=user.display_name or user.email,
-            body=msg.body,
-            created_at=msg.created_at,
-            is_own=msg.sender_user_id == viewer_id,
+    rows: list[SfChatMessageRead] = []
+    for msg, user in result.all():
+        if msg.is_system:
+            display = "System"
+        elif user is not None:
+            display = user.display_name or user.email
+        else:
+            display = "Ukendt"
+        rows.append(
+            SfChatMessageRead(
+                id=msg.id,
+                session_id=msg.session_id,
+                sender_user_id=msg.sender_user_id,
+                sender_display_name=display,
+                body=msg.body,
+                created_at=msg.created_at,
+                is_own=bool(msg.sender_user_id and msg.sender_user_id == viewer_id),
+                is_system=msg.is_system,
+            )
         )
-        for msg, user in result.all()
-    ]
+    return rows
 
 
 async def get_or_create_customer_session(
@@ -316,12 +392,23 @@ async def abandon_customer_session(
     has_messages = int(msg_count.scalar_one() or 0) > 0
     typed = session.customer_last_typing_at is not None
 
+    now = _now()
+    db.add(
+        SfChatMessage(
+            session_id=session_id,
+            sender_user_id=None,
+            body=MSG_SYS_USER_LEFT_AGENT,
+            is_system=True,
+            created_at=now,
+        )
+    )
+
     if typed and not has_messages:
         session.status = SESSION_REJECTED_QUEUE
-        session.queue_rejected_at = _now()
+        session.queue_rejected_at = now
     else:
         session.status = SESSION_CLOSED
-    session.updated_at = _now()
+    session.updated_at = now
     await db.commit()
     await db.refresh(session)
     return session
@@ -402,6 +489,28 @@ async def set_presence_online(db: AsyncSession, user: User, *, online: bool, for
             raise ValueError("logout_blocked")
 
     now = _now()
+    if not online:
+        active_sessions = (
+            await db.execute(
+                select(SfChatSession).where(
+                    SfChatSession.assigned_agent_id == user.id,
+                    SfChatSession.status == SESSION_ACTIVE,
+                )
+            )
+        ).scalars().all()
+        for session in active_sessions:
+            db.add(
+                SfChatMessage(
+                    session_id=session.id,
+                    sender_user_id=None,
+                    body=MSG_SYS_AGENT_LEFT_CUSTOMER,
+                    is_system=True,
+                    created_at=now,
+                )
+            )
+            session.status = SESSION_CLOSED
+            session.updated_at = now
+
     row = await db.get(SfChatPresence, user.id)
     if row is None:
         row = SfChatPresence(
@@ -499,6 +608,8 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
     if not await is_sf_team_member(db, agent.id):
         return SfChatAgentInboxRead(items=[], online=False, notification_count=0)
 
+    await maybe_reconcile_stale_agent_sessions(db)
+
     presence = await db.get(SfChatPresence, agent.id)
     online = bool(presence and presence.is_online)
 
@@ -526,7 +637,7 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
         )
         last_msg = last_msg_result.scalar_one_or_none()
         unread = 0
-        if last_msg and last_msg.sender_user_id == session.customer_user_id:
+        if last_msg and not last_msg.is_system and last_msg.sender_user_id == session.customer_user_id:
             if last_msg.created_at >= recent_cutoff:
                 unread = 1
                 notification_count += 1
@@ -539,12 +650,18 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
         if session.customer_last_typing_at:
             typing = session.customer_last_typing_at >= _now() - timedelta(seconds=12)
 
+        preview = None
+        if last_msg:
+            preview = last_msg.body[:80]
+            if last_msg.is_system:
+                preview = f"System: {preview}"
+
         items.append(
             SfChatAgentInboxItem(
                 session=_session_read(session, agent_name=agent_name),
                 customer_display_name=customer.display_name or customer.email,
                 customer_email=customer.email,
-                last_message_preview=last_msg.body[:80] if last_msg else None,
+                last_message_preview=preview,
                 last_message_at=last_msg.created_at if last_msg else None,
                 unread_count=unread,
                 customer_is_typing=typing,
@@ -569,6 +686,95 @@ async def session_for_user(
     if session.customer_user_id == user.id:
         return session
     if await is_sf_team_member(db, user.id):
+        if session.status == SESSION_CLOSED and session.assigned_agent_id == user.id:
+            return session
         if session.assigned_agent_id in (None, user.id) or session.status == SESSION_WAITING:
             return session
     return None
+
+
+async def create_ticket_from_sf_chat_session(
+    db: AsyncSession,
+    *,
+    session_id: uuid.UUID,
+    agent: User,
+    title: str | None,
+) -> Ticket:
+    """Create a ticket from a closed SF chat (assigned agent only, org context = agent)."""
+    if not await is_sf_team_member(db, agent.id):
+        raise ValueError("not_sf_member")
+    session = await db.get(SfChatSession, session_id)
+    if session is None:
+        raise ValueError("session_not_found")
+    if session.status != SESSION_CLOSED:
+        raise ValueError("session_not_closed")
+    if session.assigned_agent_id != agent.id:
+        raise ValueError("not_assigned_agent")
+
+    messages = await _message_reads(db, session_id, agent.id)
+    description = format_sf_chat_transcript_da(messages).strip()
+    if len(description) < 10:
+        description = "Uddrag fra SF-livechat (ingen beskeder i loggen).\n" + description
+
+    customer = await db.get(User, session.customer_user_id)
+    cust_label = (customer.display_name or customer.email) if customer else "Kunde"
+    resolved_title = (title or f"SF-livechat — {cust_label}")[:256]
+    if len(resolved_title.strip()) < 3:
+        raise ValueError("title_too_short")
+
+    routing = await apply_routing(
+        db,
+        ticket_type="incident",
+        category_id=None,
+        subcategory_id=None,
+        priority="medium",
+    )
+    now = _now()
+    is_security_ticket = resolve_create_security_flag(agent, False)
+    ticket = Ticket(
+        id=uuid.uuid4(),
+        ticket_number=await generate_ticket_number(db, "incident"),
+        ticket_type="incident",
+        title=resolved_title.strip(),
+        description=description,
+        status="assigned" if routing.assigned_team_id else "new",
+        priority=routing.priority,
+        reporter_user_id=agent.id,
+        organization_id=get_user_organization_id(agent),
+        assigned_team_id=routing.assigned_team_id,
+        assigned_user_id=routing.assigned_user_id,
+        category_id=None,
+        subcategory_id=None,
+        source="chat",
+        escalation_level=0,
+        gdpr_consent=False,
+        gdpr_consent_at=None,
+        subject_cpr=None,
+        is_major=False,
+        is_security_ticket=is_security_ticket,
+        parent_ticket_id=None,
+        tags=[],
+        emoji=None,
+        routing_metadata={"sf_chat_session_id": str(session_id)},
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    db.add(ticket)
+    await apply_sla_to_ticket(db, ticket, priority=routing.priority, start_at=now)
+    await db.flush()
+    if ticket.status == "assigned":
+        maybe_set_assigned_at(ticket, now=now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=agent.id,
+            event_type="ticket.created",
+            payload={"ticket_number": ticket.ticket_number, "source": "sf_chat"},
+            created_at=now,
+        )
+    )
+    await db.commit()
+    await db.refresh(ticket)
+    return ticket

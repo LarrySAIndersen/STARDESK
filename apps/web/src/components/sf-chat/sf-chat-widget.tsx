@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Send, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,26 @@ import { cn } from "@/lib/utils";
 import type { SfChatMessage, SfChatSession, SfChatStatus } from "@/types/sf-chat";
 
 const POLL_MS = 3000;
+const SF_CHAT_TICKET_PREFILL_KEY = "stardesk_sf_chat_ticket_description";
+
+function buildLocalTranscript(messages: SfChatMessage[]): string {
+  return messages
+    .map((m) => {
+      const d = new Date(m.created_at);
+      const ts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      const who = m.is_system ? "System" : m.sender_display_name;
+      return `[${ts}] ${who}: ${m.body}`;
+    })
+    .join("\n");
+}
+
+function proxyAbandonUrl(sessionId: string): string {
+  const path = `/api/v1/sf-chat/sessions/${sessionId}/abandon`;
+  if (path.startsWith("/api/v1/")) {
+    return `/api/proxy/${path.slice("/api/".length)}`;
+  }
+  return path;
+}
 
 type SessionResponse = {
   session: SfChatSession;
@@ -23,6 +44,7 @@ type PollResponse = {
 };
 
 export function SfChatWidget() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<SfChatStatus | null>(null);
   const [session, setSession] = useState<SfChatSession | null>(null);
@@ -30,11 +52,13 @@ export function SfChatWidget() {
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasTyped, setHasTyped] = useState(false);
+  const [transferDismissed, setTransferDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<string | null>(null);
+  const sessionStatusRef = useRef<string | undefined>(undefined);
 
   sessionRef.current = session?.id ?? null;
+  sessionStatusRef.current = session?.status;
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -108,6 +132,22 @@ export function SfChatWidget() {
   }, [loadStatus]);
 
   useEffect(() => {
+    const onPageHide = () => {
+      const sid = sessionRef.current;
+      const st = sessionStatusRef.current;
+      if (!sid || (st !== "waiting" && st !== "active")) return;
+      void fetch(proxyAbandonUrl(sid), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: "{}",
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
     if (!session && status?.open) {
       void ensureSession();
@@ -125,18 +165,37 @@ export function SfChatWidget() {
 
   const handleClose = () => {
     const sid = sessionRef.current;
-    if (hasTyped && sid && messages.length === 0) {
+    const st = sessionStatusRef.current;
+    if (sid && (st === "waiting" || st === "active")) {
       void apiPost(`/api/v1/sf-chat/sessions/${sid}/abandon`, {}).catch(() => undefined);
     }
     setOpen(false);
-    setHasTyped(false);
+  };
+
+  const startNewChat = () => {
+    setSession(null);
+    setMessages([]);
+    setDraft("");
+    setError(null);
+    setTransferDismissed(false);
+    void ensureSession();
+  };
+
+  const goCreateTicketFromChat = () => {
+    const text = buildLocalTranscript(messages);
+    if (text.trim()) {
+      try {
+        sessionStorage.setItem(SF_CHAT_TICKET_PREFILL_KEY, text);
+      } catch {
+        // ignore quota / private mode
+      }
+    }
+    setTransferDismissed(true);
+    router.push("/tickets/new?from_sf_chat=1");
   };
 
   const handleDraftChange = (value: string) => {
     setDraft(value);
-    if (value.trim() && !hasTyped) {
-      setHasTyped(true);
-    }
     const sid = sessionRef.current;
     if (sid && value.trim()) {
       void apiPostNoContent(`/api/v1/sf-chat/sessions/${sid}/typing`, {}).catch(() => undefined);
@@ -165,11 +224,14 @@ export function SfChatWidget() {
 
   const chatClosed = status && !status.open;
   const queueRejected = session?.status === "rejected_queue";
+  const sessionClosed = session?.status === "closed";
   const canSend =
     Boolean(session?.id) &&
     !chatClosed &&
     !queueRejected &&
     session?.status !== "closed";
+  const showTransferPrompt =
+    Boolean(sessionClosed && messages.length > 0 && !queueRejected && !transferDismissed);
 
   return (
     <>
@@ -222,6 +284,43 @@ export function SfChatWidget() {
               </div>
             ) : null}
 
+            {sessionClosed && !queueRejected ? (
+              <div className="sf-chat-banner sf-chat-banner--closed">
+                Chatten er afsluttet. Du kan starte en ny chat når som helst.
+              </div>
+            ) : null}
+
+            {showTransferPrompt ? (
+              <div
+                className="border-star-navy/20 bg-star-navy/5 rounded-[2px] border px-3 py-2 text-[12px] text-star-navy"
+                role="dialog"
+                aria-label="Overfør chat til sag"
+              >
+                <p className="mb-2 font-medium">Skal chatten overføres til en sag?</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="default" onClick={() => goCreateTicketFromChat()}>
+                    Ja
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTransferDismissed(true)}
+                  >
+                    Nej
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {sessionClosed ? (
+              <div className="mb-1">
+                <Button type="button" size="sm" variant="outline" onClick={() => startNewChat()}>
+                  Ny chat
+                </Button>
+              </div>
+            ) : null}
+
             {error && !queueRejected ? (
               <p className="text-star-red text-sm" role="alert">
                 {error}
@@ -234,11 +333,18 @@ export function SfChatWidget() {
                   key={m.id}
                   className={cn(
                     "sf-chat-bubble",
-                    m.is_own ? "sf-chat-bubble--own" : "sf-chat-bubble--agent",
+                    m.is_system
+                      ? "sf-chat-bubble--system"
+                      : m.is_own
+                        ? "sf-chat-bubble--own"
+                        : "sf-chat-bubble--agent",
                   )}
                 >
-                  {!m.is_own ? (
+                  {!m.is_own && !m.is_system ? (
                     <span className="sf-chat-bubble-name">{m.sender_display_name}</span>
+                  ) : null}
+                  {m.is_system ? (
+                    <span className="sf-chat-bubble-name">System</span>
                   ) : null}
                   <p>{m.body}</p>
                 </div>

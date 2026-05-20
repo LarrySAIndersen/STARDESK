@@ -74,12 +74,17 @@ const selectClassName = "wire-form-input h-9";
 const inputClassName = "wire-form-input h-9";
 const textareaClassName = "wire-form-input min-h-[8rem] resize-y";
 
+const SF_CHAT_TICKET_PREFILL_KEY = "stardesk_sf_chat_ticket_description";
+
 export function CreateTicketForm({
   categories,
   staffOnly = false,
+  prefillFromSfChat = false,
 }: {
   categories: Category[];
   staffOnly?: boolean;
+  /** When true, read transcript from sessionStorage (set by SF chat widget). */
+  prefillFromSfChat?: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +128,20 @@ export function CreateTicketForm({
       setValue("gdpr_consent", false);
     }
   }, [cprFilled, setValue]);
+
+  useEffect(() => {
+    if (!prefillFromSfChat || typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem(SF_CHAT_TICKET_PREFILL_KEY);
+      if (raw && raw.trim().length >= 10) {
+        setValue("description", raw.trim());
+        setValue("title", "Opfølgning på SF-livechat");
+      }
+      sessionStorage.removeItem(SF_CHAT_TICKET_PREFILL_KEY);
+    } catch {
+      // ignore private mode / quota
+    }
+  }, [prefillFromSfChat, setValue]);
 
   useEffect(() => {
     if (isMajor) {

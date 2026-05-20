@@ -17,11 +17,12 @@ export type SfChatSession = {
 export type SfChatMessage = {
   id: string;
   session_id: string;
-  sender_user_id: string;
+  sender_user_id?: string | null;
   sender_display_name: string;
   body: string;
   created_at: string;
   is_own: boolean;
+  is_system?: boolean;
 };
 
 export type SfChatPresence = {

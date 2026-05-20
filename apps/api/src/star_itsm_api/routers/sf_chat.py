@@ -9,6 +9,7 @@ from star_itsm_api.models.sf_chat_session import SESSION_CLOSED, SESSION_REJECTE
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sf_chat import (
     SfChatAgentInboxRead,
+    SfChatCreateTicketBody,
     SfChatLogoutCheckRead,
     SfChatMessageCreate,
     SfChatMessageRead,
@@ -19,6 +20,8 @@ from star_itsm_api.schemas.sf_chat import (
     SfChatSessionRead,
     SfChatStatusRead,
 )
+from star_itsm_api.schemas.ticket import TicketRead
+from star_itsm_api.services.ticket_read import ticket_to_read
 from star_itsm_api.services import sf_chat as chat_svc
 
 router = APIRouter(prefix="/sf-chat", tags=["sf-chat"])
@@ -121,7 +124,11 @@ async def post_message(
             raise HTTPException(status_code=403, detail="Ingen adgang til denne chat") from exc
         raise HTTPException(status_code=400, detail="Kunne ikke sende besked") from exc
 
-    name = await chat_svc._user_display(db, msg.sender_user_id)
+    name = (
+        await chat_svc._user_display(db, msg.sender_user_id)
+        if msg.sender_user_id
+        else "System"
+    )
     return SfChatMessageRead(
         id=msg.id,
         session_id=msg.session_id,
@@ -130,6 +137,7 @@ async def post_message(
         body=msg.body,
         created_at=msg.created_at,
         is_own=True,
+        is_system=msg.is_system,
     )
 
 
@@ -155,6 +163,43 @@ async def abandon_session(
         chat_svc.MSG_QUEUE_REJECTED if session.status == SESSION_REJECTED_QUEUE else None
     )
     return chat_svc._session_read(session, queue_message=queue_message)
+
+
+@router.post("/sessions/{session_id}/create-ticket", response_model=TicketRead, status_code=201)
+async def create_ticket_from_sf_chat(
+    session_id: uuid.UUID,
+    payload: SfChatCreateTicketBody,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketRead:
+    session = await chat_svc.session_for_user(db, session_id, current_user)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Chat ikke fundet")
+    try:
+        ticket = await chat_svc.create_ticket_from_sf_chat_session(
+            db,
+            session_id=session_id,
+            agent=current_user,
+            title=payload.title,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "not_sf_member":
+            raise HTTPException(status_code=403, detail="Kun SF-gruppen kan oprette sager fra chat") from exc
+        if code == "session_not_closed":
+            raise HTTPException(
+                status_code=409,
+                detail="Chatten skal være afsluttet før den kan overføres til en sag.",
+            ) from exc
+        if code == "not_assigned_agent":
+            raise HTTPException(
+                status_code=403,
+                detail="Kun den tildelte agent kan oprette en sag fra denne chat.",
+            ) from exc
+        if code == "title_too_short":
+            raise HTTPException(status_code=400, detail="Titlen er for kort.") from exc
+        raise HTTPException(status_code=400, detail="Kunne ikke oprette sag fra chat") from exc
+    return await ticket_to_read(db, ticket)
 
 
 @router.get("/presence", response_model=SfChatPresenceRead)

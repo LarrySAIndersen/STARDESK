@@ -4,7 +4,13 @@ import { getServerUser } from "@/lib/auth-server";
 import { isStaff } from "@/lib/auth";
 import type { Category } from "@/types/category";
 
-export default async function NewTicketPage() {
+export default async function NewTicketPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const fromSfChat = params.from_sf_chat === "1";
   let categories: Category[] = [];
   const currentUser = await getServerUser();
   const staffOnly = isStaff(currentUser);
@@ -17,7 +23,11 @@ export default async function NewTicketPage() {
 
   return (
     <div className="wire-scroll-content mx-auto w-full max-w-6xl flex-1">
-      <CreateTicketForm categories={categories} staffOnly={staffOnly} />
+      <CreateTicketForm
+        categories={categories}
+        staffOnly={staffOnly}
+        prefillFromSfChat={fromSfChat}
+      />
     </div>
   );
 }

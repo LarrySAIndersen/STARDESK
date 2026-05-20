@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,24 +13,33 @@ import type {
   SfChatAgentInboxItem,
   SfChatMessage,
   SfChatPresence,
+  SfChatSession,
+  SfChatStatus,
 } from "@/types/sf-chat";
+import type { Ticket } from "@/types/ticket";
 
 const POLL_MS = 4000;
 const HEARTBEAT_MS = 25000;
 
 type PollResponse = {
-  session: { id: string; status: string } | null;
+  session: SfChatSession | null;
   messages: SfChatMessage[];
+  status: SfChatStatus;
 };
 
 export function SfChatAgentConsole() {
+  const router = useRouter();
   const [presence, setPresence] = useState<SfChatPresence | null>(null);
   const [inbox, setInbox] = useState<SfChatAgentInbox | null>(null);
-  const [selected, setSelected] = useState<SfChatAgentInboxItem | null>(null);
+  const [threadId, setThreadId] = useState<string | null>(null);
+  const [threadCustomerName, setThreadCustomerName] = useState<string>("");
+  const [threadSession, setThreadSession] = useState<SfChatSession | null>(null);
   const [messages, setMessages] = useState<SfChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
   const [loadingPresence, setLoadingPresence] = useState(false);
+  const [transferPrompt, setTransferPrompt] = useState(false);
+  const [transferBusy, setTransferBusy] = useState(false);
   const notifiedRef = useRef<Set<string>>(new Set());
 
   const loadPresence = useCallback(async () => {
@@ -51,10 +61,11 @@ export function SfChatAgentConsole() {
     }
   }, []);
 
-  const pollMessages = useCallback(async (sessionId: string) => {
+  const pollThread = useCallback(async (sessionId: string) => {
     try {
       const data = await apiGet<PollResponse>(`/api/v1/sf-chat/sessions/${sessionId}/poll`);
       setMessages(data.messages);
+      setThreadSession(data.session);
     } catch {
       // ignore
     }
@@ -82,11 +93,11 @@ export function SfChatAgentConsole() {
   }, [presence?.is_online]);
 
   useEffect(() => {
-    if (!selected) return;
-    void pollMessages(selected.session.id);
-    const id = window.setInterval(() => void pollMessages(selected.session.id), POLL_MS);
+    if (!threadId) return;
+    void pollThread(threadId);
+    const id = window.setInterval(() => void pollThread(threadId), POLL_MS);
     return () => window.clearInterval(id);
-  }, [selected, pollMessages]);
+  }, [threadId, pollThread]);
 
   useEffect(() => {
     if (!inbox || !presence?.is_online) return;
@@ -107,6 +118,14 @@ export function SfChatAgentConsole() {
       }
     }
   }, [inbox, presence?.is_online]);
+
+  const selectThread = (item: SfChatAgentInboxItem) => {
+    setThreadId(item.session.id);
+    setThreadCustomerName(item.customer_display_name);
+    setThreadSession(item.session);
+    setTransferPrompt(false);
+    void pollThread(item.session.id);
+  };
 
   const toggleOnline = async () => {
     if (!presence?.is_sf_member) return;
@@ -141,7 +160,7 @@ export function SfChatAgentConsole() {
 
   const sendReply = async () => {
     const text = draft.trim();
-    const sid = selected?.session.id;
+    const sid = threadId;
     if (!text || !sid) return;
     setDraft("");
     try {
@@ -155,11 +174,30 @@ export function SfChatAgentConsole() {
     }
   };
 
+  const createTicketFromThread = async () => {
+    if (!threadId) return;
+    setTransferBusy(true);
+    try {
+      const ticket = await apiPost<Ticket>(`/api/v1/sf-chat/sessions/${threadId}/create-ticket`, {});
+      setTransferPrompt(false);
+      router.push(`/tickets/${ticket.id}`);
+    } catch (e) {
+      if (e instanceof ApiError) {
+        window.alert(e.message);
+      }
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   if (!presence?.is_sf_member) {
     return null;
   }
 
   const badge = inbox?.notification_count ?? 0;
+  const threadClosed = threadSession?.status === "closed";
+  const showTransferStrip =
+    Boolean(threadId && threadClosed && messages.length > 0 && !transferPrompt);
 
   return (
     <>
@@ -206,9 +244,9 @@ export function SfChatAgentConsole() {
                       type="button"
                       className={cn(
                         "sf-chat-agent-inbox-item",
-                        selected?.session.id === item.session.id && "sf-chat-agent-inbox-item--active",
+                        threadId === item.session.id && "sf-chat-agent-inbox-item--active",
                       )}
-                      onClick={() => setSelected(item)}
+                      onClick={() => selectThread(item)}
                     >
                       <span className="font-medium">{item.customer_display_name}</span>
                       {item.customer_is_typing ? (
@@ -223,21 +261,88 @@ export function SfChatAgentConsole() {
               )}
             </ul>
 
-            {selected ? (
+            {threadId ? (
               <div className="sf-chat-agent-thread">
                 <p className="text-[11px] font-medium text-star-navy">
-                  {selected.customer_display_name}
+                  {threadCustomerName}
                 </p>
+                {threadClosed ? (
+                  <p className="text-muted-foreground mb-1 text-[10px]">
+                    Chatten er afsluttet.
+                  </p>
+                ) : null}
+
+                {transferPrompt ? (
+                  <div
+                    className="border-star-navy/20 bg-star-navy/5 mb-2 rounded-[2px] border px-2 py-2 text-[10px] text-star-navy"
+                    role="dialog"
+                    aria-label="Overfør til sag"
+                  >
+                    <p className="mb-2 font-medium">Skal chatten overføres til en sag?</p>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 text-[10px]"
+                        disabled={transferBusy}
+                        onClick={() => void createTicketFromThread()}
+                      >
+                        Ja
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px]"
+                        disabled={transferBusy}
+                        onClick={() => setTransferPrompt(false)}
+                      >
+                        Nej
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {showTransferStrip ? (
+                  <div className="mb-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px]"
+                      onClick={() => setTransferPrompt(true)}
+                    >
+                      Overfør til sag…
+                    </Button>
+                  </div>
+                ) : null}
+
                 <div className="sf-chat-messages sf-chat-messages--compact">
                   {messages.map((m) => (
                     <div
                       key={m.id}
                       className={cn(
                         "sf-chat-bubble",
-                        m.is_own ? "sf-chat-bubble--own" : "sf-chat-bubble--agent",
+                        m.is_system
+                          ? "sf-chat-bubble--system"
+                          : m.is_own
+                            ? "sf-chat-bubble--own"
+                            : "sf-chat-bubble--agent",
                       )}
                     >
-                      <p>{m.body}</p>
+                      {m.is_system ? (
+                        <>
+                          <span className="sf-chat-bubble-name">System</span>
+                          <p>{m.body}</p>
+                        </>
+                      ) : (
+                        <>
+                          {!m.is_own ? (
+                            <span className="sf-chat-bubble-name">{m.sender_display_name}</span>
+                          ) : null}
+                          <p>{m.body}</p>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -248,7 +353,7 @@ export function SfChatAgentConsole() {
                     placeholder="Svar kunden…"
                     rows={2}
                     className="min-h-[2rem] resize-none text-xs"
-                    disabled={!presence.is_online}
+                    disabled={!presence.is_online || threadClosed}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -260,7 +365,7 @@ export function SfChatAgentConsole() {
                     type="button"
                     size="icon"
                     className="sf-chat-send shrink-0"
-                    disabled={!presence.is_online || !draft.trim()}
+                    disabled={!presence.is_online || threadClosed || !draft.trim()}
                     onClick={() => void sendReply()}
                     aria-label="Send svar"
                   >

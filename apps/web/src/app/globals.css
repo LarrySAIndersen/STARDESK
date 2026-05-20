@@ -1250,6 +1250,10 @@
     @apply border border-[var(--gray-border)] bg-[var(--gray-bg)] text-star-navy mr-auto;
   }
 
+  .sf-chat-bubble--system {
+    @apply mx-auto max-w-[95%] border border-dashed border-[var(--gray-border)] bg-[var(--gray-bg)]/90 text-center text-[11px] text-[var(--gray-mid)];
+  }
+
   .sf-chat-bubble-name {
     @apply text-star-blue mb-0.5 block text-[10px] font-bold;
   }

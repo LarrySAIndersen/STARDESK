@@ -32,11 +32,12 @@ class SfChatLogoutCheckRead(BaseModel):
 class SfChatMessageRead(BaseModel):
     id: uuid.UUID
     session_id: uuid.UUID
-    sender_user_id: uuid.UUID
+    sender_user_id: uuid.UUID | None = None
     sender_display_name: str
     body: str
     created_at: datetime
     is_own: bool = False
+    is_system: bool = False
 
 
 class SfChatSessionRead(BaseModel):
@@ -78,3 +79,7 @@ class SfChatPollRead(BaseModel):
     session: SfChatSessionRead | None = None
     messages: list[SfChatMessageRead] = Field(default_factory=list)
     status: SfChatStatusRead
+
+
+class SfChatCreateTicketBody(BaseModel):
+    title: str | None = Field(default=None, min_length=3, max_length=256)
