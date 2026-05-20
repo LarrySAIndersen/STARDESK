@@ -16,6 +16,7 @@ import { ResizableSplit } from "@/components/ui/resizable-split";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
+import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
@@ -37,7 +38,7 @@ import {
 } from "@/lib/service-desk-table-filters";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 const Gauge = dynamic(
   () => import("@/components/dashboard/gauge").then((m) => m.Gauge),
@@ -214,26 +215,17 @@ export function ServiceDeskView({
     setIsSaving(true);
     setError(null);
     try {
-      await apiPatch(`/api/v1/tickets/${pending.ticketId}/assignment`, {
-        assigned_team_id: data.teamId,
-        assigned_user_id: null,
-        assignment_reason: data.reason,
-        fault_displayed: data.faultDisplayed,
-      });
-      const team = internalTeams.find((t) => t.id === data.teamId);
-      const teamName = team?.name ?? pending.teamName ?? null;
+      const detail = await apiPatch<TicketDetail>(
+        `/api/v1/tickets/${pending.ticketId}/assignment`,
+        {
+          assigned_team_id: data.teamId,
+          assigned_user_id: null,
+          assignment_reason: data.reason,
+          fault_displayed: data.faultDisplayed,
+        },
+      );
       setLocalTickets((prev) =>
-        prev.map((ticket) =>
-          ticket.id === pending.ticketId
-            ? {
-                ...ticket,
-                assigned_team_id: data.teamId,
-                assigned_team_name: teamName,
-                assigned_user_id: null,
-                status: ticket.status === "new" ? "assigned" : ticket.status,
-              }
-            : ticket,
-        ),
+        mergeTicketAssignmentInList(prev, pending.ticketId, detail),
       );
       setPending(null);
       router.refresh();

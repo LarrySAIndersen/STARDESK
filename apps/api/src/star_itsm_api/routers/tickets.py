@@ -84,6 +84,7 @@ from star_itsm_api.services.ticket_dashboard_filters import (
 )
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
+from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
 from star_itsm_api.services.teams import user_in_team
 from star_itsm_api.services.reports import is_reopen_transition
 from star_itsm_api.models.attachment import Attachment
@@ -1097,12 +1098,12 @@ async def assign_ticket(
     await _ensure_ticket_access(db, ticket, current_user)
 
     updates = payload.model_dump(exclude_unset=True)
-    team_id = ticket.assigned_team_id
-    user_id = ticket.assigned_user_id
-    if "assigned_team_id" in updates:
-        team_id = updates["assigned_team_id"]
-    if "assigned_user_id" in updates:
-        user_id = updates["assigned_user_id"]
+    team_id, user_id = await resolve_ticket_assignment(
+        db,
+        current_team_id=ticket.assigned_team_id,
+        current_user_id=ticket.assigned_user_id,
+        updates=updates,
+    )
 
     if team_id is not None:
         team = await db.get(Team, team_id)

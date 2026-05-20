@@ -39,6 +39,10 @@ export function TicketAssignmentForm({
   }, [teamId, teams]);
 
   async function handleAssign() {
+    if (userId !== UNASSIGNED && teamId === UNASSIGNED) {
+      setError("Vælg gruppe før du tildeler en sagsbehandler.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -56,6 +60,10 @@ export function TicketAssignmentForm({
 
   function handleTeamChange(nextTeamId: string) {
     setTeamId(nextTeamId);
+    if (nextTeamId === UNASSIGNED) {
+      setUserId(UNASSIGNED);
+      return;
+    }
     if (userId !== UNASSIGNED) {
       const stillMember = teams
         .find((team) => team.id === nextTeamId)

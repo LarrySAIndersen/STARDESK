@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +25,19 @@ import { TicketSearchInput } from "@/components/ticket-search-input";
 import { SlaCountdown } from "@/components/sla-countdown";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { apiPatch } from "@/lib/api";
+import { partitionTeamsByCategory } from "@/lib/team-categories";
+import {
+  serviceDeskTeamIds,
+  ticketsForServiceDeskTable,
+  ticketsForServiceDeskTeamRail,
+} from "@/lib/service-desk-queue";
+import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
 import { getClientUser } from "@/lib/auth";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import type { Team } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 const DRAG_TYPE = "application/x-stardesk-ticket";
 
@@ -87,6 +94,12 @@ export function AgentDispatchBoard({
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [localTickets, setLocalTickets] = useState(tickets);
+
+  useEffect(() => {
+    setLocalTickets(tickets);
+  }, [tickets]);
+
   const {
     search: searchQuery,
     setSearch: setSearchQuery,
@@ -104,11 +117,16 @@ export function AgentDispatchBoard({
   const currentUser = getClientUser();
   const isOrgAgent =
     currentUser?.role === "agent" && Boolean(currentUser.organization_name);
-  const sortedTeams = useMemo(() => sortTeams(teams), [teams]);
+  const { internal: internalTeams } = useMemo(
+    () => partitionTeamsByCategory(teams),
+    [teams],
+  );
+  const sortedTeams = useMemo(() => sortTeams(internalTeams), [internalTeams]);
+  const deskTeamIds = useMemo(() => serviceDeskTeamIds(sortedTeams), [sortedTeams]);
 
   const openTickets = useMemo(
     () =>
-      [...tickets]
+      [...localTickets]
         .filter((t) => !["closed", "cancelled"].includes(t.status))
         .filter((t) => ticketMatchesSearch(t, searchQuery))
         .filter((t) => !securityOnly || Boolean(t.is_security_ticket))
@@ -121,12 +139,22 @@ export function AgentDispatchBoard({
           }
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [tickets, searchQuery, securityOnly],
+    [localTickets, searchQuery, securityOnly],
+  );
+
+  const tableTickets = useMemo(
+    () => ticketsForServiceDeskTable(openTickets, deskTeamIds),
+    [openTickets, deskTeamIds],
+  );
+
+  const railTickets = useMemo(
+    () => ticketsForServiceDeskTeamRail(openTickets, deskTeamIds),
+    [openTickets, deskTeamIds],
   );
 
   const ticketsByTeam = useMemo(() => {
     const map = new Map<string, Ticket[]>();
-    for (const ticket of openTickets) {
+    for (const ticket of railTickets) {
       if (ticket.assigned_team_id) {
         const list = map.get(ticket.assigned_team_id) ?? [];
         list.push(ticket);
@@ -140,7 +168,7 @@ export function AgentDispatchBoard({
       map.set(teamId, list);
     }
     return map;
-  }, [openTickets]);
+  }, [railTickets]);
 
   function handleDragStart(ticketId: string) {
     return (event: React.DragEvent) => {
@@ -158,7 +186,7 @@ export function AgentDispatchBoard({
       if (!ticketId) {
         return;
       }
-      const ticket = openTickets.find((t) => t.id === ticketId);
+      const ticket = tableTickets.find((t) => t.id === ticketId);
       if (!ticket) {
         return;
       }
@@ -189,12 +217,18 @@ export function AgentDispatchBoard({
     setIsSaving(true);
     setError(null);
     try {
-      await apiPatch(`/api/v1/tickets/${pending.ticketId}/assignment`, {
-        assigned_team_id: data.teamId,
-        assigned_user_id: null,
-        assignment_reason: data.reason,
-        fault_displayed: data.faultDisplayed,
-      });
+      const detail = await apiPatch<TicketDetail>(
+        `/api/v1/tickets/${pending.ticketId}/assignment`,
+        {
+          assigned_team_id: data.teamId,
+          assigned_user_id: null,
+          assignment_reason: data.reason,
+          fault_displayed: data.faultDisplayed,
+        },
+      );
+      setLocalTickets((prev) =>
+        mergeTicketAssignmentInList(prev, pending.ticketId, detail),
+      );
       setPending(null);
       router.refresh();
     } catch (err) {
@@ -240,8 +274,10 @@ export function AgentDispatchBoard({
               />
             </div>
             <div className="star-table-wrap">
-            {openTickets.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Ingen åbne sager.</p>
+            {tableTickets.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                Ingen sager i kø — tildelte sager vises under grupper til højre.
+              </p>
             ) : (
               <Table>
                 <TableCaption className="sr-only">
@@ -265,7 +301,7 @@ export function AgentDispatchBoard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {openTickets.map((ticket) => (
+                  {tableTickets.map((ticket) => (
                     <TableRow
                       key={ticket.id}
                       draggable
