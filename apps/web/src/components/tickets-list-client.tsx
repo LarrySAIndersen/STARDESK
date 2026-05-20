@@ -40,12 +40,12 @@ const STATUS_OPTIONS = [
 
 const PRIORITY_OPTIONS = ["", "critical", "high", "medium", "low"] as const;
 
-const DEFAULT_TICKET_FILTERS = {
+const DEFAULT_TICKET_FILTERS: Record<"status" | "priority" | "category" | "tag", string> = {
   status: "",
   priority: "",
   category: "",
   tag: "",
-} as const;
+};
 
 export function TicketsListClient({
   tickets,
