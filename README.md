@@ -3,6 +3,8 @@
 Cloud-prototype af STAR ITSM. Ingen Docker, intet lokalt setup.
 Alt kører i skyen, du ser det i browseren.
 
+**Udviklere:** [CONTRIBUTING.md](./CONTRIBUTING.md) (kør web + API lokalt, test, env). Miljøer: [docs/environments.md](./docs/environments.md).
+
 > Søsterprojekt til `star-itsm/` (on-prem K8s-versionen).
 > Cloud-versionen er til at validere designet hurtigt;
 > on-prem-versionen er målet når MVP er bevist.

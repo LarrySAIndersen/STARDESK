@@ -1,0 +1,8 @@
+{
+  "experimentalServices": {
+    "api": {
+      "entrypoint": "apps/api",
+      "routePrefix": "/"
+    }
+  }
+}

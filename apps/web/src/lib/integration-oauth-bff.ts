@@ -1,0 +1,89 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+
+import { buildBackendUrl } from "@/lib/api-backend";
+import { TOKEN_COOKIE } from "@/lib/auth";
+
+export type IntegrationOAuthId = "slack" | "gmail";
+
+function settingsPath(integration: IntegrationOAuthId): `/integrations/${IntegrationOAuthId}` {
+  return `/integrations/${integration}`;
+}
+
+function redirectToSettings(
+  request: Request,
+  integration: IntegrationOAuthId,
+  params: Record<string, string>,
+): NextResponse {
+  const url = new URL(settingsPath(integration), request.url);
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(url);
+}
+
+/** BFF: start Slack/Gmail OAuth (requires session cookie). */
+export async function proxyIntegrationOAuthStart(
+  request: Request,
+  integration: IntegrationOAuthId,
+): Promise<NextResponse> {
+  const onError = (error: string) => redirectToSettings(request, integration, { error });
+
+  const token = (await cookies()).get(TOKEN_COOKIE)?.value;
+  if (!token) {
+    return onError("not_authenticated");
+  }
+
+  const upstream = await fetch(
+    buildBackendUrl(`/api/v1/integrations/${integration}/oauth/start`),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!upstream.ok) {
+    return onError("oauth_start_failed");
+  }
+
+  const data = (await upstream.json()) as { authorize_url?: string };
+  if (!data.authorize_url) {
+    return onError("missing_authorize_url");
+  }
+  return NextResponse.redirect(data.authorize_url);
+}
+
+/** BFF: OAuth callback proxy → integration settings with ?connected=1 or ?error=… */
+export async function proxyIntegrationOAuthCallback(
+  request: Request,
+  integration: IntegrationOAuthId,
+): Promise<NextResponse> {
+  const onError = (error: string) => redirectToSettings(request, integration, { error });
+
+  const incoming = new URL(request.url);
+  const target = new URL(
+    buildBackendUrl(`/api/v1/integrations/${integration}/oauth/callback`),
+  );
+  target.search = incoming.search;
+
+  const upstream = await fetch(target, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+
+  if (!upstream.ok) {
+    try {
+      const data = (await upstream.json()) as { detail?: string };
+      return onError(data.detail ?? "oauth_callback_failed");
+    } catch {
+      return onError("oauth_callback_failed");
+    }
+  }
+
+  return redirectToSettings(request, integration, { connected: "1" });
+}

@@ -4,6 +4,7 @@
 .env.production
 .env.*.local
 !.env.example
+!.env.*.example
 
 # Node / Next.js
 node_modules/

@@ -107,7 +107,7 @@ Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 
 | Symptom | Tjek |
 |---------|------|
-| Vercel build: *Couldn't find any `pages` or `app` directory* / *No Next.js version detected* | **Root Directory** skal være `apps/web` (ikke repo-roden). Projekt **api** skal have `apps/api`. Settings → Build and Deployment → Root Directory. `apps/web/vercel.json` og `apps/api/vercel.json` læses kun når root directory matcher. |
+| Vercel build: *Couldn't find any `pages` or `app` directory* / *No Next.js version detected* | **Root Directory** skal være `apps/web` (ikke repo-roden). Projekt **api** skal have `apps/api`. Settings → Build and Deployment → Root Directory. `apps/web/vercel.json` og `apps/api/vercel.json` læses kun når root directory matcher. Rod-`vercel.json` (`experimentalServices`) bruges **ikke** af standard web+api-deploy — se [CONTRIBUTING.md](../CONTRIBUTING.md). |
 | Frontend: API-fejl | `NEXT_PUBLIC_API_URL` peger på Railway; API `/health` svarer |
 | Tom liste trods test-SQL | `DATABASE_URL` bruger `+asyncpg`; samme Neon DB som `init.sql` |
 | CORS-fejl i browser | `FRONTEND_URL` matcher præcis Vercel-URL (https, ingen slash til sidst) |
