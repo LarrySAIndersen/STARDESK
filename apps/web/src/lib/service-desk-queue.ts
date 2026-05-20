@@ -26,26 +26,16 @@ export function serviceDeskTeamIds(teams: Team[]): Set<string> {
 }
 
 /**
- * Venstre tabel / service desk-kø: ingen gruppe, eller kun SF Service Desk.
- * Alle andre grupper (SF, Infrastruktur, osv.) vises kun i gruppe-rail.
+ * Venstre tabel / service desk-kø: kun sager uden tildelt gruppe.
+ * Når en sag får assigned_team_id, vises den kun under den gruppe i rail.
  */
-export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
-  if (!ticket.assigned_team_id) {
-    return true;
-  }
-  if (deskTeamIds && deskTeamIds.size > 0) {
-    return deskTeamIds.has(ticket.assigned_team_id);
-  }
-  const name = ticket.assigned_team_name?.trim() ?? "";
-  return name === SERVICE_DESK_TEAM_NAME || name === "Service Desk";
+export function isInServiceDeskQueue(ticket: Ticket, _deskTeamIds?: Set<string>): boolean {
+  return !ticket.assigned_team_id;
 }
 
-/** Tildelt en operativ gruppe (vises i højre rail). */
-export function isInTeamsQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
-  if (!ticket.assigned_team_id) {
-    return false;
-  }
-  return !isInServiceDeskQueue(ticket, deskTeamIds);
+/** Tildelt en gruppe (vises i højre rail, inkl. SF Service Desk). */
+export function isInTeamsQueue(ticket: Ticket, _deskTeamIds?: Set<string>): boolean {
+  return Boolean(ticket.assigned_team_id);
 }
 
 /** Main table: distribution queue only. */

@@ -38,3 +38,34 @@ export function mergeTicketAssignmentInList(
     ticket.id === ticketId ? mergeTicketAssignmentFromDetail(ticket, detail) : ticket,
   );
 }
+
+/**
+ * Efter router.refresh kan server-props være et øjeblik bagud.
+ * Bevar nyere lokal tildeling indtil API og server er synkroniseret.
+ */
+export function reconcileLocalTicketsWithServer(
+  local: Ticket[],
+  server: Ticket[],
+): Ticket[] {
+  const localById = new Map(local.map((ticket) => [ticket.id, ticket]));
+  return server.map((serverTicket) => {
+    const localTicket = localById.get(serverTicket.id);
+    if (!localTicket) {
+      return serverTicket;
+    }
+    const localTeam = localTicket.assigned_team_id ?? null;
+    const serverTeam = serverTicket.assigned_team_id ?? null;
+    if (localTeam && localTeam !== serverTeam) {
+      return mergeTicketAssignmentFromDetail(serverTicket, {
+        assigned_team_id: localTicket.assigned_team_id ?? null,
+        assigned_team_name: localTicket.assigned_team_name ?? null,
+        assigned_user_id: localTicket.assigned_user_id ?? null,
+        assigned_user_name: localTicket.assigned_user_name ?? null,
+        status: localTicket.status,
+        assignment_reason: localTicket.assignment_reason ?? null,
+        fault_displayed: localTicket.fault_displayed,
+      });
+    }
+    return serverTicket;
+  });
+}

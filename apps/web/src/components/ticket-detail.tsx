@@ -197,10 +197,6 @@ function TicketMetadataCard({ ticket }: { ticket: TicketDetail }) {
 
         />
 
-        <DetailField label="Tildelt gruppe" value={ticket.assigned_team_name ?? "—"} />
-
-        <DetailField label="Sagsbehandler" value={ticket.assigned_user_name ?? "—"} />
-
         <DetailField label="Responsfrist" value={formatDate(ticket.response_due_at)} />
 
         <DetailField
@@ -295,17 +291,14 @@ export function TicketDetailView({
 
             <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
 
-            <TicketAssignmentForm
-
-              ticketId={ticket.id}
-
-              teams={teams}
-
-              currentTeamId={ticket.assigned_team_id}
-
-              currentUserId={ticket.assigned_user_id}
-
-            />
+            {teams.length === 0 ? (
+              <TicketAssignmentForm
+                ticketId={ticket.id}
+                teams={teams}
+                currentTeamId={ticket.assigned_team_id}
+                currentUserId={ticket.assigned_user_id}
+              />
+            ) : null}
 
           </div>
 
@@ -353,7 +346,13 @@ export function TicketDetailView({
 
       ) : null}
 
-      {staff ? <TicketDetailTopBand ticket={ticket} /> : null}
+      {staff ? (
+        <TicketDetailTopBand
+          ticket={ticket}
+          teams={teams}
+          editableAssignment={teams.length > 0}
+        />
+      ) : null}
 
       <header className="wire-card mb-0">
 

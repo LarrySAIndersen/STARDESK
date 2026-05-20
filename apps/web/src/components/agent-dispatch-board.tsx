@@ -31,7 +31,10 @@ import {
   ticketsForServiceDeskTable,
   ticketsForServiceDeskTeamRail,
 } from "@/lib/service-desk-queue";
-import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
+import {
+  mergeTicketAssignmentInList,
+  reconcileLocalTicketsWithServer,
+} from "@/lib/ticket-assignment";
 import { getClientUser } from "@/lib/auth";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
@@ -97,7 +100,7 @@ export function AgentDispatchBoard({
   const [localTickets, setLocalTickets] = useState(tickets);
 
   useEffect(() => {
-    setLocalTickets(tickets);
+    setLocalTickets((prev) => reconcileLocalTicketsWithServer(prev, tickets));
   }, [tickets]);
 
   const {

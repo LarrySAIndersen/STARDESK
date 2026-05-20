@@ -16,7 +16,10 @@ import { ResizableSplit } from "@/components/ui/resizable-split";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
-import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
+import {
+  mergeTicketAssignmentInList,
+  reconcileLocalTicketsWithServer,
+} from "@/lib/ticket-assignment";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
@@ -100,7 +103,7 @@ export function ServiceDeskView({
   const [localTickets, setLocalTickets] = useState<Ticket[]>(tickets);
 
   useEffect(() => {
-    setLocalTickets(tickets);
+    setLocalTickets((prev) => reconcileLocalTicketsWithServer(prev, tickets));
   }, [tickets]);
 
   const internalTeams = useMemo(() => {
@@ -253,7 +256,7 @@ export function ServiceDeskView({
             value={deskCount}
             max={Math.max(deskCount, 1)}
             accent="navy"
-            hint="Åbne sager i kø eller på SF Service Desk"
+            hint="Åbne sager uden tildelt gruppe"
           />
         </div>
         <div className="wire-card flex min-h-[140px] flex-col justify-center py-4">
@@ -321,7 +324,7 @@ export function ServiceDeskView({
           <p className="text-muted-foreground shrink-0 text-xs">
             {queue === "teams"
               ? "Sager tildelt en gruppe vises kun under den pågældende gruppe til højre."
-              : "Venstre liste: sager uden gruppe (eller på SF Service Desk). Træk til en gruppe — sagen forsvinder her og vises under gruppen til højre."}
+              : "Venstre liste: kun sager uden gruppe. Træk til en gruppe — sagen forsvinder her og vises under gruppen til højre."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">

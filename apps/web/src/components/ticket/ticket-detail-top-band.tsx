@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import { User } from "lucide-react";
 
 import { SlaCountdown } from "@/components/sla-countdown";
+import { TicketMetadataAssignment } from "@/components/ticket/ticket-metadata-assignment";
 import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
+import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
 
 function formatDate(iso: string | null | undefined): string {
@@ -33,7 +35,15 @@ function reporterInitials(name: string | null | undefined): string {
   return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
 }
 
-export function TicketDetailTopBand({ ticket }: { ticket: TicketDetail }) {
+export function TicketDetailTopBand({
+  ticket,
+  teams = [],
+  editableAssignment = false,
+}: {
+  ticket: TicketDetail;
+  teams?: Team[];
+  editableAssignment?: boolean;
+}) {
   const reporter = ticket.reporter_display_name ?? "Ukendt indmelder";
 
   return (
@@ -72,8 +82,21 @@ export function TicketDetailTopBand({ ticket }: { ticket: TicketDetail }) {
             label="Kilde"
             value={ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
           />
-          <DetailRow label="Gruppe" value={ticket.assigned_team_name ?? "—"} />
-          <DetailRow label="Sagsbehandler" value={ticket.assigned_user_name ?? "—"} />
+          {editableAssignment && teams.length > 0 ? (
+            <TicketMetadataAssignment
+              ticketId={ticket.id}
+              teams={teams}
+              currentTeamId={ticket.assigned_team_id}
+              currentTeamName={ticket.assigned_team_name}
+              currentUserId={ticket.assigned_user_id}
+              currentUserName={ticket.assigned_user_name}
+            />
+          ) : (
+            <>
+              <DetailRow label="Gruppe" value={ticket.assigned_team_name ?? "—"} />
+              <DetailRow label="Sagsbehandler" value={ticket.assigned_user_name ?? "—"} />
+            </>
+          )}
           <DetailRow
             label="SLA"
             value={
