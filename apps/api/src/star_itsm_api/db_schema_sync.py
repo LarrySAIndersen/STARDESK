@@ -100,6 +100,8 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _table_exists(engine, "ticket_emails"):
         return True
+    if not await _table_exists(engine, "sf_chat_sessions"):
+        return True
     return False
 
 

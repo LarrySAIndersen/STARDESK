@@ -1179,4 +1179,125 @@
   .wire-portal-card {
     @apply cursor-pointer rounded-[2px] border border-[var(--gray-border)] border-t-[3px] border-t-star-navy bg-white p-4 text-center transition-all hover:-translate-y-0.5 hover:border-t-star-red;
   }
+
+  /* SF live chat widget */
+  .sf-chat-fab {
+    @apply bg-star-red fixed right-5 bottom-5 z-[400] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-red;
+  }
+
+  .sf-chat-fab-label {
+    @apply hidden sm:inline;
+  }
+
+  .sf-chat-panel {
+    @apply border-star-navy fixed right-5 bottom-5 z-[401] flex w-[min(100vw-2rem,380px)] flex-col overflow-hidden rounded-[2px] border border-[var(--gray-border)] border-t-[3px] bg-white shadow-2xl;
+  }
+
+  .sf-chat-panel-header {
+    @apply bg-star-navy relative px-4 py-3 pr-10 text-white;
+  }
+
+  .sf-chat-panel-title {
+    @apply text-sm font-bold tracking-tight;
+  }
+
+  .sf-chat-panel-sub {
+    @apply mt-0.5 text-[11px] text-white/70;
+  }
+
+  .sf-chat-panel-close {
+    @apply absolute top-2.5 right-2.5 rounded p-1 text-white/80 hover:bg-white/10 hover:text-white;
+  }
+
+  .sf-chat-panel-body {
+    @apply flex max-h-[min(50vh,320px)] min-h-[140px] flex-col gap-2 overflow-y-auto p-3;
+  }
+
+  .sf-chat-panel-footer {
+    @apply flex items-end gap-2 border-t border-[var(--gray-border)] p-2;
+  }
+
+  .sf-chat-messages {
+    @apply flex flex-1 flex-col gap-2;
+  }
+
+  .sf-chat-messages--compact {
+    @apply max-h-[180px] overflow-y-auto;
+  }
+
+  .sf-chat-bubble {
+    @apply max-w-[85%] rounded-[2px] px-3 py-2 text-[13px] leading-snug;
+  }
+
+  .sf-chat-bubble--own {
+    @apply bg-star-red/10 text-star-navy ml-auto;
+  }
+
+  .sf-chat-bubble--agent {
+    @apply border border-[var(--gray-border)] bg-[var(--gray-bg)] text-star-navy mr-auto;
+  }
+
+  .sf-chat-bubble-name {
+    @apply text-star-blue mb-0.5 block text-[10px] font-bold;
+  }
+
+  .sf-chat-banner {
+    @apply rounded-[2px] px-3 py-2 text-[12px] leading-snug;
+  }
+
+  .sf-chat-banner--closed {
+    @apply border border-[var(--gray-border)] bg-[var(--gray-bg)] text-[var(--gray-mid)];
+  }
+
+  .sf-chat-banner--queue {
+    @apply border-star-red/30 bg-star-red/5 text-star-navy;
+  }
+
+  .sf-chat-send {
+    @apply bg-star-red hover:bg-star-red/90 text-white;
+  }
+
+  .sf-chat-agent-fab {
+    @apply border-star-navy fixed right-5 bottom-5 z-[400] flex size-12 items-center justify-center rounded-full border-2 bg-white text-star-navy shadow-lg;
+  }
+
+  .sf-chat-agent-fab--on {
+    @apply border-star-red bg-star-red text-white;
+  }
+
+  .sf-chat-agent-badge {
+    @apply bg-star-red absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full text-[10px] font-bold text-white;
+  }
+
+  .sf-chat-agent-panel {
+    @apply border-star-navy fixed right-5 bottom-[4.5rem] z-[401] flex h-[min(70vh,480px)] w-[min(100vw-2rem,420px)] flex-col overflow-hidden rounded-[2px] border border-[var(--gray-border)] border-t-[3px] bg-white shadow-2xl;
+  }
+
+  .sf-chat-agent-panel-header {
+    @apply flex items-center justify-between gap-2 border-b border-[var(--gray-border)] px-3 py-2;
+  }
+
+  .sf-chat-agent-panel-body {
+    @apply flex min-h-0 flex-1;
+  }
+
+  .sf-chat-agent-inbox {
+    @apply w-[38%] shrink-0 overflow-y-auto border-r border-[var(--gray-border)];
+  }
+
+  .sf-chat-agent-inbox-item {
+    @apply relative flex w-full flex-col gap-0.5 px-2 py-2 text-left text-[11px] hover:bg-[var(--gray-bg)];
+  }
+
+  .sf-chat-agent-inbox-item--active {
+    @apply bg-star-red/5 border-l-2 border-l-star-red;
+  }
+
+  .sf-chat-agent-inbox-dot {
+    @apply bg-star-red absolute top-2 right-2 size-2 rounded-full;
+  }
+
+  .sf-chat-agent-thread {
+    @apply flex min-w-0 flex-1 flex-col p-2;
+  }
 }

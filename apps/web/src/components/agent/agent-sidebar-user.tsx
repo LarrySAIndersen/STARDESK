@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
 import { clearSession } from "@/lib/auth";
+import { confirmSfChatLogout } from "@/lib/sf-chat-logout";
 import {
   AVATAR_UPLOAD_MAX_BYTES,
   selectUserAvatarPreset,
@@ -306,6 +307,8 @@ function LogoutButton({ onDone }: { onDone: () => void }) {
       size="sm"
       onClick={() => {
         void (async () => {
+          const ok = await confirmSfChatLogout();
+          if (!ok) return;
           await fetch("/api/auth/logout", { method: "POST" });
           clearSession();
           onDone();

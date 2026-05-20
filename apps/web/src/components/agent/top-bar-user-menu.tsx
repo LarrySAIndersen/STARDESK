@@ -8,6 +8,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { ProfileModal } from "@/components/agent/agent-sidebar-user";
 import { UserAvatar } from "@/components/agent/user-avatar";
 import { clearSession, writeUserCookie } from "@/lib/auth";
+import { confirmSfChatLogout } from "@/lib/sf-chat-logout";
 import { resolveUserAvatar, userProfileHref } from "@/lib/user-avatar";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -76,6 +77,8 @@ export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
   }, []);
 
   async function logout() {
+    const ok = await confirmSfChatLogout();
+    if (!ok) return;
     await fetch("/api/auth/logout", { method: "POST" });
     clearSession();
     setMenuOpen(false);
