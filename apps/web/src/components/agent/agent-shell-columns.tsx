@@ -5,6 +5,7 @@ import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-pan
 
 import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
+import { useIsLgUp } from "@/hooks/use-media-query";
 import {
   SHELL_NAV,
   SHELL_NAV_COLLAPSED_WIDTH,
@@ -31,6 +32,7 @@ export function AgentShellColumns({
   collapsed,
   onToggle,
 }: AgentShellColumnsProps) {
+  const isLgUp = useIsLgUp();
   const navPanelRef = usePanelRef();
   const panelIds = [SHELL_PANEL_NAV, SHELL_PANEL_MAIN];
 
@@ -43,6 +45,7 @@ export function AgentShellColumns({
   const initialLayout = defaultLayout ?? FALLBACK_LAYOUT;
 
   useLayoutEffect(() => {
+    if (!isLgUp) return;
     const panel = navPanelRef.current;
     if (!panel) return;
     if (collapsed) {
@@ -50,13 +53,21 @@ export function AgentShellColumns({
     } else {
       panel.expand();
     }
-  }, [collapsed, navPanelRef]);
+  }, [collapsed, navPanelRef, isLgUp]);
+
+  if (!isLgUp) {
+    return (
+      <div className="agent-shell-main flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+        {children}
+      </div>
+    );
+  }
 
   return (
     <Group
       id={SHELL_WIDTHS_STORAGE_KEY}
       orientation="horizontal"
-      className="min-h-0 min-w-0 flex-1"
+      className="agent-shell min-h-0 min-w-0 flex-1"
       defaultLayout={initialLayout}
       onLayoutChanged={onLayoutChanged}
       resizeTargetMinimumSize={{ fine: 4, coarse: 28 }}

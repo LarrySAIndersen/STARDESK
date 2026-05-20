@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+
+import { useIsLgUp } from "@/hooks/use-media-query";
 import {
   Group,
   Panel,
@@ -21,6 +23,8 @@ type ResizableSplitProps = {
   minSizes?: [number, number];
   className?: string;
   panelClassName?: string;
+  /** Below lg, render panels stacked without resize handles. */
+  stackBelowLg?: boolean;
 };
 
 export function ResizableSplit({
@@ -31,8 +35,10 @@ export function ResizableSplit({
   minSizes = [12, 40],
   className,
   panelClassName,
+  stackBelowLg = false,
 }: ResizableSplitProps) {
   const [first, second] = children;
+  const isLgUp = useIsLgUp();
   const generatedId = useId();
   const layoutId = storageKey ?? generatedId;
 
@@ -51,6 +57,15 @@ export function ResizableSplit({
     direction === "horizontal"
       ? "Træk for at ændre bredde"
       : "Træk for at ændre højde";
+
+  if (stackBelowLg && !isLgUp) {
+    return (
+      <div className={cn("flex min-h-0 min-w-0 flex-col gap-4", className)}>
+        <div className={cn("min-h-0 min-w-0", panelClassName)}>{first}</div>
+        <div className={cn("min-h-0 min-w-0", panelClassName)}>{second}</div>
+      </div>
+    );
+  }
 
   return (
     <Group

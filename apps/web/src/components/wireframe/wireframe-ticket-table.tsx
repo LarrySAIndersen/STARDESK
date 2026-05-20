@@ -31,6 +31,7 @@ export function WireframeTicketTable({
 
   return (
     <div className={cn("wire-table-wrap", className)}>
+      <div className="wire-table-scroll wire-table-scroll--tickets">
       <div
         className="wire-table-head wire-table-grid-tickets"
         role="row"
@@ -98,6 +99,7 @@ export function WireframeTicketTable({
           </span>
         </div>
       ))}
+      </div>
     </div>
   );
 }

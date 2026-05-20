@@ -23,9 +23,11 @@ function isActive(pathname: string, href: string): boolean {
 export function PortalSidebar({
   collapsed = false,
   onToggle,
+  onNavigate,
 }: {
   collapsed?: boolean;
   onToggle?: () => void;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -50,6 +52,7 @@ export function PortalSidebar({
               key={item.href}
               href={item.href}
               title={item.label}
+              onClick={onNavigate}
               className={cn(
                 "wire-nav-item",
                 active && "wire-nav-item--active",

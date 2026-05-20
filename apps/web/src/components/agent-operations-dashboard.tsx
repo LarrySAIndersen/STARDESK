@@ -208,6 +208,7 @@ export function AgentOperationsDashboard({
         minSizes={[32, 32]}
         className="dashboard-throughput-split min-h-[12rem]"
         panelClassName="min-h-0"
+        stackBelowLg
       >
         <LongestTicketCard ticket={dashboard.longest_open} />
         <StarSectionCard
@@ -266,7 +267,7 @@ export function AgentOperationsDashboard({
             </Badge>
           ) : null}
         </div>
-        <div className="grid gap-8 sm:grid-cols-3 sm:items-stretch">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:items-stretch lg:gap-8">
           <Gauge
             label="Åben backlog"
             value={dashboard.open_count}

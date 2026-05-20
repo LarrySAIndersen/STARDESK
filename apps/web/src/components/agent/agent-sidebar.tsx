@@ -56,6 +56,7 @@ export function AgentSidebar({
   showUsersNav: showUsersNavFromServer,
   collapsed = false,
   onToggle,
+  onNavigate,
 }: {
   /** Server-parsed session user — avoids client cookie parse mismatches. */
   user?: User | null;
@@ -63,6 +64,8 @@ export function AgentSidebar({
   showUsersNav?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
+  /** Closes mobile drawer after navigation. */
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
@@ -132,7 +135,7 @@ export function AgentSidebar({
               {showSection ? (
                 <p className="wire-nav-section">{item.section}</p>
               ) : null}
-              <Link href={item.href} className={className}>
+              <Link href={item.href} className={className} onClick={onNavigate}>
                 <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
                 <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
               </Link>
@@ -140,7 +143,11 @@ export function AgentSidebar({
           );
         })}
         {staff ? (
-          <IntegrationSidebarLinks pathname={pathname} collapsed={collapsed} />
+          <IntegrationSidebarLinks
+            pathname={pathname}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
         ) : null}
       </nav>
 

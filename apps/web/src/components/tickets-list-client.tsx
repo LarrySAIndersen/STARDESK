@@ -126,9 +126,9 @@ export function TicketsListClient({
           </span>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-sm:[&_select]:min-w-[calc(50%-0.25rem)] max-sm:[&_select]:flex-1">
         <select
-          className="wire-form-input h-8 w-auto min-w-[120px] text-xs"
+          className="wire-form-input h-8 w-auto min-w-[7.5rem] text-xs"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           aria-label="Filtrer status"

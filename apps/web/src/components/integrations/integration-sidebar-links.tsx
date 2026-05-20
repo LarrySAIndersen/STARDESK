@@ -25,9 +25,11 @@ function isIntegrationActive(pathname: string, href: string): boolean {
 export function IntegrationSidebarLinks({
   pathname,
   collapsed = false,
+  onNavigate,
 }: {
   pathname: string;
   collapsed?: boolean;
+  onNavigate?: () => void;
 }) {
   const config = useIntegrationsConfig();
 
@@ -45,6 +47,7 @@ export function IntegrationSidebarLinks({
           <Link
             key={meta.id}
             href={meta.href}
+            onClick={onNavigate}
             className={cn(
               "wire-nav-item wire-nav-item--integration",
               active && "wire-nav-item--active",

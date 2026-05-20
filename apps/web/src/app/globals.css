@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * Mobile breakpoints (Tailwind defaults): sm 640px, md 768px, lg 1024px, xl 1280px.
+ * Agent/portal sidebars → overlay drawer below lg; touch targets min 44px on coarse pointers.
+ */
+
 @custom-variant dark (&:is(.dark *));
 
 /* STAR wireframe design tokens (v1/v2 ITSM) */
@@ -254,11 +259,21 @@
   }
 
   .dashboard-throughput-split {
-    @apply gap-8;
+    @apply gap-4 lg:gap-8;
+  }
+
+  .dashboard-throughput-split--stacked {
+    @apply flex flex-col gap-4;
   }
 
   .dashboard-throughput-split [data-separator] {
     @apply mx-1 w-2 shrink-0 bg-transparent;
+  }
+
+  @media (max-width: 1023px) {
+    .dashboard-throughput-split [data-separator] {
+      @apply hidden;
+    }
   }
 
   .dashboard-ops-mini-card {
@@ -374,7 +389,7 @@
   }
 
   .wire-topheader {
-    @apply bg-star-navy sticky top-0 z-50 flex shrink-0 items-center gap-4 px-5;
+    @apply bg-star-navy sticky top-0 z-50 flex shrink-0 items-center gap-3 px-3 sm:gap-4 sm:px-5;
     height: var(--wire-shell-header-h);
     min-height: var(--wire-shell-header-h);
   }
@@ -742,14 +757,19 @@
   }
 
   .wire-topbar {
-    @apply sticky top-0 z-20 flex shrink-0 items-center gap-4 border-b border-[var(--gray-border)] bg-white px-4 sm:px-5;
-    height: var(--wire-shell-header-h);
+    @apply sticky top-0 z-20 flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--gray-border)] bg-white px-3 py-2 sm:gap-4 sm:px-5 sm:py-0;
     min-height: var(--wire-shell-header-h);
     box-sizing: border-box;
   }
 
+  @media (min-width: 640px) {
+    .wire-topbar {
+      height: var(--wire-shell-header-h);
+    }
+  }
+
   .wire-topbar-title {
-    @apply text-star-navy min-w-0 text-[15px] font-bold tracking-tight;
+    @apply text-star-navy min-w-0 text-sm font-bold tracking-tight sm:text-[15px];
   }
 
   .wire-topbar-user {
@@ -781,7 +801,34 @@
   }
 
   .wire-scroll-content {
-    @apply flex-1 overflow-y-auto px-5 py-4 leading-normal;
+    @apply flex-1 overflow-x-hidden overflow-y-auto px-3 py-3 leading-normal sm:px-5 sm:py-4;
+  }
+
+  .agent-shell,
+  .agent-shell-main {
+    @apply min-w-0 overflow-x-hidden;
+  }
+
+  .wire-touch-target {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  @media (pointer: coarse) {
+    .wire-nav-item {
+      min-height: 2.75rem;
+    }
+
+    .wire-btn {
+      min-height: 2.75rem;
+      padding-top: 0.625rem;
+      padding-bottom: 0.625rem;
+    }
+
+    .wire-topbar-user-menu-trigger {
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+    }
   }
 
   /* Ticket detail: main column + sticky LLM rail (wireframe detail-layout) */
@@ -877,7 +924,19 @@
 
   /* Table */
   .wire-table-wrap {
-    @apply overflow-hidden rounded-[2px] border border-[var(--gray-border)] bg-white;
+    @apply min-w-0 overflow-x-auto rounded-[2px] border border-[var(--gray-border)] bg-white;
+  }
+
+  .wire-table-scroll {
+    @apply min-w-[40rem];
+  }
+
+  .wire-table-scroll--tickets {
+    @apply min-w-[44rem];
+  }
+
+  .wire-table-scroll--portal {
+    @apply min-w-[28rem];
   }
 
   .wire-table-head {
@@ -1074,7 +1133,11 @@
   }
 
   .wire-portal-hero {
-    @apply bg-star-navy mb-4 rounded-[2px] px-6 py-6 text-white;
+    @apply bg-star-navy mb-4 rounded-[2px] px-4 py-5 text-white sm:px-6 sm:py-6;
+  }
+
+  .wire-portal-hero h2 {
+    @apply text-lg sm:text-xl;
   }
 
   .wire-portal-card {

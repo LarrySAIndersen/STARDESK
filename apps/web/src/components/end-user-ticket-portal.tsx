@@ -50,7 +50,7 @@ export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalPr
         </div>
       </section>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {PORTAL_CATEGORIES.map((cat) => (
           <Link key={cat.title} href="/tickets/new" className="wire-portal-card block">
             <p className="text-star-navy text-[13px] font-bold">{cat.title}</p>

@@ -20,7 +20,7 @@ const TAB_LABELS: { id: UsersTab; label: string }[] = [
 function AdminUsersTableHead() {
   return (
     <div
-      className="wire-table-head wire-table-grid-admin-users min-w-[40rem]"
+      className="wire-table-head wire-table-grid-admin-users"
       role="row"
     >
       <span>Navn</span>
@@ -60,7 +60,7 @@ function AdminUserTableRow({
   return (
     <div
       role="row"
-      className="wire-table-row wire-table-row--compact wire-table-grid-admin-users min-w-[40rem] items-center"
+      className="wire-table-row wire-table-row--compact wire-table-grid-admin-users items-center"
     >
       <div className="flex min-w-0 items-center gap-2">
         <span className="wire-avatar-xs" aria-hidden>
@@ -143,7 +143,7 @@ function TeamGroupSubheader({ section }: { section: UsersByTeamSection }) {
   return (
     <div
       role="row"
-      className="wire-table-group-head min-w-[40rem]"
+      className="wire-table-group-head"
       aria-label={`${section.team.name}, ${section.users.length} ${countLabel}`}
     >
       <span className="col-span-full flex min-w-0 items-baseline gap-2">
@@ -206,7 +206,7 @@ function UngroupedBlock({
     <section aria-label="Uden gruppe">
       <div
         role="row"
-        className="wire-table-group-head min-w-[40rem]"
+        className="wire-table-group-head"
         aria-label={`Uden gruppe, ${users.length} ${countLabel}`}
       >
         <span className="col-span-full flex min-w-0 items-baseline gap-2">
@@ -248,7 +248,8 @@ function AdminUsersCompactTable({
 
   return (
     <div className="overflow-x-auto">
-      <div className="wire-table-wrap min-w-0">
+      <div className="wire-table-wrap min-w-0 overflow-x-auto">
+        <div className="wire-table-scroll min-w-[40rem]">
         <AdminUsersTableHead />
         <TeamSectionsBlock
           sections={sections}
@@ -261,6 +262,7 @@ function AdminUsersCompactTable({
         {!hasTeamRows && !hasUngrouped ? (
           <p className="text-muted-foreground px-3.5 py-4 text-sm">Ingen brugere i denne visning.</p>
         ) : null}
+        </div>
       </div>
     </div>
   );

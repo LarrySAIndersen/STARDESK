@@ -97,7 +97,7 @@ function IntegrationSettingsFormShell<K extends IntegrationId>({
       : "Gem indstillinger";
 
   return (
-    <form onSubmit={handleSave} className="mx-auto max-w-xl space-y-5">
+    <form onSubmit={handleSave} className="mx-auto w-full max-w-xl space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <IntegrationStatusPill status={status} label={pillLabel} />
         <Link href="/integrations" className="text-star-navy text-xs font-semibold hover:underline">
