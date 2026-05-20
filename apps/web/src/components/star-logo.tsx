@@ -2,7 +2,7 @@ import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
-const MARK_SIZE = 40;
+const DEFAULT_MARK_SIZE = 40;
 
 const ORG_NAME = "Styrelsen for Arbejdsmarked og Rekruttering";
 
@@ -11,6 +11,8 @@ export function StarLogo({
   priority = false,
   inverted = false,
   showOrgSubtitle = false,
+  /** Intrinsic mark size in CSS pixels (default 40). */
+  markSize = DEFAULT_MARK_SIZE,
 }: {
   className?: string;
   priority?: boolean;
@@ -18,6 +20,7 @@ export function StarLogo({
   inverted?: boolean;
   /** Org name beside mark (brand bar, large screens). */
   showOrgSubtitle?: boolean;
+  markSize?: number;
 }) {
   const src = inverted ? "/images/star-logo-on-dark.svg" : "/images/star-logo.svg";
 
@@ -26,9 +29,14 @@ export function StarLogo({
       src={src}
       unoptimized
       alt={showOrgSubtitle ? "" : "STAR — Styrelsen for Arbejdsmarked og Rekruttering"}
-      width={MARK_SIZE}
-      height={MARK_SIZE}
-      className={cn("size-9 shrink-0 sm:size-10", className)}
+      width={markSize}
+      height={markSize}
+      className={cn(
+        "shrink-0",
+        markSize === DEFAULT_MARK_SIZE ? "size-9 sm:size-10" : undefined,
+        className,
+      )}
+      style={markSize === DEFAULT_MARK_SIZE ? undefined : { width: markSize, height: markSize }}
       priority={priority}
       aria-hidden={showOrgSubtitle ? true : undefined}
     />

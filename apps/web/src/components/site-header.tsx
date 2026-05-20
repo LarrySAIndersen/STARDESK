@@ -5,37 +5,82 @@ import { SiteHeaderNav } from "@/components/site-header-nav";
 import { StarLogo } from "@/components/star-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
-export async function SiteHeader() {
+type SiteHeaderProps = {
+  /** Dark industrial shell for forced first-time password change. */
+  shellVariant?: "default" | "firstLoginIndustrial";
+  /** Hide Sager + Opret sag (e.g. while `must_change_password`). */
+  hideCasesAndNewTicketNav?: boolean;
+};
+
+export async function SiteHeader({
+  shellVariant = "default",
+  hideCasesAndNewTicketNav = false,
+}: SiteHeaderProps) {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
   const isAuthenticated = Boolean(token);
+  const industrial = shellVariant === "firstLoginIndustrial";
+
   return (
-    <header className="sticky top-0 z-50 shadow-sm">
-      <div className="bg-star-navy text-white">
+    <header className={cn("sticky top-0 z-50", industrial ? "shadow-md shadow-black/40" : "shadow-sm")}>
+      <div
+        className={cn(
+          industrial
+            ? "border-b border-white/[0.08] bg-[#0a0e1a] text-[#94a3b8]"
+            : "bg-star-navy text-white",
+        )}
+      >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-1.5 text-xs">
-          <span className="text-white/90">
+          <span className={industrial ? "text-[#94a3b8]" : "text-white/90"}>
             Styrelsen for Arbejdsmarked og Rekruttering — ITSM prototype
           </span>
-          <span className="hidden text-white/90 sm:inline">STARdesk</span>
+          <span className={cn("hidden sm:inline", industrial ? "text-[#64748b]" : "text-white/90")}>
+            STARdesk
+          </span>
         </div>
       </div>
 
-      <div className="border-border border-b bg-white dark:bg-card">
+      <div
+        className={cn(
+          "border-b",
+          industrial
+            ? "border-white/[0.08] bg-[#0a0e1a]"
+            : "border-border bg-white dark:bg-card",
+        )}
+      >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <Link href="/" className="group flex items-center gap-3">
-            <StarLogo priority className="transition-opacity group-hover:opacity-90" />
+            <StarLogo priority inverted={industrial} />
             <div>
-              <span className="text-star-navy dark:text-foreground block text-xl font-bold leading-tight tracking-tight">
+              <span
+                className={cn(
+                  "block text-xl font-bold leading-tight tracking-tight",
+                  industrial ? "text-white" : "text-star-navy dark:text-foreground",
+                )}
+              >
                 STARdesk
               </span>
-              <span className="text-star-blue dark:text-primary block text-xs font-medium">
+              <span
+                className={cn(
+                  "block text-xs font-medium",
+                  industrial ? "text-[#E8501A]" : "text-star-blue dark:text-primary",
+                )}
+              >
                 Sagsstyring og self-service
               </span>
             </div>
           </Link>
 
           <div className="flex flex-wrap items-center gap-3">
-            {isAuthenticated ? <SiteHeaderNav /> : <ThemeToggle />}
+            {isAuthenticated ? (
+              <SiteHeaderNav
+                hideCasesAndNewTicket={hideCasesAndNewTicketNav}
+                industrialChrome={industrial}
+              />
+            ) : (
+              <ThemeToggle />
+            )}
           </div>
         </div>
       </div>

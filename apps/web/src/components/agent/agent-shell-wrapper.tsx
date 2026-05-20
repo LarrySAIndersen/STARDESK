@@ -42,11 +42,18 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   if (userMustChangePassword(currentUser) && onChangePasswordPage) {
     return (
       <>
-        <SiteHeader />
-        <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+        <SiteHeader
+          shellVariant="firstLoginIndustrial"
+          hideCasesAndNewTicketNav
+        />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex flex-1 flex-col bg-[#0a0e1a] outline-none"
+        >
           {children}
         </main>
-        <SiteFooter />
+        <SiteFooter variant="firstLoginIndustrial" />
       </>
     );
   }
