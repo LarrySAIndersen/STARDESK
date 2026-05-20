@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { readIntegrationOAuthUpstreamError } from "@/lib/integration-oauth-errors";
 
 export type IntegrationOAuthId = "slack" | "gmail";
 
@@ -31,7 +32,7 @@ export async function proxyIntegrationOAuthStart(
 
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
   if (!token) {
-    return onError("not_authenticated");
+    return onError("Du er ikke logget ind. Log ind og prøv igen.");
   }
 
   const upstream = await fetch(
@@ -47,12 +48,13 @@ export async function proxyIntegrationOAuthStart(
   );
 
   if (!upstream.ok) {
-    return onError("oauth_start_failed");
+    const detail = await readIntegrationOAuthUpstreamError(upstream);
+    return onError(detail);
   }
 
   const data = (await upstream.json()) as { authorize_url?: string };
   if (!data.authorize_url) {
-    return onError("missing_authorize_url");
+    return onError("API returnerede ikke en OAuth-URL.");
   }
   return NextResponse.redirect(data.authorize_url);
 }
@@ -77,12 +79,8 @@ export async function proxyIntegrationOAuthCallback(
   });
 
   if (!upstream.ok) {
-    try {
-      const data = (await upstream.json()) as { detail?: string };
-      return onError(data.detail ?? "oauth_callback_failed");
-    } catch {
-      return onError("oauth_callback_failed");
-    }
+    const detail = await readIntegrationOAuthUpstreamError(upstream);
+    return onError(detail);
   }
 
   return redirectToSettings(request, integration, { connected: "1" });

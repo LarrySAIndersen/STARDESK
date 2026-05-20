@@ -36,6 +36,23 @@ I backend miljo (`apps/api/.env`):
 - `POST /api/v1/integrations/slack/disconnect`
 - `POST /api/v1/tickets/{id}/slack-push`
 
+## Diagnostik (produktion)
+
+```bash
+# API sundhed
+curl -sS https://api-gamma-amber.vercel.app/health
+
+# OAuth start (kræver JWT fra login — erstat TOKEN)
+curl -sS -H "Authorization: Bearer TOKEN" \
+  https://api-gamma-amber.vercel.app/api/v1/integrations/slack/oauth/start
+
+# Organisation som integration scoper til
+curl -sS -H "Authorization: Bearer TOKEN" \
+  https://api-gamma-amber.vercel.app/api/v1/integrations/scope
+```
+
+503 med `Slack OAuth mangler konfiguration` betyder at `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` og `SLACK_REDIRECT_URI` mangler på API-projektet i Vercel Production.
+
 ## SF-administratorer uden organisation
 
 Brugere med rolle `admin` / `top_admin` og `organization_id = NULL` (fx Larry) kan stadig forbinde Slack:

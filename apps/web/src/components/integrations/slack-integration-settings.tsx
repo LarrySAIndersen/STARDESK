@@ -8,6 +8,7 @@ import { IntegrationStatusPill } from "@/components/integrations/integration-sta
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import { formatIntegrationError } from "@/lib/format-integration-error";
+import type { IntegrationScope } from "@/types/integration-scope";
 import type { SlackChannel, SlackStatus } from "@/types/slack";
 
 function channelLabel(channel: SlackChannel): string {
@@ -27,6 +28,7 @@ function statusFromSlack(status: SlackStatus): "active" | "draft" | "inactive" {
 export function SlackIntegrationSettings() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<SlackStatus | null>(null);
+  const [scope, setScope] = useState<IntegrationScope | null>(null);
   const [channels, setChannels] = useState<SlackChannel[]>([]);
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
@@ -52,11 +54,23 @@ export function SlackIntegrationSettings() {
     return "Ikke forbundet";
   }, [status]);
 
+  const loadScope = useCallback(async () => {
+    try {
+      const next = await apiGet<IntegrationScope>("/api/v1/integrations/scope");
+      setScope(next);
+    } catch {
+      setScope(null);
+    }
+  }, []);
+
   const loadStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const next = await apiGet<SlackStatus>("/api/v1/integrations/slack/status");
+      const [next] = await Promise.all([
+        apiGet<SlackStatus>("/api/v1/integrations/slack/status"),
+        loadScope(),
+      ]);
       setStatus(next);
       setSelectedChannelId(next.default_channel_id ?? "");
       setWebhookUrl(next.webhook_url ?? "");
@@ -69,7 +83,7 @@ export function SlackIntegrationSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadScope]);
 
   const loadChannels = useCallback(async () => {
     try {
@@ -97,7 +111,7 @@ export function SlackIntegrationSettings() {
     }
     const oauthError = searchParams.get("error");
     if (oauthError) {
-      setError(`Slack OAuth fejlede: ${oauthError}`);
+      setError(formatIntegrationError(oauthError));
     }
   }, [searchParams]);
 
@@ -167,6 +181,13 @@ export function SlackIntegrationSettings() {
         <p className="text-muted-foreground text-xs">
           Forbind STARdesk med Slack via OAuth. Bot-token gemmes kun på serveren.
         </p>
+
+        {scope ? (
+          <p className="text-muted-foreground text-xs">
+            Integration knyttes til organisationen{" "}
+            <span className="font-semibold text-star-navy">{scope.organization_name}</span>.
+          </p>
+        ) : null}
 
         {status?.connected ? (
           <div className="rounded-sm border border-[var(--gray-border)] bg-[var(--gray-soft)] px-3 py-2 text-xs">

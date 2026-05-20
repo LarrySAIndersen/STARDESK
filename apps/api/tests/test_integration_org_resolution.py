@@ -147,6 +147,45 @@ async def test_gmail_status_admin_without_user_org(
 
 
 @pytest.mark.asyncio
+async def test_integration_scope_admin_without_user_org(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    app.dependency_overrides[get_current_user] = _larry_admin
+
+    override_db.execute = AsyncMock(
+        side_effect=[
+            _scalar_result(SF_OPS_ORG_ID),
+            _scalar_result("SF Operations"),
+        ],
+    )
+    try:
+        response = await api_client.get("/api/v1/integrations/scope")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["organization_id"] == str(SF_OPS_ORG_ID)
+        assert body["organization_name"] == "SF Operations"
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
+async def test_slack_oauth_start_missing_oauth_config_returns_503(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    app.dependency_overrides[get_current_user] = _larry_admin
+    override_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
+    try:
+        response = await api_client.get("/api/v1/integrations/slack/oauth/start")
+        assert response.status_code == 503
+        detail = response.json()["detail"]
+        assert "OAuth mangler konfiguration" in detail or "JWT_SECRET mangler" in detail
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.mark.asyncio
 async def test_slack_oauth_start_admin_without_user_org(
     override_db: AsyncMock,
     api_client: AsyncClient,

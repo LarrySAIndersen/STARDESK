@@ -10,6 +10,7 @@ import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import { formatIntegrationError } from "@/lib/format-integration-error";
 import { saveIntegrationPartial } from "@/lib/integrations-config";
 import type { GmailStatus, GmailSyncResult, GmailTestResult } from "@/types/gmail";
+import type { IntegrationScope } from "@/types/integration-scope";
 
 function statusFromGmail(status: GmailStatus): "active" | "draft" | "inactive" {
   if (status.connected && status.enabled) {
@@ -31,6 +32,7 @@ function formatDate(iso: string | null): string {
 export function GmailIntegrationSettings() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<GmailStatus | null>(null);
+  const [scope, setScope] = useState<IntegrationScope | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +46,23 @@ export function GmailIntegrationSettings() {
     return "Ikke forbundet";
   }, [status]);
 
+  const loadScope = useCallback(async () => {
+    try {
+      const next = await apiGet<IntegrationScope>("/api/v1/integrations/scope");
+      setScope(next);
+    } catch {
+      setScope(null);
+    }
+  }, []);
+
   const loadStatus = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const next = await apiGet<GmailStatus>("/api/v1/integrations/gmail/status");
+      const [next] = await Promise.all([
+        apiGet<GmailStatus>("/api/v1/integrations/gmail/status"),
+        loadScope(),
+      ]);
       setStatus(next);
       saveIntegrationPartial("gmail", {
         connected_email: next.connected_email ?? "",
@@ -63,7 +77,7 @@ export function GmailIntegrationSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadScope]);
 
   useEffect(() => {
     void loadStatus();
@@ -75,7 +89,7 @@ export function GmailIntegrationSettings() {
     }
     const oauthError = searchParams.get("error");
     if (oauthError) {
-      setError(`Gmail OAuth fejlede: ${oauthError}`);
+      setError(formatIntegrationError(oauthError));
     }
   }, [searchParams]);
 
@@ -178,6 +192,14 @@ export function GmailIntegrationSettings() {
         <p className="text-muted-foreground text-xs">
           Forbind STARdesk med Gmail via OAuth for at oprette sager fra indgående e-mails og svare i samme tråd.
         </p>
+
+        {scope ? (
+          <p className="text-muted-foreground text-xs">
+            Integration knyttes til organisationen{" "}
+            <span className="font-semibold text-star-navy">{scope.organization_name}</span>.
+          </p>
+        ) : null}
+
         <div className="rounded-sm border border-[var(--gray-border)] bg-[var(--gray-soft)] px-3 py-2 text-xs">
           Forbundet adresse: <span className="font-semibold">{status?.connected_email ?? "—"}</span>
         </div>

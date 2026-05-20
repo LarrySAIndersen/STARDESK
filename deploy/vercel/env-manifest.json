@@ -23,7 +23,21 @@
   },
   "apps/api": {
     "required": ["DATABASE_URL", "FRONTEND_URL", "JWT_SECRET"],
-    "productionRecommended": ["APP_ENV", "CRON_SECRET", "WEBHOOK_SECRET", "RESEND_API_KEY", "MAIL_FROM"],
+    "productionRecommended": [
+      "APP_ENV",
+      "CRON_SECRET",
+      "WEBHOOK_SECRET",
+      "RESEND_API_KEY",
+      "MAIL_FROM",
+      "SLACK_CLIENT_ID",
+      "SLACK_CLIENT_SECRET",
+      "SLACK_SIGNING_SECRET",
+      "SLACK_REDIRECT_URI",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "GMAIL_REDIRECT_URI",
+      "GMAIL_TOKEN_ENCRYPTION_KEY"
+    ],
     "optional": [
       "UPLOAD_DIR",
       "SLACK_CLIENT_ID",
