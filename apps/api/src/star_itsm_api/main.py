@@ -11,6 +11,7 @@ from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
+    admin,
     assets,
     auth,
     categories,
@@ -74,4 +75,5 @@ app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(cron.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(admin.router, prefix="/api/v1")
 app.include_router(sf_chat.router, prefix="/api/v1")

@@ -66,6 +66,14 @@ Web login: `POST /api/auth/login` (sætter cookies).
 | GET | `/reports/standard?period_days=&bucket=` | agent, admin |
 | GET | `/reports/standard/export?...` | CSV |
 
+## Admin
+
+| Metode | Sti | Rolle | Note |
+|--------|-----|-------|------|
+| POST | `/admin/reset-sla` | admin, top_admin | Genberegn SLA for alle ikke-slettede sager |
+
+Query: `dry_run=true` (tæl kun), `anchor=created_at` (standard, som prioritetsændring) eller `anchor=now` (nye frister fra nu).
+
 ## Integration (hemmelighed påkrævet i production)
 
 | Metode | Sti | Header |
