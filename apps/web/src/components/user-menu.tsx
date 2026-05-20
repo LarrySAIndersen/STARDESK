@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { clearSession, getClientUser } from "@/lib/auth";
+import type { User } from "@/types/user";
 
-export function UserMenu() {
+export function UserMenu({ user: serverUser }: { user?: User | null }) {
   const router = useRouter();
-  const user = getClientUser();
+  const user = serverUser ?? getClientUser();
 
   if (!user) {
     return null;

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { getClientUser } from "@/lib/auth";
 import { portalRoleLabel } from "@/lib/portal-access";
 import { resolveUserAvatar } from "@/lib/user-avatar";
+import type { User } from "@/types/user";
 
 const TITLES: Record<string, string> = {
   "/portal": "Oversigt",
@@ -22,9 +23,15 @@ function titleForPath(pathname: string): string {
   return TITLES[pathname] ?? "Selvbetjening";
 }
 
-export function PortalTopBar({ onOpenNav }: { onOpenNav?: () => void }) {
+export function PortalTopBar({
+  user: serverUser,
+  onOpenNav,
+}: {
+  user?: User | null;
+  onOpenNav?: () => void;
+}) {
   const pathname = usePathname();
-  const user = resolveUserAvatar(getClientUser());
+  const user = resolveUserAvatar(serverUser ?? getClientUser());
 
   if (!user) {
     return null;

@@ -2,6 +2,8 @@ export type SfChatStatus = {
   open: boolean;
   available_agents: number;
   message: string;
+  waiting_sessions?: number;
+  estimated_wait_minutes?: number | null;
 };
 
 export type SfChatSession = {
@@ -12,6 +14,8 @@ export type SfChatSession = {
   created_at: string;
   updated_at: string;
   queue_message: string | null;
+  bot_assistant_active?: boolean;
+  wait_seconds?: number | null;
 };
 
 export type SfChatMessage = {
@@ -23,6 +27,7 @@ export type SfChatMessage = {
   created_at: string;
   is_own: boolean;
   is_system?: boolean;
+  is_bot?: boolean;
 };
 
 export type SfChatPresence = {
@@ -47,10 +52,13 @@ export type SfChatAgentInboxItem = {
   last_message_at: string | null;
   unread_count: number;
   customer_is_typing: boolean;
+  wait_seconds?: number | null;
 };
 
 export type SfChatAgentInbox = {
   items: SfChatAgentInboxItem[];
   online: boolean;
   notification_count: number;
+  waiting_sessions?: number;
+  estimated_wait_minutes?: number | null;
 };

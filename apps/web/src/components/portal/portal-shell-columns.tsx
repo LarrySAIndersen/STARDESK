@@ -19,15 +19,18 @@ import {
   PORTAL_SHELL_WIDTHS_STORAGE_KEY,
   SHELL_NAV_COLLAPSED_WIDTH,
 } from "@/lib/shell-layout";
+import type { User } from "@/types/user";
 
 type PortalShellColumnsProps = {
   children: ReactNode;
+  user?: User | null;
 };
 
-export function PortalShellColumns({ children }: PortalShellColumnsProps) {
+export function PortalShellColumns({ children, user: serverUser }: PortalShellColumnsProps) {
   const { collapsed, toggle } = useSidebarCollapsed();
   const isLgUp = useIsLgUp();
-  const isStaffUser = isStaff(getClientUser());
+  const sessionUser = serverUser ?? getClientUser();
+  const isStaffUser = isStaff(sessionUser);
   const showPortalTopBar = !isStaffUser;
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -65,7 +68,7 @@ export function PortalShellColumns({ children }: PortalShellColumnsProps) {
   const mainContent = (
     <>
       {showPortalTopBar ? (
-        <PortalTopBar onOpenNav={() => setMobileNavOpen(true)} />
+        <PortalTopBar user={sessionUser} onOpenNav={() => setMobileNavOpen(true)} />
       ) : null}
       <div className="wire-scroll-content h-full min-h-0 overflow-x-hidden overflow-y-auto">
         {children}

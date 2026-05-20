@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     if (meResponse.ok) {
       const user = (await meResponse.json()) as User;
       const secure = process.env.NODE_ENV === "production";
-      response.cookies.set(USER_COOKIE, encodeURIComponent(JSON.stringify(user)), {
+      response.cookies.set(USER_COOKIE, JSON.stringify(user), {
         httpOnly: false,
         secure,
         sameSite: "lax",

@@ -5,21 +5,27 @@ import { SiteHeaderNav } from "@/components/site-header-nav";
 import { StarLogo } from "@/components/star-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { getServerUser } from "@/lib/auth-server";
 import { cn } from "@/lib/utils";
+import type { User } from "@/types/user";
 
 type SiteHeaderProps = {
   /** Dark industrial shell for forced first-time password change. */
   shellVariant?: "default" | "firstLoginIndustrial";
   /** Hide Sager + Opret sag (e.g. while `must_change_password`). */
   hideCasesAndNewTicketNav?: boolean;
+  /** Session user from server (avoids relying on `document.cookie` alone). */
+  user?: User | null;
 };
 
 export async function SiteHeader({
   shellVariant = "default",
   hideCasesAndNewTicketNav = false,
+  user: userProp,
 }: SiteHeaderProps) {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
   const isAuthenticated = Boolean(token);
+  const user = userProp ?? (isAuthenticated ? await getServerUser() : null);
   const industrial = shellVariant === "firstLoginIndustrial";
 
   return (
@@ -75,6 +81,7 @@ export async function SiteHeader({
           <div className="flex flex-wrap items-center gap-3">
             {isAuthenticated ? (
               <SiteHeaderNav
+                user={user}
                 hideCasesAndNewTicket={hideCasesAndNewTicketNav}
                 industrialChrome={industrial}
               />

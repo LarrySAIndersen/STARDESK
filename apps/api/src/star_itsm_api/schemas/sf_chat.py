@@ -8,6 +8,8 @@ class SfChatStatusRead(BaseModel):
     open: bool
     available_agents: int
     message: str
+    waiting_sessions: int = 0
+    estimated_wait_minutes: int | None = None
 
 
 class SfChatPresenceRead(BaseModel):
@@ -48,6 +50,8 @@ class SfChatSessionRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     queue_message: str | None = None
+    bot_assistant_active: bool = False
+    wait_seconds: int | None = None
 
 
 class SfChatSessionCreateResponse(BaseModel):
@@ -67,12 +71,15 @@ class SfChatAgentInboxItem(BaseModel):
     last_message_at: datetime | None = None
     unread_count: int = 0
     customer_is_typing: bool = False
+    wait_seconds: int | None = None
 
 
 class SfChatAgentInboxRead(BaseModel):
     items: list[SfChatAgentInboxItem]
     online: bool
     notification_count: int
+    waiting_sessions: int = 0
+    estimated_wait_minutes: int | None = None
 
 
 class SfChatPollRead(BaseModel):

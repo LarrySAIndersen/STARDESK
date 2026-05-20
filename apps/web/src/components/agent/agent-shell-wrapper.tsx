@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AgentShell } from "@/components/agent/agent-shell";
+import { CaseAssistantShellClient } from "@/components/portal/case-assistant-shell-client";
 import { SfChatShellClient } from "@/components/sf-chat/sf-chat-shell-client";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -20,7 +21,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   if (!token) {
     return (
       <>
-        <SiteHeader />
+        <SiteHeader user={null} />
         <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
           {children}
         </main>
@@ -43,6 +44,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
     return (
       <>
         <SiteHeader
+          user={currentUser}
           shellVariant="firstLoginIndustrial"
           hideCasesAndNewTicketNav
         />
@@ -71,11 +73,12 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader user={currentUser} />
       <main id="main-content" tabIndex={-1} className="bg-background flex-1 outline-none">
         {children}
       </main>
       <SiteFooter />
+      <CaseAssistantShellClient user={currentUser} />
       <SfChatShellClient user={currentUser} />
     </>
   );

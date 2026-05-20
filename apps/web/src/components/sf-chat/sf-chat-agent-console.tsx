@@ -1,12 +1,13 @@
 "use client";
 
-import { MessageCircle, Send } from "lucide-react";
+import { Bot, MessageCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, apiGet, apiPost, apiPostNoContent, apiPut } from "@/lib/api";
+import { formatEstimatedWaitMinutes, formatWaitSeconds } from "@/lib/sf-chat-wait";
 import { cn } from "@/lib/utils";
 import type {
   SfChatAgentInbox,
@@ -40,6 +41,7 @@ export function SfChatAgentConsole() {
   const [loadingPresence, setLoadingPresence] = useState(false);
   const [transferPrompt, setTransferPrompt] = useState(false);
   const [transferBusy, setTransferBusy] = useState(false);
+  const [startBotBusy, setStartBotBusy] = useState(false);
   const notifiedRef = useRef<Set<string>>(new Set());
 
   const loadPresence = useCallback(async () => {
@@ -174,6 +176,27 @@ export function SfChatAgentConsole() {
     }
   };
 
+  const startChatServiceBot = async () => {
+    const sid = threadId;
+    if (!sid || threadSession?.status !== "waiting") return;
+    setStartBotBusy(true);
+    try {
+      const updated = await apiPost<SfChatSession>(
+        `/api/v1/sf-chat/sessions/${sid}/start-bot`,
+        {},
+      );
+      setThreadSession(updated);
+      void pollThread(sid);
+      void loadInbox();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        window.alert(e.message);
+      }
+    } finally {
+      setStartBotBusy(false);
+    }
+  };
+
   const createTicketFromThread = async () => {
     if (!threadId) return;
     setTransferBusy(true);
@@ -198,6 +221,9 @@ export function SfChatAgentConsole() {
   const threadClosed = threadSession?.status === "closed";
   const showTransferStrip =
     Boolean(threadId && threadClosed && messages.length > 0 && !transferPrompt);
+  const waitingInQueue = (inbox?.waiting_sessions ?? 0) > 0;
+  const threadWaiting = threadSession?.status === "waiting";
+  const threadBotActive = Boolean(threadSession?.bot_assistant_active);
 
   return (
     <>
@@ -231,11 +257,33 @@ export function SfChatAgentConsole() {
             </Button>
           </header>
 
+          {presence.is_online ? (
+            <div className="sf-chat-agent-queue-bar">
+              <p className="text-[10px] leading-snug text-star-navy">
+                <span className="font-semibold">{inbox?.waiting_sessions ?? 0}</span> i kø
+                {(inbox?.estimated_wait_minutes ?? 0) > 0 ? (
+                  <>
+                    {" "}
+                    · estimeret ventetid{" "}
+                    <span className="font-semibold">
+                      {formatEstimatedWaitMinutes(inbox?.estimated_wait_minutes)}
+                    </span>
+                  </>
+                ) : null}
+              </p>
+              <p className="text-[9px] text-[var(--gray-mid)]">
+                Start <strong>chat-service bot</strong> (Sag-assistent) på en ventende chat i listen.
+              </p>
+            </div>
+          ) : null}
+
           <div className="sf-chat-agent-panel-body">
             <ul className="sf-chat-agent-inbox">
               {(inbox?.items ?? []).length === 0 ? (
                 <li className="text-muted-foreground px-2 py-3 text-xs">
-                  Ingen ventende chats.
+                  {waitingInQueue
+                    ? "Ingen chats tildelt dig — tjek køen når kunder skriver."
+                    : "Ingen ventende chats."}
                 </li>
               ) : (
                 inbox?.items.map((item) => (
@@ -248,13 +296,33 @@ export function SfChatAgentConsole() {
                       )}
                       onClick={() => selectThread(item)}
                     >
-                      <span className="font-medium">{item.customer_display_name}</span>
-                      {item.customer_is_typing ? (
-                        <span className="text-star-blue text-[10px]">skriver…</span>
-                      ) : null}
-                      {item.unread_count > 0 ? (
-                        <span className="sf-chat-agent-inbox-dot" aria-label="Ulæst" />
-                      ) : null}
+                      <span className="flex w-full flex-col items-start gap-0.5 text-left">
+                        <span className="flex w-full items-center justify-between gap-1">
+                          <span className="font-medium">{item.customer_display_name}</span>
+                          {item.unread_count > 0 ? (
+                            <span className="sf-chat-agent-inbox-dot shrink-0" aria-label="Ulæst" />
+                          ) : null}
+                        </span>
+                        <span className="flex flex-wrap items-center gap-1.5 text-[10px] text-[var(--gray-mid)]">
+                          {item.session.status === "waiting" &&
+                          (item.wait_seconds != null || item.session.wait_seconds != null) ? (
+                            <span className="text-star-navy font-medium">
+                              Ventetid{" "}
+                              {formatWaitSeconds(
+                                item.wait_seconds ?? item.session.wait_seconds,
+                              )}
+                            </span>
+                          ) : null}
+                          {item.session.bot_assistant_active ? (
+                            <span className="bg-star-blue/10 text-star-blue rounded px-1 py-0.5 text-[9px] font-semibold uppercase">
+                              Bot
+                            </span>
+                          ) : null}
+                          {item.customer_is_typing ? (
+                            <span className="text-star-blue">skriver…</span>
+                          ) : null}
+                        </span>
+                      </span>
                     </button>
                   </li>
                 ))
@@ -263,9 +331,36 @@ export function SfChatAgentConsole() {
 
             {threadId ? (
               <div className="sf-chat-agent-thread">
-                <p className="text-[11px] font-medium text-star-navy">
-                  {threadCustomerName}
-                </p>
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium text-star-navy">
+                    {threadCustomerName}
+                  </p>
+                  {threadWaiting && threadSession?.wait_seconds != null ? (
+                    <span className="text-[10px] text-[var(--gray-mid)]">
+                      Ventetid {formatWaitSeconds(threadSession.wait_seconds)}
+                    </span>
+                  ) : null}
+                </div>
+                {threadWaiting && !threadBotActive ? (
+                  <div className="mb-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-[10px]"
+                      disabled={!presence.is_online || startBotBusy}
+                      onClick={() => void startChatServiceBot()}
+                    >
+                      <Bot className="size-3" aria-hidden />
+                      Start chat-service bot
+                    </Button>
+                  </div>
+                ) : null}
+                {threadBotActive ? (
+                  <p className="text-star-blue mb-1 text-[10px] font-medium">
+                    Sag-assistent (chat service) er aktiv for kunden
+                  </p>
+                ) : null}
                 {threadClosed ? (
                   <p className="text-muted-foreground mb-1 text-[10px]">
                     Chatten er afsluttet.
@@ -325,9 +420,11 @@ export function SfChatAgentConsole() {
                         "sf-chat-bubble",
                         m.is_system
                           ? "sf-chat-bubble--system"
-                          : m.is_own
-                            ? "sf-chat-bubble--own"
-                            : "sf-chat-bubble--agent",
+                          : m.is_bot
+                            ? "sf-chat-bubble--bot"
+                            : m.is_own
+                              ? "sf-chat-bubble--own"
+                              : "sf-chat-bubble--agent",
                       )}
                     >
                       {m.is_system ? (
@@ -374,9 +471,19 @@ export function SfChatAgentConsole() {
                 </div>
               </div>
             ) : (
-              <p className="text-muted-foreground flex flex-1 items-center justify-center text-xs">
-                Vælg en chat i listen
-              </p>
+              <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center text-xs">
+                <p>Vælg en chat i listen</p>
+                {waitingInQueue ? (
+                  <p className="text-[10px] leading-snug">
+                    {inbox?.waiting_sessions} kunde(r) venter
+                    {(inbox?.estimated_wait_minutes ?? 0) > 0
+                      ? ` · est. ${formatEstimatedWaitMinutes(inbox?.estimated_wait_minutes)}`
+                      : ""}
+                    . Vælg en ventende chat og start chat-service bot, hvis ingen agent er
+                    ledig.
+                  </p>
+                ) : null}
+              </div>
             )}
           </div>
         </div>

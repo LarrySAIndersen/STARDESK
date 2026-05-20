@@ -23,5 +23,6 @@ class SfChatMessage(Base):
         nullable=True,
     )
     is_system: Mapped[bool] = mapped_column(default=False, nullable=False)
+    is_bot: Mapped[bool] = mapped_column(default=False, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

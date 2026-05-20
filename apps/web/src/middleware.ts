@@ -9,7 +9,17 @@ import {
 } from "@/lib/must-change-password";
 
 /** Routes that work without a session (login UI lives on `/`). */
-const PUBLIC_PATHS = ["/", "/login", "/skift-adgangskode"];
+function isPublicAppPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (pathname === "/login" || pathname.startsWith("/login/")) return true;
+  if (
+    pathname === CHANGE_PASSWORD_PATH ||
+    pathname.startsWith(`${CHANGE_PASSWORD_PATH}/`)
+  ) {
+    return true;
+  }
+  return false;
+}
 
 const BASIC_AUTH_REALM = "Secure Area";
 
@@ -127,11 +137,7 @@ function handleJwtSession(request: NextRequest): NextResponse {
     }
   }
 
-  const isPublic = PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
-
-  if (isPublic) {
+  if (isPublicAppPath(pathname)) {
     return nextWithPathname(request);
   }
 

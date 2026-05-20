@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, apiGet, apiPost, apiPostNoContent } from "@/lib/api";
+import { formatEstimatedWaitMinutes, formatWaitSeconds } from "@/lib/sf-chat-wait";
 import { cn } from "@/lib/utils";
 import type { SfChatMessage, SfChatSession, SfChatStatus } from "@/types/sf-chat";
 
@@ -222,14 +223,16 @@ export function SfChatWidget() {
     }
   };
 
-  const chatClosed = status && !status.open;
+  const chatClosed = status && !status.open && !session?.bot_assistant_active;
   const queueRejected = session?.status === "rejected_queue";
   const sessionClosed = session?.status === "closed";
+  const sessionWaiting = session?.status === "waiting";
+  const botActive = Boolean(session?.bot_assistant_active);
   const canSend =
     Boolean(session?.id) &&
-    !chatClosed &&
     !queueRejected &&
-    session?.status !== "closed";
+    session?.status !== "closed" &&
+    (session?.status === "active" || (sessionWaiting && botActive) || Boolean(status?.open));
   const showTransferPrompt =
     Boolean(sessionClosed && messages.length > 0 && !queueRejected && !transferDismissed);
 
@@ -252,9 +255,11 @@ export function SfChatWidget() {
           <header className="sf-chat-panel-header">
             <h2 className="sf-chat-panel-title">Hurtig chat — SF</h2>
             <p className="sf-chat-panel-sub">
-              {status?.open
+              {status?.open && (status.available_agents ?? 0) > 0
                 ? `${status.available_agents} agent${status.available_agents === 1 ? "" : "er"} tilgængelig`
-                : "Ingen agenter logget på"}
+                : (status?.waiting_sessions ?? 0) > 0
+                  ? "Kø — Sag-assistent kan hjælpe"
+                  : "Ingen agenter logget på"}
             </p>
             <button
               type="button"
@@ -281,6 +286,34 @@ export function SfChatWidget() {
               <div className="sf-chat-banner sf-chat-banner--queue">
                 {session?.queue_message ??
                   "Der er meget lange køer lige nu, så chatten er utilgængelig. Prøv venligst igen senere."}
+              </div>
+            ) : null}
+
+            {sessionWaiting && !queueRejected ? (
+              <div className="sf-chat-banner sf-chat-banner--queue">
+                {botActive ? (
+                  <>
+                    <strong>Sag-assistenten</strong> (chat service) hjælper dig mens du venter på en
+                    agent. Spørg fx om dine sager eller systemer.
+                    {session.wait_seconds != null ? (
+                      <> Du har ventet {formatWaitSeconds(session.wait_seconds)}.</>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    Du er i kø til SF.
+                    {(status?.estimated_wait_minutes ?? 0) > 0 ? (
+                      <>
+                        {" "}
+                        Estimeret ventetid:{" "}
+                        {formatEstimatedWaitMinutes(status?.estimated_wait_minutes)}.
+                      </>
+                    ) : null}
+                    {session.wait_seconds != null ? (
+                      <> Ventetid indtil videre: {formatWaitSeconds(session.wait_seconds)}.</>
+                    ) : null}
+                  </>
+                )}
               </div>
             ) : null}
 
@@ -335,9 +368,11 @@ export function SfChatWidget() {
                     "sf-chat-bubble",
                     m.is_system
                       ? "sf-chat-bubble--system"
-                      : m.is_own
-                        ? "sf-chat-bubble--own"
-                        : "sf-chat-bubble--agent",
+                      : m.is_bot
+                        ? "sf-chat-bubble--bot"
+                        : m.is_own
+                          ? "sf-chat-bubble--own"
+                          : "sf-chat-bubble--agent",
                   )}
                 >
                   {!m.is_own && !m.is_system ? (
@@ -345,6 +380,9 @@ export function SfChatWidget() {
                   ) : null}
                   {m.is_system ? (
                     <span className="sf-chat-bubble-name">System</span>
+                  ) : null}
+                  {m.is_bot ? (
+                    <span className="sf-chat-bubble-name">Sag-assistent</span>
                   ) : null}
                   <p>{m.body}</p>
                 </div>

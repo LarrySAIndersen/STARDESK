@@ -36,6 +36,7 @@ from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.ticket_security import resolve_create_security_flag
+from star_itsm_api.services.sf_chat_bot import BOT_SENDER_LABEL, build_bot_reply_for_customer
 from star_itsm_api.services.ticket_timestamps import maybe_set_assigned_at
 
 SF_TEAM_NAME = "SF"
@@ -55,6 +56,10 @@ MSG_SYS_AGENT_LEFT_CUSTOMER = (
     "Agenten har forladt chatten eller er gået offline. Chatten er afsluttet."
 )
 MSG_SYS_USER_LEFT_AGENT = "Kunden har forladt chatten."
+MSG_SYS_BOT_STARTED = (
+    "Sag-assistenten (chat service) tager imod dig mens du venter på en agent. "
+    "Spørg fx om dine sager eller systemstatus."
+)
 
 
 def format_sf_chat_transcript_da(messages: list[SfChatMessageRead]) -> str:
@@ -159,14 +164,39 @@ async def count_waiting_sessions(db: AsyncSession) -> int:
     return int(result.scalar_one() or 0)
 
 
+def _wait_seconds_for_session(session: SfChatSession, *, now: datetime | None = None) -> int | None:
+    if session.status != SESSION_WAITING:
+        return None
+    ref = now or _now()
+    created = session.created_at
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=UTC)
+    return max(0, int((ref - created).total_seconds()))
+
+
+def _estimated_wait_minutes(waiting: int, online_agents: int) -> int | None:
+    if waiting <= 0:
+        return None
+    if online_agents <= 0:
+        return max(5, waiting * 4)
+    return max(2, int((waiting * 3 + online_agents - 1) // online_agents))
+
+
 async def get_chat_status(db: AsyncSession) -> SfChatStatusRead:
     await maybe_reconcile_stale_agent_sessions(db)
     agents = await _fresh_online_agent_ids(db)
-    open_ = len(agents) > 0
+    waiting = await count_waiting_sessions(db)
+    est = _estimated_wait_minutes(waiting, len(agents))
+    open_ = len(agents) > 0 or waiting > 0
+    message = MSG_CHAT_OPEN if len(agents) > 0 else MSG_CHAT_CLOSED
+    if waiting > 0 and len(agents) == 0:
+        message = "Ingen agent er logget på — du kan bruge Sag-assistenten mens du venter."
     return SfChatStatusRead(
         open=open_,
         available_agents=len(agents),
-        message=MSG_CHAT_OPEN if open_ else MSG_CHAT_CLOSED,
+        message=message,
+        waiting_sessions=waiting,
+        estimated_wait_minutes=est,
     )
 
 
@@ -182,6 +212,7 @@ def _session_read(
     *,
     agent_name: str | None = None,
     queue_message: str | None = None,
+    now: datetime | None = None,
 ) -> SfChatSessionRead:
     return SfChatSessionRead(
         id=session.id,
@@ -191,6 +222,8 @@ def _session_read(
         created_at=session.created_at,
         updated_at=session.updated_at,
         queue_message=queue_message,
+        bot_assistant_active=bool(session.bot_assistant_active),
+        wait_seconds=_wait_seconds_for_session(session, now=now),
     )
 
 
@@ -209,6 +242,8 @@ async def _message_reads(
     for msg, user in result.all():
         if msg.is_system:
             display = "System"
+        elif msg.is_bot:
+            display = BOT_SENDER_LABEL
         elif user is not None:
             display = user.display_name or user.email
         else:
@@ -433,7 +468,7 @@ async def add_message(
             raise ValueError("queue_rejected")
         if session.status == SESSION_CLOSED:
             raise ValueError("session_closed")
-        if session.status == SESSION_WAITING:
+        if session.status == SESSION_WAITING and not session.bot_assistant_active:
             await _try_assign_agent(db, session)
             if session.status == SESSION_WAITING and not await _fresh_online_agent_ids(db):
                 session.status = SESSION_REJECTED_QUEUE
@@ -446,6 +481,7 @@ async def add_message(
     if session.status == SESSION_WAITING and is_sf_agent:
         session.assigned_agent_id = sender.id
         session.status = SESSION_ACTIVE
+        session.bot_assistant_active = False
         presence = await db.get(SfChatPresence, sender.id)
         if presence:
             presence.active_session_id = session.id
@@ -463,6 +499,31 @@ async def add_message(
         session.status = SESSION_ACTIVE
     await db.commit()
     await db.refresh(msg)
+
+    if (
+        is_customer
+        and session.status == SESSION_WAITING
+        and session.bot_assistant_active
+    ):
+        customer = await db.get(User, session.customer_user_id)
+        if customer is not None:
+            reply = await build_bot_reply_for_customer(
+                db,
+                customer=customer,
+                message_body=body.strip(),
+            )
+            bot_msg = SfChatMessage(
+                session_id=session_id,
+                sender_user_id=None,
+                body=reply,
+                is_bot=True,
+                created_at=_now(),
+            )
+            db.add(bot_msg)
+            session.updated_at = _now()
+            await db.commit()
+            await db.refresh(bot_msg)
+
     return msg
 
 
@@ -627,6 +688,10 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
     items: list[SfChatAgentInboxItem] = []
     notification_count = 0
     recent_cutoff = _now() - timedelta(minutes=5)
+    now = _now()
+    waiting_total = await count_waiting_sessions(db)
+    online_agents = len(await _fresh_online_agent_ids(db))
+    est_wait = _estimated_wait_minutes(waiting_total, online_agents)
 
     for session, customer in rows:
         last_msg_result = await db.execute(
@@ -656,15 +721,18 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
             if last_msg.is_system:
                 preview = f"System: {preview}"
 
+        wait_sec = _wait_seconds_for_session(session, now=now)
+
         items.append(
             SfChatAgentInboxItem(
-                session=_session_read(session, agent_name=agent_name),
+                session=_session_read(session, agent_name=agent_name, now=now),
                 customer_display_name=customer.display_name or customer.email,
                 customer_email=customer.email,
                 last_message_preview=preview,
                 last_message_at=last_msg.created_at if last_msg else None,
                 unread_count=unread,
                 customer_is_typing=typing,
+                wait_seconds=wait_sec,
             )
         )
 
@@ -672,7 +740,45 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
         items=items,
         online=online,
         notification_count=notification_count,
+        waiting_sessions=waiting_total,
+        estimated_wait_minutes=est_wait,
     )
+
+
+async def start_bot_assistant_for_session(
+    db: AsyncSession,
+    *,
+    session_id: uuid.UUID,
+    agent: User,
+) -> SfChatSessionRead:
+    if not await is_sf_team_member(db, agent.id):
+        raise ValueError("not_sf_member")
+    session = await db.get(SfChatSession, session_id)
+    if session is None:
+        raise ValueError("session_not_found")
+    if session.status != SESSION_WAITING:
+        raise ValueError("not_waiting")
+    if session.bot_assistant_active:
+        return _session_read(session)
+
+    now = _now()
+    session.bot_assistant_active = True
+    session.updated_at = now
+    db.add(
+        SfChatMessage(
+            session_id=session.id,
+            sender_user_id=None,
+            body=MSG_SYS_BOT_STARTED,
+            is_system=True,
+            created_at=now,
+        )
+    )
+    await db.commit()
+    await db.refresh(session)
+    agent_name = None
+    if session.assigned_agent_id:
+        agent_name = await _user_display(db, session.assigned_agent_id)
+    return _session_read(session, agent_name=agent_name)
 
 
 async def session_for_user(

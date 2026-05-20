@@ -258,3 +258,29 @@ async def agent_inbox(
     current_user: User = Depends(require_staff()),
 ) -> SfChatAgentInboxRead:
     return await chat_svc.build_agent_inbox(db, current_user)
+
+
+@router.post("/sessions/{session_id}/start-bot", response_model=SfChatSessionRead)
+async def start_bot_assistant(
+    session_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> SfChatSessionRead:
+    try:
+        return await chat_svc.start_bot_assistant_for_session(
+            db,
+            session_id=session_id,
+            agent=current_user,
+        )
+    except ValueError as exc:
+        code = str(exc)
+        if code == "not_sf_member":
+            raise HTTPException(status_code=403, detail="Kun SF-agenter kan starte chat-service bot") from exc
+        if code == "session_not_found":
+            raise HTTPException(status_code=404, detail="Chat ikke fundet") from exc
+        if code == "not_waiting":
+            raise HTTPException(
+                status_code=409,
+                detail="Sag-assistenten kan kun startes for chats der venter i kø",
+            ) from exc
+        raise HTTPException(status_code=400, detail=code) from exc

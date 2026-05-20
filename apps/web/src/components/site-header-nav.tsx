@@ -8,6 +8,7 @@ import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { canManageUsers, getClientUser, isStaff } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import type { User } from "@/types/user";
 
 const NAV = [
   { href: "/", label: "Sager", staffOnly: false, adminOnly: false },
@@ -17,13 +18,15 @@ const NAV = [
 ] as const;
 
 export function SiteHeaderNav({
+  user: serverUser,
   hideCasesAndNewTicket = false,
   industrialChrome = false,
 }: {
+  user?: User | null;
   hideCasesAndNewTicket?: boolean;
   industrialChrome?: boolean;
 }) {
-  const user = getClientUser();
+  const user = serverUser ?? getClientUser();
   const staff = isStaff(user);
   const admin = canManageUsers(user);
 
@@ -59,9 +62,9 @@ export function SiteHeaderNav({
           Opret sag
         </Button>
       ) : null}
-      <PortalLoggedInAs industrialChrome={industrialChrome} />
+      <PortalLoggedInAs user={user} industrialChrome={industrialChrome} />
       <ThemeToggle />
-      <UserMenu />
+      <UserMenu user={user} />
     </nav>
   );
 }

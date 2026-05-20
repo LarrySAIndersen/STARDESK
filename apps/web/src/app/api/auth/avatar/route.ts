@@ -74,7 +74,7 @@ export async function PATCH(request: Request) {
 
   const response = NextResponse.json({ user });
   const secure = process.env.NODE_ENV === "production";
-  response.cookies.set(USER_COOKIE, encodeURIComponent(JSON.stringify(user)), {
+  response.cookies.set(USER_COOKIE, JSON.stringify(user), {
     httpOnly: false,
     secure,
     sameSite: "lax",
