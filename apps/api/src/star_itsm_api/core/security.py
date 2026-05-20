@@ -34,7 +34,13 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
-def create_access_token(*, user_id: UUID, role: str, email: str) -> str:
+def create_access_token(
+    *,
+    user_id: UUID,
+    role: str,
+    email: str,
+    must_change_password: bool = False,
+) -> str:
     if not settings.jwt_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -45,6 +51,7 @@ def create_access_token(*, user_id: UUID, role: str, email: str) -> str:
         "sub": str(user_id),
         "role": role,
         "email": email,
+        "must_change_password": must_change_password,
         "exp": expire,
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)

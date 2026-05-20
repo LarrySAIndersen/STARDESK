@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.core.security import verify_password
+from star_itsm_api.core.security import decode_access_token, verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
@@ -76,6 +76,8 @@ async def test_login_larry_sanders(login_client: AsyncClient) -> None:
     assert body["user"]["email"] == LARRY_EMAIL
     assert body["user"]["role"] == "admin"
     assert body["user"]["must_change_password"] is True
+    claims = decode_access_token(body["access_token"])
+    assert claims["must_change_password"] is True
 
 
 @pytest.mark.asyncio

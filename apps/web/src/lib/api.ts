@@ -4,7 +4,6 @@ import {
   isMustChangePasswordError,
   parseApiErrorDetail,
 } from "@/lib/api-errors";
-import { getClientUser } from "@/lib/auth";
 
 export class ApiError extends Error {
   constructor(
@@ -39,8 +38,7 @@ function redirectToChangePasswordClient(): void {
 
 async function throwApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  const sessionRequiresPasswordChange = Boolean(getClientUser()?.must_change_password);
-  if (isMustChangePasswordError(response.status, detail) && sessionRequiresPasswordChange) {
+  if (isMustChangePasswordError(response.status, detail)) {
     redirectToChangePasswordClient();
     // Never surface first-login password copy in modals — redirect handles the flow.
     throw new ApiError(response.status, apiErrorMessage(detail));

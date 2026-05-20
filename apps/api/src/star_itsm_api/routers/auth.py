@@ -56,7 +56,12 @@ async def login(
             detail="Forkert e-mail eller adgangskode",
         )
 
-    token = create_access_token(user_id=user.id, role=user.role, email=user.email)
+    token = create_access_token(
+        user_id=user.id,
+        role=user.role,
+        email=user.email,
+        must_change_password=user.must_change_password,
+    )
     org_name = await _organization_name(db, user)
     return TokenResponse(access_token=token, user=user_to_read(user, organization_name=org_name))
 

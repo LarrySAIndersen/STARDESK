@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { TOKEN_COOKIE } from "@/lib/auth";
+import { parseUserFromCookie, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import {
+  CHANGE_PASSWORD_PATH,
+  isPasswordChangeExemptPath,
+  userMustChangePassword,
+} from "@/lib/must-change-password";
 
 /** Routes that work without a session (login UI lives on `/`). */
 const PUBLIC_PATHS = ["/", "/login", "/skift-adgangskode"];
@@ -92,34 +97,49 @@ function verifyBasicAuth(request: NextRequest): boolean {
   );
 }
 
+function nextWithPathname(request: NextRequest): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 function handleJwtSession(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
 
   if (isAuthApiPath(pathname)) {
-    return NextResponse.next();
+    return nextWithPathname(request);
   }
 
   if (pathname === "/login" || pathname.startsWith("/login/")) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Option A: do not block app routes here — API allows GET while must_change_password;
-  // login flow redirects to /skift-adgangskode; mutations return 403 and client redirects.
+  if (token) {
+    const sessionUser = parseUserFromCookie(request.cookies.get(USER_COOKIE)?.value);
+    if (
+      userMustChangePassword(sessionUser) &&
+      !isPasswordChangeExemptPath(pathname)
+    ) {
+      return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, request.url));
+    }
+  }
 
   const isPublic = PUBLIC_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
 
   if (isPublic) {
-    return NextResponse.next();
+    return nextWithPathname(request);
   }
 
   if (!token) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  return NextResponse.next();
+  return nextWithPathname(request);
 }
 
 export function middleware(request: NextRequest) {

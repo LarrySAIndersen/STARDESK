@@ -9,7 +9,7 @@ import {
   isMustChangePasswordError,
   parseApiErrorDetail,
 } from "@/lib/api-errors";
-import { parseUserFromCookie, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import { TOKEN_COOKIE } from "@/lib/auth";
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
@@ -26,12 +26,7 @@ type ApiGetServerOptions = {
 
 async function throwServerApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  const cookieStore = await cookies();
-  const sessionUser = parseUserFromCookie(cookieStore.get(USER_COOKIE)?.value);
-  if (
-    isMustChangePasswordError(response.status, detail) &&
-    sessionUser?.must_change_password
-  ) {
+  if (isMustChangePasswordError(response.status, detail)) {
     redirect(CHANGE_PASSWORD_PATH);
   }
   throw new ApiError(response.status, apiErrorMessage(detail));

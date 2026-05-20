@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { DemoUserPicker } from "@/components/demo-user-picker";
@@ -18,10 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
+import { CHANGE_PASSWORD_PATH } from "@/lib/must-change-password";
 import { cn } from "@/lib/utils";
 
 export function LoginForm() {
-  const router = useRouter();
   const showDemoPicker = isDemoLoginEnabled();
   const [email, setEmail] = useState(
     showDemoPicker ? (DEMO_USERS[1]?.email ?? "sf01@example.dk") : "",
@@ -64,12 +63,10 @@ export function LoginForm() {
       }
       const body = (await response.json()) as { user?: { must_change_password?: boolean } };
       if (body.user?.must_change_password) {
-        router.replace("/skift-adgangskode?required=1");
-        router.refresh();
+        window.location.replace(CHANGE_PASSWORD_PATH);
         return;
       }
-      router.replace("/");
-      router.refresh();
+      window.location.replace("/");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login mislykkedes — prøv igen",

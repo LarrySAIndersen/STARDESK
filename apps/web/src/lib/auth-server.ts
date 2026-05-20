@@ -35,6 +35,7 @@ export async function getServerUser(): Promise<User | null> {
         ...fromApi,
         role: normalizeUserRole(cookieUser.role) ?? cookieUser.role,
         role_label: cookieUser.role_label || fromApi.role_label,
+        must_change_password: fromApi.must_change_password,
       };
     }
 
