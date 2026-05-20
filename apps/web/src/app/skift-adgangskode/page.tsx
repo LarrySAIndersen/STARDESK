@@ -1,5 +1,7 @@
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { StarLogo } from "@/components/star-logo";
+import { getServerUser } from "@/lib/auth-server";
+import { userMustChangePassword } from "@/lib/must-change-password";
 
 type SkiftAdgangskodePageProps = {
   searchParams: Promise<{ required?: string }>;
@@ -9,7 +11,8 @@ export default async function SkiftAdgangskodePage({
   searchParams,
 }: SkiftAdgangskodePageProps) {
   const params = await searchParams;
-  const required = params.required === "1";
+  const serverUser = await getServerUser();
+  const required = params.required === "1" || userMustChangePassword(serverUser);
 
   if (required) {
     return <ChangePasswordForm required />;
