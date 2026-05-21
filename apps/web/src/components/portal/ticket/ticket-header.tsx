@@ -25,7 +25,7 @@ export function TicketHeader({ ticket }: { ticket: TicketDetail }) {
           Oversigt
         </Link>
         <ChevronRight className="size-3.5 opacity-50" aria-hidden />
-        <span className="text-star-navy font-medium">Sag</span>
+        <span className="text-foreground font-medium">Sag</span>
       </nav>
 
       <div
@@ -33,33 +33,28 @@ export function TicketHeader({ ticket }: { ticket: TicketDetail }) {
         style={{ borderTopColor: barColor }}
       >
         <div className="space-y-3 p-4 sm:p-5">
-          <p className="text-[var(--gray-mid)] font-mono text-[12px] font-semibold tracking-wide">
-            {ticket.ticket_number}
-          </p>
+          <p className="portal-v2-meta">{ticket.ticket_number}</p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 space-y-2">
-              <h1 className="text-star-navy text-xl font-bold tracking-tight sm:text-2xl">
+              <h1 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
                 {ticket.title}
               </h1>
               <div className="flex flex-wrap items-center gap-2">
                 <WireStatusBadge status={ticket.status} />
-                <span className="rounded border border-star-blue/25 bg-star-blue/5 px-2 py-0.5 text-[11px] font-semibold text-star-navy">
+                <span className="portal-v2-chip">
                   Kilde: {ticket.source_label_da ?? ticketSourceLabelDa(ticket.source)}
                 </span>
-                <span className="text-[var(--gray-mid)] text-[12px]">
+                <span className="text-muted-foreground text-[12px]">
                   Oprettet {formatDateTimeDa(ticket.created_at)}
                 </span>
                 {ticket.updated_at ? (
-                  <span className="text-[var(--gray-mid)] text-[12px]">
+                  <span className="text-muted-foreground text-[12px]">
                     · Opdateret {formatDateTimeDa(ticket.updated_at)}
                   </span>
                 ) : null}
               </div>
             </div>
-            <Link
-              href={action.href}
-              className="bg-star-navy hover:bg-star-blue inline-flex h-9 shrink-0 items-center justify-center rounded-[2px] px-4 text-sm font-medium text-white"
-            >
+            <Link href={action.href} className="portal-v2-btn-primary">
               {action.label}
             </Link>
           </div>

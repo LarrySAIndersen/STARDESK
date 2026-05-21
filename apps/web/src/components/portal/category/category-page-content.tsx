@@ -115,7 +115,7 @@ export function CategoryPageContent({
             </Link>
           </div>
         ) : (
-          <div className="portal-v2-card divide-y divide-[var(--gray-border)] px-3">
+          <div className="portal-v2-card divide-y divide-border px-3">
             {filteredArticles.map((article) => (
               <ArticleRow key={article.id} article={article} />
             ))}

@@ -66,13 +66,13 @@ export default async function PortalV2TicketPage({
                   {ticket.description}
                 </p>
               ) : (
-                <p className="text-[var(--gray-mid)] text-[13px]">Ingen beskrivelse angivet.</p>
+                <p className="text-muted-foreground text-[13px]">Ingen beskrivelse angivet.</p>
               )}
             </section>
 
             <section className="portal-v2-card p-4 sm:p-5">
               <h2 className="portal-v2-section-title mb-1">Beskeder</h2>
-              <p className="text-[var(--gray-mid)] mb-4 text-[12px]">
+              <p className="text-muted-foreground mb-4 text-[12px]">
                 Kun beskeder synlige for dig — interne noter vises ikke.
               </p>
               <CommentThread ticketId={ticket.id} comments={ticket.comments} />
@@ -95,7 +95,7 @@ export default async function PortalV2TicketPage({
         <p className="text-center">
           <Link
             href={`/tickets/${ticket.id}`}
-            className="text-[var(--gray-mid)] text-[11px] hover:text-star-navy"
+            className="text-muted-foreground text-[11px] hover:text-primary"
           >
             Se klassisk sagvisning
           </Link>

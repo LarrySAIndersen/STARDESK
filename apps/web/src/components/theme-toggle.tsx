@@ -29,7 +29,7 @@ export function ThemeToggle() {
     <div
       role="group"
       aria-label="Vælg tema"
-      className="border-star-blue/30 flex overflow-hidden rounded-sm border"
+      className="border-border flex overflow-hidden rounded-sm border bg-muted/30"
     >
       <button
         type="button"
@@ -38,8 +38,8 @@ export function ThemeToggle() {
         className={cn(
           "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold transition-colors",
           !isDark
-            ? "bg-star-blue text-white"
-            : "text-star-navy hover:bg-star-blue-light/80 dark:text-sidebar-foreground dark:hover:bg-sidebar-accent",
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         )}
       >
         <Sun className="size-3.5" aria-hidden />
@@ -50,10 +50,10 @@ export function ThemeToggle() {
         onClick={() => setTheme("dark")}
         aria-pressed={isDark}
         className={cn(
-          "inline-flex items-center gap-1 border-l border-star-blue/30 px-2.5 py-1 text-xs font-semibold transition-colors dark:border-sidebar-border",
+          "inline-flex items-center gap-1 border-l border-border px-2.5 py-1 text-xs font-semibold transition-colors",
           isDark
-            ? "bg-star-blue text-white dark:bg-sidebar-accent"
-            : "text-star-navy hover:bg-star-blue-light/80 dark:text-sidebar-foreground dark:hover:bg-sidebar-accent",
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
         )}
       >
         <Moon className="size-3.5" aria-hidden />

@@ -72,7 +72,7 @@ export function PortalSidebar({
         })}
       </nav>
       {collapsed && onToggle ? (
-        <footer className="wire-sidebar-footer flex justify-center border-t border-[var(--gray-border)] px-1.5 py-2">
+        <footer className="wire-sidebar-footer flex justify-center border-t border-border px-1.5 py-2">
           <SidebarCollapseToggle collapsed onToggle={onToggle} />
         </footer>
       ) : null}

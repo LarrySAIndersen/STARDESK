@@ -7,9 +7,9 @@ import type { TicketDetail } from "@/types/ticket";
 
 function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="flex justify-between gap-3 border-b border-[var(--gray-border)] py-2.5 text-[13px] last:border-b-0">
-      <span className="text-[var(--gray-mid)] shrink-0 font-medium">{label}</span>
-      <span className="text-star-navy text-right font-medium">{value}</span>
+    <div className="flex justify-between gap-3 border-b border-border py-2.5 text-[13px] last:border-b-0">
+      <span className="text-muted-foreground shrink-0 font-medium">{label}</span>
+      <span className="text-foreground text-right font-medium">{value}</span>
     </div>
   );
 }
@@ -44,8 +44,8 @@ export function TicketDetailsSidebar({ ticket }: { ticket: TicketDetail }) {
           value={ticket.reporter_display_name ?? "—"}
         />
       </dl>
-      <div className="border-[var(--gray-border)] mt-4 border-t pt-4">
-        <p className="text-[var(--gray-mid)] mb-2 text-[12px] font-medium uppercase tracking-wide">
+      <div className="border-border mt-4 border-t pt-4">
+        <p className="text-muted-foreground mb-2 text-[12px] font-medium uppercase tracking-wide">
           SLA
         </p>
         <SlaCountdown

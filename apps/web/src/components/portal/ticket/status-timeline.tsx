@@ -81,9 +81,9 @@ export function StatusTimeline({ ticket }: { ticket: TicketDetail }) {
                 className={cn(
                   "flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold",
                   reached
-                    ? "border-star-navy bg-star-navy text-white"
-                    : "border-[var(--gray-border)] bg-white text-[var(--gray-mid)]",
-                  active && reached && "ring-star-red/30 ring-2",
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-muted text-muted-foreground",
+                  active && reached && "ring-primary/35 ring-2",
                 )}
                 aria-current={active ? "step" : undefined}
               >
@@ -95,7 +95,7 @@ export function StatusTimeline({ ticket }: { ticket: TicketDetail }) {
               </span>
               {index < STEPS.length - 1 ? (
                 <span
-                  className="bg-[var(--gray-border)] absolute top-4 left-10 hidden h-0.5 w-[calc(100%-2rem)] sm:block sm:static sm:mt-0 sm:h-0.5 sm:w-full sm:flex-1"
+                  className="bg-border absolute top-4 left-10 hidden h-0.5 w-[calc(100%-2rem)] sm:block sm:static sm:mt-0 sm:h-0.5 sm:w-full sm:flex-1"
                   aria-hidden
                 />
               ) : null}
@@ -104,17 +104,17 @@ export function StatusTimeline({ ticket }: { ticket: TicketDetail }) {
               <p
                 className={cn(
                   "text-[13px] font-semibold",
-                  reached ? "text-star-navy" : "text-[var(--gray-mid)]",
+                  reached ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 {step.label}
               </p>
               {ts ? (
-                <p className="text-[var(--gray-mid)] text-[11px] tabular-nums">
+                <p className="text-muted-foreground text-[11px] tabular-nums">
                   {formatShort(ts)}
                 </p>
               ) : (
-                <p className="text-[var(--gray-mid)] text-[11px]">—</p>
+                <p className="text-muted-foreground text-[11px]">—</p>
               )}
             </div>
           </li>

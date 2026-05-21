@@ -34,14 +34,23 @@ export async function SiteHeader({
         className={cn(
           industrial
             ? "border-b border-white/[0.08] bg-[#0a0e1a] text-[#94a3b8]"
-            : "bg-star-navy text-white",
+            : "bg-star-navy text-white dark:border-b dark:border-border dark:bg-[#0c1018] dark:text-muted-foreground",
         )}
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-1.5 text-xs">
-          <span className={industrial ? "text-[#94a3b8]" : "text-white/90"}>
+          <span
+            className={
+              industrial ? "text-[#94a3b8]" : "text-white/90 dark:text-muted-foreground"
+            }
+          >
             Styrelsen for Arbejdsmarked og Rekruttering — ITSM prototype
           </span>
-          <span className={cn("hidden sm:inline", industrial ? "text-[#64748b]" : "text-white/90")}>
+          <span
+            className={cn(
+              "hidden sm:inline",
+              industrial ? "text-[#64748b]" : "text-white/90 dark:text-muted-foreground",
+            )}
+          >
             STARdesk
           </span>
         </div>
@@ -52,7 +61,7 @@ export async function SiteHeader({
           "border-b",
           industrial
             ? "border-white/[0.08] bg-[#0a0e1a]"
-            : "border-border bg-white dark:bg-card",
+            : "border-border bg-card text-card-foreground",
         )}
       >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">

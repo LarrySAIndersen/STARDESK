@@ -73,7 +73,9 @@ export function SlaCountdown({
         "inline-flex flex-col gap-0.5 rounded-md border px-2 py-1 font-mono text-xs tabular-nums",
         breached && "border-red-300 bg-red-50 text-red-800",
         dueSoon && !breached && "border-amber-300 bg-amber-50 text-amber-900",
-        !breached && !dueSoon && "border-star-navy/15 bg-star-navy/5 text-star-navy",
+        !breached &&
+          !dueSoon &&
+          "border-primary/20 bg-primary/10 text-foreground dark:border-primary/30 dark:bg-primary/15",
         compact && "px-1.5 py-0.5",
         className,
       )}

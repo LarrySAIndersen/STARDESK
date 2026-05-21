@@ -18,7 +18,7 @@ export function RelatedArticles({ articles }: { articles: KnowledgeArticle[] }) 
           <li key={article.id}>
             <Link
               href={`/portal/knowledge/${article.id}`}
-              className="text-star-navy hover:text-star-red flex gap-2 text-[13px] font-medium"
+              className="text-foreground hover:text-primary flex gap-2 text-[13px] font-medium"
             >
               <BookOpen className="mt-0.5 size-4 shrink-0 opacity-60" aria-hidden />
               <span className="line-clamp-2">{article.title}</span>

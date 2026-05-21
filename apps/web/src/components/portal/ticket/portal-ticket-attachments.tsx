@@ -34,7 +34,7 @@ export function PortalTicketAttachments({ attachments }: { attachments: Attachme
             key={file.id}
             className="border-[var(--gray-border)] rounded-[2px] border px-3 py-2 text-[13px]"
           >
-            <p className="text-star-navy font-medium">{file.filename}</p>
+            <p className="text-foreground font-medium">{file.filename}</p>
             <p className="text-[var(--gray-mid)] text-[11px]">
               {file.scan_status_label_da}
               {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
