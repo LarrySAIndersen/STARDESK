@@ -32,6 +32,7 @@ class UserRead(BaseModel):
     must_change_password: bool = False
     avatar_url: str | None = None
     avatar_preset_id: str | None = None
+    ui_mode: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -45,6 +46,7 @@ ROLE_LABELS: dict[str, str] = {
     "agent": "Agent",
     "admin": "Administrator",
     "top_admin": "Topadministrator",
+    "supporter": "Supporter",
 }
 
 
@@ -65,4 +67,5 @@ def user_to_read(
         must_change_password=bool(getattr(user, "must_change_password", False)),
         avatar_url=getattr(user, "avatar_url", None),
         avatar_preset_id=getattr(user, "avatar_preset_id", None),
+        ui_mode=getattr(user, "ui_mode", None),
     )

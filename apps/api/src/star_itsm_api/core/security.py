@@ -22,6 +22,11 @@ ROLE_SUBMITTER = "end_user"
 ROLE_AGENT = "agent"
 ROLE_ADMIN = "admin"
 ROLE_TOP_ADMIN = "top_admin"
+ROLE_SUPPORTER = "supporter"
+
+USER_ROLE_PATTERN = (
+    r"^(end_user|agent|admin|top_admin|supporter)$"
+)
 
 
 def hash_password(password: str) -> str:
@@ -124,15 +129,25 @@ def require_roles(*roles: str):
 
 
 def is_staff(user: User) -> bool:
-    return user.role in {ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN}
+    return user.role in {
+        ROLE_AGENT,
+        ROLE_ADMIN,
+        ROLE_TOP_ADMIN,
+        ROLE_SUPPORTER,
+    }
 
 
 def require_staff():
-    return require_roles(ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN)
+    return require_roles(
+        ROLE_AGENT,
+        ROLE_ADMIN,
+        ROLE_TOP_ADMIN,
+        ROLE_SUPPORTER,
+    )
 
 
 def require_admin():
-    return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN)
+    return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER)
 
 
 def require_admin_session():
@@ -143,7 +158,7 @@ def require_admin_session():
     """
 
     async def _checker(user: User = Depends(get_current_user_session)) -> User:
-        if user.role not in (ROLE_ADMIN, ROLE_TOP_ADMIN):
+        if user.role not in (ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",

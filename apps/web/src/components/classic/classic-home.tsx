@@ -1,15 +1,12 @@
 import Link from "next/link";
 
 import { ClassicShellWrapper } from "@/components/classic/classic-shell-wrapper";
+import { loadClassicBoardTickets } from "@/lib/classic-board-tickets";
 import { CLASSIC_MODULES } from "@/lib/classic-modules";
-import { apiGetServer } from "@/lib/api-server";
-import type { Ticket } from "@/types/ticket";
 
 async function loadCounts(): Promise<Record<string, number>> {
-  let tickets: Ticket[] = [];
-  try {
-    tickets = await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
-  } catch {
+  const tickets = await loadClassicBoardTickets();
+  if (tickets.length === 0) {
     return {};
   }
   const counts: Record<string, number> = {};

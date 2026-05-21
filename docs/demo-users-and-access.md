@@ -3,6 +3,7 @@
 **Genskabelse i DB:** `docs/seed-sf-ecosystem-reset.sql`  
 **Vidensartikler (portal):** `docs/seed-knowledge-articles-kubernetes-it.sql` (KB-00001–00020, IT) · `docs/seed-knowledge-articles-arbejdsmarked.sql` (KB-00021–00055, arbejdsmarked/STAR)  
 **Eksterne leverandører (KMD, Netcompany, Schultz):** `docs/seed-vendor-groups-kmd-netcompany-schultz.sql`  
+**Landssupport + SPOC:** `docs/seed-landssupport-spoc.sql` (10× `supporter`, admin-rettigheder)  
 **Migration (delt sag + roller):** `docs/ticket-shared-migration.sql`  
 **Login-UI:** `apps/web/src/lib/demo-users.ts` (skal matche seed)
 
@@ -12,6 +13,7 @@
 |------------------|-----------|-------|-------------------------|--------------|
 | Topadministrator | `top_admin` | Alle | Ja (fuld) | Ja |
 | Administrator | `admin` | Alle | Ja | Ja |
+| Supporter | `supporter` | Alle | Ja (som admin) | Ja |
 | Agent | `agent` | Egen org / dispatch-board | Nej | Ja (egne scope) |
 | Slutbruger | `end_user` | Egen org + delte + store sager | Nej | Nej |
 
@@ -30,6 +32,7 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 |--------------|-------------|
 | Alle `@example.dk` i seed (undtagen nedenfor) | `Stardesk2026!` |
 | `larrysanders@example.dk` | `password` (ikke på login-listen) |
+| `larrysanders2@example.dk` | `password` — kun klassisk UI (`ui_mode=classic`), gruppe Landssupport |
 
 ## Aktive testbrugere (login-UI)
 

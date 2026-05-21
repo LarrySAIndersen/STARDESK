@@ -25,6 +25,7 @@ from star_itsm_api.schemas.auth import (
     user_to_read,
 )
 from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -55,6 +56,8 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Forkert e-mail eller adgangskode",
         )
+
+    await ensure_prototype_staff_account(db, user)
 
     token = create_access_token(
         user_id=user.id,

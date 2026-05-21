@@ -20,6 +20,7 @@ from star_itsm_api.services.user_import import (
         ("sagsbehandler", "agent"),
         ("Slutbruger", "end_user"),
         ("topadministrator", "top_admin"),
+        ("Supporter", "supporter"),
         (None, "end_user"),
     ],
 )

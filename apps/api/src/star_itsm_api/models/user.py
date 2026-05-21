@@ -28,6 +28,7 @@ class User(Base):
     )
     avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     avatar_preset_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    ui_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

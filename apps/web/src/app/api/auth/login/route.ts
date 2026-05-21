@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import { isClassicOnlyUser, UI_MODE_COOKIE } from "@/lib/classic-ui-mode";
 import type { LoginResponse } from "@/types/user";
 
 /** Shorter session — re-login required after idle window (no long-lived client tokens). */
@@ -52,5 +53,14 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: SESSION_MAX_AGE,
   });
+  if (isClassicOnlyUser(data.user.ui_mode)) {
+    response.cookies.set(UI_MODE_COOKIE, "classic", {
+      httpOnly: true,
+      secure,
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+    });
+  }
   return response;
 }

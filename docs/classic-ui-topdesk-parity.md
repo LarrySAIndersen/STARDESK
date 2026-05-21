@@ -28,12 +28,12 @@ From **photo 1** and all detail/list shots:
 - **`×` on the right** closes that tab; one tab stays “home” (house / module home).
 - Opening a list or a ticket **adds a tab** instead of replacing the whole page.
 
-**STARdesk classic implementation (planned):**
+**STARdesk classic implementation (v1 shipped):**
 
-- Client-side tab strip component: `ClassicWorkTabs`
-- Tab types: `home` | `list` | `ticket` | `module`
-- State: URL per tab optional (`/classic/tickets/[id]` syncs active tab) or in-memory + sessionStorage for tab stack
-- Closing tab: remove from stack; focus neighbour
+- `ClassicWorkTabs` — tab strip under top bar (Forside + opened lists/sager)
+- `ClassicWorkTabsProvider` — syncs tabs from URL; `sessionStorage` per user
+- Close via **×** on tab; **Overblik** menu → Luk alle faner / Luk andre faner
+- Opening `/classic/tickets/[id]` adds tab + **Nyligt viste kort** entry (`localStorage`)
 
 This is the **highest-impact** difference from the current single-page Next.js routes.
 
@@ -100,6 +100,18 @@ This is the **highest-impact** difference from the current single-page Next.js r
 - Process flowchart (first line / second line / delvise sager).
 - Oversigter + Filtreringer + **Ny** tiles (Førstelinje, Second line, Filtrering).
 - **Classic route:** `/classic/modules/sagsstyring` — static diagram + deep links to list routes.
+
+### Overblik (grid, top right)
+
+| TOPdesk | STARdesk classic |
+|---------|------------------|
+| Grid → blue menu | `ClassicOverviewMenuButton` |
+| Forside | `goHome()` → `/classic` |
+| Nyligt viste kort → flyout left | `recentCards` from `localStorage`; hover/click opens flyout |
+| Luk alle faner | `closeAllTabs()` — keeps Forside only |
+| Luk andre faner | `closeOtherTabs()` — keeps Forside + active tab |
+
+---
 
 ### Notifikation (bell, top right)
 

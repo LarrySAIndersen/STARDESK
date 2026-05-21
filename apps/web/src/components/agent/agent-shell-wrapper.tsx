@@ -10,6 +10,11 @@ import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import {
+  classicHomePath,
+  isClassicOnlyUser,
+  isModernStaffPath,
+} from "@/lib/classic-ui-mode";
+import {
   CHANGE_PASSWORD_PATH,
   isPasswordChangeExemptPath,
   userMustChangePassword,
@@ -37,6 +42,14 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   if (userMustChangePassword(currentUser) && !onChangePasswordPage) {
     redirect(CHANGE_PASSWORD_PATH);
+  }
+
+  if (
+    isStaff(currentUser) &&
+    isClassicOnlyUser(currentUser?.ui_mode) &&
+    isModernStaffPath(pathname)
+  ) {
+    redirect(classicHomePath());
   }
 
   const showUsersNav = canManageUsers(currentUser);

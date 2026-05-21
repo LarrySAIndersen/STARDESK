@@ -7,11 +7,19 @@ from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
     ROLE_SUBMITTER,
+    ROLE_SUPPORTER,
     ROLE_TOP_ADMIN,
+    USER_ROLE_PATTERN,
 )
 from star_itsm_api.schemas.auth import ROLE_LABELS
 
-ASSIGNABLE_ROLES = (ROLE_SUBMITTER, ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN)
+ASSIGNABLE_ROLES = (
+    ROLE_SUBMITTER,
+    ROLE_AGENT,
+    ROLE_ADMIN,
+    ROLE_SUPPORTER,
+    ROLE_TOP_ADMIN,
+)
 
 
 class UserTeamSummary(BaseModel):
@@ -56,7 +64,7 @@ class UserAdminListResponse(BaseModel):
 class UserAdminUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=255)
     email: str | None = Field(default=None, min_length=3, max_length=255)
-    role: str | None = Field(default=None, pattern="^(end_user|agent|admin|top_admin)$")
+    role: str | None = Field(default=None, pattern=USER_ROLE_PATTERN)
     is_active: bool | None = None
     organization_id: UUID | None = None
     team_ids: list[UUID] | None = None
@@ -69,7 +77,7 @@ class UserAdminPasswordReset(BaseModel):
 class UserAdminCreate(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     display_name: str = Field(min_length=1, max_length=255)
-    role: str = Field(pattern="^(end_user|agent|admin|top_admin)$")
+    role: str = Field(pattern=USER_ROLE_PATTERN)
     is_active: bool = True
     organization_id: UUID | None = None
     team_ids: list[UUID] = Field(default_factory=list)
@@ -114,7 +122,7 @@ class UserImportRow(BaseModel):
 
 class UserImportRequest(BaseModel):
     rows: list[UserImportRow] = Field(min_length=1, max_length=500)
-    default_role: str = Field(default=ROLE_SUBMITTER, pattern="^(end_user|agent|admin|top_admin)$")
+    default_role: str = Field(default=ROLE_SUBMITTER, pattern=USER_ROLE_PATTERN)
     on_duplicate: str = Field(default="skip", pattern="^(skip|update)$")
 
 

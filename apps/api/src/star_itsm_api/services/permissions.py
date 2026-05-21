@@ -4,12 +4,13 @@ from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
     ROLE_SUBMITTER,
+    ROLE_SUPPORTER,
     ROLE_TOP_ADMIN,
 )
 from star_itsm_api.models.user import User
 
-ADMIN_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN})
-STAFF_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT})
+ADMIN_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_SUPPORTER})
+STAFF_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT, ROLE_SUPPORTER})
 
 
 def is_top_admin(user: User) -> bool:
@@ -44,7 +45,7 @@ def can_export_tickets(user: User) -> bool:
 
 
 def can_assign_tickets(user: User) -> bool:
-    return user.role in {ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT}
+    return user.role in {ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT, ROLE_SUPPORTER}
 
 
 def staff_roles_tuple() -> tuple[str, ...]:

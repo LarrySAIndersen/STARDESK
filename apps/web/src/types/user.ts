@@ -1,4 +1,4 @@
-export type UserRole = "end_user" | "agent" | "admin" | "top_admin";
+export type UserRole = "end_user" | "agent" | "admin" | "top_admin" | "supporter";
 
 export interface User {
   id: string;
@@ -11,6 +11,8 @@ export interface User {
   must_change_password?: boolean;
   avatar_url?: string | null;
   avatar_preset_id?: string | null;
+  /** When set, locks UI to classic or modern (overrides login cookie). */
+  ui_mode?: "modern" | "classic" | null;
 }
 
 export type AvatarSelection =

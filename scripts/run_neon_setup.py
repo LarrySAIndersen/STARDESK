@@ -31,6 +31,8 @@ MIGRATIONS = [
     "docs/knowledge-articles-migration.sql",
     "docs/must-change-password-migration.sql",
     "docs/user-avatar-url-migration.sql",
+    "docs/supporter-role-migration.sql",
+    "docs/user-ui-mode-migration.sql",
 ]
 
 SEEDS = [
@@ -40,6 +42,8 @@ SEEDS = [
     "docs/seed-group-sample-tickets.sql",
     "docs/seed-ticket-intelligence.sql",
     "docs/seed-larrysanders.sql",
+    "docs/seed-larrysanders2.sql",
+    "docs/seed-landssupport-spoc.sql",
 ]
 
 

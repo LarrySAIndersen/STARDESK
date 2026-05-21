@@ -1573,6 +1573,226 @@
   padding: 1px;
 }
 
+.classic-topbar__icon-btn--bell {
+  position: relative;
+}
+
+.classic-topbar__badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e53935;
+  border: 1px solid var(--classic-header);
+  pointer-events: none;
+}
+
+.classic-overview {
+  position: relative;
+}
+
+.classic-overview__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 90;
+  min-width: 15rem;
+  padding: 0.35rem 0;
+  background: #2d6ca8;
+  color: #fff;
+  border: 1px solid #1e5080;
+  border-radius: 2px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.classic-overview__item-wrap {
+  position: relative;
+}
+
+.classic-overview__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.classic-overview__item:hover,
+.classic-overview__item--open {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.classic-overview__item--sub {
+  justify-content: flex-start;
+}
+
+.classic-overview__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.classic-overview__chevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.classic-overview__flyout {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  z-index: 91;
+  width: min(22rem, 70vw);
+  max-height: min(24rem, 60vh);
+  overflow-y: auto;
+  margin-right: 2px;
+  padding: 0.35rem 0;
+  background: #2d6ca8;
+  border: 1px solid #1e5080;
+  border-radius: 2px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.classic-overview__flyout-empty {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.classic-overview__flyout-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.classic-overview__flyout-item {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.classic-overview__flyout-item:hover,
+.classic-overview__flyout-item--highlight {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.classic-overview__flyout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  background: #1a4480;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.classic-overview__flyout-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.classic-overview__flyout-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classic-overview__flyout-sub {
+  font-size: 11px;
+  opacity: 0.88;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classic-work-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-height: 32px;
+  padding: 0 0.5rem;
+  background: #e8e8e4;
+  border-bottom: 1px solid #c8c8c4;
+  overflow-x: auto;
+}
+
+.classic-work-tabs__tab {
+  display: flex;
+  align-items: stretch;
+  max-width: 14rem;
+  border-right: 1px solid #c8c8c4;
+  background: #f3f3f1;
+}
+
+.classic-work-tabs__tab--active {
+  background: #fff;
+  border-bottom: 2px solid var(--classic-header);
+  margin-bottom: -1px;
+}
+
+.classic-work-tabs__select {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--star-navy);
+  cursor: pointer;
+}
+
+.classic-work-tabs__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.classic-work-tabs__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid #d8d8d4;
+  background: transparent;
+  color: var(--gray-mid);
+  cursor: pointer;
+}
+
+.classic-work-tabs__close:hover {
+  background: #e0e0dc;
+  color: var(--star-text);
+}
+
 .classic-modal-backdrop {
   position: fixed;
   inset: 0;

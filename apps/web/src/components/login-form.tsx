@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
-import { classicHomePath, modernHomePath } from "@/lib/classic-ui-mode";
+import { isClassicOnlyUser, staffLandingPath } from "@/lib/classic-ui-mode";
+import { isStaff } from "@/lib/auth";
 import { CHANGE_PASSWORD_PATH } from "@/lib/must-change-password";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -71,13 +72,25 @@ export function LoginForm() {
         window.location.replace(CHANGE_PASSWORD_PATH);
         return;
       }
-      const uiMode = useClassicUi ? "classic" : "modern";
-      await fetch("/api/auth/ui-mode", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ mode: uiMode }),
-      });
-      window.location.replace(useClassicUi ? classicHomePath() : modernHomePath());
+      const lockedClassic = isClassicOnlyUser(body.user?.ui_mode);
+      const staff = isStaff(body.user ?? null);
+      const uiMode = lockedClassic
+        ? "classic"
+        : staff && useClassicUi
+          ? "classic"
+          : staff
+            ? "modern"
+            : useClassicUi
+              ? "classic"
+              : "modern";
+      if (staff) {
+        await fetch("/api/auth/ui-mode", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ mode: uiMode }),
+        });
+      }
+      window.location.replace(staffLandingPath(body.user ?? null, uiMode));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login mislykkedes — prøv igen",

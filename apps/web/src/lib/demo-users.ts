@@ -74,6 +74,13 @@ const RAW_DEMO_USERS: DemoUser[] = [
   agent("schultz01@example.dk", "Schultz Agent 1", "Schultz"),
   agent("schultz02@example.dk", "Schultz Agent 2", "Schultz"),
   agent("schultz03@example.dk", "Schultz Agent 3", "Schultz"),
+  {
+    email: "larrysanders2@example.dk",
+    password: "password",
+    roleLabel: "Supporter (klassisk)",
+    group: "Landssupport",
+    displayName: "Larrysanders2",
+  },
 ];
 
 export const DEMO_USERS = RAW_DEMO_USERS.filter((u) => !EXCLUDED_EMAILS.has(u.email));
@@ -97,6 +104,7 @@ export function groupDemoUsers(users: DemoUser[] = DEMO_USERS): DemoUserGroup[] 
     "KMD",
     "Netcompany",
     "Schultz",
+    "Landssupport",
   ];
   const map = new Map<string, DemoUser[]>();
   for (const user of users) {

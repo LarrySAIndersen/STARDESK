@@ -4,7 +4,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from star_itsm_api.core.security import ROLE_ADMIN, ROLE_AGENT, ROLE_SUBMITTER, ROLE_TOP_ADMIN
+from star_itsm_api.core.security import (
+    ROLE_ADMIN,
+    ROLE_AGENT,
+    ROLE_SUBMITTER,
+    ROLE_SUPPORTER,
+    ROLE_TOP_ADMIN,
+)
 from star_itsm_api.services.org_access import user_can_access_ticket
 from star_itsm_api.services.permissions import (
     can_export_tickets,
@@ -41,6 +47,15 @@ def test_admin_same_ticket_access_as_top_admin() -> None:
     user = MagicMock(role=ROLE_ADMIN, organization_id=None)
     assert has_full_ticket_visibility(user)
     assert is_admin(user)
+
+
+def test_supporter_has_admin_rights() -> None:
+    user = MagicMock(role=ROLE_SUPPORTER, organization_id=None)
+    assert has_full_ticket_visibility(user)
+    assert is_admin(user)
+    assert can_manage_users(user)
+    assert can_export_tickets(user)
+    assert is_staff_role(user)
 
 
 def test_end_user_cannot_export() -> None:

@@ -1,19 +1,13 @@
 import { ClassicModuleTable } from "@/components/classic/classic-module-table";
 import { ClassicShellWrapper } from "@/components/classic/classic-shell-wrapper";
-import { apiGetServer } from "@/lib/api-server";
+import { loadClassicBoardTickets } from "@/lib/classic-board-tickets";
 import { getServerUser } from "@/lib/auth-server";
-import type { Ticket } from "@/types/ticket";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClassicMyWorkPage() {
   const user = await getServerUser();
-  let tickets: Ticket[] = [];
-  try {
-    tickets = await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
-  } catch {
-    tickets = [];
-  }
+  const tickets = await loadClassicBoardTickets();
 
   const mine = user
     ? tickets.filter((t) => t.assigned_user_id === user.id)

@@ -8,11 +8,7 @@ import { TicketListShell } from "@/components/ticket-list-shell";
 import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
-import {
-  classicHomePath,
-  parseUiMode,
-  UI_MODE_COOKIE,
-} from "@/lib/classic-ui-mode";
+import { staffLandingPath, UI_MODE_COOKIE } from "@/lib/classic-ui-mode";
 import {
   CHANGE_PASSWORD_PATH,
   userMustChangePassword,
@@ -37,9 +33,10 @@ export default async function HomePage() {
     redirect(CHANGE_PASSWORD_PATH);
   }
   const staff = isStaff(currentUser);
+  const landing = staffLandingPath(currentUser, cookieStore.get(UI_MODE_COOKIE)?.value);
 
-  if (staff && parseUiMode(cookieStore.get(UI_MODE_COOKIE)?.value) === "classic") {
-    redirect(classicHomePath());
+  if (staff && landing !== "/") {
+    redirect(landing);
   }
 
   const list = (

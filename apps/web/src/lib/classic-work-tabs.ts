@@ -33,12 +33,12 @@ export function pathnameToTab(pathname: string): ClassicTab | null {
     return { ...CLASSIC_HOME_TAB };
   }
 
-  const module = CLASSIC_MODULES.find((m) => m.href === pathname);
-  if (module) {
+  const classicModule = CLASSIC_MODULES.find((m) => m.href === pathname);
+  if (classicModule) {
     return {
-      id: `list:${module.id}`,
-      href: module.href,
-      label: module.label,
+      id: `list:${classicModule.id}`,
+      href: classicModule.href,
+      label: classicModule.label,
       kind: "list",
       closable: true,
     };

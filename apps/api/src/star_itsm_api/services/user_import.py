@@ -10,6 +10,7 @@ from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
     ROLE_SUBMITTER,
+    ROLE_SUPPORTER,
     ROLE_TOP_ADMIN,
 )
 from star_itsm_api.models.organization import Organization
@@ -36,6 +37,8 @@ _ROLE_ALIASES: dict[str, str] = {
     "operator": ROLE_AGENT,
     "admin": ROLE_ADMIN,
     "administrator": ROLE_ADMIN,
+    "supporter": ROLE_SUPPORTER,
+    "support": ROLE_SUPPORTER,
     "top_admin": ROLE_TOP_ADMIN,
     "topadmin": ROLE_TOP_ADMIN,
     "topadministrator": ROLE_TOP_ADMIN,
@@ -50,7 +53,7 @@ def normalize_import_role(raw: str | None, *, default_role: str) -> str | None:
     if raw is None or not str(raw).strip():
         return default_role
     key = str(raw).strip().lower().replace("-", "_")
-    if key in (ROLE_SUBMITTER, ROLE_AGENT, ROLE_ADMIN, ROLE_TOP_ADMIN):
+    if key in (ROLE_SUBMITTER, ROLE_AGENT, ROLE_ADMIN, ROLE_SUPPORTER, ROLE_TOP_ADMIN):
         return key
     return _ROLE_ALIASES.get(key)
 
@@ -93,6 +96,35 @@ async def _team_ids_by_names(
         else:
             ids.append(team_id)
     return ids, unknown
+
+
+async def _user_by_email(db: AsyncSession, email: str) -> User | None:
+    return (
+        await db.execute(
+            select(User).where(
+                func.lower(User.email) == email,
+                User.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def _update_existing_from_import(
+    db: AsyncSession,
+    user: User,
+    *,
+    display_name: str,
+    role: str,
+    is_active: bool,
+    organization_id: uuid.UUID | None,
+    team_ids: list[uuid.UUID],
+) -> None:
+    user.display_name = display_name
+    user.role = role
+    user.is_active = is_active
+    user.organization_id = organization_id
+    await sync_user_teams(db, user.id, team_ids)
+    await db.commit()
 
 
 async def import_users_admin(
@@ -174,32 +206,28 @@ async def import_users_admin(
                 )
                 continue
 
-        existing = (
-            await db.execute(
-                select(User).where(
-                    func.lower(User.email) == email,
-                    User.deleted_at.is_(None),
-                )
-            )
-        ).scalar_one_or_none()
+        existing = await _user_by_email(db, email)
 
         if existing is not None:
             if payload.on_duplicate == "skip":
                 skipped += 1
                 continue
 
-            existing.display_name = display_name
-            existing.role = role
-            existing.is_active = is_active
-            existing.organization_id = organization_id
             try:
-                await sync_user_teams(db, existing.id, team_ids)
+                await _update_existing_from_import(
+                    db,
+                    existing,
+                    display_name=display_name,
+                    role=role,
+                    is_active=is_active,
+                    organization_id=organization_id,
+                    team_ids=team_ids,
+                )
             except ValueError:
                 errors.append(
                     UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
                 )
                 continue
-            await db.commit()
             updated += 1
             continue
 
@@ -223,23 +251,20 @@ async def import_users_admin(
             code = str(exc)
             if code == "email_taken":
                 if payload.on_duplicate == "update":
-                    user = (
-                        await db.execute(
-                            select(User).where(
-                                func.lower(User.email) == email,
-                                User.deleted_at.is_(None),
-                            )
-                        )
-                    ).scalar_one_or_none()
+                    user = await _user_by_email(db, email)
                     if user is None:
                         skipped += 1
                         continue
-                    user.display_name = display_name
-                    user.role = role
-                    user.is_active = is_active
-                    user.organization_id = organization_id
                     try:
-                        await sync_user_teams(db, user.id, team_ids)
+                        await _update_existing_from_import(
+                            db,
+                            user,
+                            display_name=display_name,
+                            role=role,
+                            is_active=is_active,
+                            organization_id=organization_id,
+                            team_ids=team_ids,
+                        )
                     except ValueError:
                         errors.append(
                             UserImportRowError(
@@ -247,7 +272,6 @@ async def import_users_admin(
                             ),
                         )
                         continue
-                    await db.commit()
                     updated += 1
                 else:
                     skipped += 1
