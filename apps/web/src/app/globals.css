@@ -465,6 +465,14 @@
     @apply text-[var(--gray-mid)] mt-1.5 px-4 pt-2.5 pb-1 text-[10px] font-bold tracking-[0.07em] uppercase;
   }
 
+  .wire-nav-section--collapsible {
+    @apply text-[var(--gray-mid)] hover:bg-star-blue-light hover:text-[var(--star-text)] mt-1.5 flex w-full items-center gap-1.5 px-4 pt-2.5 pb-1 text-left text-[10px] font-bold tracking-[0.07em] uppercase transition-colors;
+  }
+
+  .wire-nav-section-group {
+    @apply flex flex-col;
+  }
+
   .wire-nav-item {
     @apply text-[var(--star-text-muted)] flex items-center gap-2 border-l-[3px] border-transparent px-4 py-2 text-[13px] font-medium transition-colors;
   }
@@ -519,7 +527,7 @@
   }
 
   .wire-asset-expand {
-    @apply text-[var(--gray-mid)] flex w-7 shrink-0 items-center justify-center hover:bg-star-blue-light hover:text-[var(--star-text)];
+    @apply text-[var(--gray-mid)] relative z-[1] flex w-7 shrink-0 cursor-pointer items-center justify-center hover:bg-star-blue-light hover:text-[var(--star-text)];
   }
 
   .wire-asset-row {

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Eye, EyeOff, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
+import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-section";
+import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
 import { SidebarUiModeSwitch } from "@/components/sidebar-ui-mode-switch";
@@ -26,36 +28,31 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function NavVisibilityToggle({
-  navId,
-  hidden,
-  collapsed,
-  onToggle,
-}: {
-  navId: string;
-  hidden: boolean;
-  collapsed: boolean;
-  onToggle: (navId: string, hide: boolean) => void;
-}) {
-  if (collapsed) {
-    return null;
+function sectionId(label: string): string {
+  return label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+}
+
+function groupNavItems(items: AgentNavItem[]): { unsectioned: AgentNavItem[]; sections: { label: string; items: AgentNavItem[] }[] } {
+  const unsectioned: AgentNavItem[] = [];
+  const sectionMap = new Map<string, AgentNavItem[]>();
+
+  for (const item of items) {
+    if (!item.section) {
+      unsectioned.push(item);
+      continue;
+    }
+    const list = sectionMap.get(item.section) ?? [];
+    list.push(item);
+    sectionMap.set(item.section, list);
   }
-  return (
-    <button
-      type="button"
-      className="text-muted-foreground hover:text-star-navy ml-auto shrink-0 rounded p-0.5"
-      title={hidden ? "Vis for andre brugere" : "Skjul for andre brugere"}
-      aria-label={hidden ? "Vis menupunkt for andre" : "Skjul menupunkt for andre"}
-      aria-pressed={hidden}
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        void onToggle(navId, !hidden);
-      }}
-    >
-      {hidden ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
-    </button>
-  );
+
+  return {
+    unsectioned,
+    sections: [...sectionMap.entries()].map(([label, sectionItems]) => ({
+      label,
+      items: sectionItems,
+    })),
+  };
 }
 
 function NavRow({
@@ -86,18 +83,17 @@ function NavRow({
         "wire-nav-item",
         active && "wire-nav-item--active",
         collapsed && "wire-nav-item--compact",
-        manageVisibility && isHiddenForOthers && "opacity-70",
+        manageVisibility && isHiddenForOthers && "opacity-80",
       )}
       onClick={onNavigate}
     >
       <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
       <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
       {manageVisibility ? (
-        <NavVisibilityToggle
-          navId={item.id}
+        <NavVisibilityEye
           hidden={isHiddenForOthers}
           collapsed={collapsed}
-          onToggle={onToggleHidden}
+          onToggle={() => onToggleHidden(item.id, !isHiddenForOthers)}
         />
       ) : null}
     </Link>
@@ -126,15 +122,41 @@ export function AgentSidebar({
   const onClassicRoute =
     pathname === "/classic" || pathname.startsWith("/classic/");
 
-  const { hiddenNavIds, toggleHidden } = useSidebarNavVisibility(staff);
+  const { hiddenNavIds, error, toggleHidden } = useSidebarNavVisibility(staff);
   const allItems = buildAgentNavItems({ staff, showAdmin });
   const mainItems = filterNavItemsForViewer(
     allItems.filter((item) => !item.id.startsWith("integration-")),
     hiddenNavIds,
     topAdmin,
   );
+  const { unsectioned, sections } = groupNavItems(mainItems);
 
-  let lastSection: string | undefined;
+  const renderClassicSwitch = (afterServiceDesk: boolean) => {
+    if (!showClassicSwitch) return null;
+    const hasServiceDesk = mainItems.some((item) => item.href === "/service-desk");
+    if (afterServiceDesk && !hasServiceDesk) return null;
+    if (!afterServiceDesk && hasServiceDesk) return null;
+
+    return (
+      <div key="classic-ui-switch">
+        <CollapsibleNavSection
+          sectionId="graenseflade"
+          label="Grænseflade"
+          collapsed={collapsed}
+          defaultOpen
+        >
+          <SidebarUiModeSwitch
+            targetMode="classic"
+            label="Klassisk grænseflade (TOPdesk)"
+            icon={LayoutGrid}
+            active={onClassicRoute}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
+        </CollapsibleNavSection>
+      </div>
+    );
+  };
 
   return (
     <aside
@@ -149,7 +171,15 @@ export function AgentSidebar({
 
       {topAdmin && !collapsed ? (
         <p className="text-muted-foreground border-b border-[var(--gray-border)] px-4 py-2 text-[10px] leading-snug">
-          Øje-ikon: skjul menupunkt for alle undtagen topadministrator
+          <span className="text-[#1a7a44] font-semibold">Grønt øje</span> = synlig for alle.{" "}
+          <span className="text-[#c41e2a] font-semibold">Rødt øje</span> = skjult for alle undtagen
+          topadministrator. Klik sektionsoverskrift for at folde ud/ind.
+        </p>
+      ) : null}
+
+      {error && !collapsed ? (
+        <p className="border-b border-[var(--gray-border)] px-4 py-2 text-[10px] text-[#c41e2a]" role="alert">
+          {error}
         </p>
       ) : null}
 
@@ -157,16 +187,38 @@ export function AgentSidebar({
         className="flex flex-1 flex-col overflow-y-auto py-1"
         aria-label="Hovednavigation"
       >
-        {mainItems.map((item) => {
-          const showSection = !collapsed && item.section && item.section !== lastSection;
-          if (item.section) lastSection = item.section;
+        {unsectioned.map((item) => (
+          <div key={item.id}>
+            <NavRow
+              item={item}
+              pathname={pathname}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+              manageVisibility={topAdmin}
+              hiddenNavIds={hiddenNavIds}
+              onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+            />
+            {showClassicSwitch && item.href === "/service-desk"
+              ? renderClassicSwitch(true)
+              : null}
+          </div>
+        ))}
 
-          return (
-            <div key={item.id}>
-              {showSection ? (
-                <p className="wire-nav-section">{item.section}</p>
-              ) : null}
+        {showClassicSwitch && !mainItems.some((item) => item.href === "/service-desk")
+          ? renderClassicSwitch(false)
+          : null}
+
+        {sections.map((section) => (
+          <CollapsibleNavSection
+            key={section.label}
+            sectionId={sectionId(section.label)}
+            label={section.label}
+            collapsed={collapsed}
+            defaultOpen
+          >
+            {section.items.map((item) => (
               <NavRow
+                key={item.id}
                 item={item}
                 pathname={pathname}
                 collapsed={collapsed}
@@ -175,46 +227,27 @@ export function AgentSidebar({
                 hiddenNavIds={hiddenNavIds}
                 onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
               />
-              {showClassicSwitch && item.href === "/service-desk" ? (
-                <div key="classic-ui-switch">
-                  {!collapsed ? (
-                    <p className="wire-nav-section">Grænseflade</p>
-                  ) : null}
-                  <SidebarUiModeSwitch
-                    targetMode="classic"
-                    label="Klassisk grænseflade (TOPdesk)"
-                    icon={LayoutGrid}
-                    active={onClassicRoute}
-                    collapsed={collapsed}
-                    onNavigate={onNavigate}
-                  />
-                </div>
-              ) : null}
-            </div>
-          );
-        })}
-        {showClassicSwitch && !mainItems.some((item) => item.href === "/service-desk") ? (
-          <div>
-            {!collapsed ? <p className="wire-nav-section">Grænseflade</p> : null}
-            <SidebarUiModeSwitch
-              targetMode="classic"
-              label="Klassisk grænseflade (TOPdesk)"
-              icon={LayoutGrid}
-              active={onClassicRoute}
+            ))}
+          </CollapsibleNavSection>
+        ))}
+
+        {staff ? (
+          <CollapsibleNavSection
+            sectionId="integration"
+            label="Integration"
+            collapsed={collapsed}
+            defaultOpen
+          >
+            <IntegrationSidebarLinks
+              pathname={pathname}
               collapsed={collapsed}
               onNavigate={onNavigate}
+              hiddenNavIds={hiddenNavIds}
+              isTopAdmin={topAdmin}
+              onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+              showSectionHeader={false}
             />
-          </div>
-        ) : null}
-        {staff ? (
-          <IntegrationSidebarLinks
-            pathname={pathname}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-            hiddenNavIds={hiddenNavIds}
-            isTopAdmin={topAdmin}
-            onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
-          />
+          </CollapsibleNavSection>
         ) : null}
       </nav>
 

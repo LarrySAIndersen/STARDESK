@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, EyeOff, Mail, MessageSquare, Ticket, Wrench } from "lucide-react";
+import { Mail, MessageSquare, Ticket, Wrench } from "lucide-react";
 
+import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
 import { IntegrationStatusPill } from "@/components/integrations/integration-status-pill";
 import {
   getDisplayStatus,
@@ -30,6 +31,7 @@ export function IntegrationSidebarLinks({
   hiddenNavIds = [],
   isTopAdmin = false,
   onToggleHidden,
+  showSectionHeader = true,
 }: {
   pathname: string;
   collapsed?: boolean;
@@ -37,6 +39,8 @@ export function IntegrationSidebarLinks({
   hiddenNavIds?: string[];
   isTopAdmin?: boolean;
   onToggleHidden?: (navId: string, hide: boolean) => void;
+  /** When wrapped in CollapsibleNavSection, omit duplicate section label. */
+  showSectionHeader?: boolean;
 }) {
   const config = useIntegrationsConfig();
   const hidden = new Set(hiddenNavIds);
@@ -51,7 +55,9 @@ export function IntegrationSidebarLinks({
 
   return (
     <>
-      {collapsed ? null : <p className="wire-nav-section">Integration</p>}
+      {showSectionHeader && !collapsed ? (
+        <p className="wire-nav-section">Integration</p>
+      ) : null}
       {visibleMeta.map((meta) => {
         const Icon = ICONS[meta.id];
         const navId = `integration-${meta.id}`;
@@ -70,29 +76,17 @@ export function IntegrationSidebarLinks({
               "wire-nav-item wire-nav-item--integration",
               active && "wire-nav-item--active",
               collapsed && "wire-nav-item--compact",
-              isTopAdmin && isHiddenForOthers && "opacity-70",
+              isTopAdmin && isHiddenForOthers && "opacity-80",
             )}
           >
             <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
             <span className="min-w-0 flex-1 truncate">{meta.name}</span>
-            {isTopAdmin && onToggleHidden && !collapsed ? (
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-star-navy shrink-0 rounded p-0.5"
-                title={isHiddenForOthers ? "Vis for andre" : "Skjul for andre"}
-                aria-label={isHiddenForOthers ? "Vis for andre" : "Skjul for andre"}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onToggleHidden(navId, !isHiddenForOthers);
-                }}
-              >
-                {isHiddenForOthers ? (
-                  <EyeOff className="size-3.5" aria-hidden />
-                ) : (
-                  <Eye className="size-3.5" aria-hidden />
-                )}
-              </button>
+            {isTopAdmin && onToggleHidden ? (
+              <NavVisibilityEye
+                hidden={isHiddenForOthers}
+                collapsed={collapsed}
+                onToggle={() => onToggleHidden(navId, !isHiddenForOthers)}
+              />
             ) : (
               <IntegrationStatusPill
                 status={status}

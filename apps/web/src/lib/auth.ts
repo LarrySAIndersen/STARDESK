@@ -1,3 +1,4 @@
+import { canManageNavVisibility } from "@/lib/top-admin";
 import type { User, UserRole } from "@/types/user";
 
 export const TOKEN_COOKIE = "stardesk_token";
@@ -137,10 +138,7 @@ export function isStaff(user: User | null): boolean {
 }
 
 export function isTopAdmin(user: User | null): boolean {
-  if (!user) {
-    return false;
-  }
-  return resolveUserRole(user) === "top_admin";
+  return canManageNavVisibility(user);
 }
 
 export function isAdmin(user: User | null): boolean {

@@ -108,6 +108,7 @@ async def me(
     current_user: User = Depends(get_current_user_session),
     db: AsyncSession = Depends(require_db),
 ) -> UserRead:
+    await enforce_sole_top_admin_on_login(db, current_user)
     org_name = await _organization_name(db, current_user)
     return user_to_read(current_user, organization_name=org_name)
 

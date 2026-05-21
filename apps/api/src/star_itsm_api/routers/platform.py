@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import get_current_user
-from star_itsm_api.core.top_admin_policy import is_top_admin_user
+from star_itsm_api.core.top_admin_policy import can_manage_sidebar_nav_visibility
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.platform import SidebarNavVisibilityRead, SidebarNavVisibilityUpdate
@@ -29,7 +29,7 @@ async def update_sidebar_nav_visibility(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> SidebarNavVisibilityRead:
-    if not is_top_admin_user(current_user):
+    if not can_manage_sidebar_nav_visibility(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Kun topadministrator kan skjule menupunkter",

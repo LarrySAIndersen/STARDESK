@@ -24,6 +24,11 @@ def is_top_admin_user(user: User) -> bool:
     return user.role == ROLE_TOP_ADMIN
 
 
+def can_manage_sidebar_nav_visibility(user: User) -> bool:
+    """Top admin role or reserved owner email (even before re-login promotes role)."""
+    return is_top_admin_user(user) or is_sole_top_admin_email(user.email)
+
+
 def can_assign_top_admin_role(actor: User) -> bool:
     return is_top_admin_user(actor) and is_sole_top_admin_email(actor.email)
 
