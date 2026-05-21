@@ -22,10 +22,6 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "STARdesk — Sagsstyring",
   description: "STAR ITSM cloud prototype",
-  icons: {
-    icon: [{ url: "/images/star-logo.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/images/star-logo.svg", type: "image/svg+xml" }],
-  },
 };
 
 export default function RootLayout({
