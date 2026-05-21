@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import require_admin
+from star_itsm_api.core.security import require_admin, require_admin_session
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.admin import SlaResetResponse
@@ -19,6 +19,7 @@ from star_itsm_api.schemas.category_admin import (
     SubcategoryUpdate,
 )
 from star_itsm_api.schemas.sla_admin import SlaPolicyRead, SlaPolicyUpdate, SlaStandardRuleRead
+from star_itsm_api.schemas.ticket_import import TicketImportRequest, TicketImportResult
 from star_itsm_api.services.category_admin import (
     create_category,
     create_subcategory,
@@ -35,6 +36,7 @@ from star_itsm_api.services.sla_admin import (
     update_sla_policy,
 )
 from star_itsm_api.services.sla_reset import reset_all_ticket_sla
+from star_itsm_api.services.ticket_import import import_tickets_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -191,3 +193,17 @@ async def post_fill_ticket_categories(
         category_name=result.category_name,
         subcategory_name=result.subcategory_name,
     )
+
+
+@router.post("/tickets/import", response_model=TicketImportResult)
+async def import_tickets(
+    payload: TicketImportRequest,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin_session()),
+) -> TicketImportResult:
+    if not can_manage_users(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Kun administratorer kan importere sager",
+        )
+    return await import_tickets_admin(db, payload=payload, actor=current_user)

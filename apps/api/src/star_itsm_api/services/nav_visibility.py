@@ -20,6 +20,7 @@ VALID_NAV_IDS = frozenset(
         "groups",
         "users",
         "reports",
+        "admin-dashboard",
         "admin-sla",
         "admin-categories",
         "admin-dependencies",

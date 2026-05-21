@@ -11,6 +11,7 @@ NAV_PATH_BY_ID: dict[str, str] = {
     "groups": "/groups",
     "users": "/users",
     "reports": "/reports",
+    "admin-dashboard": "/admin/dashboard",
     "admin-sla": "/admin/sla",
     "admin-categories": "/admin/categories",
     "admin-dependencies": "/admin/dependencies",

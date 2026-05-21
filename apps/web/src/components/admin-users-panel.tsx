@@ -6,7 +6,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AdminUserCreateDialog } from "@/components/admin-user-create-dialog";
-import { AdminUserImportDialog } from "@/components/admin-user-import-dialog";
 import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { Button } from "@/components/ui/button";
@@ -501,7 +500,6 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [addingToTeamUser, setAddingToTeamUser] = useState<UserAdminListItem | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
-  const [importingUsers, setImportingUsers] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -610,14 +608,6 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
             />
             <button
               type="button"
-              className="wire-btn shrink-0"
-              onClick={() => setImportingUsers(true)}
-              disabled={!meta}
-            >
-              Importer CSV
-            </button>
-            <button
-              type="button"
               className="wire-btn wire-btn-red shrink-0"
               onClick={() => setCreatingUser(true)}
               disabled={!meta}
@@ -689,14 +679,6 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
         />
       ) : null}
 
-      {importingUsers && meta ? (
-        <AdminUserImportDialog
-          roleOptions={meta.roles}
-          currentUserRole={currentUserRole}
-          onClose={() => setImportingUsers(false)}
-          onImported={() => void loadList()}
-        />
-      ) : null}
     </section>
   );
 }

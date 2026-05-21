@@ -10,6 +10,7 @@ import {
   Plus,
   Ticket,
   Shield,
+  Settings2,
   UserCog,
   Users,
   UserCircle,
@@ -56,6 +57,13 @@ export function buildAgentNavItems(options: {
     { id: "reports", href: "/reports", label: "Rapporter", icon: BarChart3 },
     ...(showAdmin
       ? [
+          {
+            id: "admin-dashboard",
+            href: "/admin/dashboard",
+            label: "Admin dashboard",
+            icon: Settings2,
+            section: "Administration",
+          },
           {
             id: "admin-sla",
             href: "/admin/sla",
