@@ -7,6 +7,7 @@ import {
   Headset,
   Layers,
   LayoutDashboard,
+  LayoutGrid,
   Library,
   Plus,
   Ticket,
@@ -36,6 +37,9 @@ function isActive(pathname: string, href: string): boolean {
   }
   if (href === "/service-desk") {
     return pathname === "/service-desk" || pathname.startsWith("/service-desk/");
+  }
+  if (href === "/classic") {
+    return pathname === "/classic" || pathname.startsWith("/classic/");
   }
   if (href === "/tickets/new") {
     return pathname === "/tickets/new";
@@ -86,6 +90,9 @@ export function AgentSidebar({
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     ...(staff
       ? [{ href: "/service-desk", label: "Service Desk", icon: Headset }]
+      : []),
+    ...(staff
+      ? [{ href: "/classic", label: "Klassisk visning", icon: LayoutGrid }]
       : []),
     { href: "/tickets", label: "Alle sager", icon: Ticket },
     { href: "/tickets/new", label: "Ny sag", icon: Plus },

@@ -1,10 +1,9 @@
 "use client";
 
-import { Pencil, UserMinus, UserPlus } from "lucide-react";
 import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
-import { cn, displayNameInitials } from "@/lib/utils";
+import { AdminUserCard } from "@/components/admin-user-card";
+import { cn } from "@/lib/utils";
 import {
   ADMIN_USERS_NO_TEAM_FILTER,
   type AdminUsersListFilters,
@@ -22,129 +21,6 @@ const TAB_LABELS: { id: UsersTab; label: string }[] = [
   { id: "external", label: "Eksterne" },
   { id: "all", label: "Alle" },
 ];
-
-function AdminUsersTableHead() {
-  return (
-    <div className="wire-table-head wire-table-grid-admin-users" role="row">
-      <span>Navn</span>
-      <span>E-mail</span>
-      <span>Rolle</span>
-      <span>Gruppe(r)</span>
-      <span>Status</span>
-      <span className="text-right">Handlinger</span>
-    </div>
-  );
-}
-
-function UserStatusBadge({ isActive }: { isActive: boolean }) {
-  if (isActive) {
-    return <span className="wire-badge wire-badge--resolved">Aktiv</span>;
-  }
-  return <span className="wire-badge wire-badge--critical">Inaktiv</span>;
-}
-
-function AdminUserTableRow({
-  user,
-  onEdit,
-  onRemoveFromTeam,
-  onAddToTeam,
-  removeTeamId,
-}: {
-  user: UserAdminListItem;
-  onEdit: (userId: string) => void;
-  onRemoveFromTeam?: (user: UserAdminListItem, teamId: string) => void;
-  onAddToTeam?: (user: UserAdminListItem) => void;
-  removeTeamId?: string;
-}) {
-  const initials = displayNameInitials(user.display_name);
-  const groupsLabel =
-    user.team_names.length > 0 ? user.team_names.join(", ") : "—";
-
-  return (
-    <div
-      role="row"
-      className="wire-table-row wire-table-row--compact wire-table-grid-admin-users items-center"
-    >
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="wire-avatar-xs" aria-hidden>
-          {initials}
-        </span>
-        <div className="min-w-0">
-          <button
-            type="button"
-            className="text-star-navy hover:text-star-blue truncate text-left text-xs font-medium leading-tight underline-offset-2 hover:underline"
-            onClick={() => onEdit(user.id)}
-          >
-            {user.display_name}
-          </button>
-          <button
-            type="button"
-            className="text-star-blue hover:text-star-navy block text-[10px] underline underline-offset-2"
-            onClick={() => onEdit(user.id)}
-          >
-            se mere
-          </button>
-        </div>
-      </div>
-
-      <span className="text-muted-foreground truncate" title={user.email}>
-        {user.email}
-      </span>
-
-      <span className="truncate" title={user.role_label}>
-        {user.role_label}
-      </span>
-
-      <span className="truncate" title={groupsLabel}>
-        {groupsLabel}
-      </span>
-
-      <span>
-        <UserStatusBadge isActive={user.is_active} />
-      </span>
-
-      <div className="flex items-center justify-end gap-0.5">
-        {onAddToTeam ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-star-navy size-7"
-            aria-label={`Tilføj ${user.display_name} til gruppe`}
-            title="Tilføj til gruppe"
-            onClick={() => onAddToTeam(user)}
-          >
-            <UserPlus className="size-3.5" />
-          </Button>
-        ) : null}
-        {onRemoveFromTeam && removeTeamId && user.team_ids.includes(removeTeamId) ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-destructive hover:text-destructive size-7"
-            aria-label={`Fjern ${user.display_name} fra gruppe`}
-            title="Fjern fra gruppe"
-            onClick={() => onRemoveFromTeam(user, removeTeamId)}
-          >
-            <UserMinus className="size-3.5" />
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="text-star-navy size-7"
-          aria-label={`Rediger ${user.display_name}`}
-          title="Rediger"
-          onClick={() => onEdit(user.id)}
-        >
-          <Pencil className="size-3.5" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export function AdminUsersGroupedSections({
   users,
@@ -261,29 +137,24 @@ export function AdminUsersGroupedSections({
       </div>
 
       <div role="tabpanel">
-        <div className="overflow-x-auto">
-          <div className="wire-table-wrap min-w-0 overflow-x-auto">
-            <div className="wire-table-scroll min-w-[40rem]">
-              <AdminUsersTableHead />
-              {users.length === 0 ? (
-                <p className="text-muted-foreground px-3.5 py-4 text-sm">
-                  Ingen brugere matcher filtrene.
-                </p>
-              ) : (
-                users.map((user) => (
-                  <AdminUserTableRow
-                    key={user.id}
-                    user={user}
-                    onEdit={onEdit}
-                    onRemoveFromTeam={onRemoveFromTeam}
-                    onAddToTeam={showAddToTeam ? onAddToTeam : undefined}
-                    removeTeamId={removeTeamId}
-                  />
-                ))
-              )}
-            </div>
+        {users.length === 0 ? (
+          <p className="text-muted-foreground px-1 py-4 text-sm">
+            Ingen brugere matcher filtrene.
+          </p>
+        ) : (
+          <div className="admin-users-card-grid grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {users.map((user) => (
+              <AdminUserCard
+                key={user.id}
+                user={user}
+                onEdit={onEdit}
+                onRemoveFromTeam={onRemoveFromTeam}
+                onAddToTeam={showAddToTeam ? onAddToTeam : undefined}
+                removeTeamId={removeTeamId}
+              />
+            ))}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,11 @@ import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import {
+  classicHomePath,
+  parseUiMode,
+  UI_MODE_COOKIE,
+} from "@/lib/classic-ui-mode";
+import {
   CHANGE_PASSWORD_PATH,
   userMustChangePassword,
 } from "@/lib/must-change-password";
@@ -32,6 +37,10 @@ export default async function HomePage() {
     redirect(CHANGE_PASSWORD_PATH);
   }
   const staff = isStaff(currentUser);
+
+  if (staff && parseUiMode(cookieStore.get(UI_MODE_COOKIE)?.value) === "classic") {
+    redirect(classicHomePath());
+  }
 
   const list = (
     <Suspense fallback={<TicketListSkeleton />}>

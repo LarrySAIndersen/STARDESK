@@ -74,3 +74,33 @@ export interface UserAdminCreated {
   user: UserAdminRead;
   temporary_password: string | null;
 }
+
+export interface UserImportRowInput {
+  email: string;
+  display_name: string;
+  role?: string;
+  is_active?: string;
+  teams?: string;
+  organization?: string;
+}
+
+export interface UserImportRequest {
+  rows: UserImportRowInput[];
+  default_role: "end_user" | "agent" | "admin" | "top_admin";
+  on_duplicate: "skip" | "update";
+}
+
+export interface UserImportRowError {
+  row: number;
+  email: string | null;
+  message: string;
+}
+
+export interface UserImportResult {
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: UserImportRowError[];
+}

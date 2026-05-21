@@ -97,6 +97,42 @@ class UserAdminMeta(BaseModel):
     organizations: list[OrganizationOption]
 
 
+class UserImportRow(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    display_name: str = Field(min_length=1, max_length=255)
+    role: str | None = None
+    is_active: str | bool | None = None
+    teams: str | None = Field(
+        default=None,
+        description="Comma- or semicolon-separated team names",
+    )
+    organization: str | None = Field(
+        default=None,
+        description="Organization name (must match an active org)",
+    )
+
+
+class UserImportRequest(BaseModel):
+    rows: list[UserImportRow] = Field(min_length=1, max_length=500)
+    default_role: str = Field(default=ROLE_SUBMITTER, pattern="^(end_user|agent|admin|top_admin)$")
+    on_duplicate: str = Field(default="skip", pattern="^(skip|update)$")
+
+
+class UserImportRowError(BaseModel):
+    row: int
+    email: str | None = None
+    message: str
+
+
+class UserImportResult(BaseModel):
+    total: int
+    created: int
+    updated: int
+    skipped: int
+    failed: int
+    errors: list[UserImportRowError] = Field(default_factory=list)
+
+
 def user_to_admin_read(
     user,
     *,

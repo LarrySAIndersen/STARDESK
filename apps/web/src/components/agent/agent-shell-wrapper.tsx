@@ -41,6 +41,15 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   const showUsersNav = canManageUsers(currentUser);
 
+  if (pathname.startsWith("/classic")) {
+    return (
+      <>
+        <ClientSessionHydrator />
+        {children}
+      </>
+    );
+  }
+
   if (userMustChangePassword(currentUser) && onChangePasswordPage) {
     return (
       <>

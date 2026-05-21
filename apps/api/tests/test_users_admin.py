@@ -395,6 +395,37 @@ async def test_create_user_clone_applies_source_settings(
 
 
 @pytest.mark.asyncio
+async def test_import_users_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    from star_itsm_api.schemas.user_admin import UserImportResult
+
+    sample = UserImportResult(
+        total=1,
+        created=1,
+        updated=0,
+        skipped=0,
+        failed=0,
+        errors=[],
+    )
+    with patch(
+        "star_itsm_api.routers.users.import_users_admin",
+        new_callable=AsyncMock,
+        return_value=sample,
+    ):
+        response = await api_client.post(
+            "/api/v1/users/import",
+            json={
+                "rows": [{"email": "import@example.dk", "display_name": "Import Test"}],
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["created"] == 1
+
+
+@pytest.mark.asyncio
 async def test_create_user_assign_top_admin_forbidden_for_admin(
     override_db: AsyncMock,
     api_client: AsyncClient,

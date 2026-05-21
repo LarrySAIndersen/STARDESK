@@ -21,6 +21,8 @@ from star_itsm_api.schemas.user_admin import (
     UserAdminPasswordReset,
     UserAdminRead,
     UserAdminUpdate,
+    UserImportRequest,
+    UserImportResult,
 )
 from star_itsm_api.services.permissions import can_manage_users
 from star_itsm_api.schemas.auth import UserRead, user_to_read
@@ -40,6 +42,7 @@ from star_itsm_api.services.user_admin import (
     set_user_password,
     sync_user_teams,
 )
+from star_itsm_api.services.user_import import import_users_admin
 from star_itsm_api.models.organization import Organization
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -75,6 +78,23 @@ async def list_users(
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
+
+
+@router.post("/import", response_model=UserImportResult)
+async def import_users(
+    payload: UserImportRequest,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin_session()),
+) -> UserImportResult:
+    if not can_manage_users(current_user):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if payload.default_role == ROLE_TOP_ADMIN:
+        _assert_can_assign_role(current_user, ROLE_TOP_ADMIN)
+    return await import_users_admin(
+        db,
+        payload=payload,
+        actor_role=current_user.role,
+    )
 
 
 @router.post("", response_model=UserAdminCreated, status_code=status.HTTP_201_CREATED)

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
+import { classicHomePath, modernHomePath } from "@/lib/classic-ui-mode";
 import { CHANGE_PASSWORD_PATH } from "@/lib/must-change-password";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -30,6 +31,7 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useClassicUi, setUseClassicUi] = useState(false);
 
   const inputClass = cn(fieldError && "border-destructive ring-destructive/30");
 
@@ -69,7 +71,13 @@ export function LoginForm() {
         window.location.replace(CHANGE_PASSWORD_PATH);
         return;
       }
-      window.location.replace("/");
+      const uiMode = useClassicUi ? "classic" : "modern";
+      await fetch("/api/auth/ui-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ mode: uiMode }),
+      });
+      window.location.replace(useClassicUi ? classicHomePath() : modernHomePath());
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login mislykkedes — prøv igen",
@@ -150,6 +158,20 @@ export function LoginForm() {
                     required
                   />
                 </div>
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={useClassicUi}
+                    onChange={(e) => setUseClassicUi(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-medium">Klassisk visning</span>
+                    <span className="text-muted-foreground block text-xs">
+                      TOPdesk-lignende moduler (Incidents, Changes, …) — kun for medarbejdere
+                    </span>
+                  </span>
+                </label>
                 <div className="space-y-2">
                   <Label htmlFor="password">Adgangskode</Label>
                   <Input
