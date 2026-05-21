@@ -1,4 +1,4 @@
-import { isStaff } from "@/lib/auth";
+import { canManageUsers, isStaff } from "@/lib/auth";
 import type { User } from "@/types/user";
 
 /** UI flow preference: modern STARdesk wireframe vs classic (TOPdesk-style) modules. */
@@ -39,7 +39,19 @@ export function isModernOnlyUser(uiModeLock: UiModeLock): boolean {
   return uiModeLock === "modern";
 }
 
-/** Staff routes outside classic shell — redirect classic-only users away. */
+/** Admin / supporter / top_admin — may toggle between modern and classic in the sidebar. */
+export function canChooseUiMode(user: User | null): boolean {
+  return isStaff(user) && canManageUsers(user);
+}
+
+export function canChooseClassicUi(user: User | null): boolean {
+  return canChooseUiMode(user) && !isClassicOnlyUser(user?.ui_mode);
+}
+
+export function canChooseModernUi(user: User | null): boolean {
+  return canChooseUiMode(user) && !isModernOnlyUser(user?.ui_mode);
+}
+
 /** Where staff should land after login or when visiting `/`. */
 export function staffLandingPath(
   user: User | null,
@@ -54,6 +66,7 @@ export function staffLandingPath(
   return modernHomePath();
 }
 
+/** Staff routes outside classic shell — redirect classic-only users away. */
 export function isModernStaffPath(pathname: string): boolean {
   if (pathname.startsWith("/classic")) return false;
   if (pathname.startsWith("/portal")) return false;

@@ -15,9 +15,6 @@ export function normalizeUserRole(role: string | undefined): UserRole | null {
   if (key === "admin" || key === "administrator") {
     return "admin";
   }
-  if (key === "supporter") {
-    return "supporter";
-  }
   if (key === "agent") {
     return "agent";
   }
@@ -37,32 +34,12 @@ export function resolveUserRole(user: Pick<User, "role" | "role_label">): UserRo
   );
 }
 
-function roleLabelIndicatesStaff(roleLabel: string | undefined): boolean {
-  const label = roleLabel?.trim().toLowerCase() ?? "";
-  if (!label) {
-    return false;
-  }
-  return (
-    label.includes("supporter") ||
-    label.includes("administrator") ||
-    label.includes("topadministrator") ||
-    label === "agent" ||
-    label.includes("sagsbehandler") ||
-    label.includes("operatør") ||
-    label === "operator"
-  );
-}
-
 function roleLabelIndicatesAdmin(roleLabel: string | undefined): boolean {
   const label = roleLabel?.trim().toLowerCase() ?? "";
   if (!label) {
     return false;
   }
-  return (
-    label.includes("administrator") ||
-    label.includes("topadministrator") ||
-    label === "supporter"
-  );
+  return label.includes("administrator") || label.includes("topadministrator");
 }
 
 /** Parse `stardesk_user` from server cookies or `document.cookie` (encoded or plain JSON). */
@@ -156,15 +133,14 @@ export function isStaff(user: User | null): boolean {
     return false;
   }
   const role = resolveUserRole(user);
-  if (
-    role === "agent" ||
-    role === "admin" ||
-    role === "top_admin" ||
-    role === "supporter"
-  ) {
-    return true;
+  return role === "agent" || role === "admin" || role === "top_admin";
+}
+
+export function isTopAdmin(user: User | null): boolean {
+  if (!user) {
+    return false;
   }
-  return roleLabelIndicatesStaff(user.role_label);
+  return resolveUserRole(user) === "top_admin";
 }
 
 export function isAdmin(user: User | null): boolean {
@@ -172,7 +148,7 @@ export function isAdmin(user: User | null): boolean {
     return false;
   }
   const role = resolveUserRole(user);
-  if (role === "admin" || role === "top_admin" || role === "supporter") {
+  if (role === "admin" || role === "top_admin") {
     return true;
   }
   return roleLabelIndicatesAdmin(user.role_label);

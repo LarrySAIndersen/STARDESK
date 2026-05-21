@@ -1,8 +1,16 @@
 import { ClassicModuleTable } from "@/components/classic/classic-module-table";
 import { ClassicShellWrapper } from "@/components/classic/classic-shell-wrapper";
-import { loadClassicBoardTickets } from "@/lib/classic-board-tickets";
+import { apiGetServer } from "@/lib/api-server";
 import type { ClassicModuleDef } from "@/lib/classic-modules";
 import type { Ticket } from "@/types/ticket";
+
+async function loadBoardTickets(): Promise<Ticket[]> {
+  try {
+    return await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
+  } catch {
+    return [];
+  }
+}
 
 export async function ClassicModulePage({
   module: classicModule,
@@ -12,7 +20,7 @@ export async function ClassicModulePage({
   /** Optional filter (e.g. my-work: assigned to current user). */
   extraFilter?: (ticket: Ticket) => boolean;
 }) {
-  const all = await loadClassicBoardTickets();
+  const all = await loadBoardTickets();
   const filtered = all.filter(
     (t) => classicModule.match(t) && (extraFilter ? extraFilter(t) : true),
   );

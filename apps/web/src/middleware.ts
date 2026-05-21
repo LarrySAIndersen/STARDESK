@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { isStaff, parseUserFromCookie, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
-import { staffLandingPath, UI_MODE_COOKIE } from "@/lib/classic-ui-mode";
+import { parseUserFromCookie, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
 import {
   CHANGE_PASSWORD_PATH,
   isPasswordChangeExemptPath,
@@ -135,15 +134,6 @@ function handleJwtSession(request: NextRequest): NextResponse {
       !isPasswordChangeExemptPath(pathname)
     ) {
       return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, request.url));
-    }
-    if (pathname === "/" && isStaff(sessionUser)) {
-      const landing = staffLandingPath(
-        sessionUser,
-        request.cookies.get(UI_MODE_COOKIE)?.value,
-      );
-      if (landing !== "/") {
-        return NextResponse.redirect(new URL(landing, request.url));
-      }
     }
   }
 

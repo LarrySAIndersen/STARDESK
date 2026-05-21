@@ -86,7 +86,7 @@ export interface UserImportRowInput {
 
 export interface UserImportRequest {
   rows: UserImportRowInput[];
-  default_role: "end_user" | "agent" | "admin" | "top_admin" | "supporter";
+  default_role: "end_user" | "agent" | "admin" | "top_admin";
   on_duplicate: "skip" | "update";
 }
 

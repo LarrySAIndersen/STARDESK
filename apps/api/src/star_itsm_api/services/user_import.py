@@ -167,12 +167,12 @@ async def import_users_admin(
                 UserImportRowError(row=index, email=email, message=f"Ukendt rolle: {row.role}"),
             )
             continue
-        if role == ROLE_TOP_ADMIN and actor_role != ROLE_TOP_ADMIN:
+        if role == ROLE_TOP_ADMIN:
             errors.append(
                 UserImportRowError(
                     row=index,
                     email=email,
-                    message="Kun topadministrator kan importere topadministrator",
+                    message="Rollen Topadministrator kan ikke importeres",
                 ),
             )
             continue

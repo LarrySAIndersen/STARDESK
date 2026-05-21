@@ -21,7 +21,7 @@ export function ClassicShellClient({
         <ClassicTopBar title={title} user={user} />
         <ClassicWorkTabs />
         <div className="classic-body flex min-h-0 flex-1">
-          <ClassicSidebar />
+          <ClassicSidebar user={user} />
           <main id="main-content" className="classic-main min-h-0 flex-1 overflow-y-auto">
             {children}
           </main>

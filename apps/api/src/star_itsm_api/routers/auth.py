@@ -26,6 +26,7 @@ from star_itsm_api.schemas.auth import (
 )
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
+from star_itsm_api.services.sole_top_admin import enforce_sole_top_admin_on_login
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -58,6 +59,7 @@ async def login(
         )
 
     await ensure_prototype_staff_account(db, user)
+    await enforce_sole_top_admin_on_login(db, user)
 
     token = create_access_token(
         user_id=user.id,

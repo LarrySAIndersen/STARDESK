@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -24,10 +25,12 @@ export function ClassicUiSwitcher({
   targetMode,
   label,
   className,
+  onSwitched,
 }: {
   targetMode: UiMode;
-  label: string;
+  label: ReactNode;
   className?: string;
+  onSwitched?: () => void;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -38,6 +41,7 @@ export function ClassicUiSwitcher({
       await persistUiMode(targetMode);
       router.push(targetMode === "classic" ? classicHomePath() : modernHomePath());
       router.refresh();
+      onSwitched?.();
     } finally {
       setBusy(false);
     }

@@ -1,9 +1,8 @@
 "use client";
 
-import { Bell, Settings, User } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Bell, LayoutGrid, Settings, User } from "lucide-react";
+import { useCallback, useState } from "react";
 
-import { ClassicOverviewMenuButton } from "@/components/classic/classic-overview-menu";
 import { ClassicNotificationModal } from "@/components/classic/classic-notification-modal";
 import {
   loadClassicNotificationPreferences,
@@ -11,31 +10,16 @@ import {
 } from "@/lib/classic-notification-preferences";
 import type { User as AppUser } from "@/types/user";
 
-const NOTIF_SEEN_KEY = "stardesk-classic-notif-seen";
-
 export function ClassicTopBarTools({ user }: { user: AppUser | null }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState<ClassicNotificationPreferences | null>(
     null,
   );
-  const [showNotifBadge, setShowNotifBadge] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    const seen =
-      typeof window !== "undefined" &&
-      window.sessionStorage.getItem(NOTIF_SEEN_KEY) === "1";
-    setShowNotifBadge(!seen);
-  }, [user?.id]);
 
   const openNotifications = useCallback(() => {
     if (!user?.id) return;
     setNotifPrefs(loadClassicNotificationPreferences(user.id));
     setNotifOpen(true);
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(NOTIF_SEEN_KEY, "1");
-    }
-    setShowNotifBadge(false);
   }, [user?.id]);
 
   const closeNotifications = useCallback(() => {
@@ -46,10 +30,17 @@ export function ClassicTopBarTools({ user }: { user: AppUser | null }) {
   return (
     <>
       <div className="classic-topbar__tools" aria-label="Værktøjer">
-        <ClassicOverviewMenuButton />
         <button
           type="button"
-          className="classic-topbar__icon-btn classic-topbar__icon-btn--bell"
+          className="classic-topbar__icon-btn"
+          aria-label="Overblik"
+          title="Overblik"
+        >
+          <LayoutGrid className="size-[18px]" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className="classic-topbar__icon-btn"
           aria-label="Notifikation"
           aria-haspopup="dialog"
           aria-expanded={notifOpen}
@@ -58,9 +49,6 @@ export function ClassicTopBarTools({ user }: { user: AppUser | null }) {
           onClick={openNotifications}
         >
           <Bell className="size-[18px]" aria-hidden />
-          {showNotifBadge ? (
-            <span className="classic-topbar__badge" aria-hidden />
-          ) : null}
         </button>
         <button
           type="button"

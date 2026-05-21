@@ -20,6 +20,7 @@ from star_itsm_api.routers import (
     health,
     integrations,
     knowledge_articles,
+    platform,
     reports,
     sf_chat,
     slack,
@@ -77,5 +78,6 @@ app.include_router(webhooks.router, prefix="/api/v1")
 app.include_router(cron.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
+app.include_router(platform.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(sf_chat.router, prefix="/api/v1")

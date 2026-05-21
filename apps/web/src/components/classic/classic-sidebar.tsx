@@ -2,17 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LayoutDashboard } from "lucide-react";
 
+import { SidebarUiModeSwitch } from "@/components/sidebar-ui-mode-switch";
 import { CLASSIC_MODULES } from "@/lib/classic-modules";
+import { canChooseModernUi } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
+import type { User } from "@/types/user";
 
 const PRIMARY_LINKS = [
   { href: "/classic", label: "Start" },
   { href: "/classic/my-work", label: "Mit arbejde" },
 ] as const;
 
-export function ClassicSidebar() {
+export function ClassicSidebar({ user }: { user?: User | null }) {
   const pathname = usePathname();
+  const showModernSwitch = canChooseModernUi(user ?? null);
+  const onModernRoute = pathname === "/" || (!pathname.startsWith("/classic") && !pathname.startsWith("/portal"));
 
   return (
     <nav className="classic-sidebar" aria-label="Klassisk navigation">
@@ -63,6 +69,20 @@ export function ClassicSidebar() {
           </Link>
         </li>
       </ul>
+
+      {showModernSwitch ? (
+        <>
+          <p className="classic-sidebar__heading">Grænseflade</p>
+          <div className="classic-sidebar__switch">
+            <SidebarUiModeSwitch
+              targetMode="modern"
+              label="Moderne STARdesk"
+              icon={LayoutDashboard}
+              active={onModernRoute}
+            />
+          </div>
+        </>
+      ) : null}
     </nav>
   );
 }

@@ -10,15 +10,11 @@ import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import {
-  classicHomePath,
-  isClassicOnlyUser,
-  isModernStaffPath,
-} from "@/lib/classic-ui-mode";
-import {
   CHANGE_PASSWORD_PATH,
   isPasswordChangeExemptPath,
   userMustChangePassword,
 } from "@/lib/must-change-password";
+import { isStaffPathBlockedForUser } from "@/lib/sidebar-nav-visibility-server";
 
 export async function AgentShellWrapper({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -42,14 +38,6 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   if (userMustChangePassword(currentUser) && !onChangePasswordPage) {
     redirect(CHANGE_PASSWORD_PATH);
-  }
-
-  if (
-    isStaff(currentUser) &&
-    isClassicOnlyUser(currentUser?.ui_mode) &&
-    isModernStaffPath(pathname)
-  ) {
-    redirect(classicHomePath());
   }
 
   const showUsersNav = canManageUsers(currentUser);
@@ -84,6 +72,9 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   }
 
   if (isStaff(currentUser)) {
+    if (await isStaffPathBlockedForUser(pathname, currentUser)) {
+      redirect("/");
+    }
     return (
       <div className="flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden">
         <ClientSessionHydrator />

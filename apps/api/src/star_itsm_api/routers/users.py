@@ -11,6 +11,11 @@ from star_itsm_api.core.security import (
     require_admin,
     require_admin_session,
 )
+from star_itsm_api.core.top_admin_policy import (
+    assert_may_assign_role,
+    can_hold_top_admin_role,
+    role_after_top_admin_policy,
+)
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.user_admin import (
@@ -48,12 +53,20 @@ from star_itsm_api.models.organization import Organization
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def _assert_can_assign_role(actor: User, new_role: str) -> None:
-    if new_role == ROLE_TOP_ADMIN and actor.role != ROLE_TOP_ADMIN:
+def _assert_can_assign_role(actor: User, new_role: str, *, target_email: str) -> None:
+    try:
+        assert_may_assign_role(actor=actor, target_email=target_email, new_role=new_role)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "top_admin_reserved":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Rollen Topadministrator er reserveret til én bestemt konto",
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Kun topadministrator kan tildele rollen Topadministrator",
-        )
+        ) from exc
 
 
 @router.get("/meta", response_model=UserAdminMeta)
@@ -89,7 +102,10 @@ async def import_users(
     if not can_manage_users(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     if payload.default_role == ROLE_TOP_ADMIN:
-        _assert_can_assign_role(current_user, ROLE_TOP_ADMIN)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rollen Topadministrator kan ikke importeres",
+        )
     return await import_users_admin(
         db,
         payload=payload,
@@ -118,12 +134,14 @@ async def create_user(
         organization_id = source.organization_id
         team_ids = [team.id for team in source.teams]
 
-    _assert_can_assign_role(current_user, role)
+    email = payload.email.lower().strip()
+    role = role_after_top_admin_policy(email, role)
+    _assert_can_assign_role(current_user, role, target_email=email)
 
     try:
         created, temporary_password = await create_user_admin(
             db,
-            email=payload.email,
+            email=email,
             display_name=payload.display_name,
             role=role,
             is_active=payload.is_active,
@@ -215,14 +233,22 @@ async def update_user(
     updates = payload.model_dump(exclude_unset=True)
 
     if "role" in updates:
-        _assert_can_assign_role(current_user, updates["role"])
-        user.role = updates["role"]
+        target_email = (
+            str(updates["email"]).lower().strip()
+            if "email" in updates
+            else user.email
+        )
+        new_role = role_after_top_admin_policy(target_email, updates["role"])
+        _assert_can_assign_role(current_user, new_role, target_email=target_email)
+        user.role = new_role
 
     if "display_name" in updates:
         user.display_name = updates["display_name"].strip()
 
     if "email" in updates:
         email = str(updates["email"]).lower().strip()
+        if user.role == ROLE_TOP_ADMIN and not can_hold_top_admin_role(email):
+            user.role = ROLE_ADMIN
         if await email_taken(db, email, exclude_user_id=user.id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

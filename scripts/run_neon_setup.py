@@ -33,6 +33,7 @@ MIGRATIONS = [
     "docs/user-avatar-url-migration.sql",
     "docs/supporter-role-migration.sql",
     "docs/user-ui-mode-migration.sql",
+    "docs/platform-settings-migration.sql",
 ]
 
 SEEDS = [
