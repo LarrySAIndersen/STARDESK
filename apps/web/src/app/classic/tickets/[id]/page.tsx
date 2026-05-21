@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
 
 import { ClassicShellWrapper } from "@/components/classic/classic-shell-wrapper";
 import { ClassicUiSwitcher } from "@/components/classic/classic-ui-switcher";
+import { TicketCaseLayout } from "@/components/ticket/ticket-case-layout";
 import { apiGetServer } from "@/lib/api-server";
-import { statusLabel, priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import type { TicketDetail } from "@/types/ticket";
 
 export const dynamic = "force-dynamic";
@@ -28,43 +29,31 @@ export default async function ClassicTicketDetailPage({
 
   return (
     <ClassicShellWrapper title={ticket.ticket_number}>
-      <div className="classic-page">
-        <header className="classic-page__header">
-          <h2 className="classic-page__title">
-            {ticket.ticket_number} — {ticket.title}
-          </h2>
-          <p className="classic-page__meta">
-            {ticketTypeLabel(ticket.ticket_type)} · {statusLabel(ticket.status)} ·{" "}
-            {priorityLabel(ticket.priority)}
-          </p>
-        </header>
-
-        <dl className="classic-detail-grid">
-          <div>
-            <dt>Gruppe</dt>
-            <dd>{ticket.assigned_team_name ?? "—"}</dd>
+      <TicketCaseLayout
+        ticket={ticket}
+        staffView
+        breadcrumb={
+          <nav className="portal-v2-breadcrumb text-[12px]" aria-label="Brødkrumme">
+            <Link href="/classic/incidents" className="portal-v2-breadcrumb-link">
+              Incidents
+            </Link>
+            <ChevronRight className="size-3.5 opacity-50" aria-hidden />
+            <span className="text-foreground font-medium">{ticket.ticket_number}</span>
+          </nav>
+        }
+        below={
+          <div className="flex flex-wrap gap-3">
+            <Link href={`/tickets/${ticket.id}`} className="classic-btn">
+              Fuld sag i moderne visning
+            </Link>
+            <ClassicUiSwitcher
+              targetMode="modern"
+              label="Skift til moderne UI"
+              className="classic-btn classic-btn--secondary"
+            />
           </div>
-          <div>
-            <dt>Behandler</dt>
-            <dd>{ticket.assigned_user_name ?? "—"}</dd>
-          </div>
-          <div>
-            <dt>Beskrivelse</dt>
-            <dd className="classic-detail-grid__block">{ticket.description || "—"}</dd>
-          </div>
-        </dl>
-
-        <div className="classic-detail-actions">
-          <Link href={`/tickets/${ticket.id}`} className="classic-btn">
-            Fuld sag i moderne visning
-          </Link>
-          <ClassicUiSwitcher
-            targetMode="modern"
-            label="Skift til moderne UI"
-            className="classic-btn classic-btn--secondary"
-          />
-        </div>
-      </div>
+        }
+      />
     </ClassicShellWrapper>
   );
 }

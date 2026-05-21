@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { ticketStatusBarColor } from "@/components/portal/ticket/ticket-status-colors";
 import { WireStatusBadge } from "@/components/wireframe/wire-badge";
@@ -7,26 +8,39 @@ import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import { formatDateTimeDa } from "@/lib/utils";
 import type { TicketDetail } from "@/types/ticket";
 
-function primaryAction(status: string): { label: string; href: string } {
+function primaryAction(
+  status: string,
+  commentFormId: string,
+): { label: string; href: string } {
   if (status === "resolved" || status === "closed" || status === "cancelled") {
     return { label: "Opret ny sag", href: "/tickets/new" };
   }
-  return { label: "Skriv opdatering", href: "#portal-comment-form" };
+  return { label: "Skriv opdatering", href: `#${commentFormId}` };
 }
 
-export function TicketHeader({ ticket }: { ticket: TicketDetail }) {
-  const action = primaryAction(ticket.status);
+export function TicketHeader({
+  ticket,
+  breadcrumb,
+  commentFormId = "portal-comment-form",
+}: {
+  ticket: TicketDetail;
+  breadcrumb?: ReactNode;
+  commentFormId?: string;
+}) {
+  const action = primaryAction(ticket.status, commentFormId);
   const barColor = ticketStatusBarColor(ticket.status);
 
   return (
     <header className="portal-v2-section space-y-4">
-      <nav className="portal-v2-breadcrumb text-[12px]" aria-label="Brødkrumme">
-        <Link href="/portal" className="portal-v2-breadcrumb-link">
-          Oversigt
-        </Link>
-        <ChevronRight className="size-3.5 opacity-50" aria-hidden />
-        <span className="text-foreground font-medium">Sag</span>
-      </nav>
+      {breadcrumb ?? (
+        <nav className="portal-v2-breadcrumb text-[12px]" aria-label="Brødkrumme">
+          <Link href="/portal" className="portal-v2-breadcrumb-link">
+            Oversigt
+          </Link>
+          <ChevronRight className="size-3.5 opacity-50" aria-hidden />
+          <span className="text-foreground font-medium">Sag</span>
+        </nav>
+      )}
 
       <div
         className="portal-v2-card border-t-4 overflow-hidden"
