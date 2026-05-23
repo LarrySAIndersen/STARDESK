@@ -141,8 +141,12 @@ async def build_dashboard(
 
     longest_open: LongestOpenTicket | None = None
     if longest is not None:
-        enriched_rows = await tickets_to_read_list(db, [longest])
-        enriched_row = enriched_rows[0] if enriched_rows else None
+        enriched_row = None
+        try:
+            enriched_rows = await tickets_to_read_list(db, [longest])
+            enriched_row = enriched_rows[0] if enriched_rows else None
+        except Exception:
+            enriched_row = None
         hours_open = longest_age * 24
         longest_open = LongestOpenTicket(
             id=longest.id,

@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
-import { TicketList } from "@/components/ticket-list";
+import { AgentWorkspace } from "@/components/agent-workspace";
+import { EndUserTicketPortal } from "@/components/end-user-ticket-portal";
 import { TicketListShell } from "@/components/ticket-list-shell";
 import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
 import { getServerUser } from "@/lib/auth-server";
@@ -35,17 +36,21 @@ export default async function HomePage() {
     redirect(classicHomePath());
   }
 
-  const list = (
-    <Suspense fallback={<TicketListSkeleton />}>
-      <TicketListShell>
-        <TicketList />
-      </TicketListShell>
-    </Suspense>
-  );
-
   if (staff) {
-    return list;
+    return (
+      <TicketListShell>
+        <AgentWorkspace />
+      </TicketListShell>
+    );
   }
 
-  return <main className="star-page">{list}</main>;
+  return (
+    <main className="star-page">
+      <Suspense fallback={<TicketListSkeleton />}>
+        <TicketListShell>
+          <EndUserTicketPortal currentUser={currentUser} />
+        </TicketListShell>
+      </Suspense>
+    </main>
+  );
 }

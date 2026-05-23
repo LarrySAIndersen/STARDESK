@@ -5,22 +5,25 @@ import { CLASSIC_MODULES } from "@/lib/classic-modules";
 import { apiGetServer } from "@/lib/api-server";
 import type { Ticket } from "@/types/ticket";
 
-async function loadCounts(): Promise<Record<string, number>> {
+async function loadCounts(): Promise<{
+  counts: Record<string, number>;
+  fetchError: string | null;
+}> {
   let tickets: Ticket[] = [];
   try {
     tickets = await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
   } catch {
-    return {};
+    return { counts: {}, fetchError: "Kunne ikke hente sager fra API." };
   }
   const counts: Record<string, number> = {};
   for (const classicModule of CLASSIC_MODULES) {
     counts[classicModule.id] = tickets.filter((t) => classicModule.match(t)).length;
   }
-  return counts;
+  return { counts, fetchError: null };
 }
 
 export async function ClassicHome() {
-  const counts = await loadCounts();
+  const { counts, fetchError } = await loadCounts();
 
   return (
     <ClassicShellWrapper title="Start">
@@ -32,6 +35,12 @@ export async function ClassicHome() {
             Data hentes fra samme database som den moderne visning.
           </p>
         </header>
+
+        {fetchError ? (
+          <p className="text-star-red text-sm" role="alert">
+            {fetchError}
+          </p>
+        ) : null}
 
         <div className="classic-tiles">
           {CLASSIC_MODULES.map((classicModule) => (

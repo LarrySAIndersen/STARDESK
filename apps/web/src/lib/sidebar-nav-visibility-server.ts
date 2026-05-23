@@ -2,7 +2,8 @@ import "server-only";
 
 import { apiGetServer } from "@/lib/api-server";
 import { isTopAdmin } from "@/lib/auth";
-import { isNavPathHidden } from "@/lib/agent-nav";
+import { firstAllowedStaffPath, isStaffPathBlocked } from "@/lib/agent-nav";
+import { canManageNavVisibility } from "@/lib/top-admin";
 import type { User } from "@/types/user";
 
 export async function fetchHiddenNavIds(): Promise<string[]> {
@@ -24,5 +25,12 @@ export async function isStaffPathBlockedForUser(
     return false;
   }
   const hidden = await fetchHiddenNavIds();
-  return isNavPathHidden(pathname, hidden, isTopAdmin(user));
+  return isStaffPathBlocked(pathname, hidden, user);
+}
+
+export async function firstAllowedStaffPathForUser(
+  user: User | null,
+): Promise<string> {
+  const hidden = await fetchHiddenNavIds();
+  return firstAllowedStaffPath(hidden, canManageNavVisibility(user));
 }

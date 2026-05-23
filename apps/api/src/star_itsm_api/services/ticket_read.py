@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from sqlalchemy import func, select
@@ -21,6 +22,8 @@ from star_itsm_api.services.ticket_hierarchy import (
     get_related_major_tickets,
     tickets_to_summaries,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def _load_list_context(
@@ -189,23 +192,36 @@ async def _load_active_teams(db: AsyncSession) -> list[_TeamRef]:
 
 
 async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[TicketRead]:
-    sub_map, categories, subcategories, teams, users = await _load_list_context(db, tickets)
-    parents, child_counts = await _load_hierarchy_context(db, tickets)
-    active_teams = await _load_active_teams(db)
-    return [
-        _ticket_to_read(
-            ticket,
-            sub_map.get(ticket.id, []),
-            categories=categories,
-            subcategories=subcategories,
-            teams=teams,
-            users=users,
-            parents=parents,
-            child_counts=child_counts,
-            active_teams=active_teams,
-        )
-        for ticket in tickets
-    ]
+    if not tickets:
+        return []
+    try:
+        sub_map, categories, subcategories, teams, users = await _load_list_context(db, tickets)
+        parents, child_counts = await _load_hierarchy_context(db, tickets)
+        active_teams = await _load_active_teams(db)
+    except Exception:
+        logger.exception("Ticket list context query failed; using minimal payloads")
+        return [_fallback_ticket_read(ticket) for ticket in tickets]
+
+    reads: list[TicketRead] = []
+    for ticket in tickets:
+        try:
+            reads.append(
+                _ticket_to_read(
+                    ticket,
+                    sub_map.get(ticket.id, []),
+                    categories=categories,
+                    subcategories=subcategories,
+                    teams=teams,
+                    users=users,
+                    parents=parents,
+                    child_counts=child_counts,
+                    active_teams=active_teams,
+                )
+            )
+        except Exception:
+            logger.exception("Failed to serialize ticket %s", ticket.id)
+            reads.append(_fallback_ticket_read(ticket))
+    return reads
 
 
 async def ticket_hierarchy_detail_extras(

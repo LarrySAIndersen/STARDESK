@@ -9,7 +9,10 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
-import { isStaffPathBlockedForUser } from "@/lib/sidebar-nav-visibility-server";
+import {
+  firstAllowedStaffPathForUser,
+  isStaffPathBlockedForUser,
+} from "@/lib/sidebar-nav-visibility-server";
 
 export async function AgentShellWrapper({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -43,7 +46,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   if (isStaff(currentUser)) {
     if (await isStaffPathBlockedForUser(pathname, currentUser)) {
-      redirect("/");
+      redirect(await firstAllowedStaffPathForUser(currentUser));
     }
     return (
       <div className="flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden">

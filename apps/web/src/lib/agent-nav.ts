@@ -19,7 +19,9 @@ import {
   Wrench,
 } from "lucide-react";
 
+import { canManageNavVisibility } from "@/lib/top-admin";
 import { INTEGRATION_META } from "@/lib/integrations-config";
+import type { User } from "@/types/user";
 
 export type AgentNavItem = {
   id: string;
@@ -127,6 +129,27 @@ export function filterNavItemsForViewer(
   }
   const hidden = new Set(hiddenNavIds);
   return items.filter((item) => !hidden.has(item.id));
+}
+
+/** First staff route that is not hidden — fallback when blocked from current path. */
+export function firstAllowedStaffPath(
+  hiddenNavIds: string[],
+  isTopAdmin: boolean,
+): string {
+  const items = buildAgentNavItems({ staff: true, showAdmin: true });
+  const visible = filterNavItemsForViewer(items, hiddenNavIds, isTopAdmin);
+  return visible[0]?.href ?? "/service-desk";
+}
+
+export function isStaffPathBlocked(
+  pathname: string,
+  hiddenNavIds: string[],
+  user: User | null,
+): boolean {
+  if (!user) {
+    return false;
+  }
+  return isNavPathHidden(pathname, hiddenNavIds, canManageNavVisibility(user));
 }
 
 export function isNavPathHidden(

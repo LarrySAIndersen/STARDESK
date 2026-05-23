@@ -29,6 +29,11 @@ function isAuthApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/auth/");
 }
 
+/** Browser API proxy — must return JSON 401, not redirect to login HTML. */
+function isProxyApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api/proxy/");
+}
+
 /** Public files from `public/` (logos, icons) — must not require JWT or Basic Auth. */
 function isStaticPublicAsset(pathname: string): boolean {
   if (pathname.startsWith("/images/")) return true;
@@ -110,7 +115,7 @@ function handleJwtSession(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
 
-  if (isAuthApiPath(pathname)) {
+  if (isAuthApiPath(pathname) || isProxyApiPath(pathname)) {
     return nextWithPathname(request);
   }
 

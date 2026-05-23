@@ -22,6 +22,7 @@ export function AgentDashboardClient({
   const [teams, setTeams] = useState(initialTeams);
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [slackTabRequest, setSlackTabRequest] = useState(0);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,9 +35,16 @@ export function AgentDashboardClient({
         if (!cancelled) {
           setTickets(freshTickets);
           setTeams(freshTeams);
+          setRefreshError(null);
         }
-      } catch {
-        // keep SSR payload on failure
+      } catch (error) {
+        if (!cancelled) {
+          setRefreshError(
+            error instanceof Error
+              ? error.message
+              : "Kunne ikke opdatere sager. Viser seneste kendte data.",
+          );
+        }
       }
     })();
     return () => {
@@ -72,6 +80,11 @@ export function AgentDashboardClient({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="wire-scroll-content min-h-0 flex-1">
+        {refreshError ? (
+          <p className="text-star-red mb-3 px-1 text-sm" role="alert">
+            {refreshError}
+          </p>
+        ) : null}
         {aiTicket ? (
           <WireAiBanner>
             <strong>

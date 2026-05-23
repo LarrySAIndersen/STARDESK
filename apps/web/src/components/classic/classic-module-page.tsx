@@ -4,11 +4,14 @@ import { apiGetServer } from "@/lib/api-server";
 import type { ClassicModuleDef } from "@/lib/classic-modules";
 import type { Ticket } from "@/types/ticket";
 
-async function loadBoardTickets(): Promise<Ticket[]> {
+async function loadBoardTickets(): Promise<{ tickets: Ticket[]; fetchError: string | null }> {
   try {
-    return await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
+    const tickets = await apiGetServer<Ticket[]>(
+      "/api/v1/tickets?board=true&limit=500&open_only=true",
+    );
+    return { tickets, fetchError: null };
   } catch {
-    return [];
+    return { tickets: [], fetchError: "Kunne ikke hente sager fra API." };
   }
 }
 
@@ -20,7 +23,7 @@ export async function ClassicModulePage({
   /** Optional filter (e.g. my-work: assigned to current user). */
   extraFilter?: (ticket: Ticket) => boolean;
 }) {
-  const all = await loadBoardTickets();
+  const { tickets: all, fetchError } = await loadBoardTickets();
   const filtered = all.filter(
     (t) => classicModule.match(t) && (extraFilter ? extraFilter(t) : true),
   );
@@ -35,10 +38,16 @@ export async function ClassicModulePage({
             {filtered.length} åbne sager · samme data som moderne STARdesk
           </p>
         </header>
-        <ClassicModuleTable
-          tickets={filtered}
-          emptyMessage={`Ingen åbne sager i ${classicModule.label.toLowerCase()}.`}
-        />
+        {fetchError ? (
+          <p className="text-star-red text-sm" role="alert">
+            {fetchError}
+          </p>
+        ) : (
+          <ClassicModuleTable
+            tickets={filtered}
+            emptyMessage={`Ingen åbne sager i ${classicModule.label.toLowerCase()}.`}
+          />
+        )}
       </div>
     </ClassicShellWrapper>
   );

@@ -9,9 +9,11 @@ export const dynamic = "force-dynamic";
 export default async function ClassicMyWorkPage() {
   const user = await getServerUser();
   let tickets: Ticket[] = [];
+  let fetchError: string | null = null;
   try {
     tickets = await apiGetServer<Ticket[]>("/api/v1/tickets?board=true&limit=500&open_only=true");
   } catch {
+    fetchError = "Kunne ikke hente sager fra API.";
     tickets = [];
   }
 
@@ -29,7 +31,13 @@ export default async function ClassicMyWorkPage() {
           </p>
           <p className="classic-page__meta">{mine.length} sager</p>
         </header>
-        <ClassicModuleTable tickets={mine} emptyMessage="Ingen åbne sager tildelt dig." />
+        {fetchError ? (
+          <p className="text-star-red text-sm" role="alert">
+            {fetchError}
+          </p>
+        ) : (
+          <ClassicModuleTable tickets={mine} emptyMessage="Ingen åbne sager tildelt dig." />
+        )}
       </div>
     </ClassicShellWrapper>
   );

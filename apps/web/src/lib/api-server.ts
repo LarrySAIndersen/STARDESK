@@ -5,6 +5,9 @@ import { ApiError } from "@/lib/api";
 import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
 import { TOKEN_COOKIE } from "@/lib/auth";
 
+/** Avoid infinite SSR Suspense when upstream is unreachable. */
+const SERVER_FETCH_TIMEOUT_MS = 25_000;
+
 async function authHeaders(): Promise<HeadersInit> {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
   return {
@@ -30,6 +33,7 @@ export async function apiGetServer<T>(
   const revalidate = options?.revalidate;
   const response = await fetch(buildBackendUrl(path), {
     headers: await authHeaders(),
+    signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     ...(revalidate !== undefined
       ? { next: { revalidate } }
       : { cache: "no-store" as const }),

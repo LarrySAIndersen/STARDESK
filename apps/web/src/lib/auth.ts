@@ -135,7 +135,12 @@ export function isStaff(user: User | null): boolean {
     return false;
   }
   const role = resolveUserRole(user);
-  return role === "agent" || role === "admin" || role === "top_admin";
+  return (
+    role === "agent" ||
+    role === "admin" ||
+    role === "top_admin" ||
+    role === "supporter"
+  );
 }
 
 export function isTopAdmin(user: User | null): boolean {

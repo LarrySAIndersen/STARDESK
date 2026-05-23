@@ -1,5 +1,6 @@
 import { AgentDashboardClient } from "@/components/agent-dashboard-client";
 import { AgentOperationsHome } from "@/components/agent-operations-home";
+import { ApiError } from "@/lib/api";
 import { apiGetServer } from "@/lib/api-server";
 import { canManageUsers } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
@@ -11,6 +12,22 @@ import type { User } from "@/types/user";
 
 function defaultScopeForUser(user: User | null): DashboardScope {
   return canManageUsers(user) ? "all" : "personal";
+}
+
+function formatWorkspaceFetchError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 401) {
+      return "Din session er udløbet. Log ind igen.";
+    }
+    if (error.status === 403) {
+      return "Du har ikke adgang til at hente dashboard-data.";
+    }
+    return `Kunne ikke hente data fra API (${error.status}): ${error.message}`;
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return "API svarer ikke i tide. Tjek at backend kører og at NEXT_PUBLIC_API_URL er korrekt.";
+  }
+  return "Kunne ikke hente data fra API. Tjek at backend kører.";
 }
 
 export async function AgentWorkspace() {
@@ -33,8 +50,8 @@ export async function AgentWorkspace() {
     dashboard = dashboardData;
     tickets = boardTickets;
     teams = teamList;
-  } catch {
-    fetchError = "Kunne ikke hente data fra API. Tjek at backend kører.";
+  } catch (error) {
+    fetchError = formatWorkspaceFetchError(error);
   }
 
   if (fetchError) {
