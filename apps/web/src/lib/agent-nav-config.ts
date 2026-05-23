@@ -68,6 +68,59 @@ export function buildDefaultNavLayout(
   return { version: NAV_LAYOUT_VERSION, entries };
 }
 
+const VALID_SECTION_IDS = new Set<NavSectionId>(NAV_SECTIONS.map((section) => section.id));
+
+function isValidNavLayoutEntry(
+  entry: unknown,
+  availableIds: Set<string>,
+): entry is NavLayoutEntry {
+  if (!entry || typeof entry !== "object") {
+    return false;
+  }
+  const candidate = entry as NavLayoutEntry;
+  return (
+    typeof candidate.id === "string" &&
+    availableIds.has(candidate.id) &&
+    typeof candidate.sectionId === "string" &&
+    VALID_SECTION_IDS.has(candidate.sectionId)
+  );
+}
+
+export function sanitizeNavLayout(
+  saved: NavLayout | null,
+  defaultLayout: NavLayout,
+  availableIds: Set<string>,
+): NavLayout {
+  if (!saved || saved.version !== NAV_LAYOUT_VERSION || !Array.isArray(saved.entries)) {
+    return defaultLayout;
+  }
+
+  const entries = saved.entries.filter((entry) => isValidNavLayoutEntry(entry, availableIds));
+  const uniqueEntries: NavLayoutEntry[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of entries) {
+    if (seen.has(entry.id)) {
+      continue;
+    }
+    seen.add(entry.id);
+    uniqueEntries.push(entry);
+  }
+
+  if (uniqueEntries.length === 0) {
+    return defaultLayout;
+  }
+
+  for (const entry of defaultLayout.entries) {
+    if (seen.has(entry.id)) {
+      continue;
+    }
+    uniqueEntries.push(entry);
+  }
+
+  return { version: NAV_LAYOUT_VERSION, entries: uniqueEntries };
+}
+
 export function mergeNavLayout(
   saved: NavLayout | null,
   defaultLayout: NavLayout,
@@ -77,25 +130,7 @@ export function mergeNavLayout(
     return defaultLayout;
   }
 
-  const seen = new Set<string>();
-  const entries: NavLayoutEntry[] = [];
-
-  for (const entry of saved.entries) {
-    if (!availableIds.has(entry.id) || seen.has(entry.id)) {
-      continue;
-    }
-    seen.add(entry.id);
-    entries.push(entry);
-  }
-
-  for (const entry of defaultLayout.entries) {
-    if (seen.has(entry.id)) {
-      continue;
-    }
-    entries.push(entry);
-  }
-
-  return { version: NAV_LAYOUT_VERSION, entries };
+  return sanitizeNavLayout(saved, defaultLayout, availableIds);
 }
 
 export function groupLayoutBySection(

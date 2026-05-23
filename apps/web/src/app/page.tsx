@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
+import { AgentMainLoading } from "@/components/agent/agent-main-loading";
 import { AgentWorkspace } from "@/components/agent-workspace";
 import { EndUserTicketPortal } from "@/components/end-user-ticket-portal";
 import { TicketListShell } from "@/components/ticket-list-shell";
@@ -39,7 +40,9 @@ export default async function HomePage() {
   if (staff) {
     return (
       <TicketListShell>
-        <AgentWorkspace />
+        <Suspense fallback={<AgentMainLoading />}>
+          <AgentWorkspace />
+        </Suspense>
       </TicketListShell>
     );
   }

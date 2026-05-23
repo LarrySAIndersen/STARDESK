@@ -6,9 +6,9 @@ import type { AgentNavItem } from "@/lib/agent-nav";
 import {
   buildDefaultNavLayout,
   groupLayoutBySection,
-  mergeNavLayout,
   moveNavEntry,
   readNavLayoutFromStorage,
+  sanitizeNavLayout,
   type NavLayout,
   type NavSectionId,
   writeNavLayoutToStorage,
@@ -33,14 +33,18 @@ export function useNavLayout(
 
   useEffect(() => {
     const saved = readNavLayoutFromStorage();
-    setLayout(mergeNavLayout(saved, defaultLayout, availableIds));
+    const sanitized = sanitizeNavLayout(saved, defaultLayout, availableIds);
+    setLayout(sanitized);
+    if (saved && JSON.stringify(saved) !== JSON.stringify(sanitized)) {
+      writeNavLayoutToStorage(sanitized);
+    }
     setHydrated(true);
   }, [defaultLayout, availableIds]);
 
   useEffect(() => {
     const onChanged = () => {
       const saved = readNavLayoutFromStorage();
-      setLayout(mergeNavLayout(saved, defaultLayout, availableIds));
+      setLayout(sanitizeNavLayout(saved, defaultLayout, availableIds));
     };
     window.addEventListener(NAV_LAYOUT_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(NAV_LAYOUT_CHANGED_EVENT, onChanged);

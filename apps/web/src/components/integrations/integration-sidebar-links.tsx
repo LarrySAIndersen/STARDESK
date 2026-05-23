@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Mail, MessageSquare, Ticket, Wrench } from "lucide-react";
 
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
@@ -44,6 +44,7 @@ export function IntegrationSidebarLinks({
   showSectionHeader?: boolean;
   orderedIds?: string[];
 }) {
+  const router = useRouter();
   const config = useIntegrationsConfig();
   const hidden = new Set(hiddenNavIds);
   let visibleMeta = INTEGRATION_META.filter((meta) => {
@@ -79,10 +80,14 @@ export function IntegrationSidebarLinks({
         const isHiddenForOthers = hidden.has(navId);
 
         return (
-          <Link
+          <a
             key={meta.id}
             href={meta.href}
-            onClick={onNavigate}
+            onClick={(event) => {
+              event.preventDefault();
+              onNavigate?.();
+              router.push(meta.href);
+            }}
             className={cn(
               "wire-nav-item wire-nav-item--integration",
               active && "wire-nav-item--active",
@@ -106,7 +111,7 @@ export function IntegrationSidebarLinks({
                 className="ml-auto shrink-0"
               />
             )}
-          </Link>
+          </a>
         );
       })}
     </>

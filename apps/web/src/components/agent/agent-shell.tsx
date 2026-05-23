@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { AgentBrandHeader } from "@/components/agent/agent-brand-header";
+import { AgentErrorBoundary } from "@/components/agent/agent-error-boundary";
 import { AgentShellColumns } from "@/components/agent/agent-shell-columns";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
@@ -78,7 +79,7 @@ export function AgentShell({
             tabIndex={-1}
             className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden outline-none"
           >
-            {children}
+            <AgentErrorBoundary>{children}</AgentErrorBoundary>
           </main>
         </div>
       </AgentShellColumns>

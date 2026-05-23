@@ -1,7 +1,6 @@
 ﻿"use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { GripVertical, LayoutGrid } from "lucide-react";
 import { useCallback, useMemo, useState, type DragEvent, type ReactNode } from "react";
 
@@ -42,6 +41,10 @@ function readDraggedNavId(dataTransfer: DataTransfer): string {
   return dataTransfer.getData(NAV_DRAG_MIME) || dataTransfer.getData("text/plain") || "";
 }
 
+function isValidNavHref(href: string): boolean {
+  return href.startsWith("/") && href !== "/#";
+}
+
 function NavRow({
   item,
   pathname,
@@ -71,9 +74,11 @@ function NavRow({
   onDrop?: (event: DragEvent<HTMLElement>) => void;
   dragOver?: boolean;
 }) {
+  const router = useRouter();
   const Icon = item.icon;
   const active = isActive(pathname, item.href);
   const isHiddenForOthers = hiddenNavIds.includes(item.id);
+  const href = isValidNavHref(item.href) ? item.href : null;
 
   const content = (
     <>
@@ -123,10 +128,22 @@ function NavRow({
     );
   }
 
+  if (!href) {
+    return null;
+  }
+
   return (
-    <Link href={item.href} className={className} onClick={onNavigate}>
+    <a
+      href={href}
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate?.();
+        router.push(href);
+      }}
+    >
       {content}
-    </Link>
+    </a>
   );
 }
 

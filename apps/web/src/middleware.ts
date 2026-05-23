@@ -46,6 +46,7 @@ function isBasicAuthExcluded(pathname: string): boolean {
   if (isStaticPublicAsset(pathname)) return true;
   if (pathname.startsWith("/_next")) return true;
   if (pathname === "/api/health") return true;
+  if (pathname === "/api/backend-health") return true;
   if (isAuthApiPath(pathname)) return true;
   return false;
 }
