@@ -43,7 +43,7 @@ export async function SiteHeader({
               industrial ? "text-[#94a3b8]" : "text-white/90 dark:text-muted-foreground"
             }
           >
-            Styrelsen for Arbejdsmarked og Rekruttering — ITSM prototype
+            STARdesk — ITSM prototype
           </span>
           <span
             className={cn(

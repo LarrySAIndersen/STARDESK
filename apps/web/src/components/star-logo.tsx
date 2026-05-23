@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const DEFAULT_MARK_SIZE = 40;
 
-const ORG_NAME = "Styrelsen for Arbejdsmarked og Rekruttering";
+const ORG_SUBTITLE = "STARdesk";
 
 export function StarLogo({
   className,
@@ -28,7 +28,7 @@ export function StarLogo({
     <Image
       src={src}
       unoptimized
-      alt={showOrgSubtitle ? "" : "STAR — Styrelsen for Arbejdsmarked og Rekruttering"}
+      alt={showOrgSubtitle ? "" : "STARdesk"}
       width={markSize}
       height={markSize}
       className={cn(
@@ -53,7 +53,7 @@ export function StarLogo({
         <span className="text-[10px] font-semibold tracking-wide text-white/90 uppercase">
           STAR
         </span>
-        <span className="text-[9px] font-medium text-white/65">{ORG_NAME}</span>
+        <span className="text-[9px] font-medium text-white/65">{ORG_SUBTITLE}</span>
       </span>
     </span>
   );

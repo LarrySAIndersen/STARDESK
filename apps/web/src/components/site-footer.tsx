@@ -11,7 +11,7 @@ export function SiteFooter({ variant = "default" }: SiteFooterProps) {
             <span className="font-medium text-[#94a3b8]">STARdesk</span> — prototype for STAR ITSM
           </p>
           <p className="text-xs text-[#64748b]">
-            Styrelsen for Arbejdsmarked og Rekruttering · Design inspireret af star.dk
+            Design inspireret af star.dk
           </p>
         </div>
       </footer>
@@ -25,7 +25,7 @@ export function SiteFooter({ variant = "default" }: SiteFooterProps) {
           <span className="font-semibold">STARdesk</span> — prototype for STAR ITSM
         </p>
         <p className="text-white/85 text-xs">
-          Styrelsen for Arbejdsmarked og Rekruttering · Design inspireret af star.dk
+          Design inspireret af star.dk
         </p>
       </div>
     </footer>
