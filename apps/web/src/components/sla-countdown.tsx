@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
 import { cn } from "@/lib/utils";
 import {
-  computeRemainingSeconds,
-  formatSlaDuration,
+  formatSlaCountdownValue,
   slaCountdownLabel,
 } from "@/lib/sla-format";
+import {
+  SLA_TICK_INTERVAL_MS,
+  useSlaRemaining,
+} from "@/lib/use-sla-remaining";
 
 const CLOSED_STATUSES = new Set(["resolved", "closed", "cancelled"]);
 
@@ -23,34 +24,20 @@ export function SlaCountdown({
   resolutionDueAt?: string | null;
   slaRemainingSeconds?: number | null;
   slaBreached?: boolean;
+  /** List/kanban: smaller chip + 30s tick interval. */
   compact?: boolean;
   className?: string;
 }) {
-  const anchorRef = useRef(Date.now());
-  const [remaining, setRemaining] = useState<number | null>(() =>
-    computeRemainingSeconds(resolutionDueAt, slaRemainingSeconds),
-  );
+  const tickIntervalMs = compact
+    ? SLA_TICK_INTERVAL_MS.list
+    : SLA_TICK_INTERVAL_MS.detail;
 
-  useEffect(() => {
-    anchorRef.current = Date.now();
-    setRemaining(computeRemainingSeconds(resolutionDueAt, slaRemainingSeconds));
-    if (CLOSED_STATUSES.has(status)) {
-      return;
-    }
-    const id = window.setInterval(() => {
-      if (resolutionDueAt) {
-        setRemaining(
-          Math.floor((new Date(resolutionDueAt).getTime() - Date.now()) / 1000),
-        );
-        return;
-      }
-      if (slaRemainingSeconds != null) {
-        const elapsed = Math.floor((Date.now() - anchorRef.current) / 1000);
-        setRemaining(slaRemainingSeconds - elapsed);
-      }
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [resolutionDueAt, slaRemainingSeconds, status]);
+  const remaining = useSlaRemaining({
+    status,
+    resolutionDueAt,
+    slaRemainingSeconds,
+    tickIntervalMs,
+  });
 
   if (CLOSED_STATUSES.has(status)) {
     return (
@@ -65,7 +52,8 @@ export function SlaCountdown({
   const breached = slaBreached ?? (remaining != null && remaining < 0);
   const dueSoon = !breached && remaining != null && remaining <= 3600;
   const label = slaCountdownLabel(remaining, breached, status);
-  const display = remaining == null ? "—" : formatSlaDuration(remaining);
+  const display =
+    remaining == null ? "—" : formatSlaCountdownValue(remaining, breached);
 
   return (
     <span
@@ -84,9 +72,7 @@ export function SlaCountdown({
       <span className="text-[10px] font-sans font-medium tracking-wide uppercase">
         {label}
       </span>
-      <span className={cn("font-semibold", compact && "text-[11px]")}>
-        {breached ? `+${display}` : display}
-      </span>
+      <span className={cn("font-semibold", compact && "text-[11px]")}>{display}</span>
     </span>
   );
 }

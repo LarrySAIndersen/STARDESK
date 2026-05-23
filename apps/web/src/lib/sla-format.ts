@@ -40,15 +40,27 @@ export function slaCountdownLabel(
   return "SLA tid tilbage";
 }
 
+/**
+ * Prefer `resolution_due_at` (ISO UTC from API) so the client clock stays aligned
+ * with server SLA math. Fall back to `sla_remaining_seconds` only when due is missing.
+ */
 export function computeRemainingSeconds(
   resolutionDueAt: string | null | undefined,
   serverRemainingSeconds: number | null | undefined,
 ): number | null {
+  if (resolutionDueAt) {
+    return Math.floor((new Date(resolutionDueAt).getTime() - Date.now()) / 1000);
+  }
   if (serverRemainingSeconds != null) {
     return serverRemainingSeconds;
   }
-  if (!resolutionDueAt) {
-    return null;
+  return null;
+}
+
+export function formatSlaCountdownValue(remainingSeconds: number, breached: boolean): string {
+  const duration = formatSlaDuration(remainingSeconds);
+  if (breached || remainingSeconds < 0) {
+    return `${duration} overskredet`;
   }
-  return Math.floor((new Date(resolutionDueAt).getTime() - Date.now()) / 1000);
+  return duration;
 }

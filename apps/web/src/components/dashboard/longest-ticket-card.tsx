@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LongestTicketSla } from "@/components/dashboard/longest-ticket-sla";
 import { Badge } from "@/components/ui/badge";
 import { priorityLabel } from "@/lib/ticket-labels";
 import type { LongestOpenTicket } from "@/types/dashboard";
@@ -11,27 +12,12 @@ function formatDuration(days: number, hours: number): string {
   return `${Math.round(hours)} timer`;
 }
 
-function formatSlaStatus(ticket: LongestOpenTicket): string | null {
-  if (ticket.sla_breached === true) {
-    return "SLA overskredet";
-  }
-  if (ticket.sla_remaining_seconds != null && ticket.sla_remaining_seconds > 0) {
-    const hours = ticket.sla_remaining_seconds / 3600;
-    if (hours < 1) {
-      return `${Math.max(1, Math.round(ticket.sla_remaining_seconds / 60))} min til SLA`;
-    }
-    if (hours < 24) {
-      return `${Math.round(hours)} t til SLA`;
-    }
-    return `${Math.round(hours / 24)} d til SLA`;
-  }
-  if (ticket.resolution_due_at) {
-    return `Forfald ${new Intl.DateTimeFormat("da-DK", {
-      dateStyle: "short",
-      timeStyle: "short",
-    }).format(new Date(ticket.resolution_due_at))}`;
-  }
-  return null;
+function hasSlaDisplay(ticket: LongestOpenTicket): boolean {
+  return (
+    ticket.sla_breached === true ||
+    ticket.sla_remaining_seconds != null ||
+    ticket.resolution_due_at != null
+  );
 }
 
 export function LongestTicketCard({ ticket }: { ticket: LongestOpenTicket | null }) {
@@ -49,7 +35,7 @@ export function LongestTicketCard({ ticket }: { ticket: LongestOpenTicket | null
     );
   }
 
-  const slaLabel = formatSlaStatus(ticket);
+  const showSla = hasSlaDisplay(ticket);
 
   return (
     <section
@@ -94,17 +80,11 @@ export function LongestTicketCard({ ticket }: { ticket: LongestOpenTicket | null
             {ticket.assigned_team_name ?? "—"}
           </dd>
         </div>
-        {slaLabel ? (
+        {showSla ? (
           <div className="sm:col-span-2">
             <dt className="text-xs font-semibold tracking-wide uppercase">SLA</dt>
-            <dd
-              className={
-                ticket.sla_breached === true
-                  ? "text-star-red mt-0.5 font-semibold"
-                  : "text-star-navy mt-0.5 font-medium"
-              }
-            >
-              {slaLabel}
+            <dd className="mt-0.5">
+              <LongestTicketSla ticket={ticket} />
             </dd>
           </div>
         ) : null}

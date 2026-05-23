@@ -76,6 +76,7 @@ export function KanbanCard({
             <dd>
               <SlaCountdown
                 resolutionDueAt={ticket.resolution_due_at}
+                slaRemainingSeconds={ticket.sla_remaining_seconds}
                 status={ticket.status}
                 slaBreached={ticket.sla_breached}
                 compact
