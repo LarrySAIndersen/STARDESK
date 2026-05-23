@@ -10,7 +10,7 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash, must
         'end_user',
         TRUE,
         '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC',
-        TRUE
+        FALSE
     ),
     (
         '00000000-0000-0000-0000-000000000020',
@@ -19,7 +19,7 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash, must
         'agent',
         TRUE,
         '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC',
-        TRUE
+        FALSE
     ),
     (
         '00000000-0000-0000-0000-000000000030',
@@ -28,7 +28,7 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash, must
         'admin',
         TRUE,
         '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC',
-        TRUE
+        FALSE
     ),
     (
         '00000000-0000-0000-0000-000000000040',
@@ -37,7 +37,7 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash, must
         'admin',
         TRUE,
         '$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC',
-        TRUE
+        FALSE
     )
 ON CONFLICT (email) DO UPDATE SET
     display_name = EXCLUDED.display_name,
@@ -45,5 +45,6 @@ ON CONFLICT (email) DO UPDATE SET
     password_hash = EXCLUDED.password_hash,
     is_active = EXCLUDED.is_active,
     must_change_password = EXCLUDED.must_change_password,
+    password_policy_exempt = TRUE,
     deleted_at = NULL,
     updated_at = NOW();

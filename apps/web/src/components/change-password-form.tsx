@@ -26,11 +26,16 @@ import { cn } from "@/lib/utils";
 type ChangePasswordFormProps = {
   required?: boolean;
   initialEmail?: string;
+  /** Logged-in staff with legacy `must_change_password` may continue to the app. */
+  showSkipToDashboard?: boolean;
+  dashboardHref?: string;
 };
 
 export function ChangePasswordForm({
   required = false,
   initialEmail = "",
+  showSkipToDashboard = false,
+  dashboardHref = "/",
 }: ChangePasswordFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
@@ -326,10 +331,24 @@ export function ChangePasswordForm({
               {isSubmitting ? "Gemmer…" : "Gem adgangskode"}
             </Button>
             <p className="text-center text-sm">
-              <Link href="/" className="text-star-blue hover:text-star-navy underline">
-                Tilbage til login
-              </Link>
+              {showSkipToDashboard ? (
+                <Link
+                  href={dashboardHref}
+                  className="text-star-blue hover:text-star-navy underline"
+                >
+                  Gå til dashboard
+                </Link>
+              ) : (
+                <Link href="/" className="text-star-blue hover:text-star-navy underline">
+                  Tilbage til login
+                </Link>
+              )}
             </p>
+            {showSkipToDashboard ? (
+              <p className="text-muted-foreground text-center text-xs">
+                Du kan skifte adgangskode senere under din profil.
+              </p>
+            ) : null}
           </form>
         </CardContent>
       </Card>

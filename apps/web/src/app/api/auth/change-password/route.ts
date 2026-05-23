@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import { userForSessionCookie } from "@/lib/must-change-password";
 import type { LoginResponse, User } from "@/types/user";
 
 const SESSION_MAX_AGE = 60 * 60 * 2;
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
         path: "/",
         maxAge: SESSION_MAX_AGE,
       });
-      response.cookies.set(USER_COOKIE, JSON.stringify(data.user), {
+      response.cookies.set(USER_COOKIE, JSON.stringify(userForSessionCookie(data.user)), {
         httpOnly: true,
         secure,
         sameSite: "lax",
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
     });
     if (meResponse.ok) {
       const user = (await meResponse.json()) as User;
-      response.cookies.set(USER_COOKIE, JSON.stringify(user), {
+      response.cookies.set(USER_COOKIE, JSON.stringify(userForSessionCookie(user)), {
         httpOnly: true,
         secure,
         sameSite: "lax",

@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
-from star_itsm_api.core.password_policy import validate_password_for_user
+from star_itsm_api.core.password_policy import (
+    effective_must_change_password,
+    validate_password_for_user,
+)
 from star_itsm_api.core.security import (
     create_access_token,
     get_current_user_session,
@@ -65,7 +68,7 @@ async def login(
         user_id=user.id,
         role=user.role,
         email=user.email,
-        must_change_password=user.must_change_password and not user.password_policy_exempt,
+        must_change_password=effective_must_change_password(user),
     )
     org_name = await _organization_name(db, user)
     return TokenResponse(access_token=token, user=user_to_read(user, organization_name=org_name))

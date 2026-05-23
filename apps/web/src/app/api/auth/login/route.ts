@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
+import { userForSessionCookie } from "@/lib/must-change-password";
 import type { LoginResponse } from "@/types/user";
 
 /** Shorter session — re-login required after idle window (no long-lived client tokens). */
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
   }
 
   const data = (await upstream.json()) as LoginResponse;
-  const response = NextResponse.json({ user: data.user });
+  const sessionUser = userForSessionCookie(data.user);
+  const response = NextResponse.json({ user: sessionUser });
   const secure = process.env.NODE_ENV === "production";
   response.cookies.set(TOKEN_COOKIE, data.access_token, {
     httpOnly: true,
@@ -45,7 +47,7 @@ export async function POST(request: Request) {
     path: "/",
     maxAge: SESSION_MAX_AGE,
   });
-  response.cookies.set(USER_COOKIE, JSON.stringify(data.user), {
+  response.cookies.set(USER_COOKIE, JSON.stringify(sessionUser), {
     httpOnly: true,
     secure,
     sameSite: "lax",

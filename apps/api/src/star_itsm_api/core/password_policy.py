@@ -12,6 +12,13 @@ def validate_password(password: str) -> None:
         raise ValueError(PASSWORD_VALIDATION_MESSAGE)
 
 
+def effective_must_change_password(user) -> bool:  # noqa: ANN001
+    """Whether the client should treat the user as needing a password change."""
+    if getattr(user, "password_policy_exempt", False):
+        return False
+    return bool(getattr(user, "must_change_password", False))
+
+
 def validate_password_for_user(user, password: str) -> None:  # noqa: ANN001
     if getattr(user, "password_policy_exempt", False):
         return

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from star_itsm_api.core.password_policy import effective_must_change_password
 from star_itsm_api.core.security import ensure_password_changed, hash_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
@@ -38,6 +39,14 @@ async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
+
+
+def test_effective_must_change_password_respects_exempt() -> None:
+    user = SimpleNamespace(
+        must_change_password=True,
+        password_policy_exempt=True,
+    )
+    assert effective_must_change_password(user) is False
 
 
 def test_ensure_password_changed_skips_exempt_user() -> None:

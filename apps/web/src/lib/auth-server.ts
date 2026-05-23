@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 import { apiGetServer } from "@/lib/api-server";
 import { TOKEN_COOKIE, normalizeUserRole } from "@/lib/auth";
+import { userForSessionCookie } from "@/lib/must-change-password";
 import type { User } from "@/types/user";
 
 /** Server session user — authoritative source is JWT + API `/me` only. */
@@ -16,7 +17,7 @@ export async function getServerUser(): Promise<User | null> {
   try {
     const me = await apiGetServer<User>("/api/v1/auth/me");
     const role = normalizeUserRole(me.role) ?? me.role;
-    return { ...me, role };
+    return userForSessionCookie({ ...me, role });
   } catch {
     return null;
   }

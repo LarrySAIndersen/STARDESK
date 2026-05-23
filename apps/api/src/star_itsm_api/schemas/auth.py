@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from star_itsm_api.core.password_policy import effective_must_change_password
+
 
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255)
@@ -65,7 +67,7 @@ def user_to_read(
         role_label=ROLE_LABELS.get(user.role, user.role),
         organization_id=org_id,
         organization_name=organization_name,
-        must_change_password=bool(getattr(user, "must_change_password", False)),
+        must_change_password=effective_must_change_password(user),
         password_policy_exempt=bool(getattr(user, "password_policy_exempt", False)),
         avatar_url=getattr(user, "avatar_url", None),
         avatar_preset_id=getattr(user, "avatar_preset_id", None),

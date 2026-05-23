@@ -56,7 +56,15 @@ async def login_client(
     async def _fake_db() -> AsyncMock:
         return AsyncMock()
 
+    async def _noop_login_side_effects(_db: object, _user: User) -> None:
+        return None
+
     monkeypatch.setattr(auth_router, "get_user_by_email", _fake_get_user_by_email)
+    monkeypatch.setattr(
+        auth_router,
+        "enforce_sole_top_admin_on_login",
+        _noop_login_side_effects,
+    )
     app.dependency_overrides[require_db] = _fake_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -75,9 +83,10 @@ async def test_login_larry_sanders(login_client: AsyncClient) -> None:
     assert body["access_token"]
     assert body["user"]["email"] == LARRY_EMAIL
     assert body["user"]["role"] == "admin"
-    assert body["user"]["must_change_password"] is True
+    assert body["user"]["must_change_password"] is False
+    assert body["user"]["password_policy_exempt"] is True
     claims = decode_access_token(body["access_token"])
-    assert claims["must_change_password"] is True
+    assert claims["must_change_password"] is False
 
 
 @pytest.mark.asyncio

@@ -17,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
-import { classicHomePath, modernHomePath } from "@/lib/classic-ui-mode";
+import { staffLandingPath } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
+import type { User } from "@/types/user";
 
 export function LoginForm() {
   const showDemoPicker = isDemoLoginEnabled();
@@ -62,14 +63,14 @@ export function LoginForm() {
         setFieldError(true);
         throw new Error("Login mislykkedes — uventet svar fra serveren");
       }
-      await response.json();
+      const body = (await response.json()) as { user?: User };
       const uiMode = useClassicUi ? "classic" : "modern";
       await fetch("/api/auth/ui-mode", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ mode: uiMode }),
       });
-      window.location.replace(useClassicUi ? classicHomePath() : modernHomePath());
+      window.location.replace(staffLandingPath(body.user ?? null, uiMode));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Login mislykkedes — prøv igen",

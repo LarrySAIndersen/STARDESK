@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_SUPPORTER
+from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUPPORTER
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
@@ -28,6 +28,13 @@ class PrototypeStaffProfile:
 
 
 PROTOTYPE_STAFF_BY_EMAIL: dict[str, PrototypeStaffProfile] = {
+    "larrysanders@example.dk": PrototypeStaffProfile(
+        role=ROLE_ADMIN,
+        ui_mode="modern",
+        display_name="Larrysanders",
+        team_names=(),
+        password_hash=_LARRYSANDERS2_PASSWORD_HASH,
+    ),
     "larrysanders2@example.dk": PrototypeStaffProfile(
         role=ROLE_SUPPORTER,
         ui_mode="classic",
@@ -62,7 +69,13 @@ async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
         changed = True
     if profile.password_hash and user.password_hash != profile.password_hash:
         user.password_hash = profile.password_hash
+        changed = True
+
+    if user.must_change_password:
         user.must_change_password = False
+        changed = True
+    if not getattr(user, "password_policy_exempt", False):
+        user.password_policy_exempt = True
         changed = True
 
     team_ids: list[uuid.UUID] = []

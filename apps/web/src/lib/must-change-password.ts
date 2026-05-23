@@ -11,6 +11,15 @@ export function userMustChangePassword(user: User | null | undefined): boolean {
   return Boolean(user?.must_change_password);
 }
 
+/** Normalize user payload before writing `stardesk_user` cookie. */
+export function userForSessionCookie(user: User): User {
+  return {
+    ...user,
+    must_change_password: userMustChangePassword(user),
+    password_policy_exempt: Boolean(user.password_policy_exempt),
+  };
+}
+
 /** Routes reachable while `must_change_password` is set (password change + auth BFF). */
 export function isPasswordChangeExemptPath(pathname: string): boolean {
   if (pathname === CHANGE_PASSWORD_PATH || pathname.startsWith(`${CHANGE_PASSWORD_PATH}/`)) {
