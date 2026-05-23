@@ -31,11 +31,16 @@ export function SidebarUiModeSwitch({
         active && "wire-nav-item--active",
         collapsed && "wire-nav-item--compact",
       )}
+      ariaLabel={collapsed ? label : undefined}
       label={
-        <>
-          <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-          <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{label}</span>
-        </>
+        collapsed ? (
+          <Icon className="size-[18px] shrink-0 opacity-70" aria-hidden />
+        ) : (
+          <>
+            <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
+            <span className="wire-nav-item__label min-w-0 flex-1 truncate">{label}</span>
+          </>
+        )
       }
     />
   );

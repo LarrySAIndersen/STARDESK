@@ -83,6 +83,8 @@ export function IntegrationSidebarLinks({
           <a
             key={meta.id}
             href={meta.href}
+            title={collapsed ? meta.name : undefined}
+            aria-label={collapsed ? meta.name : undefined}
             onClick={(event) => {
               event.preventDefault();
               onNavigate?.();
@@ -95,21 +97,28 @@ export function IntegrationSidebarLinks({
               isTopAdmin && isHiddenForOthers && "opacity-80",
             )}
           >
-            <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
-            <span className="min-w-0 flex-1 truncate">{meta.name}</span>
-            {isTopAdmin && onToggleHidden ? (
-              <NavVisibilityEye
-                hidden={isHiddenForOthers}
-                collapsed={collapsed}
-                onToggle={() => onToggleHidden(navId, !isHiddenForOthers)}
-              />
-            ) : (
-              <IntegrationStatusPill
-                status={status}
-                label={pillLabel}
-                compact={collapsed}
-                className="ml-auto shrink-0"
-              />
+            <Icon
+              className={cn("shrink-0 opacity-60", collapsed ? "size-[18px]" : "size-[15px]")}
+              aria-hidden
+            />
+            {collapsed ? null : (
+              <>
+                <span className="wire-nav-item__label min-w-0 flex-1 truncate">{meta.name}</span>
+                {isTopAdmin && onToggleHidden ? (
+                  <NavVisibilityEye
+                    hidden={isHiddenForOthers}
+                    collapsed={collapsed}
+                    onToggle={() => onToggleHidden(navId, !isHiddenForOthers)}
+                  />
+                ) : (
+                  <IntegrationStatusPill
+                    status={status}
+                    label={pillLabel}
+                    compact={collapsed}
+                    className="ml-auto shrink-0"
+                  />
+                )}
+              </>
             )}
           </a>
         );

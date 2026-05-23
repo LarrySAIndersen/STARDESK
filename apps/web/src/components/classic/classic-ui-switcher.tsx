@@ -26,11 +26,13 @@ export function ClassicUiSwitcher({
   label,
   className,
   onSwitched,
+  ariaLabel,
 }: {
   targetMode: UiMode;
   label: ReactNode;
   className?: string;
   onSwitched?: () => void;
+  ariaLabel?: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -52,6 +54,8 @@ export function ClassicUiSwitcher({
       type="button"
       className={className}
       disabled={busy}
+      title={ariaLabel}
+      aria-label={ariaLabel}
       onClick={() => void switchMode()}
     >
       {busy ? "Skifter…" : label}

@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { GripVertical, LayoutGrid } from "lucide-react";
-import { useCallback, useMemo, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
 
 import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-section";
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
@@ -80,14 +80,16 @@ function NavRow({
   const isHiddenForOthers = hiddenNavIds.includes(item.id);
   const href = isValidNavHref(item.href) ? item.href : null;
 
-  const content = (
+  const content = collapsed ? (
+    <Icon className="size-[18px] shrink-0 opacity-70" aria-hidden />
+  ) : (
     <>
       {editMode ? (
         <GripVertical className="text-muted-foreground size-3.5 shrink-0 opacity-70" aria-hidden />
       ) : (
         <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
       )}
-      <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
+      <span className="wire-nav-item__label min-w-0 flex-1 truncate">{item.label}</span>
       {manageVisibility && !editMode ? (
         <NavVisibilityEye
           hidden={isHiddenForOthers}
@@ -136,6 +138,8 @@ function NavRow({
     <a
       href={href}
       className={className}
+      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
       onClick={(event) => {
         event.preventDefault();
         onNavigate?.();
@@ -230,6 +234,12 @@ export function AgentSidebar({
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (collapsed && editMode) {
+      setEditMode(false);
+    }
+  }, [collapsed, editMode, setEditMode]);
 
   const handleDropOnItem = useCallback(
     (targetId: string, targetSectionId: NavSectionId) => (event: DragEvent<HTMLElement>) => {
@@ -367,11 +377,14 @@ export function AgentSidebar({
       className={cn("wire-sidebar flex flex-col", collapsed && "wire-sidebar--collapsed")}
       data-collapsed={collapsed ? "" : undefined}
     >
-      {!collapsed ? (
-        <div className="wire-shell-col-header wire-shell-col-header--nav flex items-center justify-end px-1">
-          {onToggle ? <SidebarCollapseToggle collapsed={false} onToggle={onToggle} /> : null}
-        </div>
-      ) : null}
+      <div
+        className={cn(
+          "wire-shell-col-header wire-shell-col-header--nav flex shrink-0 items-center px-1",
+          collapsed ? "justify-center py-1" : "justify-end",
+        )}
+      >
+        {onToggle ? <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggle} /> : null}
+      </div>
 
       {topAdmin && !collapsed && !editMode ? (
         <p className="text-muted-foreground border-b border-[var(--gray-border)] px-4 py-2 text-[10px] leading-snug">
@@ -441,11 +454,6 @@ export function AgentSidebar({
         </footer>
       ) : null}
 
-      {collapsed && onToggle ? (
-        <footer className="wire-sidebar-footer flex justify-center border-t border-[var(--gray-border)] px-1.5 py-2">
-          <SidebarCollapseToggle collapsed onToggle={onToggle} />
-        </footer>
-      ) : null}
     </aside>
   );
 }
