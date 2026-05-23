@@ -13,10 +13,6 @@ import {
   parseUiMode,
   UI_MODE_COOKIE,
 } from "@/lib/classic-ui-mode";
-import {
-  CHANGE_PASSWORD_PATH,
-  userMustChangePassword,
-} from "@/lib/must-change-password";
 
 export const dynamic = "force-dynamic";
 
@@ -33,9 +29,6 @@ export default async function HomePage() {
   }
 
   const currentUser = await getServerUser();
-  if (userMustChangePassword(currentUser)) {
-    redirect(CHANGE_PASSWORD_PATH);
-  }
   const staff = isStaff(currentUser);
 
   if (staff && parseUiMode(cookieStore.get(UI_MODE_COOKIE)?.value) === "classic") {

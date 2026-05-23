@@ -259,6 +259,11 @@ async def update_user(
     if "is_active" in updates:
         user.is_active = updates["is_active"]
 
+    if "password_policy_exempt" in updates:
+        user.password_policy_exempt = updates["password_policy_exempt"]
+        if user.password_policy_exempt:
+            user.must_change_password = False
+
     if "organization_id" in updates:
         user.organization_id = updates["organization_id"]
 

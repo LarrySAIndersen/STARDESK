@@ -35,6 +35,7 @@ class UserAdminRead(BaseModel):
     role: str
     role_label: str
     is_active: bool
+    password_policy_exempt: bool = False
     organization_id: UUID | None = None
     organization_name: str | None = None
     teams: list[UserTeamSummary] = Field(default_factory=list)
@@ -65,6 +66,7 @@ class UserAdminUpdate(BaseModel):
     email: str | None = Field(default=None, min_length=3, max_length=255)
     role: str | None = Field(default=None, pattern=USER_ROLE_PATTERN)
     is_active: bool | None = None
+    password_policy_exempt: bool | None = None
     organization_id: UUID | None = None
     team_ids: list[UUID] | None = None
 
@@ -153,6 +155,7 @@ def user_to_admin_read(
         role=user.role,
         role_label=ROLE_LABELS.get(user.role, user.role),
         is_active=user.is_active,
+        password_policy_exempt=bool(getattr(user, "password_policy_exempt", False)),
         organization_id=getattr(user, "organization_id", None),
         organization_name=organization_name,
         teams=teams,

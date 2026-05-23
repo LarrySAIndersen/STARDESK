@@ -1,9 +1,4 @@
-import {
-  apiErrorMessage,
-  CHANGE_PASSWORD_PATH,
-  isMustChangePasswordError,
-  parseApiErrorDetail,
-} from "@/lib/api-errors";
+import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
 
 export class ApiError extends Error {
   constructor(
@@ -26,23 +21,8 @@ function resolveClientUrl(path: string): string {
   return normalized;
 }
 
-function redirectToChangePasswordClient(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  if (window.location.pathname.startsWith("/skift-adgangskode")) {
-    return;
-  }
-  window.location.replace(CHANGE_PASSWORD_PATH);
-}
-
 async function throwApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  if (isMustChangePasswordError(response.status, detail)) {
-    redirectToChangePasswordClient();
-    // Never surface first-login password copy in modals — redirect handles the flow.
-    throw new ApiError(response.status, apiErrorMessage(detail));
-  }
   throw new ApiError(response.status, apiErrorMessage(detail));
 }
 

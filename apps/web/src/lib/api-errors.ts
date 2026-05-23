@@ -5,7 +5,7 @@ export const MUST_CHANGE_PASSWORD_DETAIL = "must_change_password";
 export const MUST_CHANGE_PASSWORD_MESSAGE =
   "Du skal skifte adgangskode før du kan fortsætte.";
 
-export const CHANGE_PASSWORD_PATH = "/skift-adgangskode?required=1";
+export const CHANGE_PASSWORD_PATH = "/skift-adgangskode";
 
 /** Neutral copy for 403 must_change_password in modals and toasts — never the first-login message. */
 export const MUTATION_FORBIDDEN_MESSAGE = "Du har ikke adgang til denne handling.";

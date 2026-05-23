@@ -6,10 +6,6 @@ import { ClientSessionHydrator } from "@/components/client-session-hydrator";
 import { SfChatShellClient } from "@/components/sf-chat/sf-chat-shell-client";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
-import {
-  CHANGE_PASSWORD_PATH,
-  userMustChangePassword,
-} from "@/lib/must-change-password";
 
 export async function ClassicShellWrapper({
   title,
@@ -26,9 +22,6 @@ export async function ClassicShellWrapper({
   }
 
   const currentUser = await getServerUser();
-  if (userMustChangePassword(currentUser)) {
-    redirect(CHANGE_PASSWORD_PATH);
-  }
 
   if (!isStaff(currentUser)) {
     redirect("/portal");

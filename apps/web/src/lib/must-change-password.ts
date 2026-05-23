@@ -1,17 +1,19 @@
 import type { User } from "@/types/user";
 
-import { CHANGE_PASSWORD_PATH } from "@/lib/api-errors";
+/** Voluntary password change page (no forced first-login redirect). */
+export const CHANGE_PASSWORD_PATH = "/skift-adgangskode";
 
 /** True when API/session user must complete first-time password change. */
 export function userMustChangePassword(user: User | null | undefined): boolean {
+  if (user?.password_policy_exempt) {
+    return false;
+  }
   return Boolean(user?.must_change_password);
 }
 
-export { CHANGE_PASSWORD_PATH };
-
 /** Routes reachable while `must_change_password` is set (password change + auth BFF). */
 export function isPasswordChangeExemptPath(pathname: string): boolean {
-  if (pathname === "/skift-adgangskode" || pathname.startsWith("/skift-adgangskode/")) {
+  if (pathname === CHANGE_PASSWORD_PATH || pathname.startsWith(`${CHANGE_PASSWORD_PATH}/`)) {
     return true;
   }
   if (pathname.startsWith("/api/auth/")) {

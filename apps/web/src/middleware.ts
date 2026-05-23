@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { parseUserFromCookie, TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
-import {
-  CHANGE_PASSWORD_PATH,
-  isPasswordChangeExemptPath,
-  userMustChangePassword,
-} from "@/lib/must-change-password";
+import { TOKEN_COOKIE } from "@/lib/auth";
+import { isPasswordChangeExemptPath } from "@/lib/must-change-password";
 
 /** Routes that work without a session (login UI lives on `/`). */
 function isPublicAppPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/login" || pathname.startsWith("/login/")) return true;
-  if (
-    pathname === CHANGE_PASSWORD_PATH ||
-    pathname.startsWith(`${CHANGE_PASSWORD_PATH}/`)
-  ) {
-    return true;
-  }
+  if (isPasswordChangeExemptPath(pathname)) return true;
   return false;
 }
 
@@ -125,16 +116,6 @@ function handleJwtSession(request: NextRequest): NextResponse {
 
   if (pathname === "/login" || pathname.startsWith("/login/")) {
     return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  if (token) {
-    const sessionUser = parseUserFromCookie(request.cookies.get(USER_COOKIE)?.value);
-    if (
-      userMustChangePassword(sessionUser) &&
-      !isPasswordChangeExemptPath(pathname)
-    ) {
-      return NextResponse.redirect(new URL(CHANGE_PASSWORD_PATH, request.url));
-    }
   }
 
   if (isPublicAppPath(pathname)) {

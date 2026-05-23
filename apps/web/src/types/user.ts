@@ -9,6 +9,7 @@ export interface User {
   organization_id?: string | null;
   organization_name?: string | null;
   must_change_password?: boolean;
+  password_policy_exempt?: boolean;
   avatar_url?: string | null;
   avatar_preset_id?: string | null;
   /** When set, locks UI to classic or modern (overrides login cookie). */

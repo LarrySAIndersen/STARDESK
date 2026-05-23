@@ -10,3 +10,9 @@ PASSWORD_VALIDATION_MESSAGE = (
 def validate_password(password: str) -> None:
     if not PASSWORD_PATTERN.fullmatch(password):
         raise ValueError(PASSWORD_VALIDATION_MESSAGE)
+
+
+def validate_password_for_user(user, password: str) -> None:  # noqa: ANN001
+    if getattr(user, "password_policy_exempt", False):
+        return
+    validate_password(password)

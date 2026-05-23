@@ -18,9 +18,7 @@ import { Label } from "@/components/ui/label";
 import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
 import { classicHomePath, modernHomePath } from "@/lib/classic-ui-mode";
-import { CHANGE_PASSWORD_PATH } from "@/lib/must-change-password";
 import { cn } from "@/lib/utils";
-import type { User } from "@/types/user";
 
 export function LoginForm() {
   const showDemoPicker = isDemoLoginEnabled();
@@ -64,13 +62,7 @@ export function LoginForm() {
         setFieldError(true);
         throw new Error("Login mislykkedes — uventet svar fra serveren");
       }
-      const body = (await response.json()) as {
-        user?: User & { must_change_password?: boolean };
-      };
-      if (body.user?.must_change_password) {
-        window.location.replace(CHANGE_PASSWORD_PATH);
-        return;
-      }
+      await response.json();
       const uiMode = useClassicUi ? "classic" : "modern";
       await fetch("/api/auth/ui-mode", {
         method: "POST",

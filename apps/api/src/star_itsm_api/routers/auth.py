@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
-from star_itsm_api.core.password_policy import validate_password
+from star_itsm_api.core.password_policy import validate_password_for_user
 from star_itsm_api.core.security import (
     create_access_token,
     get_current_user_session,
@@ -65,7 +65,7 @@ async def login(
         user_id=user.id,
         role=user.role,
         email=user.email,
-        must_change_password=user.must_change_password,
+        must_change_password=user.must_change_password and not user.password_policy_exempt,
     )
     org_name = await _organization_name(db, user)
     return TokenResponse(access_token=token, user=user_to_read(user, organization_name=org_name))
@@ -82,14 +82,6 @@ async def change_password(
             detail="Den nye adgangskode skal være forskellig fra den nuværende",
         )
 
-    try:
-        validate_password(payload.new_password)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
-
     user = await get_user_by_email(db, payload.email)
     if user is None or not _current_password_valid(user, payload.current_password):
         await asyncio.sleep(0.4)
@@ -97,6 +89,14 @@ async def change_password(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Forkert e-mail eller nuværende adgangskode",
         )
+
+    try:
+        validate_password_for_user(user, payload.new_password)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False

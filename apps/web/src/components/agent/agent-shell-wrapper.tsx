@@ -9,11 +9,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
-import {
-  CHANGE_PASSWORD_PATH,
-  isPasswordChangeExemptPath,
-  userMustChangePassword,
-} from "@/lib/must-change-password";
 import { isStaffPathBlockedForUser } from "@/lib/sidebar-nav-visibility-server";
 
 export async function AgentShellWrapper({ children }: { children: React.ReactNode }) {
@@ -34,11 +29,6 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   const currentUser = await getServerUser();
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const onChangePasswordPage = isPasswordChangeExemptPath(pathname);
-
-  if (userMustChangePassword(currentUser) && !onChangePasswordPage) {
-    redirect(CHANGE_PASSWORD_PATH);
-  }
 
   const showUsersNav = canManageUsers(currentUser);
 
@@ -47,26 +37,6 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
       <>
         <ClientSessionHydrator />
         {children}
-      </>
-    );
-  }
-
-  if (userMustChangePassword(currentUser) && onChangePasswordPage) {
-    return (
-      <>
-        <SiteHeader
-          user={currentUser}
-          shellVariant="firstLoginIndustrial"
-          hideCasesAndNewTicketNav
-        />
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="flex flex-1 flex-col bg-[#0a0e1a] outline-none"
-        >
-          {children}
-        </main>
-        <SiteFooter variant="firstLoginIndustrial" />
       </>
     );
   }

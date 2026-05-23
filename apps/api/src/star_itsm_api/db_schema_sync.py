@@ -94,6 +94,8 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _schema_has_column(engine, "avatar_preset_id", table_name="users"):
         return True
+    if not await _schema_has_column(engine, "password_policy_exempt", table_name="users"):
+        return True
     if not await _table_exists(engine, "organization_integrations"):
         return True
     if not await _table_exists(engine, "email_integrations"):

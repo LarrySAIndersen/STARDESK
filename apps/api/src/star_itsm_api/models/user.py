@@ -22,6 +22,11 @@ class User(Base):
         nullable=False,
         server_default="false",
     )
+    password_policy_exempt: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         nullable=True,

@@ -3,9 +3,15 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
-import type { User } from "@/types/user";
+import type { LoginResponse, User } from "@/types/user";
 
 const SESSION_MAX_AGE = 60 * 60 * 2;
+
+type ChangePasswordBody = {
+  email?: string;
+  current_password?: string;
+  new_password?: string;
+};
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -36,6 +42,38 @@ export async function POST(request: Request) {
   }
 
   const response = new NextResponse(null, { status: 204 });
+  const secure = process.env.NODE_ENV === "production";
+  const payload = body as ChangePasswordBody;
+  const email = payload.email?.trim().toLowerCase();
+  const newPassword = payload.new_password;
+
+  if (email && newPassword) {
+    const loginResponse = await fetch(buildBackendUrl("/api/v1/auth/login"), {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: newPassword }),
+      cache: "no-store",
+    });
+    if (loginResponse.ok) {
+      const data = (await loginResponse.json()) as LoginResponse;
+      response.cookies.set(TOKEN_COOKIE, data.access_token, {
+        httpOnly: true,
+        secure,
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_MAX_AGE,
+      });
+      response.cookies.set(USER_COOKIE, JSON.stringify(data.user), {
+        httpOnly: true,
+        secure,
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_MAX_AGE,
+      });
+      return response;
+    }
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
   if (token) {
@@ -45,7 +83,6 @@ export async function POST(request: Request) {
     });
     if (meResponse.ok) {
       const user = (await meResponse.json()) as User;
-      const secure = process.env.NODE_ENV === "production";
       response.cookies.set(USER_COOKIE, JSON.stringify(user), {
         httpOnly: true,
         secure,

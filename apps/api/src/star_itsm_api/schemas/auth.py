@@ -30,6 +30,7 @@ class UserRead(BaseModel):
     organization_id: UUID | None = None
     organization_name: str | None = None
     must_change_password: bool = False
+    password_policy_exempt: bool = False
     avatar_url: str | None = None
     avatar_preset_id: str | None = None
     ui_mode: str | None = None
@@ -65,6 +66,7 @@ def user_to_read(
         organization_id=org_id,
         organization_name=organization_name,
         must_change_password=bool(getattr(user, "must_change_password", False)),
+        password_policy_exempt=bool(getattr(user, "password_policy_exempt", False)),
         avatar_url=getattr(user, "avatar_url", None),
         avatar_preset_id=getattr(user, "avatar_preset_id", None),
         ui_mode=getattr(user, "ui_mode", None),

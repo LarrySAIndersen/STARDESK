@@ -1,14 +1,8 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { ApiError } from "@/lib/api";
-import {
-  apiErrorMessage,
-  CHANGE_PASSWORD_PATH,
-  isMustChangePasswordError,
-  parseApiErrorDetail,
-} from "@/lib/api-errors";
+import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
 import { TOKEN_COOKIE } from "@/lib/auth";
 
 async function authHeaders(): Promise<HeadersInit> {
@@ -26,9 +20,6 @@ type ApiGetServerOptions = {
 
 async function throwServerApiError(response: Response): Promise<never> {
   const detail = await parseApiErrorDetail(response);
-  if (isMustChangePasswordError(response.status, detail)) {
-    redirect(CHANGE_PASSWORD_PATH);
-  }
   throw new ApiError(response.status, apiErrorMessage(detail));
 }
 

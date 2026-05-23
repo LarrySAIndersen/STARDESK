@@ -65,6 +65,7 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
         ...parsed,
         role,
         must_change_password: Boolean(parsed.must_change_password),
+        password_policy_exempt: Boolean(parsed.password_policy_exempt),
       };
     } catch {
       // try next candidate

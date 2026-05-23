@@ -78,6 +78,8 @@ def decode_access_token(token: str) -> dict[str, Any]:
 
 
 def ensure_password_changed(user: User) -> None:
+    if user.password_policy_exempt:
+        return
     if user.must_change_password:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

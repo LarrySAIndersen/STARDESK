@@ -39,6 +39,7 @@ const profileSchema = z.object({
   email: z.string().email("Ugyldig e-mail"),
   role: z.enum(["end_user", "agent", "admin", "top_admin"]),
   is_active: z.boolean(),
+  password_policy_exempt: z.boolean(),
   organization_id: z.string(),
   team_ids: z.array(z.string()),
 });
@@ -237,6 +238,7 @@ function AdminUserEditDialog({
           email: detail.email,
           role: detail.role as ProfileFormValues["role"],
           is_active: detail.is_active,
+          password_policy_exempt: detail.password_policy_exempt,
           organization_id: detail.organization_id ?? "",
           team_ids: detail.teams.map((t) => t.id),
         });
@@ -260,6 +262,7 @@ function AdminUserEditDialog({
         email: values.email.trim().toLowerCase(),
         role: values.role,
         is_active: values.is_active,
+        password_policy_exempt: values.password_policy_exempt,
         organization_id: values.organization_id ? values.organization_id : null,
         team_ids: values.team_ids,
       };
@@ -378,6 +381,18 @@ function AdminUserEditDialog({
                 />
                 <Label htmlFor="admin-user-active" className="font-normal">
                   Aktiv konto
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="admin-user-password-exempt"
+                  type="checkbox"
+                  className="size-4 rounded border"
+                  {...register("password_policy_exempt")}
+                />
+                <Label htmlFor="admin-user-password-exempt" className="font-normal">
+                  Undtaget fra adgangskodepolitik
                 </Label>
               </div>
 

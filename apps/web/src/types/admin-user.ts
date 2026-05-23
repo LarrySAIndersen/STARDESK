@@ -29,6 +29,7 @@ export interface UserAdminRead {
   role: string;
   role_label: string;
   is_active: boolean;
+  password_policy_exempt: boolean;
   organization_id: string | null;
   organization_name: string | null;
   teams: UserTeamSummary[];
@@ -57,6 +58,7 @@ export interface UserAdminUpdateInput {
   is_active?: boolean;
   organization_id?: string | null;
   team_ids?: string[];
+  password_policy_exempt?: boolean;
 }
 
 export interface UserAdminCreateInput {
