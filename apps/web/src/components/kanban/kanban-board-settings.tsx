@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiGet, apiPatch } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 import type { KanbanBoardDetail, KanbanBoardMember, KanbanMemberRole } from "@/types/kanban";
 import type { Team } from "@/types/team";
 import type { User } from "@/types/user";
@@ -28,14 +29,17 @@ export function KanbanBoardSettings({
   teams,
   users,
   onUpdated,
+  onDeleted,
   onClose,
 }: {
   detail: KanbanBoardDetail;
   teams: Team[];
   users: User[];
   onUpdated: (detail: KanbanBoardDetail) => void;
+  onDeleted?: () => void;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [name, setName] = useState(detail.board.name);
   const [teamId, setTeamId] = useState(detail.board.team_id ?? "");
   const [memberIds, setMemberIds] = useState<string[]>(
@@ -46,6 +50,7 @@ export function KanbanBoardSettings({
   );
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
@@ -68,6 +73,30 @@ export function KanbanBoardSettings({
     );
     if (!roles[userId]) {
       setRoles((prev) => ({ ...prev, [userId]: "editor" }));
+    }
+  }
+
+  async function handleDelete() {
+    if (
+      !window.confirm(
+        `Slet boardet "${detail.board.name}"? Dette kan ikke fortrydes.`,
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      await apiDelete(`/api/v1/kanban/boards/${detail.board.id}`);
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        router.push("/kanban");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke slette board.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -117,7 +146,7 @@ export function KanbanBoardSettings({
         />
       </div>
       <div className="space-y-2">
-        <Label>Gruppe (scope)</Label>
+        <Label>Gruppe (filter ved tilføjelse)</Label>
         <Select
           value={teamId || "__none__"}
           onValueChange={(v) => setTeamId(!v || v === "__none__" ? "" : v)}
@@ -188,9 +217,21 @@ export function KanbanBoardSettings({
         </p>
       ) : null}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <Button type="button" onClick={handleSave} disabled={saving || !name.trim()}>
-        {saving ? "Gemmer…" : "Gem indstillinger"}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button type="button" onClick={handleSave} disabled={saving || !name.trim()}>
+          {saving ? "Gemmer…" : "Gem indstillinger"}
+        </Button>
+        {detail.can_delete_board ? (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+          >
+            {deleting ? "Sletter…" : "Slet board"}
+          </Button>
+        ) : null}
+      </div>
     </section>
   );
 }

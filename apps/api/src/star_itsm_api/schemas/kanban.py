@@ -2,9 +2,9 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from star_itsm_api.schemas.ticket import TicketRead
+from star_itsm_api.schemas.ticket import TicketCreate, TicketRead
 
 KanbanMemberRole = Literal["owner", "editor", "viewer"]
 
@@ -55,7 +55,23 @@ class KanbanColumnRead(BaseModel):
     name: str
     position: int
     statuses: list[str]
-    default_status: str
+    default_status: str | None = None
+    is_custom: bool = False
+    wip_limit: int | None = None
+
+
+class KanbanColumnCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    position: int | None = Field(default=None, ge=0)
+    default_status: str | None = Field(default=None, max_length=32)
+    wip_limit: int | None = Field(default=None, ge=1, le=999)
+
+
+class KanbanColumnUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    position: int | None = Field(default=None, ge=0)
+    default_status: str | None = Field(default=None, max_length=32)
+    wip_limit: int | None = Field(default=None, ge=1, le=999)
 
 
 class KanbanCardRead(BaseModel):
@@ -74,8 +90,39 @@ class KanbanBoardDetailRead(BaseModel):
     members: list[KanbanBoardMemberRead] = Field(default_factory=list)
     can_edit: bool = False
     can_move_cards: bool = False
+    can_remove_cards: bool = False
+    can_delete_board: bool = False
+    can_delete_tickets: bool = False
 
 
 class KanbanCardMove(BaseModel):
     column_id: UUID
     position: int | None = Field(default=None, ge=0)
+
+
+class KanbanCardAdd(BaseModel):
+    column_id: UUID
+    ticket_id: UUID | None = None
+    ticket: TicketCreate | None = None
+
+    @model_validator(mode="after")
+    def ticket_or_create(self) -> "KanbanCardAdd":
+        if self.ticket_id is None and self.ticket is None:
+            raise ValueError("Either ticket_id or ticket is required")
+        if self.ticket_id is not None and self.ticket is not None:
+            raise ValueError("Provide ticket_id or ticket, not both")
+        return self
+
+
+class KanbanCardRemove(BaseModel):
+    delete_ticket: bool = False
+
+
+class KanbanTicketSearchResult(BaseModel):
+    id: UUID
+    ticket_number: str
+    title: str
+    status: str
+    priority: str
+    assigned_team_name: str | None = None
+    assigned_user_name: str | None = None

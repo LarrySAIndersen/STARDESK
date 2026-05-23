@@ -6,7 +6,10 @@ from httpx import AsyncClient
 from star_itsm_api.models.kanban import KanbanBoard, KanbanColumn
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services.kanban_access import (
+    user_can_delete_board,
+    user_can_delete_tickets,
     user_can_move_cards,
+    user_can_remove_cards,
     user_can_view_board,
     sees_all_boards,
 )
@@ -42,6 +45,7 @@ def test_column_for_ticket_status() -> None:
             position=0,
             statuses=["assigned", "new"],
             default_status="new",
+            is_custom=False,
         ),
         KanbanColumn(
             id=uuid.uuid4(),
@@ -50,6 +54,7 @@ def test_column_for_ticket_status() -> None:
             position=1,
             statuses=["in_progress"],
             default_status="in_progress",
+            is_custom=False,
         ),
     ]
     assert column_for_ticket_status(columns, "assigned") is columns[0]
@@ -76,6 +81,26 @@ def test_move_cards_editor_only() -> None:
     assert user_can_move_cards("viewer", agent) is False
 
 
+def test_remove_cards_editor_only() -> None:
+    agent = SimpleNamespace(role="agent")
+    assert user_can_remove_cards("editor", agent) is True
+    assert user_can_remove_cards("viewer", agent) is False
+
+
+def test_delete_board_owner_only() -> None:
+    agent = SimpleNamespace(role="agent")
+    board = _board()
+    assert user_can_delete_board("owner", agent, board) is True
+    assert user_can_delete_board("editor", agent, board) is False
+
+
+def test_delete_tickets_admin_only() -> None:
+    admin = SimpleNamespace(role="admin")
+    agent = SimpleNamespace(role="agent")
+    assert user_can_delete_tickets(admin) is True
+    assert user_can_delete_tickets(agent) is False
+
+
 def test_move_card_updates_status_mapping() -> None:
     board_id = uuid.uuid4()
     column = KanbanColumn(
@@ -85,6 +110,7 @@ def test_move_card_updates_status_mapping() -> None:
         position=2,
         statuses=["resolved"],
         default_status="resolved",
+        is_custom=False,
     )
     ticket = Ticket()
     ticket.status = "in_progress"

@@ -79,3 +79,5 @@ scripts/load-test/results/
 # Load-testing local secrets/reports
 scripts/load-test/.env.loadtest
 scripts/load-test/reports/*.json
+
+.vercel

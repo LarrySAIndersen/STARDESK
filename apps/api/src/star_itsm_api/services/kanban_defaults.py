@@ -30,6 +30,7 @@ def build_default_columns(board_id: uuid.UUID, now: datetime | None = None) -> l
                 position=position,
                 statuses=statuses,
                 default_status=default_status,
+                is_custom=False,
                 created_at=ts,
                 updated_at=ts,
             )

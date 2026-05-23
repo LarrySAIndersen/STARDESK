@@ -61,3 +61,24 @@ def user_can_move_cards(role: str | None, user: User) -> bool:
     if sees_all_boards(user):
         return True
     return role in MOVE_ROLES
+
+
+def user_can_remove_cards(role: str | None, user: User) -> bool:
+    if sees_all_boards(user):
+        return True
+    return role in EDIT_ROLES
+
+
+def user_can_delete_board(role: str | None, user: User, board: KanbanBoard) -> bool:
+    if sees_all_boards(user):
+        return True
+    if role == KANBAN_ROLE_OWNER:
+        return True
+    user_id = getattr(user, "id", None)
+    if user_id is not None and user_created_board(board, user_id):
+        return True
+    return False
+
+
+def user_can_delete_tickets(user: User) -> bool:
+    return sees_all_boards(user)

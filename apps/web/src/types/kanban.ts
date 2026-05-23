@@ -25,7 +25,9 @@ export type KanbanColumn = {
   name: string;
   position: number;
   statuses: string[];
-  default_status: string;
+  default_status: string | null;
+  is_custom: boolean;
+  wip_limit: number | null;
 };
 
 export type KanbanCard = {
@@ -44,4 +46,17 @@ export type KanbanBoardDetail = {
   members: KanbanBoardMember[];
   can_edit: boolean;
   can_move_cards: boolean;
+  can_remove_cards: boolean;
+  can_delete_board: boolean;
+  can_delete_tickets: boolean;
+};
+
+export type KanbanTicketSearchResult = {
+  id: string;
+  ticket_number: string;
+  title: string;
+  status: string;
+  priority: string;
+  assigned_team_name: string | null;
+  assigned_user_name: string | null;
 };

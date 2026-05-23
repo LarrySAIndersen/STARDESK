@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, SmallInteger, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, SmallInteger, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -74,13 +74,41 @@ class KanbanColumn(Base):
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     statuses: Mapped[list[str]] = mapped_column(ARRAY(String(32)), nullable=False)
-    default_status: Mapped[str] = mapped_column(String(32), nullable=False)
+    default_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    is_custom: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    wip_limit: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
     )
     updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class KanbanBoardTicket(Base):
+    __tablename__ = "kanban_board_tickets"
+
+    board_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kanban_boards.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    ticket_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tickets.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    column_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("kanban_columns.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    position: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
