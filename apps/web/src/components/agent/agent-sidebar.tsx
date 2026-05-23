@@ -2,19 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid } from "lucide-react";
+import { GripVertical, LayoutGrid } from "lucide-react";
+import { useCallback, useMemo, useState, type DragEvent, type ReactNode } from "react";
 
 import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-section";
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
 import { SidebarUiModeSwitch } from "@/components/sidebar-ui-mode-switch";
+import { Button } from "@/components/ui/button";
+import { useNavLayout } from "@/hooks/use-nav-layout";
 import { useSidebarNavVisibility } from "@/hooks/use-sidebar-nav-visibility";
 import {
   buildAgentNavItems,
+  CLASSIC_UI_NAV_ID,
   filterNavItemsForViewer,
   type AgentNavItem,
 } from "@/lib/agent-nav";
+import {
+  NAV_DRAG_MIME,
+  NAV_SECTIONS,
+  type NavLayoutEntry,
+  type NavSectionId,
+} from "@/lib/agent-nav-config";
 import { canManageUsers, getClientUser, isStaff, isTopAdmin } from "@/lib/auth";
 import { canChooseClassicUi } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
@@ -28,31 +38,8 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function sectionId(label: string): string {
-  return label.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-}
-
-function groupNavItems(items: AgentNavItem[]): { unsectioned: AgentNavItem[]; sections: { label: string; items: AgentNavItem[] }[] } {
-  const unsectioned: AgentNavItem[] = [];
-  const sectionMap = new Map<string, AgentNavItem[]>();
-
-  for (const item of items) {
-    if (!item.section) {
-      unsectioned.push(item);
-      continue;
-    }
-    const list = sectionMap.get(item.section) ?? [];
-    list.push(item);
-    sectionMap.set(item.section, list);
-  }
-
-  return {
-    unsectioned,
-    sections: [...sectionMap.entries()].map(([label, sectionItems]) => ({
-      label,
-      items: sectionItems,
-    })),
-  };
+function readDraggedNavId(dataTransfer: DataTransfer): string {
+  return dataTransfer.getData(NAV_DRAG_MIME) || dataTransfer.getData("text/plain") || "";
 }
 
 function NavRow({
@@ -63,6 +50,12 @@ function NavRow({
   manageVisibility,
   hiddenNavIds,
   onToggleHidden,
+  editMode,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  dragOver,
 }: {
   item: AgentNavItem;
   pathname: string;
@@ -71,32 +64,111 @@ function NavRow({
   manageVisibility: boolean;
   hiddenNavIds: string[];
   onToggleHidden: (navId: string, hide: boolean) => void;
+  editMode?: boolean;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+  onDragOver?: (event: DragEvent<HTMLElement>) => void;
+  onDrop?: (event: DragEvent<HTMLElement>) => void;
+  dragOver?: boolean;
 }) {
   const Icon = item.icon;
   const active = isActive(pathname, item.href);
   const isHiddenForOthers = hiddenNavIds.includes(item.id);
 
-  return (
-    <Link
-      href={item.href}
-      className={cn(
-        "wire-nav-item",
-        active && "wire-nav-item--active",
-        collapsed && "wire-nav-item--compact",
-        manageVisibility && isHiddenForOthers && "opacity-80",
+  const content = (
+    <>
+      {editMode ? (
+        <GripVertical className="text-muted-foreground size-3.5 shrink-0 opacity-70" aria-hidden />
+      ) : (
+        <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
       )}
-      onClick={onNavigate}
-    >
-      <Icon className="size-[15px] shrink-0 opacity-60" aria-hidden />
       <span className={cn(collapsed && "min-w-0 flex-1 truncate")}>{item.label}</span>
-      {manageVisibility ? (
+      {manageVisibility && !editMode ? (
         <NavVisibilityEye
           hidden={isHiddenForOthers}
           collapsed={collapsed}
           onToggle={() => onToggleHidden(item.id, !isHiddenForOthers)}
         />
       ) : null}
+    </>
+  );
+
+  const className = cn(
+    "wire-nav-item",
+    active && !editMode && "wire-nav-item--active",
+    collapsed && "wire-nav-item--compact",
+    manageVisibility && isHiddenForOthers && "opacity-80",
+    editMode && "wire-nav-item--editable cursor-grab active:cursor-grabbing",
+    dragOver && "wire-nav-item--drag-over",
+  );
+
+  if (editMode) {
+    return (
+      <div
+        role="listitem"
+        draggable
+        className={className}
+        onDragStart={(event) => {
+          event.dataTransfer.setData(NAV_DRAG_MIME, item.id);
+          event.dataTransfer.setData("text/plain", item.id);
+          event.dataTransfer.effectAllowed = "move";
+          onDragStart?.();
+        }}
+        onDragEnd={() => onDragEnd?.()}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={item.href} className={className} onClick={onNavigate}>
+      {content}
     </Link>
+  );
+}
+
+function NavSectionDropZone({
+  sectionId,
+  editMode,
+  draggingId,
+  onMove,
+  children,
+}: {
+  sectionId: NavSectionId;
+  editMode: boolean;
+  draggingId: string | null;
+  onMove: (draggedId: string, targetSectionId: NavSectionId, beforeId?: string | null) => void;
+  children: ReactNode;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  if (!editMode) {
+    return <>{children}</>;
+  }
+
+  return (
+    <div
+      className={cn("wire-nav-section-drop", dragOver && "wire-nav-section-drop--active")}
+      onDragOver={(event) => {
+        if (!draggingId) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        setDragOver(true);
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragOver(false);
+        const draggedId = readDraggedNavId(event.dataTransfer);
+        if (!draggedId) return;
+        onMove(draggedId, sectionId, null);
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -124,39 +196,154 @@ export function AgentSidebar({
 
   const { hiddenNavIds, error, toggleHidden } = useSidebarNavVisibility(staff);
   const allItems = buildAgentNavItems({ staff, showAdmin });
-  const mainItems = filterNavItemsForViewer(
-    allItems.filter((item) => !item.id.startsWith("integration-")),
-    hiddenNavIds,
-    topAdmin,
+  const visibleItems = filterNavItemsForViewer(allItems, hiddenNavIds, topAdmin);
+  const itemMap = useMemo(
+    () => new Map(visibleItems.map((item) => [item.id, item])),
+    [visibleItems],
   );
-  const { unsectioned, sections } = groupNavItems(mainItems);
 
-  const renderClassicSwitch = (afterServiceDesk: boolean) => {
-    if (!showClassicSwitch) return null;
-    const hasServiceDesk = mainItems.some((item) => item.href === "/service-desk");
-    if (afterServiceDesk && !hasServiceDesk) return null;
-    if (!afterServiceDesk && hasServiceDesk) return null;
+  const {
+    grouped,
+    editMode,
+    setEditMode,
+    resetLayout,
+    moveItem,
+    hydrated,
+  } = useNavLayout(visibleItems, { includeClassicUi: showClassicSwitch });
+
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDropOnItem = useCallback(
+    (targetId: string, targetSectionId: NavSectionId) => (event: DragEvent<HTMLElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const draggedId = readDraggedNavId(event.dataTransfer);
+      setDragOverId(null);
+      setDraggingId(null);
+      if (!draggedId || draggedId === targetId) return;
+      moveItem(draggedId, targetSectionId, targetId);
+    },
+    [moveItem],
+  );
+
+  const renderClassicSwitch = () => (
+    <SidebarUiModeSwitch
+      targetMode="classic"
+      label="Klassisk grænseflade (TOPdesk)"
+      icon={LayoutGrid}
+      active={onClassicRoute}
+      collapsed={collapsed}
+      onNavigate={onNavigate}
+    />
+  );
+
+  const renderClassicUiEditor = (sectionId: NavSectionId) => (
+    <div
+      key={CLASSIC_UI_NAV_ID}
+      role="listitem"
+      draggable
+      className={cn(
+        "wire-nav-item wire-nav-item--editable cursor-grab active:cursor-grabbing",
+        dragOverId === CLASSIC_UI_NAV_ID && "wire-nav-item--drag-over",
+      )}
+      onDragStart={(event) => {
+        event.dataTransfer.setData(NAV_DRAG_MIME, CLASSIC_UI_NAV_ID);
+        event.dataTransfer.setData("text/plain", CLASSIC_UI_NAV_ID);
+        event.dataTransfer.effectAllowed = "move";
+        setDraggingId(CLASSIC_UI_NAV_ID);
+      }}
+      onDragEnd={() => {
+        setDraggingId(null);
+        setDragOverId(null);
+      }}
+      onDragOver={(event) => {
+        if (!draggingId || draggingId === CLASSIC_UI_NAV_ID) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setDragOverId(CLASSIC_UI_NAV_ID);
+      }}
+      onDrop={handleDropOnItem(CLASSIC_UI_NAV_ID, sectionId)}
+    >
+      <GripVertical className="text-muted-foreground size-3.5 shrink-0 opacity-70" aria-hidden />
+      <span>Klassisk grænseflade (TOPdesk)</span>
+    </div>
+  );
+
+  const renderEntry = (entry: NavLayoutEntry, sectionId: NavSectionId) => {
+    if (entry.id === CLASSIC_UI_NAV_ID) {
+      if (!showClassicSwitch) return null;
+      return editMode ? renderClassicUiEditor(sectionId) : renderClassicSwitch();
+    }
+
+    const item = itemMap.get(entry.id);
+    if (!item) return null;
+
+    if (item.id.startsWith("integration-") && !editMode) {
+      return null;
+    }
 
     return (
-      <div key="classic-ui-switch">
-        <CollapsibleNavSection
-          sectionId="graenseflade"
-          label="Grænseflade"
-          collapsed={collapsed}
-          defaultOpen
-        >
-          <SidebarUiModeSwitch
-            targetMode="classic"
-            label="Klassisk grænseflade (TOPdesk)"
-            icon={LayoutGrid}
-            active={onClassicRoute}
-            collapsed={collapsed}
-            onNavigate={onNavigate}
-          />
-        </CollapsibleNavSection>
-      </div>
+      <NavRow
+        key={entry.id}
+        item={item}
+        pathname={pathname}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+        manageVisibility={topAdmin}
+        hiddenNavIds={hiddenNavIds}
+        onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+        editMode={editMode}
+        dragOver={dragOverId === entry.id}
+        onDragStart={() => setDraggingId(entry.id)}
+        onDragEnd={() => {
+          setDraggingId(null);
+          setDragOverId(null);
+        }}
+        onDragOver={(event) => {
+          if (!editMode || !draggingId || draggingId === entry.id) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.dataTransfer.dropEffect = "move";
+          setDragOverId(entry.id);
+        }}
+        onDrop={handleDropOnItem(entry.id, sectionId)}
+      />
     );
   };
+
+  const renderSectionContent = (sectionId: NavSectionId, entries: NavLayoutEntry[]) => {
+    const integrationIds = entries
+      .map((entry) => entry.id)
+      .filter((id) => id.startsWith("integration-"));
+
+    return (
+      <NavSectionDropZone
+        sectionId={sectionId}
+        editMode={editMode}
+        draggingId={draggingId}
+        onMove={moveItem}
+      >
+        {entries.map((entry) => renderEntry(entry, sectionId))}
+
+        {integrationIds.length > 0 && !editMode ? (
+          <IntegrationSidebarLinks
+            pathname={pathname}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+            hiddenNavIds={hiddenNavIds}
+            isTopAdmin={topAdmin}
+            onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+            showSectionHeader={false}
+            orderedIds={integrationIds}
+          />
+        ) : null}
+      </NavSectionDropZone>
+    );
+  };
+
+  const sectionLabel = (sectionId: NavSectionId) =>
+    NAV_SECTIONS.find((section) => section.id === sectionId)?.label;
 
   return (
     <aside
@@ -169,11 +356,17 @@ export function AgentSidebar({
         </div>
       ) : null}
 
-      {topAdmin && !collapsed ? (
+      {topAdmin && !collapsed && !editMode ? (
         <p className="text-muted-foreground border-b border-[var(--gray-border)] px-4 py-2 text-[10px] leading-snug">
           <span className="text-[#1a7a44] font-semibold">Grønt øje</span> = synlig for alle.{" "}
           <span className="text-[#c41e2a] font-semibold">Rødt øje</span> = skjult for alle undtagen
           topadministrator. Klik sektionsoverskrift for at folde ud/ind.
+        </p>
+      ) : null}
+
+      {editMode && !collapsed ? (
+        <p className="text-muted-foreground border-b border-[var(--gray-border)] bg-muted/30 px-4 py-2 text-[10px] leading-snug">
+          Træk menupunkter mellem sektioner for at tilpasse menuen.
         </p>
       ) : null}
 
@@ -187,69 +380,49 @@ export function AgentSidebar({
         className="flex flex-1 flex-col overflow-y-auto py-1"
         aria-label="Hovednavigation"
       >
-        {unsectioned.map((item) => (
-          <div key={item.id}>
-            <NavRow
-              item={item}
-              pathname={pathname}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-              manageVisibility={topAdmin}
-              hiddenNavIds={hiddenNavIds}
-              onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
-            />
-            {showClassicSwitch && item.href === "/service-desk"
-              ? renderClassicSwitch(true)
-              : null}
-          </div>
-        ))}
-
-        {showClassicSwitch && !mainItems.some((item) => item.href === "/service-desk")
-          ? renderClassicSwitch(false)
+        {hydrated
+          ? grouped.map((section) => {
+              const label = sectionLabel(section.sectionId);
+              if (!label) {
+                return (
+                  <div key={section.sectionId}>
+                    {renderSectionContent(section.sectionId, section.entries)}
+                  </div>
+                );
+              }
+              return (
+                <CollapsibleNavSection
+                  key={section.sectionId}
+                  sectionId={section.sectionId}
+                  label={label}
+                  collapsed={collapsed}
+                  defaultOpen
+                >
+                  {renderSectionContent(section.sectionId, section.entries)}
+                </CollapsibleNavSection>
+              );
+            })
           : null}
-
-        {sections.map((section) => (
-          <CollapsibleNavSection
-            key={section.label}
-            sectionId={sectionId(section.label)}
-            label={section.label}
-            collapsed={collapsed}
-            defaultOpen
-          >
-            {section.items.map((item) => (
-              <NavRow
-                key={item.id}
-                item={item}
-                pathname={pathname}
-                collapsed={collapsed}
-                onNavigate={onNavigate}
-                manageVisibility={topAdmin}
-                hiddenNavIds={hiddenNavIds}
-                onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
-              />
-            ))}
-          </CollapsibleNavSection>
-        ))}
-
-        {staff ? (
-          <CollapsibleNavSection
-            sectionId="integration"
-            label="Integration"
-            collapsed={collapsed}
-            defaultOpen
-          >
-            <IntegrationSidebarLinks
-              pathname={pathname}
-              collapsed={collapsed}
-              onNavigate={onNavigate}
-              hiddenNavIds={hiddenNavIds}
-              isTopAdmin={topAdmin}
-              onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
-              showSectionHeader={false}
-            />
-          </CollapsibleNavSection>
-        ) : null}
       </nav>
+
+      {!collapsed && showAdmin ? (
+        <footer className="wire-sidebar-footer border-t border-[var(--gray-border)] px-3 py-2">
+          {editMode ? (
+            <div className="flex flex-col gap-2">
+              <Button type="button" size="sm" className="w-full" onClick={() => setEditMode(false)}>
+                Færdig
+              </Button>
+              <Button type="button" size="sm" variant="outline" className="w-full" onClick={resetLayout}>
+                Nulstil menu
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" size="sm" variant="outline" className="w-full" onClick={() => setEditMode(true)}>
+              Tilpas menu
+            </Button>
+          )}
+        </footer>
+      ) : null}
 
       {collapsed && onToggle ? (
         <footer className="wire-sidebar-footer flex justify-center border-t border-[var(--gray-border)] px-1.5 py-2">

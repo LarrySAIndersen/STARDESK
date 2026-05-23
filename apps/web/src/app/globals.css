@@ -493,6 +493,18 @@
     @apply pr-2.5 text-[12px];
   }
 
+  .wire-nav-item--editable {
+    @apply select-none;
+  }
+
+  .wire-nav-item--drag-over {
+    @apply border-star-blue/50 bg-star-blue/10 ring-1 ring-star-blue/30;
+  }
+
+  .wire-nav-section-drop--active {
+    @apply bg-muted/40 outline outline-1 outline-dashed outline-[var(--gray-border)];
+  }
+
   .wire-integ-pill {
     @apply inline-flex shrink-0 items-center rounded-full px-1.5 py-px text-[9px] font-bold tracking-wide uppercase;
   }

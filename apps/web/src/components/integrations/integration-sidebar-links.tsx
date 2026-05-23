@@ -32,6 +32,7 @@ export function IntegrationSidebarLinks({
   isTopAdmin = false,
   onToggleHidden,
   showSectionHeader = true,
+  orderedIds,
 }: {
   pathname: string;
   collapsed?: boolean;
@@ -41,13 +42,23 @@ export function IntegrationSidebarLinks({
   onToggleHidden?: (navId: string, hide: boolean) => void;
   /** When wrapped in CollapsibleNavSection, omit duplicate section label. */
   showSectionHeader?: boolean;
+  orderedIds?: string[];
 }) {
   const config = useIntegrationsConfig();
   const hidden = new Set(hiddenNavIds);
-  const visibleMeta = INTEGRATION_META.filter((meta) => {
+  let visibleMeta = INTEGRATION_META.filter((meta) => {
     const navId = `integration-${meta.id}`;
     return isTopAdmin || !hidden.has(navId);
   });
+
+  if (orderedIds?.length) {
+    const order = new Map(orderedIds.map((id, index) => [id, index]));
+    visibleMeta = [...visibleMeta].sort((a, b) => {
+      const aIndex = order.get(`integration-${a.id}`) ?? Number.MAX_SAFE_INTEGER;
+      const bIndex = order.get(`integration-${b.id}`) ?? Number.MAX_SAFE_INTEGER;
+      return aIndex - bIndex;
+    });
+  }
 
   if (visibleMeta.length === 0) {
     return null;

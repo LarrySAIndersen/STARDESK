@@ -3,6 +3,7 @@ import {
   BarChart3,
   Columns3,
   Headset,
+  Inbox,
   Layers,
   LayoutDashboard,
   Library,
@@ -49,6 +50,9 @@ export function buildAgentNavItems(options: {
       : []),
     ...(staff
       ? [{ id: "kanban", href: "/kanban", label: "Kanban", icon: Columns3 }]
+      : []),
+    ...(staff
+      ? [{ id: "backlog", href: "/backlog", label: "Backlog", icon: Inbox }]
       : []),
     { id: "tickets", href: "/tickets", label: "Alle sager", icon: Ticket },
     { id: "tickets-new", href: "/tickets/new", label: "Ny sag", icon: Plus },
