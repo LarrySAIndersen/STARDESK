@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Columns3,
   Headset,
   Layers,
   LayoutDashboard,
@@ -45,6 +46,9 @@ export function buildAgentNavItems(options: {
     { id: "dashboard", href: "/", label: "Dashboard", icon: LayoutDashboard },
     ...(staff
       ? [{ id: "service-desk", href: "/service-desk", label: "Service Desk", icon: Headset }]
+      : []),
+    ...(staff
+      ? [{ id: "kanban", href: "/kanban", label: "Kanban", icon: Columns3 }]
       : []),
     { id: "tickets", href: "/tickets", label: "Alle sager", icon: Ticket },
     { id: "tickets-new", href: "/tickets/new", label: "Ny sag", icon: Plus },
