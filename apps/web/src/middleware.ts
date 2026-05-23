@@ -34,6 +34,11 @@ function isProxyApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/proxy/");
 }
 
+/** Health probes — must not redirect to login HTML. */
+function isHealthApiPath(pathname: string): boolean {
+  return pathname === "/api/health" || pathname === "/api/backend-health";
+}
+
 /** Public files from `public/` (logos, icons) — must not require JWT or Basic Auth. */
 function isStaticPublicAsset(pathname: string): boolean {
   if (pathname.startsWith("/images/")) return true;
@@ -45,8 +50,7 @@ function isStaticPublicAsset(pathname: string): boolean {
 function isBasicAuthExcluded(pathname: string): boolean {
   if (isStaticPublicAsset(pathname)) return true;
   if (pathname.startsWith("/_next")) return true;
-  if (pathname === "/api/health") return true;
-  if (pathname === "/api/backend-health") return true;
+  if (isHealthApiPath(pathname)) return true;
   if (isAuthApiPath(pathname)) return true;
   return false;
 }
@@ -116,7 +120,7 @@ function handleJwtSession(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
 
-  if (isAuthApiPath(pathname) || isProxyApiPath(pathname)) {
+  if (isAuthApiPath(pathname) || isProxyApiPath(pathname) || isHealthApiPath(pathname)) {
     return nextWithPathname(request);
   }
 
