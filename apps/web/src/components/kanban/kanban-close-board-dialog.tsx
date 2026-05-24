@@ -63,8 +63,8 @@ export function KanbanCloseBoardDialog({
   }
 
   return (
-    <motionlessDialogBackdrop onClose={handleDismiss}>
-      <motionlessDialogPanel
+    <MotionlessDialogBackdrop onClose={handleDismiss}>
+      <MotionlessDialogPanel
         trapRef={trapRef}
         titleId={titleId}
         onClose={handleDismiss}
@@ -126,12 +126,12 @@ export function KanbanCloseBoardDialog({
             </Button>
           </div>
         </form>
-      </motionlessDialogPanel>
-    </motionlessDialogBackdrop>
+      </MotionlessDialogPanel>
+    </MotionlessDialogBackdrop>
   );
 }
 
-function motionlessDialogBackdrop({
+function MotionlessDialogBackdrop({
   children,
   onClose,
 }: {
@@ -148,7 +148,7 @@ function motionlessDialogBackdrop({
   );
 }
 
-function motionlessDialogPanel({
+function MotionlessDialogPanel({
   children,
   trapRef,
   titleId,
