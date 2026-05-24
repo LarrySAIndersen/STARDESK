@@ -203,6 +203,13 @@ export function LoginForm() {
                   >
                     Skift adgangskode
                   </Link>
+                  {" · "}
+                  <Link
+                    href="/portal"
+                    className="text-star-blue hover:text-star-navy underline"
+                  >
+                    STAR Help Desk login
+                  </Link>
                 </p>
               </form>
             </CardContent>

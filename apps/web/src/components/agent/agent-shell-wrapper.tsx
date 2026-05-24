@@ -14,9 +14,19 @@ import {
   isStaffPathBlockedForUser,
 } from "@/lib/sidebar-nav-visibility-server";
 
+function isStandaloneLoginPath(pathname: string): boolean {
+  if (pathname === "/portal") return true;
+  return pathname === "/login/helpdesk" || pathname.startsWith("/login/helpdesk/");
+}
+
 export async function AgentShellWrapper({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
+  const pathname = (await headers()).get("x-pathname") ?? "";
+
+  if (!token && isStandaloneLoginPath(pathname)) {
+    return <>{children}</>;
+  }
 
   if (!token) {
     return (
@@ -31,7 +41,6 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   }
 
   const currentUser = await getServerUser();
-  const pathname = (await headers()).get("x-pathname") ?? "";
 
   const showUsersNav = canManageUsers(currentUser);
 

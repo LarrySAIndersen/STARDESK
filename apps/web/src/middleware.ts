@@ -4,9 +4,10 @@ import type { NextRequest } from "next/server";
 import { TOKEN_COOKIE } from "@/lib/auth";
 import { isPasswordChangeExemptPath } from "@/lib/must-change-password";
 
-/** Routes that work without a session (login UI lives on `/`). */
+/** Routes that work without a session (login UI lives on `/` and `/portal`). */
 function isPublicAppPath(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname === "/portal") return true;
   if (pathname === "/login" || pathname.startsWith("/login/")) return true;
   if (isPasswordChangeExemptPath(pathname)) return true;
   return false;
@@ -125,7 +126,7 @@ function handleJwtSession(request: NextRequest): NextResponse {
   }
 
   if (pathname === "/login" || pathname.startsWith("/login/")) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return nextWithPathname(request);
   }
 
   if (isPublicAppPath(pathname)) {
@@ -133,6 +134,9 @@ function handleJwtSession(request: NextRequest): NextResponse {
   }
 
   if (!token) {
+    if (pathname.startsWith("/portal/")) {
+      return NextResponse.redirect(new URL("/portal", request.url));
+    }
     return NextResponse.redirect(new URL("/", request.url));
   }
 
