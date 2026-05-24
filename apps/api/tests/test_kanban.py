@@ -14,6 +14,7 @@ from star_itsm_api.services.kanban_access import (
     sees_all_boards,
 )
 from star_itsm_api.services.kanban_defaults import (
+    build_columns_for_board,
     column_for_ticket_status,
     default_column_specs,
 )
@@ -33,6 +34,31 @@ def test_default_columns_match_itsm_buckets() -> None:
     assert specs[0][0] == "Modtaget"
     assert "new" in specs[0][2]
     assert specs[1][0] == "Igangsat"
+
+
+def test_simple_template_columns() -> None:
+    board_id = uuid.uuid4()
+    columns = build_columns_for_board(board_id, template="simple")
+    assert len(columns) == 3
+    assert [c.name for c in columns] == ["Backlog", "I gang", "Færdig"]
+
+
+def test_blank_template_columns() -> None:
+    board_id = uuid.uuid4()
+    columns = build_columns_for_board(board_id, template="blank")
+    assert columns == []
+
+
+def test_custom_template_columns() -> None:
+    board_id = uuid.uuid4()
+    columns = build_columns_for_board(
+        board_id,
+        template="custom",
+        column_names=["Todo", "Doing", "Done"],
+    )
+    assert len(columns) == 3
+    assert all(c.is_custom for c in columns)
+    assert columns[0].name == "Todo"
 
 
 def test_column_for_ticket_status() -> None:

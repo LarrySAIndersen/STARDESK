@@ -32,32 +32,44 @@ export function KanbanCard({
 }) {
   const [hovered, setHovered] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [didDrag, setDidDrag] = useState(false);
 
   return (
     <article
       className={cn(
-        "group relative cursor-grab rounded-md border border-[var(--gray-border)] bg-card p-3 shadow-sm transition-shadow active:cursor-grabbing",
-        dragging && "opacity-60 ring-2 ring-star-blue/40",
-        "hover:border-star-blue/35 hover:shadow-md",
+        "group relative cursor-grab rounded-lg border border-[var(--gray-border)] bg-card p-3 shadow-sm transition-all active:cursor-grabbing",
+        dragging && "scale-[1.02] opacity-70 shadow-lg ring-2 ring-star-blue/50",
+        !dragging && "hover:-translate-y-0.5 hover:border-star-blue/35 hover:shadow-md",
       )}
       draggable
       onDragStart={(event) => {
+        setDidDrag(true);
         event.dataTransfer.setData("application/x-stardesk-kanban-ticket", ticket.id);
         event.dataTransfer.setData("text/plain", ticket.id);
         event.dataTransfer.effectAllowed = "move";
         onDragStart?.();
       }}
-      onDragEnd={() => onDragEnd?.()}
+      onDragEnd={() => {
+        onDragEnd?.();
+        window.setTimeout(() => setDidDrag(false), 0);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => {
         setHovered(false);
         setConfirmDelete(false);
       }}
-      onClick={onOpen}
+      onClick={() => {
+        if (didDrag) {
+          return;
+        }
+        onOpen();
+      }}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onOpen();
+          if (!didDrag) {
+            onOpen();
+          }
         }
       }}
       role="button"

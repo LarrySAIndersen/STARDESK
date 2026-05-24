@@ -30,6 +30,57 @@ jobs:
       - name: pip-audit (dependencies)
         run: pip-audit -r <(pip freeze) || true
 
+  database-migrate:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [api-security]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+      - name: Install API package
+        run: pip install -e .
+      - name: Resolve DATABASE_URL
+        id: db_url
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            echo "source=secret" >> "$GITHUB_OUTPUT"
+            echo "database_url=$DATABASE_URL" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::No DATABASE_URL or VERCEL_TOKEN secret — skip CI migrate (API runs alembic on startup)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          npm install -g vercel@latest
+          vercel link --yes --project=api --token="$VERCEL_TOKEN"
+          vercel env pull .env.ci --environment=production --yes --token="$VERCEL_TOKEN"
+          url=$(grep -E '^DATABASE_URL=' .env.ci | cut -d= -f2- | tr -d '"')
+          if [ -z "$url" ]; then
+            echo "::warning::Vercel pull returned empty DATABASE_URL — skip CI migrate (API runs alembic on startup)."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "source=vercel" >> "$GITHUB_OUTPUT"
+          echo "database_url=$url" >> "$GITHUB_OUTPUT"
+      - name: Alembic upgrade head
+        if: steps.db_url.outputs.skip != 'true'
+        env:
+          DATABASE_URL: ${{ steps.db_url.outputs.database_url }}
+        run: |
+          alembic upgrade head
+          alembic current
+
   web-security:
     runs-on: ubuntu-latest
     defaults:

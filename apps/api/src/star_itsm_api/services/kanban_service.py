@@ -47,7 +47,7 @@ from star_itsm_api.services.kanban_access import (
     user_can_view_board,
     user_created_board,
 )
-from star_itsm_api.services.kanban_defaults import build_default_columns
+from star_itsm_api.services.kanban_defaults import build_columns_for_board
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.org_access import apply_ticket_list_filter, get_user_organization_id
 from star_itsm_api.services.reports import is_reopen_transition
@@ -314,7 +314,12 @@ async def create_board(
             created_at=now,
         )
     )
-    for column in build_default_columns(board_id, now=now):
+    for column in build_columns_for_board(
+        board_id,
+        template=payload.template,
+        column_names=payload.column_names,
+        now=now,
+    ):
         db.add(column)
     for member_id in payload.member_user_ids:
         if member_id == user.id:

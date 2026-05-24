@@ -1,4 +1,4 @@
-# Optional one-shot schema sync before rollout (API also migrates on startup).
+# Optional one-shot DB migrate before rollout (API also runs alembic on startup).
 #   kubectl apply -f deploy/kubernetes/schema-sync-job.yaml -n stardesk
 #   kubectl wait --for=condition=complete job/schema-sync -n stardesk --timeout=120s
 apiVersion: batch/v1
@@ -27,6 +27,7 @@ spec:
                 name: stardesk-config
             - secretRef:
                 name: stardesk-secrets
+          workingDir: /app
           command:
             - python
             - -c
@@ -34,12 +35,14 @@ spec:
               import asyncio
               from star_itsm_api.core.config import settings
               from star_itsm_api.db import engine
+              from star_itsm_api.db_alembic import run_alembic_upgrade_head
               from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 
               if not settings.database_url:
                   raise SystemExit("DATABASE_URL is required for schema-sync")
+              run_alembic_upgrade_head()
               asyncio.run(ensure_ticket_schema_current(engine, settings.database_url))
-              print("schema-sync complete")
+              print("schema-sync complete (alembic + sql)")
           resources:
             requests:
               cpu: 50m

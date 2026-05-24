@@ -20,7 +20,8 @@ export default async function AdminSlaPage() {
       <header>
         <h1 className="text-star-navy text-2xl font-bold tracking-tight">SLA-indstillinger</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Rediger SLA-politikker. SLA genberegnes ved prioritets- og sagstypeændring samt via{" "}
+          Konfigurer standard P1–P4, pause ved på hold, hvilke modtagergrupper der udløser SLA, og
+          database-politikker. SLA genberegnes ved prioritetsændring og via{" "}
           <code className="text-xs">POST /api/v1/admin/reset-sla</code>.
         </p>
       </header>

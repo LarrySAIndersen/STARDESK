@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { Archive, MoreHorizontal, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
+import { KanbanAddColumnDialog } from "@/components/kanban/kanban-add-column-dialog";
 import { KanbanAddTicketDialog } from "@/components/kanban/kanban-add-ticket-dialog";
 import { KanbanBoardSettings } from "@/components/kanban/kanban-board-settings";
 import { KanbanCard } from "@/components/kanban/kanban-card";
+import { KanbanCloseBoardDialog } from "@/components/kanban/kanban-close-board-dialog";
 import { KanbanCreateBoardDialog } from "@/components/kanban/kanban-create-board-dialog";
 import { KanbanQuickCreateDialog } from "@/components/kanban/kanban-quick-create-dialog";
 import { KanbanTicketDrawer } from "@/components/kanban/kanban-ticket-drawer";
@@ -23,7 +25,12 @@ import {
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import { canManageUsers } from "@/lib/auth";
 import type { Category } from "@/types/category";
-import type { KanbanBoardDetail, KanbanBoardSummary, KanbanColumn } from "@/types/kanban";
+import type {
+  KanbanBoardDetail,
+  KanbanBoardSummary,
+  KanbanCard as KanbanCardData,
+  KanbanColumn,
+} from "@/types/kanban";
 import type { Team } from "@/types/team";
 import type { User } from "@/types/user";
 
@@ -47,6 +54,44 @@ function wipHint(column: KanbanColumn, count: number): string | null {
     return `WIP: ${count}/${column.wip_limit}`;
   }
   return null;
+}
+
+const COLUMN_ACCENT = [
+  "border-t-star-blue",
+  "border-t-amber-500",
+  "border-t-emerald-500",
+  "border-t-violet-500",
+  "border-t-rose-500",
+  "border-t-cyan-500",
+] as const;
+
+function moveCardOptimistically(
+  detail: KanbanBoardDetail,
+  ticketId: string,
+  targetColumnId: string,
+): KanbanBoardDetail {
+  let moved: KanbanCardData | null = null;
+  const columns = detail.columns.map(({ column, cards }) => {
+    const remaining = cards.filter(({ ticket }) => {
+      if (ticket.id === ticketId) {
+        moved = { ticket, position: cards.length };
+        return false;
+      }
+      return true;
+    });
+    return { column, cards: remaining };
+  });
+  if (!moved) {
+    return detail;
+  }
+  return {
+    ...detail,
+    columns: columns.map(({ column, cards }) =>
+      column.id === targetColumnId
+        ? { column, cards: [...cards, { ...moved!, position: cards.length }] }
+        : { column, cards },
+    ),
+  };
 }
 
 export function KanbanBoardView({
@@ -74,12 +119,16 @@ export function KanbanBoardView({
   const [targetColumnId, setTargetColumnId] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [closeBoardOpen, setCloseBoardOpen] = useState(false);
+  const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [columnMenuId, setColumnMenuId] = useState<string | null>(null);
   const [renamingColumnId, setRenamingColumnId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const showAdminPicker = canManageUsers(currentUser);
   const canEdit = detail.can_edit;
+  const canCloseBoard = detail.can_delete_board;
 
   const totalCards = useMemo(
     () => detail.columns.reduce((sum, col) => sum + col.cards.length, 0),
@@ -102,12 +151,15 @@ export function KanbanBoardView({
       return;
     }
     setMoveError(null);
+    const previous = detail;
+    setDetail((current) => moveCardOptimistically(current, ticketId, columnId));
     try {
       await apiPatch(`/api/v1/kanban/boards/${detail.board.id}/cards/${ticketId}/move`, {
         column_id: columnId,
       });
       await refreshBoard();
     } catch (err) {
+      setDetail(previous);
       setMoveError(err instanceof Error ? err.message : "Kunne ikke flytte kort.");
     }
   }
@@ -132,20 +184,12 @@ export function KanbanBoardView({
     }
   }
 
-  async function handleAddColumn(afterPosition?: number) {
-    const name = window.prompt("Navn på ny kolonne:");
-    if (!name?.trim()) {
-      return;
-    }
-    try {
-      await apiPost(`/api/v1/kanban/boards/${detail.board.id}/columns`, {
-        name: name.trim(),
-        position: afterPosition,
-      });
-      await refreshBoard();
-    } catch (err) {
-      setMoveError(err instanceof Error ? err.message : "Kunne ikke oprette kolonne.");
-    }
+  async function handleAddColumn(name: string) {
+    await apiPost(`/api/v1/kanban/boards/${detail.board.id}/columns`, {
+      name,
+      position: detail.columns.length,
+    });
+    await refreshBoard();
   }
 
   async function handleRenameColumn(columnId: string) {
@@ -240,6 +284,44 @@ export function KanbanBoardView({
               Indstillinger
             </Button>
           ) : null}
+          {canCloseBoard ? (
+            <div className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8"
+                aria-label="Board-handlinger"
+                aria-expanded={boardMenuOpen}
+                onClick={() => setBoardMenuOpen((open) => !open)}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+              {boardMenuOpen ? (
+                <>
+                  <button
+                    type="button"
+                    className="fixed inset-0 z-10 cursor-default"
+                    aria-label="Luk menu"
+                    onClick={() => setBoardMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-[var(--gray-border)] bg-popover py-1 text-sm shadow-md">
+                    <button
+                      type="button"
+                      className="text-destructive hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-left"
+                      onClick={() => {
+                        setBoardMenuOpen(false);
+                        setCloseBoardOpen(true);
+                      }}
+                    >
+                      <Archive className="size-4" />
+                      Luk board
+                    </button>
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : null}
           <Link
             href="/kanban"
             className="inline-flex h-8 items-center justify-center rounded-md px-3 text-sm font-medium hover:bg-muted"
@@ -262,12 +344,11 @@ export function KanbanBoardView({
 
       {moveError ? <p className="text-destructive px-1 text-sm">{moveError}</p> : null}
 
-      {totalCards === 0 ? (
-        <section className="ledger-card mx-1 flex flex-col items-center justify-center gap-3 p-10 text-center">
+      {totalCards === 0 && detail.columns.length > 0 ? (
+        <section className="ledger-card mx-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
           <p className="text-muted-foreground max-w-md text-sm">
-            Boardet er tomt. Tilføj sager manuelt med <strong>Tilføj sag</strong> eller opret nye
-            med <strong>Ny sag</strong>. Gruppe-filter bruges kun ved søgning — sager vises ikke
-            automatisk.
+            Boardet er tomt. Træk sager mellem kolonner, opret nye med <strong>Ny sag</strong>, eller
+            tilføj eksisterende med <strong>Tilføj sag</strong>.
           </p>
           {canEdit ? (
             <div className="flex flex-wrap justify-center gap-2">
@@ -282,18 +363,36 @@ export function KanbanBoardView({
         </section>
       ) : null}
 
+      {detail.columns.length === 0 ? (
+        <section className="ledger-card mx-1 flex flex-col items-center justify-center gap-4 p-12 text-center">
+          <p className="text-muted-foreground max-w-sm text-sm">
+            Dette board har ingen kolonner endnu. Tilføj den første kolonne for at komme i gang —
+            fx &quot;Backlog&quot;, &quot;I gang&quot; eller &quot;Færdig&quot;.
+          </p>
+          {canEdit ? (
+            <Button type="button" onClick={() => setAddColumnOpen(true)}>
+              <Plus className="mr-1.5 size-4" />
+              Tilføj første kolonne
+            </Button>
+          ) : null}
+        </section>
+      ) : (
       <div
         className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-4 px-1"
         role="list"
         aria-label="Kanban-kolonner"
       >
-        {detail.columns.map(({ column, cards }) => {
+        {detail.columns.map(({ column, cards }, columnIndex) => {
           const wip = wipHint(column, cards.length);
+          const accent = COLUMN_ACCENT[columnIndex % COLUMN_ACCENT.length];
+          const isDropTarget = dragOverColumnId === column.id;
           return (
             <section
               key={column.id}
               role="listitem"
-              className="flex w-72 shrink-0 flex-col rounded-lg border border-[var(--gray-border)] bg-muted/20"
+              className={`flex w-80 shrink-0 flex-col rounded-xl border border-[var(--gray-border)] border-t-[3px] bg-card shadow-sm transition-shadow ${accent} ${
+                isDropTarget ? "ring-2 ring-star-blue/40 shadow-md" : ""
+              }`}
               onDragOver={(event) => {
                 if (!detail.can_move_cards) {
                   return;
@@ -328,7 +427,15 @@ export function KanbanBoardView({
                       autoFocus
                     />
                   ) : (
-                    <div className="min-w-0">
+                    <div
+                      className="min-w-0 flex-1 cursor-text"
+                      onDoubleClick={() => {
+                        if (!canEdit) return;
+                        setRenameValue(column.name);
+                        setRenamingColumnId(column.id);
+                      }}
+                      title={canEdit ? "Dobbeltklik for at omdøbe" : undefined}
+                    >
                       <h2 className="text-sm font-semibold">{column.name}</h2>
                       <p className="text-muted-foreground text-[10px]">
                         {cards.length} sager
@@ -382,13 +489,18 @@ export function KanbanBoardView({
                 </div>
               </header>
               <div
-                className={`flex max-h-[calc(100vh-16rem)] min-h-[12rem] flex-1 flex-col gap-2 overflow-y-auto p-2 ${
-                  dragOverColumnId === column.id ? "bg-star-blue/5 ring-1 ring-star-blue/30" : ""
+                className={`flex max-h-[calc(100vh-16rem)] min-h-[14rem] flex-1 flex-col gap-2 overflow-y-auto p-2.5 transition-colors ${
+                  isDropTarget ? "bg-star-blue/8" : "bg-muted/15"
                 }`}
               >
-                {cards.length === 0 ? (
-                  <p className="text-muted-foreground py-6 text-center text-xs">
-                    Ingen sager her endnu
+                {isDropTarget && detail.can_move_cards ? (
+                  <div className="border-star-blue/40 bg-star-blue/5 text-star-blue mb-1 rounded-md border border-dashed px-2 py-3 text-center text-xs font-medium">
+                    Slip kortet her
+                  </div>
+                ) : null}
+                {cards.length === 0 && !isDropTarget ? (
+                  <p className="text-muted-foreground flex flex-1 items-center justify-center py-8 text-center text-xs">
+                    Træk sager hertil
                   </p>
                 ) : (
                   cards.map(({ ticket }) => (
@@ -431,20 +543,27 @@ export function KanbanBoardView({
           );
         })}
         {canEdit ? (
-          <section className="flex w-12 shrink-0 items-start pt-2">
+          <section className="flex w-44 shrink-0 items-start pt-1">
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              className="size-9"
+              className="h-10 w-full justify-start gap-2 border-dashed text-muted-foreground hover:border-star-blue/40 hover:text-foreground"
               aria-label="Tilføj kolonne"
-              onClick={() => void handleAddColumn(detail.columns.length)}
+              onClick={() => setAddColumnOpen(true)}
             >
               <Plus className="size-4" />
+              Ny kolonne
             </Button>
           </section>
         ) : null}
       </div>
+      )}
+
+      <KanbanAddColumnDialog
+        open={addColumnOpen}
+        onClose={() => setAddColumnOpen(false)}
+        onAdd={handleAddColumn}
+      />
 
       <KanbanTicketDrawer
         ticketId={selectedTicketId}
@@ -469,6 +588,14 @@ export function KanbanBoardView({
         columnId={targetColumnId}
         onClose={() => setAddOpen(false)}
         onAdded={() => void refreshBoard()}
+      />
+
+      <KanbanCloseBoardDialog
+        open={closeBoardOpen}
+        boardId={detail.board.id}
+        boardName={detail.board.name}
+        onClose={() => setCloseBoardOpen(false)}
+        onClosed={() => router.push("/kanban")}
       />
 
       <KanbanQuickCreateDialog

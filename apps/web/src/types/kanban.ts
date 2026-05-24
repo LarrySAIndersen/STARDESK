@@ -2,6 +2,8 @@ import type { Ticket } from "@/types/ticket";
 
 export type KanbanMemberRole = "owner" | "editor" | "viewer";
 
+export type KanbanBoardTemplate = "itsm" | "simple" | "blank" | "custom";
+
 export type KanbanBoardSummary = {
   id: string;
   name: string;
@@ -60,3 +62,35 @@ export type KanbanTicketSearchResult = {
   assigned_team_name: string | null;
   assigned_user_name: string | null;
 };
+
+export const KANBAN_BOARD_TEMPLATES: {
+  id: KanbanBoardTemplate;
+  label: string;
+  description: string;
+  columns: string[];
+}[] = [
+  {
+    id: "itsm",
+    label: "ITSM-standard",
+    description: "Fire kolonner koblet til sagstatus — ideelt til service desk.",
+    columns: ["Modtaget", "Igangsat", "Løst", "Lukket"],
+  },
+  {
+    id: "simple",
+    label: "Simpel",
+    description: "Tre kolonner til hurtig opstart — Backlog, I gang, Færdig.",
+    columns: ["Backlog", "I gang", "Færdig"],
+  },
+  {
+    id: "blank",
+    label: "Tomt board",
+    description: "Start uden kolonner og tilføj præcis dem du har brug for.",
+    columns: [],
+  },
+  {
+    id: "custom",
+    label: "Tilpasset",
+    description: "Vælg egne kolonnenavne inden boardet oprettes.",
+    columns: ["Backlog", "I gang", "Færdig"],
+  },
+];

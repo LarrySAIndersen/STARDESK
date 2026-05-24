@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from star_itsm_api.schemas.ticket import TicketCreate, TicketRead
 
 KanbanMemberRole = Literal["owner", "editor", "viewer"]
+KanbanBoardTemplate = Literal["itsm", "simple", "blank", "custom"]
 
 
 class KanbanBoardMemberRead(BaseModel):
@@ -39,6 +40,18 @@ class KanbanBoardCreate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     team_id: UUID | None = None
     member_user_ids: list[UUID] = Field(default_factory=list)
+    template: KanbanBoardTemplate = "itsm"
+    column_names: list[str] = Field(default_factory=list, max_length=12)
+
+    @model_validator(mode="after")
+    def custom_template_requires_columns(self) -> "KanbanBoardCreate":
+        if self.template == "custom":
+            names = [name.strip() for name in self.column_names if name.strip()]
+            if not names:
+                raise ValueError("custom template requires at least one column name")
+            if len(names) > 12:
+                raise ValueError("custom template supports at most 12 columns")
+        return self
 
 
 class KanbanBoardUpdate(BaseModel):

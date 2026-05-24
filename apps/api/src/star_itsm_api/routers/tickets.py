@@ -84,6 +84,11 @@ from star_itsm_api.services.ticket_dashboard_filters import (
 )
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
+from star_itsm_api.services.sla_pause import (
+    maybe_start_sla_on_assignment,
+    sync_sla_pause_on_status_change,
+)
+from star_itsm_api.services.sla_settings_store import get_sla_runtime_settings
 from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
 from star_itsm_api.services.teams import user_in_team
 from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
@@ -470,12 +475,7 @@ async def create_ticket(
         deleted_at=None,
     )
     db.add(ticket)
-    await apply_sla_to_ticket(
-        db,
-        ticket,
-        priority=routing.priority,
-        start_at=now,
-    )
+    await apply_sla_to_ticket(db, ticket, priority=routing.priority, start_at=now)
     await db.flush()
     if payload.parent_ticket_id is not None:
         try:
@@ -698,8 +698,16 @@ async def update_ticket_status(
 
     previous_status = ticket.status
     now = datetime.now(UTC)
+    sla_settings = await get_sla_runtime_settings(db)
     ticket.status = payload.status
     apply_status_milestone_timestamps(ticket, payload.status, now=now)
+    sync_sla_pause_on_status_change(
+        ticket,
+        previous_status=previous_status,
+        new_status=payload.status,
+        settings=sla_settings,
+        now=now,
+    )
 
     event_type = "ticket.status_changed"
     if is_reopen_transition(previous_status, payload.status):
@@ -845,6 +853,7 @@ async def update_ticket_priority(
         ticket,
         priority=payload.priority,
         start_at=ticket.created_at,
+        force=True,
     )
     touch_ticket_updated(ticket, now)
     db.add(
@@ -903,11 +912,7 @@ async def update_ticket_type(
 
     now = datetime.now(UTC)
     ticket.ticket_type = payload.ticket_type
-    await apply_sla_to_ticket(
-        db,
-        ticket,
-        start_at=ticket.created_at,
-    )
+    await apply_sla_to_ticket(db, ticket, start_at=ticket.created_at, force=True)
     touch_ticket_updated(ticket, now)
     db.add(
         TicketEvent(
@@ -1162,6 +1167,7 @@ async def assign_ticket(
         "assigned_team_id": str(ticket.assigned_team_id) if ticket.assigned_team_id else None,
         "assigned_user_id": str(ticket.assigned_user_id) if ticket.assigned_user_id else None,
     }
+    previous_team_id = ticket.assigned_team_id
     ticket.assigned_team_id = team_id
     ticket.assigned_user_id = user_id
     if "assignment_reason" in updates:
@@ -1173,6 +1179,12 @@ async def assign_ticket(
         ticket.status = "assigned"
         apply_status_milestone_timestamps(ticket, "assigned", now=now)
     maybe_set_assigned_at(ticket, now=now)
+    await maybe_start_sla_on_assignment(
+        db,
+        ticket,
+        previous_team_id=previous_team_id,
+        now=now,
+    )
 
     db.add(
         TicketEvent(

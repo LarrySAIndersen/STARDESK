@@ -11,6 +11,7 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead, TicketSummaryRead
 from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
+from star_itsm_api.services.sla_settings_store import SlaRuntimeSettings, get_sla_runtime_settings
 from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
 from star_itsm_api.services.sub_causes import get_sub_causes_by_ticket_ids
 from star_itsm_api.services.knowledge_articles import (
@@ -126,8 +127,9 @@ def _ticket_to_read(
     parents: dict[uuid.UUID, TicketSummaryRead],
     child_counts: dict[uuid.UUID, int],
     active_teams: list[_TeamRef] | None = None,
+    sla_settings: SlaRuntimeSettings | None = None,
 ) -> TicketRead:
-    sla = sla_fields_for_ticket(ticket)
+    sla = sla_fields_for_ticket(ticket, settings=sla_settings)
     ka_status = getattr(ticket, "knowledge_status", None)
     ka_visibility = getattr(ticket, "knowledge_visibility", None)
     return TicketRead(
@@ -198,6 +200,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
         sub_map, categories, subcategories, teams, users = await _load_list_context(db, tickets)
         parents, child_counts = await _load_hierarchy_context(db, tickets)
         active_teams = await _load_active_teams(db)
+        sla_settings = await get_sla_runtime_settings(db)
     except Exception:
         logger.exception("Ticket list context query failed; using minimal payloads")
         return [_fallback_ticket_read(ticket) for ticket in tickets]
@@ -216,6 +219,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
                     parents=parents,
                     child_counts=child_counts,
                     active_teams=active_teams,
+                    sla_settings=sla_settings,
                 )
             )
         except Exception:

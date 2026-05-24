@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { KanbanCloseBoardDialog } from "@/components/kanban/kanban-close-board-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiDelete, apiGet, apiPatch } from "@/lib/api";
+import { apiGet, apiPatch } from "@/lib/api";
 import type { KanbanBoardDetail, KanbanBoardMember, KanbanMemberRole } from "@/types/kanban";
 import type { Team } from "@/types/team";
 import type { User } from "@/types/user";
@@ -50,7 +51,7 @@ export function KanbanBoardSettings({
   );
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
@@ -73,30 +74,6 @@ export function KanbanBoardSettings({
     );
     if (!roles[userId]) {
       setRoles((prev) => ({ ...prev, [userId]: "editor" }));
-    }
-  }
-
-  async function handleDelete() {
-    if (
-      !window.confirm(
-        `Slet boardet "${detail.board.name}"? Dette kan ikke fortrydes.`,
-      )
-    ) {
-      return;
-    }
-    setDeleting(true);
-    setError(null);
-    try {
-      await apiDelete(`/api/v1/kanban/boards/${detail.board.id}`);
-      if (onDeleted) {
-        onDeleted();
-      } else {
-        router.push("/kanban");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Kunne ikke slette board.");
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -134,7 +111,7 @@ export function KanbanBoardSettings({
       <div className="flex items-center justify-between gap-2">
         <h2 className="star-section-title">Board-indstillinger</h2>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Luk
+          Luk panel
         </Button>
       </div>
       <div className="space-y-2">
@@ -217,21 +194,35 @@ export function KanbanBoardSettings({
         </p>
       ) : null}
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--gray-border)] pt-4">
         <Button type="button" onClick={handleSave} disabled={saving || !name.trim()}>
           {saving ? "Gemmer…" : "Gem indstillinger"}
         </Button>
         {detail.can_delete_board ? (
           <Button
             type="button"
-            variant="destructive"
-            onClick={() => void handleDelete()}
-            disabled={deleting}
+            variant="outline"
+            className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
+            onClick={() => setCloseOpen(true)}
           >
-            {deleting ? "Sletter…" : "Slet board"}
+            Luk board…
           </Button>
         ) : null}
       </div>
+
+      <KanbanCloseBoardDialog
+        open={closeOpen}
+        boardId={detail.board.id}
+        boardName={detail.board.name}
+        onClose={() => setCloseOpen(false)}
+        onClosed={() => {
+          if (onDeleted) {
+            onDeleted();
+          } else {
+            router.push("/kanban");
+          }
+        }}
+      />
     </section>
   );
 }

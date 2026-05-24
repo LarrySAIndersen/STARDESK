@@ -55,6 +55,23 @@ cd ..\api
 pytest
 ```
 
+## Database migrations
+
+Schema changes live in `apps/api/alembic/versions/`. After merge to `main`:
+
+1. CI runs `alembic upgrade head` (needs repo secret `DATABASE_URL`).
+2. API redeploy runs the same on startup.
+
+Local:
+
+```powershell
+cd apps\api
+$env:DATABASE_URL = "postgresql+asyncpg://..."
+alembic upgrade head
+```
+
+Or from repo root: `bash scripts/migrate-db.sh` (Git Bash / WSL).
+
 ## Deploy (Vercel)
 
 - **Do not** deploy from the repository root. Set **Root Directory** to `apps/web` or `apps/api` per project.

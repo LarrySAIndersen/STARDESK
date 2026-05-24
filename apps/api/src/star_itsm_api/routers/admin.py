@@ -18,7 +18,13 @@ from star_itsm_api.schemas.category_admin import (
     SubcategoryCreate,
     SubcategoryUpdate,
 )
-from star_itsm_api.schemas.sla_admin import SlaPolicyRead, SlaPolicyUpdate, SlaStandardRuleRead
+from star_itsm_api.schemas.sla_admin import (
+    SlaPolicyRead,
+    SlaPolicyUpdate,
+    SlaSettingsRead,
+    SlaSettingsUpdate,
+    SlaStandardRuleRead,
+)
 from star_itsm_api.schemas.ticket_import import TicketImportRequest, TicketImportResult
 from star_itsm_api.services.category_admin import (
     create_category,
@@ -31,9 +37,11 @@ from star_itsm_api.services.category_admin import (
 from star_itsm_api.services.category_bulk_assign import fill_tickets_missing_category
 from star_itsm_api.services.permissions import can_manage_users
 from star_itsm_api.services.sla_admin import (
+    get_sla_settings_admin,
     list_sla_policies,
     list_standard_sla_rules,
     update_sla_policy,
+    update_sla_settings_admin,
 )
 from star_itsm_api.services.sla_reset import reset_all_ticket_sla
 from star_itsm_api.services.ticket_import import import_tickets_admin
@@ -89,6 +97,27 @@ async def get_sla_standard_rules(
     if not can_manage_users(current_user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
     return list_standard_sla_rules()
+
+
+@router.get("/sla/settings", response_model=SlaSettingsRead)
+async def get_sla_settings(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> SlaSettingsRead:
+    if not can_manage_users(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return await get_sla_settings_admin(db)
+
+
+@router.patch("/sla/settings", response_model=SlaSettingsRead)
+async def patch_sla_settings(
+    payload: SlaSettingsUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> SlaSettingsRead:
+    if not can_manage_users(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return await update_sla_settings_admin(db, payload)
 
 
 @router.patch("/sla/policies/{policy_id}", response_model=SlaPolicyRead)

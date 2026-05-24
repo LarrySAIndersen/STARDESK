@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.models.sla import SlaAssignment, SlaPolicy
 from star_itsm_api.services.sla_calendar import add_sla_duration
 from star_itsm_api.services.sla_config import SlaRule, get_sla_rule
+from star_itsm_api.services.sla_settings_store import get_sla_runtime_settings, sla_applies_to_team
 
 
 @dataclass
@@ -118,8 +119,16 @@ async def apply_sla_to_ticket(
     *,
     priority: str | None = None,
     start_at: datetime | None = None,
+    force: bool = False,
 ) -> None:
     """Set SLA fields on a ticket model (create or priority change)."""
+    if not force:
+        runtime = await get_sla_runtime_settings(db)
+        if runtime.sla_starts_on_team_assignment and getattr(ticket, "assigned_team_id", None) is None:
+            return
+        if runtime.trigger_team_ids and not sla_applies_to_team(ticket, runtime):  # type: ignore[arg-type]
+            return
+
     effective_priority = priority or getattr(ticket, "priority", "medium")
     category_id = getattr(ticket, "category_id", None)
     subcategory_id = getattr(ticket, "subcategory_id", None)

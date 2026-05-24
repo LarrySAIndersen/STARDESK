@@ -51,7 +51,7 @@ async def reset_all_ticket_sla(
     now = datetime.now(UTC)
     for ticket in tickets:
         start_at = now if anchor == "now" else ticket.created_at
-        await apply_sla_to_ticket(db, ticket, start_at=start_at)
+        await apply_sla_to_ticket(db, ticket, start_at=start_at, force=True)
         ticket.escalation_level = 0
         ticket.last_escalation_at = None
         touch_ticket_updated(ticket, now)

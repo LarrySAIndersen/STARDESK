@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -8,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
+from star_itsm_api.db_alembic import run_alembic_upgrade_head
 from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
@@ -44,6 +46,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "data endpoints return 503."
         )
     else:
+        await asyncio.to_thread(run_alembic_upgrade_head)
         await ensure_ticket_schema_current(engine, settings.database_url)
     yield
 

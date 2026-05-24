@@ -5,6 +5,14 @@
 
 Deploy **backend først**, derefter frontend. Frontend skal kende backend-URL.
 
+## Database-migrationer (Alembic)
+
+Ved push til `main` kører GitHub Actions **`alembic upgrade head`** automatisk efter API-tests (`security.yml` → job `database-migrate`). API’en kører samme migration ved opstart (Vercel/Railway cold start).
+
+**Én gang i GitHub:** Settings → Secrets and variables → Actions → `DATABASE_URL` = samme Neon-streng som produktion (`postgresql+asyncpg://…`).
+
+Manuel kørsel: Actions → **Database migrate (manual)** → Run workflow. Lokalt: `scripts/migrate-db.sh` (kræver `DATABASE_URL`).
+
 ## Hurtig checklist (15 min)
 
 ### Vercel (anbefalet — begge apps)
