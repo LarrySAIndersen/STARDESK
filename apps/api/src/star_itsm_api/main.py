@@ -2,10 +2,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
@@ -33,10 +31,7 @@ from star_itsm_api.routers import (
     users,
     webhooks,
 )
-
 logger = logging.getLogger(__name__)
-
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     validate_production_settings()
@@ -46,17 +41,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             "data endpoints return 503."
         )
     else:
-        await asyncio.to_thread(run_alembic_upgrade_head)
-        await ensure_ticket_schema_current(engine, settings.database_url)
+        logger.info(
+            "Skipping DB migrations and schema check in lifespan. "
+            "Run 'alembic upgrade head' manually after deploys that need migrations."
+        )
+        # Disabled to prevent cold-start failures on Vercel serverless.
+        # await asyncio.to_thread(run_alembic_upgrade_head)
+        # await ensure_ticket_schema_current(engine, settings.database_url)
     yield
-
-
 app = FastAPI(
     title="STARdesk API",
     version="0.2.0",
     lifespan=lifespan,
 )
-
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -66,7 +63,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(tickets.router, prefix="/api/v1")
