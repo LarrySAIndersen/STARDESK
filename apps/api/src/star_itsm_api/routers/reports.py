@@ -46,7 +46,10 @@ async def get_standard_report(
 
 @router.get("/standard/export")
 async def export_standard_report(
-    bucket: str | None = Query(default=None, description="modtaget, igangsat, lost, lukket, genaabnet"),
+    bucket: str | None = Query(
+        default=None,
+        description="modtaget, igangsat, lost, lukket, genaabnet",
+    ),
     period_days: int | None = Query(default=30, ge=0, le=365),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -64,8 +67,8 @@ async def export_standard_report(
 
 @router.get("/tickets/export")
 async def export_tickets_excel(
-    db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
+    db: AsyncSession = Depends(require_db),
 ) -> Response:
     """Export tickets visible to the current user as Excel (.xlsx)."""
     content = await build_tickets_export_xlsx(db, current_user)

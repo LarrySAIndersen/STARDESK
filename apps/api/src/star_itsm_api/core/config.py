@@ -1,10 +1,21 @@
-from pydantic import AliasChoices, Field
+from pathlib import Path
+from typing import Any
+
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+API_ROOT = Path(__file__).resolve().parents[3]
+ENV_FILES = (
+    API_ROOT / ".env.vercel.production",
+    API_ROOT / ".env",
+    API_ROOT / ".env.local",
+)
+LOCAL_JWT_SECRET = "local-development-only-jwt-secret-do-not-use-in-production"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILES,
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -53,6 +64,58 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="GMAIL_DEFAULT_FROM",
     )
+
+    @field_validator(
+        "database_url",
+        "resend_api_key",
+        "mail_from",
+        "cron_secret",
+        "webhook_secret",
+        "jwt_secret",
+        "slack_client_id",
+        "slack_client_secret",
+        "slack_signing_secret",
+        "slack_redirect_uri",
+        "google_client_id",
+        "google_client_secret",
+        "gmail_redirect_uri",
+        "gmail_token_encryption_key",
+        "gmail_sync_from_email",
+        "gmail_default_from",
+        mode="before",
+    )
+    @classmethod
+    def _blank_optional_string_to_none(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
+    @field_validator("frontend_url", mode="before")
+    @classmethod
+    def _blank_frontend_url_to_localhost(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return "http://localhost:3000"
+        return value
+
+    @field_validator("app_env", mode="before")
+    @classmethod
+    def _blank_app_env_to_development(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return "development"
+        return value
+
+    @field_validator("upload_dir", mode="before")
+    @classmethod
+    def _blank_upload_dir_to_tmp(cls, value: Any) -> Any:
+        if isinstance(value, str) and not value.strip():
+            return "/tmp/stardesk-uploads"
+        return value
+
+    @model_validator(mode="after")
+    def _ensure_local_jwt_secret(self) -> "Settings":
+        if not self.is_production and not self.jwt_secret:
+            self.jwt_secret = LOCAL_JWT_SECRET
+        return self
 
     @property
     def is_production(self) -> bool:

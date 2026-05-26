@@ -3,7 +3,6 @@ from types import SimpleNamespace
 import pytest
 from httpx import AsyncClient
 
-import star_itsm_api.db as db_module
 from star_itsm_api.core.security import ROLE_SUBMITTER, get_current_user
 from star_itsm_api.main import app
 

@@ -15,7 +15,12 @@ async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 def normalize_database_url(url: str) -> str:
-    """Strip query params that asyncpg does not accept (e.g. sslmode)."""
+    """Use an async SQLAlchemy URL and strip query params asyncpg does not accept."""
+    if url.startswith("postgresql://"):
+        url = "postgresql+asyncpg://" + url.removeprefix("postgresql://")
+    elif url.startswith("postgres://"):
+        url = "postgresql+asyncpg://" + url.removeprefix("postgres://")
+
     parsed = urlparse(url)
     if not parsed.query:
         return url

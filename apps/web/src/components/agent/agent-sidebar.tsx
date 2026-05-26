@@ -216,8 +216,14 @@ export function AgentSidebar({
     pathname === "/classic" || pathname.startsWith("/classic/");
 
   const { hiddenNavIds, error, toggleHidden } = useSidebarNavVisibility(staff);
-  const allItems = buildAgentNavItems({ staff, showAdmin });
-  const visibleItems = filterNavItemsForViewer(allItems, hiddenNavIds, topAdmin);
+  const allItems = useMemo(
+    () => buildAgentNavItems({ staff, showAdmin }),
+    [staff, showAdmin],
+  );
+  const visibleItems = useMemo(
+    () => filterNavItemsForViewer(allItems, hiddenNavIds, topAdmin),
+    [allItems, hiddenNavIds, topAdmin],
+  );
   const itemMap = useMemo(
     () => new Map(visibleItems.map((item) => [item.id, item])),
     [visibleItems],
@@ -256,6 +262,7 @@ export function AgentSidebar({
 
   const renderClassicSwitch = () => (
     <SidebarUiModeSwitch
+      key={CLASSIC_UI_NAV_ID}
       targetMode="classic"
       label="Klassisk grænseflade (TOPdesk)"
       icon={LayoutGrid}

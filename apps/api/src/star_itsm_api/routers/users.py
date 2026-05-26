@@ -2,10 +2,10 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import (
+    ROLE_ADMIN,
     ROLE_TOP_ADMIN,
     get_current_user,
     require_admin,
@@ -17,7 +17,9 @@ from star_itsm_api.core.top_admin_policy import (
     role_after_top_admin_policy,
 )
 from star_itsm_api.deps import require_db
+from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
+from star_itsm_api.schemas.auth import UserRead, user_to_read
 from star_itsm_api.schemas.user_admin import (
     UserAdminCreate,
     UserAdminCreated,
@@ -29,14 +31,13 @@ from star_itsm_api.schemas.user_admin import (
     UserImportRequest,
     UserImportResult,
 )
-from star_itsm_api.services.permissions import can_manage_users
-from star_itsm_api.schemas.auth import UserRead, user_to_read
 from star_itsm_api.services.avatars import (
     resolve_avatar_file,
     resolve_avatar_media_type,
     save_user_avatar,
 )
 from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.services.permissions import can_manage_users
 from star_itsm_api.services.user_admin import (
     build_admin_meta,
     create_user_admin,
@@ -48,7 +49,6 @@ from star_itsm_api.services.user_admin import (
     sync_user_teams,
 )
 from star_itsm_api.services.user_import import import_users_admin
-from star_itsm_api.models.organization import Organization
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -135,8 +135,8 @@ async def create_user(
         team_ids = [team.id for team in source.teams]
 
     email = payload.email.lower().strip()
-    role = role_after_top_admin_policy(email, role)
     _assert_can_assign_role(current_user, role, target_email=email)
+    role = role_after_top_admin_policy(email, role)
 
     try:
         created, temporary_password = await create_user_admin(
@@ -238,9 +238,8 @@ async def update_user(
             if "email" in updates
             else user.email
         )
-        new_role = role_after_top_admin_policy(target_email, updates["role"])
-        _assert_can_assign_role(current_user, new_role, target_email=target_email)
-        user.role = new_role
+        _assert_can_assign_role(current_user, updates["role"], target_email=target_email)
+        user.role = role_after_top_admin_policy(target_email, updates["role"])
 
     if "display_name" in updates:
         user.display_name = updates["display_name"].strip()
