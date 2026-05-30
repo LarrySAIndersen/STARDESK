@@ -62,6 +62,8 @@ _canvas_cors_origins = ["null"]
 _canvas_cors_origin_regex = (
     r"https://.*\.vercel\.app"
     r"|https://([a-z0-9-]+\.)*cursor\.(com|sh)"
+    r"|http://localhost:\d+"
+    r"|http://127\.0\.0\.1:\d+"
     r"|vscode-file://.*"
     r"|vscode-webview://.*"
 )

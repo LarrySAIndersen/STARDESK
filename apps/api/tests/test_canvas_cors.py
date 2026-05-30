@@ -16,6 +16,7 @@ from star_itsm_api.main import app
         "https://cursor.com",
         "https://www.cursor.com",
         "https://app.cursor.sh",
+        "http://localhost:49390",
     ],
 )
 async def test_workboard_bulk_import_preflight_allows_canvas_origins(origin: str) -> None:

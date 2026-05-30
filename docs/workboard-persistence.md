@@ -55,7 +55,7 @@ Historisk: Cursor canvases **må ikke importere npm** — Canvas SDK fraråder `
 3. Status **Gemt kl. HH:MM** vises ved knappen; toast ved manuel gem.
 4. Token gemmes i `stardesk-workboard.canvas.data.json` — **commit ikke** filen med token.
 
-API CORS tillader `Origin: null`, `vscode-file://`, `vscode-webview://` og `https://*.cursor.com` / `*.cursor.sh` (nyere Cursor/Glass). **Neon skal have revision `20260530_workboard_tasks`** (`alembic upgrade head`) — ellers returnerer bulk-import **500**. Ved fortsat «Netværksfejl» i canvas (sandbox blokerer `fetch`): `node scripts/migrate-workboard-json-to-db.mjs` med `STARDESK_API_URL` + `STARDESK_API_TOKEN`.
+API CORS tillader `Origin: null`, `vscode-file://`, `vscode-webview://`, `http://localhost:<port>` (Cursor canvas dev-server), og `https://*.cursor.com` / `*.cursor.sh`. **Neon skal have revision `20260530_workboard_tasks`** (`alembic upgrade head`) — ellers returnerer bulk-import **500**. Ved fortsat «Netværksfejl» i canvas (sandbox blokerer `fetch`): `node scripts/migrate-workboard-json-to-db.mjs` med `STARDESK_API_URL` + `STARDESK_API_TOKEN`.
 
 Phase 2 alternativer (uændret):
 
