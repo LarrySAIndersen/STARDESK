@@ -12,6 +12,7 @@ from star_itsm_api.core.security import (
     USER_ROLE_PATTERN,
 )
 from star_itsm_api.schemas.auth import ROLE_LABELS
+from star_itsm_api.schemas.ticket import TicketRead
 
 ASSIGNABLE_ROLES = (
     ROLE_SUBMITTER,
@@ -24,6 +25,16 @@ ASSIGNABLE_ROLES = (
 class UserTeamSummary(BaseModel):
     id: UUID
     name: str
+
+
+class UserTicketsGroupedRead(BaseModel):
+    """Tickets linked to a user by reporter, assignee, or stakeholder role."""
+
+    reported: list[TicketRead] = Field(default_factory=list)
+    assigned: list[TicketRead] = Field(default_factory=list)
+    affected: list[TicketRead] = Field(default_factory=list)
+    interested: list[TicketRead] = Field(default_factory=list)
+    mentioned: list[TicketRead] = Field(default_factory=list)
 
 
 class UserAdminRead(BaseModel):

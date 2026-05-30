@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { displayNameInitials, formatDateTimeDa } from "@/lib/utils";
-import type { UserAdminRead } from "@/types/admin-user";
+import type { UserAdminRead, UserTicketsGrouped } from "@/types/admin-user";
 import type { Ticket } from "@/types/ticket";
 
 function MetadataRow({ label, children }: { label: string; children: ReactNode }) {
@@ -15,12 +15,35 @@ function MetadataRow({ label, children }: { label: string; children: ReactNode }
   );
 }
 
+function UserTicketSection({
+  headingId,
+  title,
+  tickets,
+}: {
+  headingId: string;
+  title: string;
+  tickets: Ticket[];
+}) {
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="wire-sec-title mb-3">
+        {title}
+      </h3>
+      {tickets.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Ingen sager i denne kategori.</p>
+      ) : (
+        <WireframeTicketTable tickets={tickets} />
+      )}
+    </section>
+  );
+}
+
 export function AdminUserDetail({
   user,
-  assignedTickets,
+  userTickets,
 }: {
   user: UserAdminRead;
-  assignedTickets: Ticket[];
+  userTickets: UserTicketsGrouped;
 }) {
   const initials = displayNameInitials(user.display_name);
 
@@ -88,16 +111,33 @@ export function AdminUserDetail({
         </div>
       </section>
 
-      <section aria-labelledby="user-tickets-heading">
-        <h3 id="user-tickets-heading" className="wire-sec-title mb-3">
-          Tildelte sager
-        </h3>
-        {assignedTickets.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Ingen sager er tildelt denne bruger.</p>
-        ) : (
-          <WireframeTicketTable tickets={assignedTickets} />
-        )}
-      </section>
+      <UserTicketSection
+        headingId="user-reported-tickets-heading"
+        title="Indmeldte sager"
+        tickets={userTickets.reported}
+      />
+      <UserTicketSection
+        headingId="user-assigned-tickets-heading"
+        title="Tildelte sager"
+        tickets={userTickets.assigned}
+      />
+      <UserTicketSection
+        headingId="user-affected-tickets-heading"
+        title="Berørte sager"
+        tickets={userTickets.affected}
+      />
+      <UserTicketSection
+        headingId="user-interested-tickets-heading"
+        title="Interessent på"
+        tickets={userTickets.interested}
+      />
+      {userTickets.mentioned.length > 0 ? (
+        <UserTicketSection
+          headingId="user-mentioned-tickets-heading"
+          title="Nævnt i kommentarer"
+          tickets={userTickets.mentioned}
+        />
+      ) : null}
     </div>
   );
 }

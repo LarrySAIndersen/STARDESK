@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.constants import SYSTEM_USER_ID
 from star_itsm_api.models.category import Category, Subcategory
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
@@ -25,6 +26,33 @@ from star_itsm_api.services.ticket_hierarchy import (
 )
 
 logger = logging.getLogger(__name__)
+
+SYSTEM_REPORTER_DISPLAY_NAME = "System"
+
+
+async def load_user_display_names(
+    db: AsyncSession,
+    user_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    """Resolve display names including inactive/deleted users (for ticket reporters)."""
+    if not user_ids:
+        return {}
+    rows = await db.execute(select(User).where(User.id.in_(user_ids)))
+    names: dict[uuid.UUID, str] = {}
+    for user in rows.scalars().all():
+        names[user.id] = user.display_name
+    for user_id in user_ids:
+        if user_id not in names and user_id == SYSTEM_USER_ID:
+            names[user_id] = SYSTEM_REPORTER_DISPLAY_NAME
+    return names
+
+
+async def resolve_reporter_display_name(
+    db: AsyncSession,
+    reporter_user_id: uuid.UUID,
+) -> str | None:
+    names = await load_user_display_names(db, {reporter_user_id})
+    return names.get(reporter_user_id)
 
 
 async def _load_list_context(
@@ -66,8 +94,7 @@ async def _load_list_context(
 
     users: dict[uuid.UUID, str] = {}
     if user_ids:
-        rows = await db.execute(select(User).where(User.id.in_(user_ids)))
-        users = {u.id: u.display_name for u in rows.scalars().all()}
+        users = await load_user_display_names(db, user_ids)
 
     return sub_map, categories, subcategories, teams, users
 
@@ -153,6 +180,7 @@ def _ticket_to_read(
         assigned_team_id=ticket.assigned_team_id,
         assigned_team_name=teams.get(ticket.assigned_team_id) if ticket.assigned_team_id else None,
         assigned_user_name=users.get(ticket.assigned_user_id) if ticket.assigned_user_id else None,
+        reporter_user_id=ticket.reporter_user_id,
         reporter_display_name=users.get(ticket.reporter_user_id),
         response_due_at=sla["response_due_at"],
         resolution_due_at=sla["resolution_due_at"],
@@ -203,7 +231,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
         sla_settings = await get_sla_runtime_settings(db)
     except Exception:
         logger.exception("Ticket list context query failed; using minimal payloads")
-        return [_fallback_ticket_read(ticket) for ticket in tickets]
+        return [await _fallback_ticket_read_async(db, ticket) for ticket in tickets]
 
     reads: list[TicketRead] = []
     for ticket in tickets:
@@ -224,7 +252,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
             )
         except Exception:
             logger.exception("Failed to serialize ticket %s", ticket.id)
-            reads.append(_fallback_ticket_read(ticket))
+            reads.append(await _fallback_ticket_read_async(db, ticket))
     return reads
 
 
@@ -245,7 +273,11 @@ async def ticket_hierarchy_detail_extras(
         return {"children": [], "related_major_tickets": []}
 
 
-def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
+def _fallback_ticket_read(
+    ticket: Ticket,
+    *,
+    reporter_display_name: str | None = None,
+) -> TicketRead:
     """Minimal ticket payload when joined list context queries fail."""
     sla = sla_fields_for_ticket(ticket)
     return TicketRead(
@@ -260,6 +292,8 @@ def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
         is_security_ticket=getattr(ticket, "is_security_ticket", False),
         parent_ticket_id=getattr(ticket, "parent_ticket_id", None),
         assigned_team_id=ticket.assigned_team_id,
+        reporter_user_id=ticket.reporter_user_id,
+        reporter_display_name=reporter_display_name,
         response_due_at=sla["response_due_at"],
         resolution_due_at=sla["resolution_due_at"],
         sla_remaining_seconds=sla["sla_remaining_seconds"],
@@ -273,12 +307,22 @@ def _fallback_ticket_read(ticket: Ticket) -> TicketRead:
     )
 
 
+async def _fallback_ticket_read_async(db: AsyncSession, ticket: Ticket) -> TicketRead:
+    reporter_name = await resolve_reporter_display_name(db, ticket.reporter_user_id)
+    return _fallback_ticket_read(ticket, reporter_display_name=reporter_name)
+
+
 async def ticket_to_read(db: AsyncSession, ticket: Ticket) -> TicketRead:
     try:
         items = await tickets_to_read_list(db, [ticket])
-        return items[0]
+        read = items[0]
+        if read.reporter_display_name is None:
+            reporter_name = await resolve_reporter_display_name(db, ticket.reporter_user_id)
+            if reporter_name is not None:
+                return read.model_copy(update={"reporter_display_name": reporter_name})
+        return read
     except Exception:
-        return _fallback_ticket_read(ticket)
+        return await _fallback_ticket_read_async(db, ticket)
 
 
 async def ticket_to_detail_read(

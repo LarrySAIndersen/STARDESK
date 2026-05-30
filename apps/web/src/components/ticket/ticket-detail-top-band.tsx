@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { User } from "lucide-react";
 
@@ -51,7 +52,12 @@ export function TicketDetailTopBand({
   editableMetadata?: boolean;
   staffView?: boolean;
 }) {
-  const reporter = ticket.reporter_display_name ?? "Ukendt indmelder";
+  const reporterName =
+    ticket.reporter_display_name ??
+    (ticket.reporter_user_id ? "Bruger (navn utilgængeligt)" : "Ukendt indmelder");
+  const reporterProfileHref = ticket.reporter_user_id
+    ? `/users/${ticket.reporter_user_id}`
+    : null;
   const canEdit = editableMetadata && teams.length > 0 && categories.length > 0;
 
   return (
@@ -63,10 +69,19 @@ export function TicketDetailTopBand({
             className="bg-star-navy flex size-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
             aria-hidden
           >
-            {reporterInitials(reporter)}
+            {reporterInitials(reporterName)}
           </div>
           <div className="min-w-0">
-            <p className="text-star-navy text-base font-semibold">{reporter}</p>
+            {reporterProfileHref ? (
+              <Link
+                href={reporterProfileHref}
+                className="text-star-blue hover:text-star-navy text-base font-semibold underline underline-offset-2"
+              >
+                {reporterName}
+              </Link>
+            ) : (
+              <p className="text-star-navy text-base font-semibold">{reporterName}</p>
+            )}
             <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
               <User className="size-3.5 shrink-0" aria-hidden />
               Bruger der oprettede sagen

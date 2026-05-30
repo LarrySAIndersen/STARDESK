@@ -64,7 +64,7 @@ from star_itsm_api.services.sub_causes import (
     replace_ticket_sub_causes,
     validate_sub_cause_ids,
 )
-from star_itsm_api.services.ticket_read import ticket_to_detail_read, ticket_to_read, tickets_to_read_list
+from star_itsm_api.services.ticket_read import resolve_reporter_display_name, ticket_to_detail_read, ticket_to_read, tickets_to_read_list
 from star_itsm_api.services.dashboard_scope import (
     apply_dashboard_scope_stmt,
     parse_dashboard_scope,
@@ -627,6 +627,7 @@ async def _get_ticket_detail(
         integration_email = integration.connected_email if integration else None
     activity = await build_ticket_activity(db, ticket, current_user)
     stakeholders = await get_ticket_stakeholders_grouped(db, ticket_id)
+    reporter_display_name = await resolve_reporter_display_name(db, ticket.reporter_user_id)
     intelligence = None
     if is_staff(current_user):
         try:
@@ -661,6 +662,8 @@ async def _get_ticket_detail(
             "timestamps": ticket_timestamps_read(ticket),
             "activity": activity,
             "stakeholders": stakeholders,
+            "reporter_user_id": ticket.reporter_user_id,
+            "reporter_display_name": reporter_display_name,
             **ticket_sensitive_fields(ticket, current_user),
         },
     )

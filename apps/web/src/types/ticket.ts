@@ -47,6 +47,7 @@ export interface Ticket {
   assigned_user_name?: string | null;
   fault_displayed?: boolean;
   assignment_reason?: string | null;
+  reporter_user_id?: string | null;
   reporter_display_name?: string | null;
   response_due_at?: string | null;
   resolution_due_at?: string | null;

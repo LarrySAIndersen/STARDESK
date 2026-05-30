@@ -1,6 +1,16 @@
-﻿export interface UserTeamSummary {
+﻿import type { Ticket } from "@/types/ticket";
+
+export interface UserTeamSummary {
   id: string;
   name: string;
+}
+
+export interface UserTicketsGrouped {
+  reported: Ticket[];
+  assigned: Ticket[];
+  affected: Ticket[];
+  interested: Ticket[];
+  mentioned: Ticket[];
 }
 
 export interface UserAdminListItem {

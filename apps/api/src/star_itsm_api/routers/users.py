@@ -30,6 +30,7 @@ from star_itsm_api.schemas.user_admin import (
     UserAdminUpdate,
     UserImportRequest,
     UserImportResult,
+    UserTicketsGroupedRead,
 )
 from star_itsm_api.services.avatars import (
     resolve_avatar_file,
@@ -49,6 +50,7 @@ from star_itsm_api.services.user_admin import (
     sync_user_teams,
 )
 from star_itsm_api.services.user_import import import_users_admin
+from star_itsm_api.services.user_tickets import list_user_tickets_grouped
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -199,6 +201,22 @@ async def get_user_avatar(
     if path is None:
         raise HTTPException(status_code=404, detail="Avatar not found")
     return FileResponse(path, media_type=resolve_avatar_media_type(path))
+
+
+@router.get("/{user_id}/tickets", response_model=UserTicketsGroupedRead)
+async def get_user_tickets(
+    user_id: uuid.UUID,
+    limit: int = Query(default=100, ge=1, le=500),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> UserTicketsGroupedRead:
+    is_self = current_user.id == user_id
+    if not can_manage_users(current_user) and not is_self:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    user = await get_user_admin(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return await list_user_tickets_grouped(db, user_id=user_id, limit=limit)
 
 
 @router.get("/{user_id}", response_model=UserAdminRead)

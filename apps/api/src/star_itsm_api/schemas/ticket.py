@@ -62,6 +62,7 @@ class TicketRead(BaseModel):
     assigned_team_id: UUID | None = None
     assigned_team_name: str | None = None
     assigned_user_name: str | None = None
+    reporter_user_id: UUID | None = None
     reporter_display_name: str | None = None
     response_due_at: datetime | None = None
     resolution_due_at: datetime | None = None
