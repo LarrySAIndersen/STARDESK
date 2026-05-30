@@ -14,6 +14,8 @@ export interface TicketStakeholdersGrouped {
   interested: StakeholderUser[];
   mentioned: StakeholderUser[];
 }
+
+export interface TicketSummary {
   id: string;
   ticket_number: string;
   title: string;
