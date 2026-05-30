@@ -17,14 +17,7 @@ function formatCopenhagenClock(now: Date): string {
 }
 
 /** Live wall clock (Copenhagen) so agents trust SLA timers. */
-export function AgentClock({
-  className,
-  groupedWithMascot,
-}: {
-  className?: string;
-  /** When true, parent handles sm+ visibility (mascot+clock group). */
-  groupedWithMascot?: boolean;
-}) {
+export function AgentClock({ className }: { className?: string }) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -41,8 +34,7 @@ export function AgentClock({
     <time
       dateTime={now.toISOString()}
       className={cn(
-        "text-muted-foreground inline-flex items-baseline gap-1.5 font-mono text-xs tabular-nums",
-        !groupedWithMascot && "hidden sm:inline-flex",
+        "text-muted-foreground hidden sm:inline-flex items-baseline gap-1.5 font-mono text-xs tabular-nums",
         className,
       )}
       aria-label={`Klokken ${formatCopenhagenClock(now)}`}
