@@ -64,3 +64,11 @@ Phase 2 alternativer (uændret):
 - **Cursor hook** on canvas save → trigger sync script
 
 Treat DB as authoritative for task numbers/content; canvas JSON remains UI cache. Run `migrate-workboard-json-to-db.mjs` after major sessions if canvas sync was unavailable.
+
+## Status guard (deploy / bulk-import)
+
+Neon **must not** receive column regressions from stale `canvas.data.json` after deploy.
+
+- API `workboard_status_guard`: bulk-import and PATCH keep existing `status` unless the incoming change is an allowed workflow step (+1 forward, or Human Review → In Progress).
+- Canvas hydrates from `GET /api/v1/workboard/tasks/export` on open (when API token is set) before auto-save; DB column wins when ahead of local cache.
+- Bulk-import response includes `status_preserved` when rows were protected.

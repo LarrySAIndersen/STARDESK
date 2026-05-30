@@ -22,6 +22,7 @@ from star_itsm_api.services.workboard_mapping import (
     row_to_canvas_dict,
     split_canvas_payload,
 )
+from star_itsm_api.services.workboard_status_guard import resolve_persisted_status
 
 
 def _now() -> datetime:
@@ -152,11 +153,21 @@ async def update_task(
     merge = row_to_canvas_dict(row)
     patch = payload.model_dump(by_alias=True, exclude_unset=True)
     merge.update(patch)
+    status_override: str | None = None
+    if "status" in patch and patch["status"] is not None:
+        resolved, _preserved = resolve_persisted_status(row.status, str(patch["status"]))
+        status_override = resolved
+        merge["status"] = resolved
     parent_uuid = await _resolve_parent_id(
         db,
         merge.get("parentId") or merge.get("parent_id"),
     )
-    apply_canvas_payload_to_row(row, merge, parent_uuid=parent_uuid)
+    apply_canvas_payload_to_row(
+        row,
+        merge,
+        parent_uuid=parent_uuid,
+        status_override=status_override,
+    )
     await db.commit()
     await db.refresh(row)
     return _read_from_row(row)
@@ -181,7 +192,14 @@ async def patch_task_from_canvas_dict(
         row = new_row_from_canvas(raw, parent_uuid=parent_uuid)
         db.add(row)
     else:
-        apply_canvas_payload_to_row(row, raw, parent_uuid=parent_uuid)
+        columns, _, _, _ = split_canvas_payload(raw)
+        resolved, _preserved = resolve_persisted_status(row.status, columns["status"])
+        apply_canvas_payload_to_row(
+            row,
+            raw,
+            parent_uuid=parent_uuid,
+            status_override=resolved,
+        )
     await db.commit()
     await db.refresh(row)
     return _read_from_row(row)
@@ -194,6 +212,7 @@ async def bulk_import(
     replace_missing: bool = False,
 ) -> WorkboardBulkImportResult:
     stats = WorkboardBulkImportResult()
+    status_preserved = 0
     seen_canvas_ids: set[str] = set()
 
     for raw in tasks:
@@ -221,7 +240,19 @@ async def bulk_import(
             canvas_to_row[canvas_id] = row
             stats.created += 1
         else:
-            apply_canvas_payload_to_row(existing, raw, parent_uuid=None)
+            columns, _, _, _ = split_canvas_payload(raw)
+            resolved, preserved = resolve_persisted_status(
+                existing.status,
+                columns["status"],
+            )
+            if preserved:
+                status_preserved += 1
+            apply_canvas_payload_to_row(
+                existing,
+                raw,
+                parent_uuid=None,
+                status_override=resolved,
+            )
             canvas_to_row[canvas_id] = existing
             stats.updated += 1
 
@@ -255,6 +286,7 @@ async def bulk_import(
                 stats.soft_deleted += 1
 
     await db.commit()
+    stats.status_preserved = status_preserved
     return stats
 
 

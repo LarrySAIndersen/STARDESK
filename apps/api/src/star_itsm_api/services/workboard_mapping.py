@@ -90,6 +90,7 @@ def apply_canvas_payload_to_row(
     raw: dict[str, Any],
     *,
     parent_uuid: uuid.UUID | None,
+    status_override: str | None = None,
 ) -> None:
     columns, extra, field_history, activity_log = split_canvas_payload(raw)
     if columns["canvas_id"]:
@@ -98,7 +99,7 @@ def apply_canvas_payload_to_row(
         row.number = int(columns["number"])
     row.title = columns["title"] or row.title
     row.description = columns["description"]
-    row.status = columns["status"]
+    row.status = status_override if status_override is not None else columns["status"]
     row.priority = columns["priority"]
     row.owner = columns["owner"]
     row.tags = columns["tags"]

@@ -75,3 +75,7 @@ class WorkboardBulkImportResult(BaseModel):
     updated: int = 0
     skipped: int = 0
     soft_deleted: int = 0
+    status_preserved: int = Field(
+        default=0,
+        description="Existing tasks whose status was kept (workflow guard blocked regression)",
+    )

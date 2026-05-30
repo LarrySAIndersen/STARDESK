@@ -4961,6 +4961,7 @@ type BulkImportResult = {
   updated?: number;
   skipped?: number;
   soft_deleted?: number;
+  status_preserved?: number;
 };
 
 /** Lightweight probe: GET /health (no auth). Separates API+CORS vs canvas sandbox block. */
@@ -5039,6 +5040,87 @@ async function bulkImportWorkboardTasks(
   } catch {
     return {};
   }
+}
+
+function workboardColumnIndex(status: Status): number {
+  return COLUMNS.indexOf(status);
+}
+
+/** Neon wins when DB column is ahead of stale canvas cache (post-deploy). */
+function mergeDbAuthoritativeStatuses(local: Task[], fromDb: Task[]): Task[] {
+  const dbById = new Map(fromDb.map((task) => [task.id, task]));
+  return local.map((task) => {
+    const dbTask = dbById.get(task.id);
+    if (!dbTask || dbTask.status === task.status) return task;
+    const localRank = workboardColumnIndex(task.status);
+    const dbRank = workboardColumnIndex(dbTask.status);
+    if (localRank < 0 || dbRank < 0) return task;
+    if (dbRank > localRank) {
+      return { ...task, status: dbTask.status };
+    }
+    return task;
+  });
+}
+
+async function fetchWorkboardTasksFromDb(
+  apiUrl: string,
+  token: string,
+): Promise<Task[]> {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) return [];
+  const base = apiUrl.replace(/\/$/, "");
+  const res = await fetchFn(`${base}/api/v1/workboard/tasks/export`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Kunne ikke hente opgaver fra Neon (${res.status})`);
+  }
+  const body = (await res.json()) as Task[];
+  return Array.isArray(body) ? body : [];
+}
+
+let workboardDbHydrationStarted = false;
+let workboardDbHydrationComplete = false;
+let workboardDbHydrationToken = "";
+
+function scheduleWorkboardDbHydration(
+  setTasks: SetWorkboardTasksFn,
+  apiUrl: string,
+  token: string,
+  onComplete: () => void,
+): void {
+  const trimmed = token.trim();
+  if (!trimmed) {
+    workboardDbHydrationComplete = true;
+    return;
+  }
+  if (workboardDbHydrationStarted && workboardDbHydrationToken === trimmed) return;
+  if (workboardDbHydrationStarted && workboardDbHydrationToken !== trimmed) {
+    workboardDbHydrationStarted = false;
+    workboardDbHydrationComplete = false;
+  }
+  workboardDbHydrationStarted = true;
+  workboardDbHydrationToken = trimmed;
+  void (async () => {
+    try {
+      const fromDb = await fetchWorkboardTasksFromDb(apiUrl, token);
+      if (fromDb.length === 0) return;
+      setTasks((prev) => {
+        const hydrated = hydrateTasksCore(prev);
+        const merged = mergeDbAuthoritativeStatuses(hydrated, fromDb);
+        const regressions = findHydrateStatusRegressions(prev, merged);
+        const stable =
+          regressions.length > 0 ? preservePersistedStatuses(merged, prev) : merged;
+        return stable;
+      });
+    } catch {
+      /* hydration is best-effort; auto-save guard still protects Neon */
+    } finally {
+      workboardDbHydrationComplete = true;
+      onComplete();
+    }
+  })();
 }
 
 function getCanvasOriginHint(): string {
@@ -5193,6 +5275,7 @@ function clearDraggingTaskId(): void {
 type SetWorkboardTasksFn = (action: Task[] | ((prev: Task[]) => Task[])) => void;
 
 function scheduleDebouncedWorkboardDbSave(): void {
+  if (!workboardDbHydrationComplete) return;
   if (!dbAutosaveEnabledSnapshot || !dbSyncApiTokenSnapshot.trim()) return;
   if (dbSaveDebounceTimer) globalThis.clearTimeout?.(dbSaveDebounceTimer);
   dbSaveDebounceTimer = globalThis.setTimeout?.(() => {
@@ -5225,6 +5308,7 @@ function scheduleWorkboardDbAutosave(): void {
   if (dbAutosaveIntervalStarted) return;
   dbAutosaveIntervalStarted = true;
   globalThis.setInterval?.(() => {
+    if (!workboardDbHydrationComplete) return;
     if (!dbAutosaveEnabledSnapshot) return;
     void dbSaveTrigger?.("auto");
   }, WORKBOARD_DB_AUTOSAVE_MS);
@@ -8455,6 +8539,12 @@ export default function StardeskWorkboardCanvas() {
   }
 
   async function saveWorkboardToDb(trigger: "manual" | "auto" = "manual") {
+    if (!workboardDbHydrationComplete && dbSyncApiToken.trim()) {
+      if (trigger === "manual") {
+        showToast("Henter kolonneplacering fra Neon — prøv igen om et øjeblik.");
+      }
+      return;
+    }
     if (dbSyncInFlight) {
       if (trigger === "manual") showToast("Gemmer allerede…");
       return;
@@ -8476,7 +8566,8 @@ export default function StardeskWorkboardCanvas() {
       const result = await bulkImportWorkboardTasks(currentTasks, apiUrl, token);
       const updated = result.updated ?? 0;
       const created = result.created ?? 0;
-      const summary = `Gemt til database (${updated} opdateret${created ? `, ${created} nye` : ""}).`;
+      const preserved = result.status_preserved ?? 0;
+      const summary = `Gemt til database (${updated} opdateret${created ? `, ${created} nye` : ""}${preserved ? `, ${preserved} status bevaret` : ""}).`;
       setDbSyncStatus({
         state: "ok",
         at: Date.now(),
@@ -8485,7 +8576,15 @@ export default function StardeskWorkboardCanvas() {
         updated,
       });
       if (trigger === "manual") {
-        showToast("Gemt til database");
+        showToast(
+          preserved > 0
+            ? `Gemt — ${preserved} opgave(r) beholdt kolonne i Neon (workflow-guard)`
+            : "Gemt til database",
+        );
+      } else if (preserved > 0) {
+        showToast(
+          `Auto-gem: ${preserved} opgave(r) — Neon-kolonne ikke overskrevet (kun agent-flow)`,
+        );
       }
     } catch (err) {
       const message =
@@ -8505,6 +8604,12 @@ export default function StardeskWorkboardCanvas() {
   dbSyncApiTokenSnapshot = dbSyncApiToken;
   dbSaveTrigger = saveWorkboardToDb;
   scheduleWorkboardDbAutosave();
+  scheduleWorkboardDbHydration(
+    setTasks,
+    (dbSyncApiUrl.trim() || WORKBOARD_DEFAULT_API_URL).replace(/\/$/, ""),
+    dbSyncApiToken,
+    () => {},
+  );
 
   function collectAllWorkboardTaskIds(taskList: Task[]): Set<string> {
     const ids = new Set<string>();
