@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 
-import { ForbedringerPanel } from "@/components/forbedringer/forbedringer-panel";
+import { Saglayout2Prototype } from "@/components/forbedringer/saglayout-2-prototype";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff } from "@/lib/auth";
 
-export default async function ForbedringerPage() {
+export default async function Saglayout2Page() {
   const currentUser = await getServerUser();
 
   if (!isStaff(currentUser)) {
     redirect("/");
   }
 
-  return <ForbedringerPanel />;
+  return <Saglayout2Prototype />;
 }

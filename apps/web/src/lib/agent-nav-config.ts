@@ -6,6 +6,7 @@ export const NAV_LAYOUT_VERSION = 1;
 export type NavSectionId =
   | "main"
   | "graenseflade"
+  | "forbedringer"
   | "administration"
   | "slutbrugere"
   | "integration";
@@ -18,6 +19,7 @@ export type NavSectionDef = {
 export const NAV_SECTIONS: NavSectionDef[] = [
   { id: "main", label: null },
   { id: "graenseflade", label: "Grænseflade" },
+  { id: "forbedringer", label: "Forbedringer" },
   { id: "administration", label: "Administration" },
   { id: "slutbrugere", label: "Slutbrugere" },
   { id: "integration", label: "Integration" },
@@ -38,6 +40,7 @@ const SECTION_LABEL_TO_ID: Record<string, NavSectionId> = {
   Slutbrugere: "slutbrugere",
   Integration: "integration",
   Grænseflade: "graenseflade",
+  Forbedringer: "forbedringer",
 };
 
 export function defaultSectionForItem(item: AgentNavItem): NavSectionId {

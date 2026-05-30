@@ -10,6 +10,7 @@ import {
   Mail,
   MessageSquare,
   Plus,
+  LayoutTemplate,
   StickyNote,
   Ticket,
   Shield,
@@ -66,7 +67,22 @@ export function buildAgentNavItems(options: {
       : []),
     ...(staff ? [{ id: "groups", href: "/groups", label: "Grupper", icon: Users }] : []),
     ...(showForbedringer
-      ? [{ id: "forbedringer", href: "/forbedringer", label: "Forbedringer", icon: StickyNote }]
+      ? [
+          {
+            id: "forbedringer",
+            href: "/forbedringer",
+            label: "Review-sedler",
+            icon: StickyNote,
+            section: "Forbedringer",
+          },
+          {
+            id: "saglayout-2",
+            href: "/forbedringer/saglayout-2",
+            label: "Saglayout #2",
+            icon: LayoutTemplate,
+            section: "Forbedringer",
+          },
+        ]
       : []),
     ...(showAdmin ? [{ id: "users", href: "/users", label: "Brugere", icon: UserCog }] : []),
     { id: "reports", href: "/reports", label: "Rapporter", icon: BarChart3 },
