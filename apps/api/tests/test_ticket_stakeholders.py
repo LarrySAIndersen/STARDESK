@@ -3,7 +3,7 @@
 import uuid
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -250,6 +250,10 @@ async def test_add_stakeholder_happy_path(
 async def test_get_ticket_stakeholders_grouped_returns_empty_when_query_fails() -> None:
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(side_effect=Exception("relation ticket_stakeholders does not exist"))
+    nested = AsyncMock()
+    nested.__aenter__ = AsyncMock(return_value=nested)
+    nested.__aexit__ = AsyncMock(return_value=False)
+    mock_db.begin_nested = MagicMock(return_value=nested)
 
     grouped = await get_ticket_stakeholders_grouped(mock_db, uuid.uuid4())
 
@@ -257,3 +261,27 @@ async def test_get_ticket_stakeholders_grouped_returns_empty_when_query_fails() 
     assert grouped.affected == []
     assert grouped.interested == []
     assert grouped.mentioned == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_reporter_display_name_after_stakeholders_failure() -> None:
+    """Stakeholder query failure in a savepoint must not block reporter lookup."""
+    from star_itsm_api.services.ticket_read import resolve_reporter_display_name
+
+    user_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    nested = AsyncMock()
+    nested.__aenter__ = AsyncMock(return_value=nested)
+    nested.__aexit__ = AsyncMock(return_value=False)
+    mock_db.begin_nested = MagicMock(return_value=nested)
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            Exception("relation ticket_stakeholders does not exist"),
+            MagicMock(scalars=MagicMock(return_value=MagicMock(all=lambda: []))),
+        ]
+    )
+
+    await get_ticket_stakeholders_grouped(mock_db, uuid.uuid4())
+    name = await resolve_reporter_display_name(mock_db, user_id)
+
+    assert name is None

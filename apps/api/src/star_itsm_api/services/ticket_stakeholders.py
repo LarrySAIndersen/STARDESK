@@ -18,6 +18,7 @@ from star_itsm_api.schemas.stakeholder import (
     TicketStakeholderRead,
     TicketStakeholdersGroupedRead,
 )
+from star_itsm_api.services.db_resilience import optional_db_read
 
 EDITABLE_STAKEHOLDER_ROLES = frozenset({"affected", "interested"})
 RELATIONSHIP_TYPE_BY_ROLE = {
@@ -288,16 +289,16 @@ async def get_ticket_stakeholders_grouped(
     db: AsyncSession,
     ticket_id: uuid.UUID,
 ) -> TicketStakeholdersGroupedRead:
-    try:
+    async def _load() -> TicketStakeholdersGroupedRead:
         rows = await list_stakeholders_for_ticket(db, ticket_id)
         return await stakeholders_to_grouped_read(db, rows)
-    except Exception:
-        logger.warning(
-            "Could not load stakeholders for ticket %s; returning empty groups",
-            ticket_id,
-            exc_info=True,
-        )
-        return empty_stakeholders_grouped()
+
+    return await optional_db_read(
+        db,
+        _load,
+        default=empty_stakeholders_grouped(),
+        log_message=f"Could not load stakeholders for ticket {ticket_id}; returning empty groups",
+    )
 
 
 async def stakeholder_to_read(

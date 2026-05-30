@@ -19,6 +19,7 @@ from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_STATUS_LABELS_DA,
     KNOWLEDGE_VISIBILITY_LABELS_DA,
 )
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services.ticket_hierarchy import (
     get_child_tickets,
     get_related_major_tickets,
@@ -37,14 +38,23 @@ async def load_user_display_names(
     """Resolve display names including inactive/deleted users (for ticket reporters)."""
     if not user_ids:
         return {}
-    rows = await db.execute(select(User).where(User.id.in_(user_ids)))
-    names: dict[uuid.UUID, str] = {}
-    for user in rows.scalars().all():
-        names[user.id] = user.display_name
-    for user_id in user_ids:
-        if user_id not in names and user_id == SYSTEM_USER_ID:
-            names[user_id] = SYSTEM_REPORTER_DISPLAY_NAME
-    return names
+    try:
+        rows = await db.execute(select(User).where(User.id.in_(user_ids)))
+        names: dict[uuid.UUID, str] = {}
+        for user in rows.scalars().all():
+            names[user.id] = user.display_name
+        for user_id in user_ids:
+            if user_id not in names and user_id == SYSTEM_USER_ID:
+                names[user_id] = SYSTEM_REPORTER_DISPLAY_NAME
+        return names
+    except Exception:
+        logger.warning("Could not load user display names; returning empty map", exc_info=True)
+        await rollback_session(db)
+        names = {}
+        for user_id in user_ids:
+            if user_id == SYSTEM_USER_ID:
+                names[user_id] = SYSTEM_REPORTER_DISPLAY_NAME
+        return names
 
 
 async def resolve_reporter_display_name(
@@ -231,6 +241,7 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
         sla_settings = await get_sla_runtime_settings(db)
     except Exception:
         logger.exception("Ticket list context query failed; using minimal payloads")
+        await rollback_session(db)
         return [await _fallback_ticket_read_async(db, ticket) for ticket in tickets]
 
     reads: list[TicketRead] = []
@@ -270,6 +281,8 @@ async def ticket_hierarchy_detail_extras(
             "related_major_tickets": related,
         }
     except Exception:
+        logger.warning("Could not load ticket hierarchy for %s", ticket.id, exc_info=True)
+        await rollback_session(db)
         return {"children": [], "related_major_tickets": []}
 
 

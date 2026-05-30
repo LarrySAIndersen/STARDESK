@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -9,6 +10,9 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, TicketTimestampsRead
+from star_itsm_api.services.db_resilience import rollback_session
+
+logger = logging.getLogger(__name__)
 
 _STATUS_LABELS_DA = {
     "new": "Ny",
@@ -108,6 +112,12 @@ async def build_ticket_activity(
     try:
         return await _build_ticket_activity(db, ticket, user)
     except Exception:
+        logger.warning(
+            "Could not load activity for ticket %s; returning empty list",
+            ticket.id,
+            exc_info=True,
+        )
+        await rollback_session(db)
         return []
 
 

@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,8 +12,11 @@ from star_itsm_api.core.security import ROLE_SUBMITTER, is_staff
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services import file_storage
 from star_itsm_api.services.virus_scan import run_virus_scan
+
+logger = logging.getLogger(__name__)
 
 SCAN_LABELS_DA = {
     "pending": "Afventer virusscan",
@@ -81,6 +85,12 @@ async def list_ticket_attachments_for_detail(
             reporter_user_id=reporter_user_id,
         )
     except Exception:
+        logger.warning(
+            "Could not load attachments for ticket %s; returning empty list",
+            ticket_id,
+            exc_info=True,
+        )
+        await rollback_session(db)
         return []
 
 

@@ -69,6 +69,7 @@ from star_itsm_api.services.dashboard_scope import (
     apply_dashboard_scope_stmt,
     parse_dashboard_scope,
 )
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services.org_access import (
     apply_agent_team_list_filter,
     apply_ticket_list_filter,
@@ -598,33 +599,55 @@ async def _get_ticket_detail(
         )
     except Exception:
         logger.warning("Could not load comment reactions for ticket %s", ticket_id, exc_info=True)
+        await rollback_session(db)
         reaction_map = {}
     comments = apply_reaction_summaries(comments, reaction_map)
 
-    team_name, user_name = await _assignment_names(db, ticket)
+    try:
+        team_name, user_name = await _assignment_names(db, ticket)
+    except Exception:
+        logger.warning("Could not load assignment names for ticket %s", ticket_id, exc_info=True)
+        await rollback_session(db)
+        team_name, user_name = None, None
+
     attachments = await list_ticket_attachments_for_detail(
         db,
         ticket_id,
         current_user,
         reporter_user_id=ticket.reporter_user_id,
     )
-    ticket_emails_rows = await list_ticket_emails(db, ticket_id=ticket_id)
-    ticket_emails = [
-        {
-            "id": row.id,
-            "direction": row.direction,
-            "subject": row.subject,
-            "from_email": row.from_email,
-            "to_email": row.to_email,
-            "body_text": row.body_text,
-            "received_at": row.received_at,
-        }
-        for row in ticket_emails_rows
-    ]
+    try:
+        ticket_emails_rows = await list_ticket_emails(db, ticket_id=ticket_id)
+        ticket_emails = [
+            {
+                "id": row.id,
+                "direction": row.direction,
+                "subject": row.subject,
+                "from_email": row.from_email,
+                "to_email": row.to_email,
+                "body_text": row.body_text,
+                "received_at": row.received_at,
+            }
+            for row in ticket_emails_rows
+        ]
+    except Exception:
+        logger.warning("Could not load ticket emails for ticket %s", ticket_id, exc_info=True)
+        await rollback_session(db)
+        ticket_emails = []
+
     integration_email = None
     if ticket.organization_id:
-        integration = await get_gmail_integration(db, organization_id=ticket.organization_id)
-        integration_email = integration.connected_email if integration else None
+        try:
+            integration = await get_gmail_integration(db, organization_id=ticket.organization_id)
+            integration_email = integration.connected_email if integration else None
+        except Exception:
+            logger.warning(
+                "Could not load Gmail integration for ticket %s",
+                ticket_id,
+                exc_info=True,
+            )
+            await rollback_session(db)
+            integration_email = None
     activity = await build_ticket_activity(db, ticket, current_user)
     stakeholders = await get_ticket_stakeholders_grouped(db, ticket_id)
     reporter_display_name = await resolve_reporter_display_name(db, ticket.reporter_user_id)

@@ -12,6 +12,7 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_stakeholder import TicketStakeholder
 from star_itsm_api.schemas.ticket import TicketRead
 from star_itsm_api.schemas.user_admin import UserTicketsGroupedRead
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ async def _ticket_ids_by_stakeholder_role(
             role,
             exc_info=True,
         )
+        await rollback_session(db)
         return []
 
 
