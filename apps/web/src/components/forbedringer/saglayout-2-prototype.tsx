@@ -103,7 +103,7 @@ const MOCK = {
       event_type: "ticket_created",
       label_da: "Sag oprettet",
       actor_display_name: "Bo",
-      visibility: "external",
+      visibility: "external" as const,
       detail: "Kilde: Selvbetjening",
     },
     {
@@ -112,7 +112,7 @@ const MOCK = {
       event_type: "assigned",
       label_da: "Tildelt SF Service Desk",
       actor_display_name: "System",
-      visibility: "system",
+      visibility: "system" as const,
       detail: "Emilio",
     },
     {
@@ -121,7 +121,7 @@ const MOCK = {
       event_type: "status_changed",
       label_da: "Status ændret til I arbejde",
       actor_display_name: "Larrysanders",
-      visibility: "internal",
+      visibility: "internal" as const,
       detail: null,
     },
     {
@@ -130,7 +130,7 @@ const MOCK = {
       event_type: "comment_added",
       label_da: "Ekstern kommentar tilføjet",
       actor_display_name: "Larrysanders",
-      visibility: "external",
+      visibility: "external" as const,
       detail: "test",
     },
   ],
