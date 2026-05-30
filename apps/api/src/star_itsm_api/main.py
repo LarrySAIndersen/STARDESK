@@ -57,10 +57,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(SecurityHeadersMiddleware)
+# Cursor / VS Code canvases may send Origin: null (sandbox) or vscode-file:// / vscode-webview://
+_canvas_cors_origins = ["null"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app|vscode-file://.*",
+    allow_origins=[*settings.cors_origins, *_canvas_cors_origins],
+    allow_origin_regex=(
+        r"https://.*\.vercel\.app"
+        r"|vscode-file://.*"
+        r"|vscode-webview://.*"
+    ),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
