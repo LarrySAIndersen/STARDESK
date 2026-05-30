@@ -3,7 +3,7 @@
 Cloud-prototype af STAR ITSM. Ingen Docker, intet lokalt setup.
 Alt kører i skyen, du ser det i browseren.
 
-**Udviklere:** [CONTRIBUTING.md](./CONTRIBUTING.md) (kør web + API lokalt, test, env). Miljøer: [docs/environments.md](./docs/environments.md). **Work Board DB:** [docs/workboard-persistence.md](./docs/workboard-persistence.md) (genskab sager fra Neon efter tab af canvas JSON).
+**Udviklere:** [CONTRIBUTING.md](./CONTRIBUTING.md) (kør web + API lokalt, test, env). Miljøer: [docs/environments.md](./docs/environments.md). **Deploy:** [docs/deploy.md](./docs/deploy.md). **Work Board DB:** [docs/workboard-persistence.md](./docs/workboard-persistence.md) (genskab sager fra Neon efter tab af canvas JSON).
 
 > Søsterprojekt til `star-itsm/` (on-prem K8s-versionen).
 > Cloud-versionen er til at validere designet hurtigt;
@@ -13,37 +13,35 @@ Alt kører i skyen, du ser det i browseren.
 
 | Lag | Værktøj | Hvor |
 |---|---|---|
-| Frontend | Next.js 15 + TypeScript + shadcn/ui | Vercel |
-| Backend API | Python 3.12 + FastAPI + SQLAlchemy + Alembic | Railway |
+| Frontend | Next.js 15 + TypeScript + shadcn/ui | Vercel (`apps/web`) |
+| Backend API | Python 3.12 + FastAPI + SQLAlchemy + Alembic | Vercel serverless (`apps/api`) |
 | Database | PostgreSQL 16 (Neon serverless) | Neon |
 | Code editor | Cursor (Composer) | Lokalt |
 | Repo | GitHub (mono-repo med `apps/web` + `apps/api`) | GitHub |
 
+**Produktion:** web → Vercel; API → https://api-gamma-amber.vercel.app; DB → Neon (`DATABASE_URL` i Vercel api-projekt).
+
 ## Hvad du skal have på plads inden vi koder
 
-**Tre gratis konti:**
-1. GitHub - du har sandsynligvis allerede
-2. Vercel - log ind med GitHub: https://vercel.com
-3. Neon - log ind med GitHub: https://neon.tech
-4. Railway - log ind med GitHub: https://railway.app
+**To gratis konti (+ GitHub):**
+1. GitHub — du har sandsynligvis allerede
+2. Vercel — log ind med GitHub: https://vercel.com
+3. Neon — log ind med GitHub: https://neon.tech
 
 **Opret én ting hvert sted (10 minutter):**
 
 ### GitHub
-- Opret et tomt repo: `star-itsm-cloud` (privat eller offentligt - dit valg)
+- Opret et tomt repo: `star-itsm-cloud` (privat eller offentligt — dit valg)
 - Klon det lokalt (via Cursor: "Clone repository")
 
 ### Neon
 - Opret et project: `star-itsm`
 - Branch: `main` (default)
-- Kopier `DATABASE_URL` connection string - gem den i password manager
+- Kopier `DATABASE_URL` connection string — gem den i password manager
 - Den ser ud som: `postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/star_itsm?sslmode=require`
 
 ### Vercel
-- Gør ingenting endnu. Vi forbinder repo'et fra Cursor senere.
-
-### Railway
-- Gør ingenting endnu. Vi sætter det op når API'et er klar at deploye.
+- Gør ingenting endnu. Vi forbinder repo'et fra Cursor senere (to projekter: `apps/web` og `apps/api`).
 
 ## Kom i gang
 
@@ -75,42 +73,45 @@ Du har nu en tom database med fuldt schema (13 tabeller, seed data).
 
 1. Åbn projektet i Cursor
 2. Settings → Rules for AI → peg på `CLAUDE.md`
-3. Tilføj `.env.local` (kopi af `.env.example`) - udfyld `DATABASE_URL` fra Neon
+3. Tilføj `.env.local` (kopi af `.env.example`) — udfyld `DATABASE_URL` fra Neon
 
 ### Trin 4: Lad Cursor scaffolde apps
 
-Åbn `docs/first-prompts.md` - der ligger de første 3 prompts klar.
+Åbn `docs/first-prompts.md` — der ligger de første 3 prompts klar.
 
 Kopier prompt #1 ind i Cursor Composer. Vent. Review. Accept.
 Så prompt #2. Så prompt #3.
 
 Efter prompt #1 har du `apps/web` (Next.js på Vercel).
-Efter prompt #2 har du `apps/api` (FastAPI på Railway).
+Efter prompt #2 har du `apps/api` (FastAPI på Vercel serverless).
 Efter prompt #3 er de forbundet og du kan se en tom ticket-liste i browseren.
+
+> **Note:** `first-prompts.md` nævner historisk Railway — produktion kører på Vercel. Se [docs/deploy.md](./docs/deploy.md).
 
 ### Trin 5: Deploy
 
-**Frontend til Vercel:**
-1. Gå til vercel.com → New Project → importer dit GitHub repo
-2. Root directory: `apps/web`
-3. Environment variables: `NEXT_PUBLIC_API_URL` = (Railway URL fra trin under)
-4. Deploy
+Se [docs/deploy.md](./docs/deploy.md) for fuld guide. Kort:
 
-**Backend til Railway:**
-1. Gå til railway.app → New Project → Deploy from GitHub
-2. Vælg dit repo, root: `apps/api`
-3. Environment variables: `DATABASE_URL` (fra Neon)
-4. Deploy
-5. Kopier den genererede URL og sæt den ind som `NEXT_PUBLIC_API_URL` i Vercel
-6. Redeploy Vercel
+**API til Vercel:**
+1. vercel.com → New Project → GitHub repo → root: `apps/api`
+2. `DATABASE_URL` (Neon, `postgresql+asyncpg://…`)
+3. Deploy → kopiér API-URL
+4. Kør Alembic: GitHub Actions `database-migrate` eller `scripts/run-migrate.py`
+
+**Frontend til Vercel:**
+1. vercel.com → New Project → root: `apps/web`
+2. `NEXT_PUBLIC_API_URL` = API-URL fra ovenfor
+3. Deploy
+
+**Afslut:** Sæt `FRONTEND_URL` på api-projektet til web-URL.
 
 Nu har du en kørende app på en `https://star-itsm-cloud.vercel.app`-URL.
 
 ## Hvad du IKKE skal gøre
 
-- Ikke installere Python, Node.js, eller PostgreSQL lokalt - alt sker i Cursor + cloud
+- Ikke installere Python, Node.js, eller PostgreSQL lokalt — alt sker i Cursor + cloud
 - Ikke køre `docker` overhovedet
-- Ikke skrive kode manuelt - lad Cursor om det, du reviewer og accepterer
+- Ikke skrive kode manuelt — lad Cursor om det, du reviewer og accepterer
 
 ## Roadmap (samme som on-prem-versionen)
 
@@ -119,7 +120,7 @@ Nu har du en kørende app på en `https://star-itsm-cloud.vercel.app`-URL.
 3. **Routing-regler + kategorier**
 4. **SLA-engine + mail-eskalering**
 5. **Email-to-ticket** (via Resend webhook eller Postmark)
-6. **Auth** (Clerk - simplest, eller NextAuth)
+6. **Auth** (Clerk — simplest, eller NextAuth)
 7. **Knowledge base + similar-ticket search**
 8. **Agentic: LLM klassificerer/foreslår**
 
@@ -138,9 +139,9 @@ og denne cloud-version kan parkeres som "demo-miljø".
 
 | | star-itsm (on-prem) | star-itsm-cloud (denne) |
 |---|---|---|
-| Backend | FastAPI + worker | FastAPI (worker = Railway cron) |
+| Backend | FastAPI + worker | FastAPI (worker = Vercel cron) |
 | DB | Postgres i K8s | Neon serverless |
 | Mail | STAR SMTP relay | Resend (gratis tier) |
 | Auth | Entra ID via Keycloak | Clerk eller NextAuth |
 | Persondata | OK (on-prem) | Brug fake data i prototypen |
-| Deploy | Helm + K8s | git push → Vercel/Railway |
+| Deploy | Helm + K8s | git push → Vercel (web + api) |

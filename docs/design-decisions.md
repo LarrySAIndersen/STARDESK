@@ -7,7 +7,7 @@ Ved uenighed mellem docs og kode: **koden vinder** — opdater denne fil efter �
 
 | Valg | Begrundelse |
 |------|-------------|
-| Next.js 15 (App Router) + FastAPI | Hurtig cloud-deploy (Vercel + Vercel/Railway API), delt domænemodel med on-prem |
+| Next.js 15 (App Router) + FastAPI | Hurtig cloud-deploy (Vercel web + Vercel serverless API), delt domænemodel med on-prem |
 | Neon PostgreSQL | Serverless, samme SQL som prod |
 | SQL-filer i `docs/` frem for kun Alembic i prototype | Jan deployer via script; `run_neon_setup.py` kører kendt rækkefølge |
 | Dansk UI, engelsk kode | STAR-konvention (se `CLAUDE.md`) |

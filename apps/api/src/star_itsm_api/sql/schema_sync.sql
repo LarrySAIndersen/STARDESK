@@ -260,7 +260,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_is_shared
 -- Allow top_admin rettighedsgruppe on users
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
 ALTER TABLE users ADD CONSTRAINT users_role_check
-    CHECK (role IN ('end_user', 'agent', 'admin', 'top_admin', 'supporter'));
+    CHECK (role IN ('end_user', 'agent', 'admin', 'top_admin', 'supporter', 'stardesk_reviewer'));
 
 -- === docs/ticket-security-flag-migration.sql ===
 

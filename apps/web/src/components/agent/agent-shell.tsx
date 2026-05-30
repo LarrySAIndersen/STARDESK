@@ -8,6 +8,7 @@ import { AgentErrorBoundary } from "@/components/agent/agent-error-boundary";
 import { AgentShellColumns } from "@/components/agent/agent-shell-columns";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
+import { ReviewNotesOverlay } from "@/components/review-notes/review-notes-overlay";
 import { PageLayoutEditProvider } from "@/components/page-layout/page-layout-edit-provider";
 import { PageLayoutEditMainChrome } from "@/components/page-layout/page-layout-edit-main-chrome";
 import { canEditPageLayout } from "@/lib/page-layout/access";
@@ -88,6 +89,7 @@ export function AgentShell({
           />
           <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
+            <ReviewNotesOverlay user={user ?? null} />
           </PageLayoutEditMainChrome>
         </div>
       </AgentShellColumns>

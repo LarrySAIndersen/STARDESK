@@ -2224,3 +2224,63 @@ body.page-layout-edit-active .page-layout-field--editing {
 .page-layout-main--active {
   background: color-mix(in srgb, var(--star-blue-light) 8%, transparent);
 }
+
+/* Stardesk Reviewer — gule sedler */
+.review-notes-toolbar {
+  @apply fixed right-4 z-[60] flex max-w-sm flex-col gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow-md;
+  top: calc(var(--wire-page-layout-banner-top, 3.5rem) + 0.5rem);
+}
+
+.review-notes-toolbar__toggle {
+  @apply flex items-center gap-2 font-semibold;
+}
+
+.review-notes-toolbar__hint {
+  @apply text-amber-900/80 leading-snug;
+}
+
+.review-notes-layer {
+  @apply pointer-events-none absolute inset-0 z-[45];
+}
+
+.review-notes-layer--active {
+  @apply pointer-events-auto cursor-crosshair;
+}
+
+.review-note-pin {
+  @apply absolute z-[46] flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-amber-500 bg-amber-300 text-amber-950 shadow-md transition-transform hover:scale-105;
+}
+
+.review-note-popover,
+.review-note-composer {
+  @apply absolute z-[47] w-72 max-w-[calc(100vw-2rem)] rounded-md border border-amber-400 bg-amber-100 p-3 text-amber-950 shadow-lg;
+}
+
+.review-note-popover__header,
+.review-note-composer__header {
+  @apply mb-2 flex items-center justify-between gap-2;
+}
+
+.review-note-popover__meta {
+  @apply text-xs text-amber-900/80;
+}
+
+.review-note-popover__comment {
+  @apply text-sm leading-relaxed whitespace-pre-wrap;
+}
+
+.review-note-composer__textarea {
+  @apply border-amber-300 bg-amber-50 text-sm;
+}
+
+.review-note-composer__actions {
+  @apply mt-2 flex justify-end gap-2;
+}
+
+.review-notes-error {
+  @apply fixed bottom-4 right-4 z-[60] rounded-md border border-[#c41e2a]/30 bg-white px-3 py-2 text-xs text-[#c41e2a] shadow;
+}
+
+.wire-scroll-content {
+  position: relative;
+}

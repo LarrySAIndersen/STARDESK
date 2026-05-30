@@ -16,3 +16,5 @@ class AttachmentRead(BaseModel):
     scanned_at: datetime | None
     created_at: datetime
     download_available: bool
+    file_retrievable: bool
+    file_unavailable_label_da: str | None = None

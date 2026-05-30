@@ -23,6 +23,7 @@ const TITLES: Record<string, string> = {
   "/groups": "Grupper",
   "/users": "Brugere",
   "/reports": "Rapporter",
+  "/forbedringer": "Forbedringer",
   "/admin/dashboard": "Admin dashboard",
   "/admin/sla": "SLA-indstillinger",
   "/admin/categories": "Kategorier",

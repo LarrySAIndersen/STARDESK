@@ -23,6 +23,7 @@ from star_itsm_api.routers import (
     knowledge_articles,
     platform,
     reports,
+    review_notes,
     sf_chat,
     slack,
     sub_causes,
@@ -59,7 +60,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.vercel\.app|vscode-file://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -74,6 +75,7 @@ app.include_router(knowledge_articles.router, prefix="/api/v1")
 app.include_router(teams.router, prefix="/api/v1")
 app.include_router(kanban.router, prefix="/api/v1")
 app.include_router(workboard.router, prefix="/api/v1")
+app.include_router(review_notes.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(assets.router, prefix="/api/v1")
 app.include_router(sub_causes.router, prefix="/api/v1")

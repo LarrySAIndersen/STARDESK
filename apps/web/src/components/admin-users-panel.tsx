@@ -37,7 +37,7 @@ const selectClassName =
 const profileSchema = z.object({
   display_name: z.string().min(1, "Navn er påkrævet"),
   email: z.string().email("Ugyldig e-mail"),
-  role: z.enum(["end_user", "agent", "admin", "top_admin"]),
+  role: z.enum(["end_user", "agent", "admin", "top_admin", "supporter", "stardesk_reviewer"]),
   is_active: z.boolean(),
   password_policy_exempt: z.boolean(),
   organization_id: z.string(),

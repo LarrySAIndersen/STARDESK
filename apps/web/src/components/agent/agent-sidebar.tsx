@@ -24,7 +24,7 @@ import {
   type NavLayoutEntry,
   type NavSectionId,
 } from "@/lib/agent-nav-config";
-import { canManageUsers, getClientUser, isStaff, isTopAdmin } from "@/lib/auth";
+import { canManageUsers, getClientUser, hasAgentShellAccess, isStaff, isTopAdmin } from "@/lib/auth";
 import { canChooseClassicUi } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
@@ -209,6 +209,7 @@ export function AgentSidebar({
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
   const staff = isStaff(user);
+  const agentShellUser = hasAgentShellAccess(user);
   const showAdmin = showUsersNavFromServer ?? canManageUsers(user);
   const topAdmin = isTopAdmin(user);
   const showClassicSwitch = canChooseClassicUi(user);
@@ -217,8 +218,13 @@ export function AgentSidebar({
 
   const { hiddenNavIds, error, toggleHidden } = useSidebarNavVisibility(staff);
   const allItems = useMemo(
-    () => buildAgentNavItems({ staff, showAdmin }),
-    [staff, showAdmin],
+    () =>
+      buildAgentNavItems({
+        staff: agentShellUser,
+        showAdmin,
+        showForbedringer: staff,
+      }),
+    [agentShellUser, showAdmin, staff],
   );
   const visibleItems = useMemo(
     () => filterNavItemsForViewer(allItems, hiddenNavIds, topAdmin),

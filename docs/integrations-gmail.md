@@ -38,7 +38,7 @@ Hvis `GMAIL_SYNC_FROM_EMAIL` er sat, afvises OAuth, hvis en anden konto forbinde
 
 ## 3) Miljøvariabler
 
-### Backend (Railway / lokal `apps/api/.env`)
+### Backend (Vercel api-projekt / lokal `apps/api/.env`)
 
 | Variabel | Beskrivelse |
 |----------|-------------|
@@ -58,7 +58,7 @@ OAuth-start/callback kører via Next.js BFF; backend-URL skal pege på API:
 
 | Variabel | Beskrivelse |
 |----------|-------------|
-| `NEXT_PUBLIC_API_URL` | Backend base URL (Railway) |
+| `NEXT_PUBLIC_API_URL` | Backend base URL (Vercel api-projekt) |
 
 Sæt **Google OAuth-variabler på backend-deployment** (ikke kun Vercel web), medmindre I proxyer dem eksplicit.
 

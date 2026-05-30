@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -53,6 +53,12 @@ def attachment_to_read(row: Attachment, *, user: User) -> AttachmentRead:
     can_download = row.scan_status == "clean" and (
         is_staff(user) or (user.role == ROLE_SUBMITTER and row.visible_to_submitter)
     )
+    file_retrievable = file_storage.storage_key_is_retrievable(row.storage_key)
+    file_unavailable_label_da = (
+        None
+        if file_retrievable
+        else file_storage.FILE_UNAVAILABLE_LABEL_DA
+    )
     return AttachmentRead(
         id=row.id,
         filename=row.filename,
@@ -62,7 +68,9 @@ def attachment_to_read(row: Attachment, *, user: User) -> AttachmentRead:
         scan_status_label_da=SCAN_LABELS_DA.get(row.scan_status, row.scan_status),
         scanned_at=row.scanned_at,
         created_at=row.created_at,
-        download_available=can_download,
+        download_available=can_download and file_retrievable,
+        file_retrievable=file_retrievable,
+        file_unavailable_label_da=file_unavailable_label_da,
     )
 
 
@@ -120,6 +128,12 @@ async def _list_ticket_attachments_for_detail(
             scanned_at=row.scanned_at,
             created_at=row.created_at,
             download_available=False,
+            file_retrievable=file_storage.storage_key_is_retrievable(row.storage_key),
+            file_unavailable_label_da=(
+                None
+                if file_storage.storage_key_is_retrievable(row.storage_key)
+                else file_storage.FILE_UNAVAILABLE_LABEL_DA
+            ),
         )
         for row in rows
     ]
@@ -203,8 +217,10 @@ def _ensure_clean_attachment(attachment: Attachment) -> None:
         raise HTTPException(status_code=403, detail="Attachment not available until scan completes")
 
 
-async def build_attachment_download_response(attachment: Attachment) -> FileResponse | Response:
-    """Return file bytes (blob) or FileResponse (local disk)."""
+async def build_attachment_download_response(
+    attachment: Attachment,
+) -> FileResponse | RedirectResponse | Response:
+    """Return file bytes (private blob), redirect (public blob), or FileResponse (local disk)."""
     _ensure_clean_attachment(attachment)
     disposition = (
         "inline"
@@ -215,6 +231,9 @@ async def build_attachment_download_response(attachment: Attachment) -> FileResp
     content_disposition = f'{disposition}; filename="{attachment.filename}"'
 
     if file_storage.is_blob_storage_key(attachment.storage_key):
+        public_url = file_storage.public_blob_download_url(attachment.storage_key)
+        if public_url:
+            return RedirectResponse(url=public_url, status_code=307)
         body = await file_storage.read_blob_bytes(attachment.storage_key)
         return Response(
             content=body,
@@ -222,9 +241,18 @@ async def build_attachment_download_response(attachment: Attachment) -> FileResp
             headers={"Content-Disposition": content_disposition},
         )
 
+    if file_storage.is_vercel_serverless():
+        raise HTTPException(
+            status_code=404,
+            detail=file_storage.FILE_NOT_FOUND_DETAIL_DA,
+        )
+
     path = Path(attachment.storage_key)
     if not path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+        raise HTTPException(
+            status_code=404,
+            detail=file_storage.FILE_NOT_FOUND_DETAIL_DA,
+        )
     return FileResponse(
         path,
         media_type=attachment.content_type,

@@ -154,6 +154,13 @@ export function TicketImageStrip({
                       className="size-full object-cover"
                     />
                   </a>
+                ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
+                  <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-0.5 p-1 text-center">
+                    <FileImage className="size-5 shrink-0 opacity-40" aria-hidden />
+                    <span className="line-clamp-3 text-[8px] leading-tight">
+                      {file.file_unavailable_label_da ?? "Filen findes ikke længere"}
+                    </span>
+                  </div>
                 ) : (
                   <div className="text-muted-foreground flex size-full flex-col items-center justify-center gap-0.5 p-1 text-center">
                     <FileImage className="size-5 shrink-0" aria-hidden />
@@ -213,6 +220,14 @@ export function TicketImageStrip({
                     <Paperclip className="size-3" aria-hidden />
                     {file.filename}
                   </a>
+                ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
+                  <span
+                    className="border-input text-muted-foreground inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs"
+                    title={file.file_unavailable_label_da ?? undefined}
+                  >
+                    <Paperclip className="size-3" aria-hidden />
+                    {file.filename}
+                  </span>
                 ) : (
                   <span className="border-input text-muted-foreground inline-flex h-7 items-center gap-1 rounded-md border px-2 text-xs">
                     <Paperclip className="size-3" aria-hidden />

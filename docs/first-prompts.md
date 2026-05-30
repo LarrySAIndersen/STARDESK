@@ -6,6 +6,10 @@ er færdig og virker før du går videre til næste.
 > **Vigtigt:** Sørg for at `CLAUDE.md` er valgt som "Rules for AI" i Cursor
 > settings før du begynder. Den indeholder guardrails og konventioner som
 > alle disse prompts bygger på.
+>
+> **Deploy (2026):** Prompts #2 og #3 nævner historisk Railway. Produktion kører
+> **Vercel serverless** for API (`apps/api`) og **Neon** for database.
+> Se [deploy.md](./deploy.md) for aktuel opsætning.
 
 ---
 

@@ -41,6 +41,10 @@ async function proxyRequest(request: Request, pathSegments: string[]) {
   if (disposition) {
     responseHeaders.set("Content-Disposition", disposition);
   }
+  const location = upstream.headers.get("location");
+  if (location) {
+    responseHeaders.set("Location", location);
+  }
 
   return new NextResponse(upstream.body, {
     status: upstream.status,

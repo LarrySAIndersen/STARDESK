@@ -35,7 +35,7 @@ const PRIORITY_LABELS: Record<IntakeAssistDraft["suggested_priority"], string> =
 };
 
 const TYPE_LABELS: Record<IntakeAssistDraft["suggested_ticket_type"], string> = {
-  incident: "Incident",
+  incident: "Hændelse",
   service_request: "Serviceanmodning",
   problem: "Problem",
 };

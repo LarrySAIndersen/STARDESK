@@ -50,6 +50,7 @@ ROLE_LABELS: dict[str, str] = {
     "admin": "Administrator",
     "top_admin": "Topadministrator",
     "supporter": "Supporter",
+    "stardesk_reviewer": "Stardesk Reviewer",
 }
 
 

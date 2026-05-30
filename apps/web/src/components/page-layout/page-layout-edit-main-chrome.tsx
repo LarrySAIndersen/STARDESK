@@ -22,7 +22,7 @@ export function PageLayoutEditMainChrome({ children }: { children: ReactNode }) 
       {canEdit && editMode ? (
         <PageLayoutEditSagaIndicator className="page-layout-saga-indicator--global mx-4 mt-3 shrink-0 sm:mx-5" />
       ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         {children}
       </div>
     </main>

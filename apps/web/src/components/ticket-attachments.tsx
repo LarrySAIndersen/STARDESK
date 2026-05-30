@@ -68,6 +68,10 @@ export function TicketAttachments({
                 >
                   Åbn
                 </a>
+              ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
+                <span className="text-muted-foreground text-xs">
+                  {file.file_unavailable_label_da ?? "Filen findes ikke længere — upload igen"}
+                </span>
               ) : null}
             </li>
           ))}

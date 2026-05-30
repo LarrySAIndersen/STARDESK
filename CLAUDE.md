@@ -23,7 +23,7 @@ Læs `ARCHITECTURE.md` før du gør noget i denne repo.
 - Migrations: Alembic
 - Schemas: Pydantic v2
 - Mail: Resend (gratis tier i prototype)
-- Deployes til Railway
+- Deployes til Vercel serverless (FastAPI service, `index.py` + `vercel.json`)
 
 **Database** - PostgreSQL 16 på Neon (serverless)
 - Initial schema fra `init.sql` (kør én gang manuelt)
@@ -77,14 +77,15 @@ eller slettet.
 - Preview deployments på alle pull requests
 - Root directory i Vercel settings: `apps/web`
 
-**apps/api → Railway:**
-- Push til `main` triggerer auto-deploy
-- Procfile definerer start-kommando
+**apps/api → Vercel:**
+- Push til `main` triggerer auto-deploy (separat Vercel-projekt `api`)
 - Root directory: `apps/api`
+- Prod-URL: `https://api-gamma-amber.vercel.app`
 
 **Database → Neon:**
-- Connection string i `DATABASE_URL` (Railway env)
-- Alembic migrations kører via Railway pre-deploy hook eller manuelt
+- Connection string i `DATABASE_URL` (Vercel env på `api`-projekt)
+- Alembic kører **ikke** ved API-opstart (Vercel cold start)
+- Efter schema-ændringer: GitHub Actions (`security.yml` / `database-migrate.yml`) eller `scripts/run-migrate.py` efter `vercel env pull`
 
 ## Testing
 

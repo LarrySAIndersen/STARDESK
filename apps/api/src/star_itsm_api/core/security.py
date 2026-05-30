@@ -23,9 +23,10 @@ ROLE_AGENT = "agent"
 ROLE_ADMIN = "admin"
 ROLE_TOP_ADMIN = "top_admin"
 ROLE_SUPPORTER = "supporter"
+ROLE_STARDESK_REVIEWER = "stardesk_reviewer"
 
 USER_ROLE_PATTERN = (
-    r"^(end_user|agent|admin|top_admin|supporter)$"
+    r"^(end_user|agent|admin|top_admin|supporter|stardesk_reviewer)$"
 )
 
 

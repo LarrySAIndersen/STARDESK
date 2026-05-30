@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 BLOB_STORAGE_PREFIX = "blob:"
 _BLOB_API_BASE = "https://blob.vercel-storage.com"
 _BLOB_API_VERSION = "10"
+FILE_NOT_FOUND_DETAIL_DA = "Filen findes ikke længere. Upload vedhæftningen igen."
+FILE_UNAVAILABLE_LABEL_DA = "Filen findes ikke længere — upload igen"
 
 
 def blob_storage_enabled() -> bool:
@@ -29,6 +31,33 @@ def is_blob_storage_key(storage_key: str) -> bool:
 
 def blob_url_from_storage_key(storage_key: str) -> str:
     return storage_key[len(BLOB_STORAGE_PREFIX) :]
+
+
+def is_vercel_serverless() -> bool:
+    return bool(os.getenv("VERCEL"))
+
+
+def is_public_blob_url(url: str) -> bool:
+    return ".public.blob.vercel-storage.com" in url
+
+
+def public_blob_download_url(storage_key: str) -> str | None:
+    """Direct CDN URL for public blobs — safe to redirect browsers to."""
+    if not is_blob_storage_key(storage_key):
+        return None
+    url = blob_url_from_storage_key(storage_key)
+    if is_public_blob_url(url):
+        return url
+    return None
+
+
+def storage_key_is_retrievable(storage_key: str) -> bool:
+    """Best-effort check without network I/O (used when listing attachments)."""
+    if is_blob_storage_key(storage_key):
+        return True
+    if is_vercel_serverless():
+        return False
+    return Path(storage_key).is_file()
 
 
 def require_attachment_storage_configured() -> None:
@@ -83,14 +112,24 @@ async def persist_to_blob(*, pathname: str, content: bytes, content_type: str) -
     return f"{BLOB_STORAGE_PREFIX}{url}"
 
 
+def _blob_download_headers() -> dict[str, str]:
+    token = settings.blob_read_write_token
+    if not token:
+        return {}
+    return {"Authorization": f"Bearer {token}"}
+
+
 async def read_blob_bytes(storage_key: str) -> bytes:
     url = blob_url_from_storage_key(storage_key)
+    headers = _blob_download_headers()
+    candidates = (f"{url}?download=1", url)
     async with httpx.AsyncClient(timeout=60.0) as client:
-        response = await client.get(f"{url}?download=1")
-    if response.status_code != 200:
-        logger.warning("Blob download failed for %s: %s", url, response.status_code)
-        raise HTTPException(status_code=404, detail="File not found")
-    return response.content
+        for fetch_url in candidates:
+            response = await client.get(fetch_url, headers=headers)
+            if response.status_code == 200:
+                return response.content
+            logger.warning("Blob download failed for %s: %s", fetch_url, response.status_code)
+    raise HTTPException(status_code=404, detail=FILE_NOT_FOUND_DETAIL_DA)
 
 
 def persist_to_local_disk(*, ticket_id: str, attachment_id: str, filename: str, content: bytes) -> Path:

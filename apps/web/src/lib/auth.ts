@@ -22,6 +22,12 @@ export function normalizeUserRole(role: string | undefined): UserRole | null {
   if (key === "end_user" || key === "slutbruger") {
     return "end_user";
   }
+  if (key === "supporter") {
+    return "supporter";
+  }
+  if (key === "stardesk_reviewer" || key === "stardesk reviewer") {
+    return "stardesk_reviewer";
+  }
   return null;
 }
 
@@ -168,4 +174,21 @@ export function canExportTickets(user: User | null): boolean {
 
 export function isSubmitter(user: User | null): boolean {
   return user?.role === "end_user";
+}
+
+export function isStardeskReviewer(user: User | null): boolean {
+  if (!user) {
+    return false;
+  }
+  return resolveUserRole(user) === "stardesk_reviewer";
+}
+
+/** Staff or Stardesk Reviewer — agent shell and browse access. */
+export function hasAgentShellAccess(user: User | null): boolean {
+  return isStaff(user) || isStardeskReviewer(user);
+}
+
+/** Staff-only Forbedringer tab (reviewers create notes on pages). */
+export function canViewImprovements(user: User | null): boolean {
+  return isStaff(user);
 }

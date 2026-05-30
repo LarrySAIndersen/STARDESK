@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
+    ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
     ROLE_TOP_ADMIN,
@@ -43,6 +44,9 @@ _ROLE_ALIASES: dict[str, str] = {
     "topadmin": ROLE_TOP_ADMIN,
     "topadministrator": ROLE_TOP_ADMIN,
     "top administrator": ROLE_TOP_ADMIN,
+    "stardesk_reviewer": ROLE_STARDESK_REVIEWER,
+    "stardesk reviewer": ROLE_STARDESK_REVIEWER,
+    "reviewer": ROLE_STARDESK_REVIEWER,
 }
 
 _ACTIVE_TRUE = frozenset({"1", "true", "ja", "yes", "aktiv", "active", "y"})

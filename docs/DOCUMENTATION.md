@@ -14,6 +14,7 @@ Brug den når noget skal genskabes i Neon, når adgang ikke matcher forventning,
 | Drag-drop gemmer ikke | Browser + `PATCH .../assignment`, se [api-reference.md](./api-reference.md) |
 | Cron/webhook 503 | `APP_ENV=production` kræver `CRON_SECRET` / `WEBHOOK_SECRET` |
 | Manglende kolonner i DB | Kør [database-rebuild.md](./database-rebuild.md) migrations i rækkefølge |
+| Interessenter/relationsgraf virker ikke | Alembic revision `20260530_ticket_stakeholders` — se [deploy.md](./deploy.md) |
 
 ## Dokumenter
 
@@ -25,7 +26,7 @@ Brug den når noget skal genskabes i Neon, når adgang ikke matcher forventning,
 | [api-reference.md](./api-reference.md) | REST-endpoints og vigtige payloads |
 | [database-rebuild.md](./database-rebuild.md) | Genskab schema + seed fra bunden |
 | [llm-ticket-evaluation.md](./llm-ticket-evaluation.md) | LLM-metadata og API til vurdering |
-| [deploy.md](./deploy.md) | Vercel/Railway deploy |
+| [deploy.md](./deploy.md) | Vercel (web + api) + Neon deploy og Alembic-migrationer |
 | [environments.md](./environments.md) | Test, produktion og prod-klon (Neon + Vercel) |
 | [frontend-structure.md](./frontend-structure.md) | Next.js ruter og komponenter |
 | [performance-testing.md](./performance-testing.md) | Headless load/soak/stress (20 VU) |

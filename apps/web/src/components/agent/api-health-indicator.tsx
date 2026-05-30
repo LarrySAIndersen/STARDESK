@@ -15,7 +15,7 @@ async function probeHealth(url: string): Promise<Response> {
   return fetch(url, { cache: "no-store", signal: AbortSignal.timeout(8000) });
 }
 
-/** Shows a header warning when the web app or Railway API backend is unreachable. */
+/** Shows a header warning when the web app or Vercel API backend is unreachable. */
 export function ApiHealthIndicator({ className }: { className?: string }) {
   const [health, setHealth] = useState<HealthState>({ status: "checking" });
 
@@ -53,7 +53,7 @@ export function ApiHealthIndicator({ className }: { className?: string }) {
           setHealth({
             status: "error",
             message: "API: Driftstilstand",
-            detail: `${detail} Tjek at Railway-backend kører og at NEXT_PUBLIC_API_URL er korrekt.`,
+            detail: `${detail} Tjek at API-backend kører på Vercel og at NEXT_PUBLIC_API_URL er korrekt.`,
           });
           return;
         }

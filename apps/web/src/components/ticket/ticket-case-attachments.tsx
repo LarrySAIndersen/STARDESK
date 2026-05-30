@@ -51,7 +51,7 @@ export function TicketCaseAttachments({
             key={file.id}
             className="border-border rounded-[2px] border px-3 py-2 text-[13px]"
           >
-            {staffView && file.scan_status === "clean" ? (
+            {staffView && file.download_available ? (
               <a
                 href={attachmentDownloadUrl(ticketId, file.id)}
                 target="_blank"
@@ -60,6 +60,13 @@ export function TicketCaseAttachments({
               >
                 {file.filename}
               </a>
+            ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
+              <p className="text-foreground font-medium">
+                {file.filename}
+                <span className="text-muted-foreground mt-0.5 block text-[11px] font-normal">
+                  {file.file_unavailable_label_da ?? "Filen findes ikke længere — upload igen"}
+                </span>
+              </p>
             ) : (
               <p className="text-foreground font-medium">{file.filename}</p>
             )}

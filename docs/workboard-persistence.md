@@ -4,6 +4,12 @@
 
 STARdesk Work Board tasks live in **PostgreSQL** (`workboard_tasks`). Git + `stardesk-workboard.canvas.data.json` hold **UI state only** (column widths, selection, forms).
 
+## Database-migrationer
+
+Work Board kræver Alembic-revision **`20260530_workboard_tasks`**. Kør `alembic upgrade head` mod Neon (se [deploy.md](./deploy.md)).
+
+Interessenter på tickets (sag #54) kræver **`20260530_ticket_stakeholders`** (tabeller `ticket_stakeholders` og `entity_relationships`). Samme `alembic upgrade head` anvender begge revisioner i korrekt rækkefølge.
+
 ## Recover board after canvas data loss
 
 1. Run migration on Neon: `alembic upgrade head` (revision `20260530_workboard_tasks`).
@@ -11,7 +17,7 @@ STARdesk Work Board tasks live in **PostgreSQL** (`workboard_tasks`). Git + `sta
 
 ```bash
 cd STARDESK
-export STARDESK_API_URL=https://your-api.railway.app
+export STARDESK_API_URL=https://api-gamma-amber.vercel.app
 export STARDESK_API_TOKEN=<jwt-from-login>
 node scripts/migrate-workboard-json-to-db.mjs
 ```
@@ -40,10 +46,21 @@ Merge `workboard-tasks-export.json` into `stardesk-workboard.canvas.data.json` u
 
 ## Canvas limitation (phase 2)
 
-Cursor canvases **cannot call `fetch()`**. Phase 1: DB + API + import script. Phase 2 options:
+Historisk: Cursor canvases **må ikke importere npm** — Canvas SDK fraråder `fetch()`. **Sag #76** tilføjer dog direkte sync fra Work Board canvas via `globalThis.fetch` til `POST /api/v1/workboard/tasks/bulk-import` (samme payload som `migrate-workboard-json-to-db.mjs`).
+
+### Canvas Gem-knap (sag #76)
+
+1. Klik **Database-sync** i toolbaren → indsæt **API URL** (default prod API) og **staff JWT** fra `/api/v1/auth/login`.
+2. Klik **Gem** (til højre for Reset kolonnebredder) — eller vent på auto-save hvert **5. minut**.
+3. Status **Gemt kl. HH:MM** vises ved knappen; toast ved manuel gem.
+4. Token gemmes i `stardesk-workboard.canvas.data.json` — **commit ikke** filen med token.
+
+API CORS tillader `vscode-file://` så Cursor canvas kan kalde API. Fallback: `node scripts/migrate-workboard-json-to-db.mjs` med `STARDESK_API_URL` + `STARDESK_API_TOKEN`.
+
+Phase 2 alternativer (uændret):
 
 - **Sidecar script** (cron / manual): `migrate-workboard-json-to-db.mjs` + export endpoint
 - **STARDESK web** `/workboard` page using API directly (recommended long-term)
 - **Cursor hook** on canvas save → trigger sync script
 
-Until sync exists, run import after major canvas sessions and treat DB as authoritative for task numbers/content.
+Treat DB as authoritative for task numbers/content; canvas JSON remains UI cache. Run `migrate-workboard-json-to-db.mjs` after major sessions if canvas sync was unavailable.

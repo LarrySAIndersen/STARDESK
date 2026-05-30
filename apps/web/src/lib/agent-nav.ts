@@ -10,6 +10,7 @@ import {
   Mail,
   MessageSquare,
   Plus,
+  StickyNote,
   Ticket,
   Shield,
   Settings2,
@@ -43,8 +44,9 @@ const INTEGRATION_ICONS = {
 export function buildAgentNavItems(options: {
   staff: boolean;
   showAdmin: boolean;
+  showForbedringer?: boolean;
 }): AgentNavItem[] {
-  const { staff, showAdmin } = options;
+  const { staff, showAdmin, showForbedringer = false } = options;
   return [
     { id: "dashboard", href: "/", label: "Dashboard", icon: LayoutDashboard },
     ...(staff
@@ -63,6 +65,9 @@ export function buildAgentNavItems(options: {
       ? [{ id: "knowledge", href: "/knowledge", label: "Vidensartikler", icon: Library }]
       : []),
     ...(staff ? [{ id: "groups", href: "/groups", label: "Grupper", icon: Users }] : []),
+    ...(showForbedringer
+      ? [{ id: "forbedringer", href: "/forbedringer", label: "Forbedringer", icon: StickyNote }]
+      : []),
     ...(showAdmin ? [{ id: "users", href: "/users", label: "Brugere", icon: UserCog }] : []),
     { id: "reports", href: "/reports", label: "Rapporter", icon: BarChart3 },
     ...(showAdmin

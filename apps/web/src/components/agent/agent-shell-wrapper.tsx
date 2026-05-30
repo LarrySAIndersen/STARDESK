@@ -7,7 +7,7 @@ import { CaseAssistantShellClient } from "@/components/portal/case-assistant-she
 import { SfChatShellClient } from "@/components/sf-chat/sf-chat-shell-client";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
+import { canManageUsers, hasAgentShellAccess, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import { canEditPageLayout } from "@/lib/page-layout/access";
 import {
@@ -55,8 +55,8 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
     );
   }
 
-  if (isStaff(currentUser)) {
-    if (await isStaffPathBlockedForUser(pathname, currentUser)) {
+  if (hasAgentShellAccess(currentUser)) {
+    if (isStaff(currentUser) && (await isStaffPathBlockedForUser(pathname, currentUser))) {
       redirect(await firstAllowedStaffPathForUser(currentUser));
     }
     return (
@@ -69,7 +69,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
         >
           {children}
         </AgentShell>
-        <SfChatShellClient user={currentUser} />
+        {isStaff(currentUser) ? <SfChatShellClient user={currentUser} /> : null}
       </div>
     );
   }

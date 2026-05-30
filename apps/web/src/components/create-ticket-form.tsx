@@ -284,45 +284,127 @@ export function CreateTicketForm({
         "wire-card border-t-[3px] border-t-star-red",
       )}
     >
-      <h1 className="wire-card-title">Opret ny sag</h1>
-      <p className="text-muted-foreground mb-6 text-sm">
-        Brug AI-assistenten til et udkast, eller udfyld formularen direkte — personoplysninger og
-        tags er valgfrie.
+      <h1 id="create-ticket-heading" className="wire-card-title">
+        Ny sag
+      </h1>
+      <p className="text-muted-foreground mb-2 text-sm">
+        Opret en sag i STARdesk. Felter markeret med stjerne er påkrævet — kategori, tags og
+        personoplysninger er valgfrie.
+      </p>
+      <p className="text-muted-foreground mb-6 text-xs">
+        Valgfrit: brug AI-assistenten til et udkast, eller udfyld formularen direkte.
       </p>
       <div className="ticket-create-layout">
         <TicketCreateLlmAssistant
           onApplyDraft={applyIntakeDraft}
           disabled={isSubmitting}
         />
-        <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="min-w-0"
+          aria-labelledby="create-ticket-heading"
+          noValidate
+        >
         <PageLayoutGrid className="space-y-8">
           <PageLayoutSection
             fieldId="section-basics"
             defaultLabel="Sagens indhold"
             defaultOrder={10}
           >
+            <p className="text-muted-foreground text-xs">
+              Start med kort titel og beskrivelse — type og prioritet kan justeres bagefter.
+            </p>
+
+            <PageLayoutFormField
+              fieldId="field-title"
+              defaultLabel="Titel (påkrævet)"
+              defaultOrder={11}
+              htmlFor="title"
+            >
+              <Input
+                id="title"
+                className={inputClassName}
+                required
+                aria-required="true"
+                aria-invalid={errors.title ? true : undefined}
+                aria-describedby={errors.title ? "title-error" : "title-hint"}
+                placeholder="Kort overskrift på sagen"
+                {...register("title")}
+              />
+              {errors.title ? (
+                <p id="title-error" className="text-destructive text-sm" role="alert">
+                  {errors.title.message}
+                </p>
+              ) : (
+                <p id="title-hint" className="text-muted-foreground text-xs">
+                  Mindst 3 tegn — fx «VPN virker ikke hjemmefra».
+                </p>
+              )}
+            </PageLayoutFormField>
+
+            <PageLayoutFormField
+              fieldId="field-description"
+              defaultLabel="Beskrivelse (påkrævet)"
+              defaultOrder={12}
+              htmlFor="description"
+            >
+              <Textarea
+                id="description"
+                rows={6}
+                className={textareaClassName}
+                required
+                aria-required="true"
+                aria-invalid={errors.description ? true : undefined}
+                aria-describedby={
+                  errors.description ? "description-error" : "description-hint"
+                }
+                placeholder="Hvad skete der, hvornår, og hvad har I allerede prøvet?"
+                {...register("description")}
+                onPaste={(event) => {
+                  onDescriptionPaste(event);
+                }}
+              />
+              <PendingImageAttachments
+                files={pendingAttachments}
+                onRemove={removeAttachmentAt}
+              />
+              {errors.description ? (
+                <p id="description-error" className="text-destructive text-sm" role="alert">
+                  {errors.description.message}
+                </p>
+              ) : (
+                <p id="description-hint" className="text-muted-foreground text-xs">
+                  Mindst 10 tegn. Indsæt billeder med Ctrl+V — CPR må ikke stå her.
+                </p>
+              )}
+            </PageLayoutFormField>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <PageLayoutFormField
                 fieldId="field-type"
                 defaultLabel="Type"
-                defaultOrder={11}
+                defaultOrder={13}
                 defaultSpan="half"
                 htmlFor="ticket_type"
               >
                 <select
                   id="ticket_type"
                   className={selectClassName}
+                  aria-describedby="ticket-type-hint"
                   {...register("ticket_type")}
                 >
-                  <option value="incident">Incident</option>
+                  <option value="incident">Hændelse</option>
                   <option value="service_request">Serviceanmodning</option>
                   <option value="problem">Problem</option>
                 </select>
+                <p id="ticket-type-hint" className="text-muted-foreground text-xs">
+                  Hændelse ved uventet nedbrud; serviceanmodning ved bestilling/ændring.
+                </p>
               </PageLayoutFormField>
               <PageLayoutFormField
                 fieldId="field-priority"
                 defaultLabel="Prioritet"
-                defaultOrder={12}
+                defaultOrder={14}
                 defaultSpan="half"
                 htmlFor="priority"
               >
@@ -338,42 +420,6 @@ export function CreateTicketForm({
                 </select>
               </PageLayoutFormField>
             </div>
-
-            <PageLayoutFormField
-              fieldId="field-title"
-              defaultLabel="Titel"
-              defaultOrder={13}
-              htmlFor="title"
-            >
-              <Input id="title" className={inputClassName} {...register("title")} />
-              {errors.title ? (
-                <p className="text-destructive text-sm">{errors.title.message}</p>
-              ) : null}
-            </PageLayoutFormField>
-
-            <PageLayoutFormField
-              fieldId="field-description"
-              defaultLabel="Beskrivelse"
-              defaultOrder={14}
-              htmlFor="description"
-            >
-              <Textarea
-                id="description"
-                rows={6}
-                className={textareaClassName}
-                {...register("description")}
-                onPaste={(event) => {
-                  onDescriptionPaste(event);
-                }}
-              />
-              <PendingImageAttachments
-                files={pendingAttachments}
-                onRemove={removeAttachmentAt}
-              />
-              {errors.description ? (
-                <p className="text-destructive text-sm">{errors.description.message}</p>
-              ) : null}
-            </PageLayoutFormField>
 
             {staffOnly ? (
               <PageLayoutFormField
@@ -455,6 +501,7 @@ export function CreateTicketForm({
                   id="subcategory_id"
                   className={selectClassName}
                   disabled={subcategories.length === 0}
+                  aria-describedby="subcategory-hint"
                   {...register("subcategory_id")}
                 >
                   <option value="">Vælg underkategori</option>
@@ -464,6 +511,11 @@ export function CreateTicketForm({
                     </option>
                   ))}
                 </select>
+                <p id="subcategory-hint" className="text-muted-foreground text-xs">
+                  {subcategories.length === 0
+                    ? "Vælg først en kategori for at se underkategorier."
+                    : "Valgfrit — præciserer klassificeringen."}
+                </p>
               </PageLayoutFormField>
             </div>
 
@@ -562,6 +614,10 @@ export function CreateTicketForm({
                     placeholder="Søg bruger til berørte…"
                     disabled={isSubmitting}
                   />
+                  <p className="text-muted-foreground text-xs">
+                    Personer der er direkte ramt af problemet — får ikke automatisk alle
+                    sagshændelser.
+                  </p>
                 </PageLayoutFormField>
                 <PageLayoutFormField
                   fieldId="field-interested-users"
@@ -575,6 +631,10 @@ export function CreateTicketForm({
                     placeholder="Søg bruger til interessenter…"
                     disabled={isSubmitting}
                   />
+                  <p className="text-muted-foreground text-xs">
+                    Kolleger der skal følge med i sagen uden at være berørt — fx leder eller
+                    projektgruppe.
+                  </p>
                 </PageLayoutFormField>
               </>
             ) : null}
@@ -691,15 +751,35 @@ export function CreateTicketForm({
             </p>
           ) : null}
 
-          <PageLayoutFormField fieldId="field-submit" defaultLabel="Opret sag" defaultOrder={50}>
-            <Button
-              type="submit"
-              className="wire-btn wire-btn-primary w-full sm:w-auto"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Opretter…" : "Opret sag"}
-            </Button>
-          </PageLayoutFormField>
+          <PageLayoutSection
+            fieldId="section-submit"
+            defaultLabel="Afslut"
+            defaultOrder={50}
+            contentClassName="border-t border-[var(--gray-border)] pt-6"
+          >
+            <p className="text-muted-foreground text-sm">
+              Tjek titel og beskrivelse før du opretter — du sendes til den nye sag bagefter.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <Button
+                type="submit"
+                className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? "Opretter sag…" : "Opret sag"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="wire-btn min-h-11 w-full sm:w-auto"
+                disabled={isSubmitting}
+                onClick={() => router.push("/tickets")}
+              >
+                Annuller
+              </Button>
+            </div>
+          </PageLayoutSection>
         </PageLayoutGrid>
         </form>
       </div>

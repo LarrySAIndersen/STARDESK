@@ -1,6 +1,14 @@
 # STARdesk API
 
-FastAPI backend for STARdesk. Deployed to Railway.
+FastAPI backend for STARdesk. Deployed to **Vercel serverless** (`index.py` + `vercel.json`).
+
+**Production URL:** https://api-gamma-amber.vercel.app
+
+## Deploy
+
+- Vercel project with root directory `apps/api`
+- `DATABASE_URL` from Neon (`postgresql+asyncpg://…`) in Vercel env vars
+- Alembic migrations run via CI or manually — **not** at cold start (see [docs/deploy.md](../../docs/deploy.md))
 
 ## Local (optional)
 

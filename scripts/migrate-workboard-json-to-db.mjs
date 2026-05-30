@@ -3,7 +3,7 @@
  * One-time / repeatable import: stardesk-workboard.canvas.data.json → Neon via API.
  *
  * Env:
- *   STARDESK_API_URL   — e.g. https://your-api.railway.app
+ *   STARDESK_API_URL   — e.g. https://api-gamma-amber.vercel.app
  *   STARDESK_API_TOKEN — Bearer JWT (staff/admin); login via /api/v1/auth/login
  *
  * Optional:
@@ -36,7 +36,7 @@ function fail(msg) {
 }
 
 async function main() {
-  if (!apiUrl) fail("Set STARDESK_API_URL (Railway API base URL).");
+  if (!apiUrl) fail("Set STARDESK_API_URL (Vercel API base URL).");
   if (!token) fail("Set STARDESK_API_TOKEN (staff JWT from /api/v1/auth/login).");
   if (!fs.existsSync(dataPath)) fail(`Work Board data not found: ${dataPath}`);
 

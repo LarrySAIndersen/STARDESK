@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 
-/** Proxies Railway `/health` for client-side API status checks (no JWT required). */
+/** Proxies Vercel API `/health` for client-side API status checks (no JWT required). */
 export async function GET() {
   try {
     const response = await fetch(buildBackendUrl("/health"), {

@@ -1,4 +1,4 @@
-# Pinned for Railway/Nixpacks when pyproject editable install is skipped.
+# Pinned for Vercel/Nixpacks when pyproject editable install is skipped.
 alembic>=1.14.0
 asyncpg>=0.30.0
 fastapi>=0.115.0

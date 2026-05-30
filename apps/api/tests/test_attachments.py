@@ -1,12 +1,19 @@
 import uuid
+from collections.abc import AsyncIterator
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
+from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.security import get_current_user, get_current_user_session
+from star_itsm_api.deps import require_db
+from star_itsm_api.main import app
 from star_itsm_api.models.attachment import Attachment
+from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services import attachments, file_storage
 
 
@@ -29,9 +36,54 @@ def clean_attachment() -> Attachment:
     )
 
 
+@pytest.fixture
+def mock_db() -> AsyncMock:
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    return session
+
+
+@pytest.fixture
+def override_db(mock_db: AsyncMock):
+    async def _require_db() -> AsyncMock:
+        return mock_db
+
+    app.dependency_overrides[require_db] = _require_db
+    yield mock_db
+    app.dependency_overrides.pop(require_db, None)
+
+
+@pytest.fixture
+async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+
 def test_is_blob_storage_key() -> None:
     assert file_storage.is_blob_storage_key("blob:https://x.blob.vercel-storage.com/a.png")
     assert not file_storage.is_blob_storage_key("/tmp/a.png")
+
+
+def test_storage_key_is_retrievable_blob() -> None:
+    assert file_storage.storage_key_is_retrievable(
+        "blob:https://store.public.blob.vercel-storage.com/t.png"
+    )
+
+
+def test_storage_key_is_retrievable_local_missing() -> None:
+    assert not file_storage.storage_key_is_retrievable("/tmp/does-not-exist.png")
+
+
+def test_storage_key_is_retrievable_local_present(tmp_path: Path) -> None:
+    local = tmp_path / "photo.png"
+    local.write_bytes(b"x")
+    assert file_storage.storage_key_is_retrievable(str(local))
+
+
+def test_storage_key_not_retrievable_on_vercel_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VERCEL", "1")
+    assert not file_storage.storage_key_is_retrievable("/tmp/stardesk-uploads/ticket/file.png")
 
 
 @pytest.mark.asyncio
@@ -46,17 +98,47 @@ async def test_read_blob_bytes_happy_path(monkeypatch: pytest.MonkeyPatch) -> No
     mock_client.__aexit__ = AsyncMock(return_value=None)
 
     monkeypatch.setattr(file_storage.httpx, "AsyncClient", lambda **_: mock_client)
+    monkeypatch.setattr(settings, "blob_read_write_token", "test-token")
 
     data = await file_storage.read_blob_bytes("blob:https://store.public.blob.vercel-storage.com/t.png")
     assert data == b"\x89PNG"
-    mock_client.get.assert_awaited_once_with(
-        "https://store.public.blob.vercel-storage.com/t.png?download=1"
-    )
+    mock_client.get.assert_awaited()
+    call_kwargs = mock_client.get.await_args.kwargs
+    assert call_kwargs["headers"]["Authorization"] == "Bearer test-token"
 
 
 @pytest.mark.asyncio
-async def test_build_attachment_download_blob(monkeypatch: pytest.MonkeyPatch, clean_attachment) -> None:
+async def test_read_blob_bytes_private_with_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.content = b"secret"
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_response)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    monkeypatch.setattr(file_storage.httpx, "AsyncClient", lambda **_: mock_client)
+    monkeypatch.setattr(settings, "blob_read_write_token", "rw-token")
+
+    data = await file_storage.read_blob_bytes(
+        "blob:https://store.private.blob.vercel-storage.com/t.png"
+    )
+    assert data == b"secret"
+
+
+@pytest.mark.asyncio
+async def test_build_attachment_download_public_blob_redirect(clean_attachment) -> None:
     clean_attachment.storage_key = "blob:https://store.public.blob.vercel-storage.com/t.png"
+
+    response = await attachments.build_attachment_download_response(clean_attachment)
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://store.public.blob.vercel-storage.com/t.png"
+
+
+@pytest.mark.asyncio
+async def test_build_attachment_download_private_blob(monkeypatch: pytest.MonkeyPatch, clean_attachment) -> None:
+    clean_attachment.storage_key = "blob:https://store.private.blob.vercel-storage.com/t.png"
     monkeypatch.setattr(
         file_storage,
         "read_blob_bytes",
@@ -88,7 +170,19 @@ async def test_build_attachment_download_missing_local_returns_404(clean_attachm
     with pytest.raises(HTTPException) as exc:
         await attachments.build_attachment_download_response(clean_attachment)
     assert exc.value.status_code == 404
-    assert exc.value.detail == "File not found"
+    assert exc.value.detail == file_storage.FILE_NOT_FOUND_DETAIL_DA
+
+
+@pytest.mark.asyncio
+async def test_build_attachment_download_vercel_local_returns_404(
+    monkeypatch: pytest.MonkeyPatch, clean_attachment
+) -> None:
+    monkeypatch.setenv("VERCEL", "1")
+    clean_attachment.storage_key = "/tmp/stardesk-uploads/ticket/file.png"
+    with pytest.raises(HTTPException) as exc:
+        await attachments.build_attachment_download_response(clean_attachment)
+    assert exc.value.status_code == 404
+    assert exc.value.detail == file_storage.FILE_NOT_FOUND_DETAIL_DA
 
 
 def test_require_attachment_storage_on_vercel_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -122,5 +216,90 @@ async def test_persist_to_blob_upload(monkeypatch: pytest.MonkeyPatch) -> None:
         content=b"png",
         content_type="image/png",
     )
-    assert key.startswith("blob:https://")
+    assert key == "blob:https://store.public.blob.vercel-storage.com/attachments/x.png"
     mock_client.put.assert_awaited_once()
+
+
+def test_attachment_to_read_marks_legacy_vercel_local_unavailable(
+    monkeypatch: pytest.MonkeyPatch, clean_attachment
+) -> None:
+    monkeypatch.setenv("VERCEL", "1")
+    clean_attachment.storage_key = "/tmp/stardesk-uploads/ticket/file.png"
+    staff = SimpleNamespace(role="admin")
+    read = attachments.attachment_to_read(clean_attachment, user=staff)
+    assert read.file_retrievable is False
+    assert read.download_available is False
+    assert read.file_unavailable_label_da == file_storage.FILE_UNAVAILABLE_LABEL_DA
+
+
+@pytest.mark.asyncio
+async def test_download_ticket_attachment_happy_path_blob(
+    api_client: AsyncClient,
+    mock_db: AsyncMock,
+    clean_attachment,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ticket_id = clean_attachment.ticket_id
+    attachment_id = clean_attachment.id
+    ticket = Ticket(
+        id=ticket_id,
+        reporter_user_id=uuid.uuid4(),
+        deleted_at=None,
+    )
+    clean_attachment.storage_key = "blob:https://store.public.blob.vercel-storage.com/t.png"
+
+    async def _get(model, pk):
+        if model is Ticket:
+            return ticket
+        if model is Attachment:
+            return clean_attachment
+        return None
+
+    mock_db.get = AsyncMock(side_effect=_get)
+    monkeypatch.setattr(
+        "star_itsm_api.routers.tickets._ensure_ticket_access",
+        AsyncMock(),
+    )
+
+    response = await api_client.get(
+        f"/api/v1/tickets/{ticket_id}/attachments/{attachment_id}/download"
+    )
+    assert response.status_code == 307
+    assert response.headers["location"] == "https://store.public.blob.vercel-storage.com/t.png"
+
+
+@pytest.mark.asyncio
+async def test_download_ticket_attachment_missing_file(
+    api_client: AsyncClient,
+    mock_db: AsyncMock,
+    clean_attachment,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ticket_id = clean_attachment.ticket_id
+    attachment_id = clean_attachment.id
+    ticket = Ticket(
+        id=ticket_id,
+        reporter_user_id=uuid.uuid4(),
+        deleted_at=None,
+    )
+    clean_attachment.storage_key = "/tmp/stardesk-uploads/missing.png"
+
+    async def _get(model, pk):
+        if model is Ticket:
+            return ticket
+        if model is Attachment:
+            return clean_attachment
+        return None
+
+    mock_db.get = AsyncMock(side_effect=_get)
+    monkeypatch.setattr(
+        "star_itsm_api.routers.tickets._ensure_ticket_access",
+        AsyncMock(),
+    )
+    monkeypatch.setenv("VERCEL", "1")
+
+    response = await api_client.get(
+        f"/api/v1/tickets/{ticket_id}/attachments/{attachment_id}/download"
+    )
+    assert response.status_code == 404
+    assert response.json()["detail"] == file_storage.FILE_NOT_FOUND_DETAIL_DA

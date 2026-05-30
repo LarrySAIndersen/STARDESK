@@ -3,6 +3,7 @@
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
+    ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
     ROLE_TOP_ADMIN,
@@ -27,6 +28,10 @@ def is_staff_role(user: User) -> bool:
 
 def is_end_user(user: User) -> bool:
     return user.role == ROLE_SUBMITTER
+
+
+def is_stardesk_reviewer(user: User) -> bool:
+    return user.role == ROLE_STARDESK_REVIEWER
 
 
 def has_full_ticket_visibility(user: User) -> bool:
