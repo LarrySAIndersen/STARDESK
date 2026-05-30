@@ -42,6 +42,10 @@ class Settings(BaseSettings):
         validation_alias="PROTOTYPE_STAFF_PASSWORD_HASH",
     )
     upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
+    blob_read_write_token: str | None = Field(
+        default=None,
+        validation_alias="BLOB_READ_WRITE_TOKEN",
+    )
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")
     slack_client_secret: str | None = Field(default=None, validation_alias="SLACK_CLIENT_SECRET")
@@ -86,6 +90,7 @@ class Settings(BaseSettings):
         "gmail_token_encryption_key",
         "gmail_sync_from_email",
         "gmail_default_from",
+        "blob_read_write_token",
         mode="before",
     )
     @classmethod

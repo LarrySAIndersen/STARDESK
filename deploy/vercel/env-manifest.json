@@ -36,7 +36,8 @@
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
       "GMAIL_REDIRECT_URI",
-      "GMAIL_TOKEN_ENCRYPTION_KEY"
+      "GMAIL_TOKEN_ENCRYPTION_KEY",
+      "BLOB_READ_WRITE_TOKEN"
     ],
     "optional": [
       "UPLOAD_DIR",

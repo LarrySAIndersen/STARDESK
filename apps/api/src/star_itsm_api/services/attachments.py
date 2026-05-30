@@ -3,14 +3,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import ROLE_SUBMITTER, is_staff
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
+from star_itsm_api.services import file_storage
 from star_itsm_api.services.virus_scan import run_virus_scan
 
 SCAN_LABELS_DA = {
@@ -37,6 +38,8 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
 def upload_root() -> Path:
+    from star_itsm_api.core.config import settings
+
     root = Path(settings.upload_dir)
     root.mkdir(parents=True, exist_ok=True)
     return root
@@ -119,6 +122,8 @@ async def save_ticket_upload(
     user: User,
     upload: UploadFile,
 ) -> AttachmentRead:
+    file_storage.require_attachment_storage_configured()
+
     if upload.filename is None or not upload.filename.strip():
         raise HTTPException(status_code=400, detail="Filename is required")
 
@@ -132,36 +137,88 @@ async def save_ticket_upload(
 
     attachment_id = uuid.uuid4()
     safe_name = Path(upload.filename).name
-    storage_path = upload_root() / str(ticket_id) / f"{attachment_id}_{safe_name}"
-    storage_path.parent.mkdir(parents=True, exist_ok=True)
-    storage_path.write_bytes(content)
+    ticket_id_str = str(ticket_id)
+    attachment_id_str = str(attachment_id)
 
-    now = datetime.now(UTC)
-    row = Attachment(
-        id=attachment_id,
-        ticket_id=ticket_id,
-        comment_id=None,
-        uploader_user_id=user.id,
-        filename=safe_name,
-        content_type=content_type,
-        size_bytes=len(content),
-        storage_key=str(storage_path),
-        scan_status="pending",
-        scanned_at=None,
-        scan_detail=None,
-        visible_to_submitter=False,
-        created_at=now,
-    )
-    db.add(row)
-    await db.flush()
-    await run_virus_scan(db, row, storage_path)
-    return attachment_to_read(row, user=user)
+    scan_path = file_storage.write_temp_upload(content, suffix=safe_name)
+    storage_key: str
+
+    try:
+        if file_storage.blob_storage_enabled():
+            pathname = file_storage.attachment_pathname(
+                ticket_id=ticket_id_str,
+                attachment_id=attachment_id_str,
+                filename=safe_name,
+            )
+            storage_key = await file_storage.persist_to_blob(
+                pathname=pathname,
+                content=content,
+                content_type=content_type,
+            )
+        else:
+            storage_path = file_storage.persist_to_local_disk(
+                ticket_id=ticket_id_str,
+                attachment_id=attachment_id_str,
+                filename=safe_name,
+                content=content,
+            )
+            storage_key = str(storage_path)
+
+        now = datetime.now(UTC)
+        row = Attachment(
+            id=attachment_id,
+            ticket_id=ticket_id,
+            comment_id=None,
+            uploader_user_id=user.id,
+            filename=safe_name,
+            content_type=content_type,
+            size_bytes=len(content),
+            storage_key=storage_key,
+            scan_status="pending",
+            scanned_at=None,
+            scan_detail=None,
+            visible_to_submitter=False,
+            created_at=now,
+        )
+        db.add(row)
+        await db.flush()
+        await run_virus_scan(db, row, scan_path)
+        return attachment_to_read(row, user=user)
+    finally:
+        scan_path.unlink(missing_ok=True)
 
 
-def resolve_download_path(attachment: Attachment) -> Path:
+def _ensure_clean_attachment(attachment: Attachment) -> None:
     if attachment.scan_status != "clean":
         raise HTTPException(status_code=403, detail="Attachment not available until scan completes")
+
+
+async def build_attachment_download_response(attachment: Attachment) -> FileResponse | Response:
+    """Return file bytes (blob) or FileResponse (local disk)."""
+    _ensure_clean_attachment(attachment)
+    disposition = (
+        "inline"
+        if attachment.content_type.startswith("image/")
+        or attachment.content_type == "application/pdf"
+        else "attachment"
+    )
+    content_disposition = f'{disposition}; filename="{attachment.filename}"'
+
+    if file_storage.is_blob_storage_key(attachment.storage_key):
+        body = await file_storage.read_blob_bytes(attachment.storage_key)
+        return Response(
+            content=body,
+            media_type=attachment.content_type,
+            headers={"Content-Disposition": content_disposition},
+        )
+
     path = Path(attachment.storage_key)
-    if not path.exists():
+    if not path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    return path
+    return FileResponse(
+        path,
+        media_type=attachment.content_type,
+        filename=attachment.filename,
+        content_disposition_type=disposition,
+    )
+

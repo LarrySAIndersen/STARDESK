@@ -94,8 +94,8 @@ from star_itsm_api.services.teams import user_in_team
 from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.services.attachments import (
+    build_attachment_download_response,
     list_ticket_attachments_for_detail,
-    resolve_download_path,
     save_ticket_upload,
 )
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
@@ -706,7 +706,7 @@ async def download_ticket_attachment(
     attachment_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
-) -> FileResponse:
+):
     if not is_staff(current_user):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     ticket = await db.get(Ticket, ticket_id)
@@ -718,19 +718,7 @@ async def download_ticket_attachment(
     if attachment is None or attachment.ticket_id != ticket_id:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
-    path = resolve_download_path(attachment)
-    disposition = (
-        "inline"
-        if attachment.content_type.startswith("image/")
-        or attachment.content_type == "application/pdf"
-        else "attachment"
-    )
-    return FileResponse(
-        path,
-        media_type=attachment.content_type,
-        filename=attachment.filename,
-        content_disposition_type=disposition,
-    )
+    return await build_attachment_download_response(attachment)
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)

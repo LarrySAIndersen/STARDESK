@@ -64,13 +64,25 @@ async def run_virus_scan(db: AsyncSession, attachment: Attachment, file_path: Pa
 
 
 async def scan_pending_attachments(db: AsyncSession, limit: int = 20) -> int:
+    import tempfile
+
     from sqlalchemy import select
+
+    from star_itsm_api.services import file_storage
 
     result = await db.execute(
         select(Attachment).where(Attachment.scan_status == "pending").limit(limit)
     )
     count = 0
     for attachment in result.scalars().all():
-        await run_virus_scan(db, attachment, Path(attachment.storage_key))
+        if file_storage.is_blob_storage_key(attachment.storage_key):
+            body = await file_storage.read_blob_bytes(attachment.storage_key)
+            scan_path = file_storage.write_temp_upload(body, suffix=attachment.filename)
+            try:
+                await run_virus_scan(db, attachment, scan_path)
+            finally:
+                scan_path.unlink(missing_ok=True)
+        else:
+            await run_virus_scan(db, attachment, Path(attachment.storage_key))
         count += 1
     return count
