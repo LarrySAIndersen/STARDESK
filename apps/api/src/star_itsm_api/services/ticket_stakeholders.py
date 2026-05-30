@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime
@@ -28,6 +29,13 @@ RELATIONSHIP_TYPE_BY_ROLE = {
 
 _MENTION_EMAIL = re.compile(r"@([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
 _MENTION_NAME = re.compile(r"@([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9._\- ]{1,60})")
+
+logger = logging.getLogger(__name__)
+
+
+def empty_stakeholders_grouped() -> TicketStakeholdersGroupedRead:
+    """Default payload when stakeholder tables are unavailable or empty."""
+    return TicketStakeholdersGroupedRead()
 
 
 def _now() -> datetime:
@@ -280,8 +288,16 @@ async def get_ticket_stakeholders_grouped(
     db: AsyncSession,
     ticket_id: uuid.UUID,
 ) -> TicketStakeholdersGroupedRead:
-    rows = await list_stakeholders_for_ticket(db, ticket_id)
-    return await stakeholders_to_grouped_read(db, rows)
+    try:
+        rows = await list_stakeholders_for_ticket(db, ticket_id)
+        return await stakeholders_to_grouped_read(db, rows)
+    except Exception:
+        logger.warning(
+            "Could not load stakeholders for ticket %s; returning empty groups",
+            ticket_id,
+            exc_info=True,
+        )
+        return empty_stakeholders_grouped()
 
 
 async def stakeholder_to_read(

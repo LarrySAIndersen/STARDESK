@@ -15,6 +15,8 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.stakeholder import TicketStakeholderRead
 from star_itsm_api.services.ticket_stakeholders import (
     _extract_mention_tokens,
+    empty_stakeholders_grouped,
+    get_ticket_stakeholders_grouped,
     resolve_mentioned_user_ids,
 )
 
@@ -242,3 +244,16 @@ async def test_add_stakeholder_happy_path(
             app.dependency_overrides.pop(get_current_user, None)
 
     assert response.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_get_ticket_stakeholders_grouped_returns_empty_when_query_fails() -> None:
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(side_effect=Exception("relation ticket_stakeholders does not exist"))
+
+    grouped = await get_ticket_stakeholders_grouped(mock_db, uuid.uuid4())
+
+    assert grouped == empty_stakeholders_grouped()
+    assert grouped.affected == []
+    assert grouped.interested == []
+    assert grouped.mentioned == []
