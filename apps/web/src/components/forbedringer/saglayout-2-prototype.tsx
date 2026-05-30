@@ -13,6 +13,11 @@ import {
 } from "lucide-react";
 
 import { KnowledgeMergeFieldText } from "@/components/forbedringer/knowledge-merge-field-text";
+import { Saglayout2ActivitySection } from "@/components/forbedringer/saglayout-2-activity-section";
+import {
+  Saglayout2EditableDetails,
+  type Saglayout2DetailsData,
+} from "@/components/forbedringer/saglayout-2-editable-details";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buildMergeField, MERGE_FIELD_HELP_DA } from "@/lib/knowledge-merge-fields";
@@ -33,6 +38,8 @@ const MOCK = {
   source: "Selvbetjening",
   slaLabel: "SLA OVERSKREDET",
   slaDetail: "9d 23t 24m overskredet",
+  tags: ["test", "certifiakt", "hardware", "printer"],
+  emoji: null,
   comments: [
     {
       id: "1",
@@ -74,6 +81,59 @@ const MOCK = {
     { number: "KB-2024-00001", title: "Printer viser certifikatfejl ved udskrivning", score: 92 },
     { number: "KB-2024-00008", title: "Hardware — generel fejlfinding", score: 61 },
   ],
+  timestamps: {
+    created_at: "2026-05-20T14:51:00.000Z",
+    updated_at: "2026-05-30T18:14:00.000Z",
+    gdpr_consent_at: null,
+    assigned_at: "2026-05-20T14:51:00.000Z",
+    in_progress_at: "2026-05-30T16:29:00.000Z",
+    on_hold_at: null,
+    first_response_at: "2026-05-30T20:03:00.000Z",
+    resolved_at: null,
+    closed_at: null,
+    cancelled_at: null,
+    last_escalation_at: null,
+    response_due_at: "2026-05-21T14:51:00.000Z",
+    resolution_due_at: "2026-05-22T14:51:00.000Z",
+  },
+  activity: [
+    {
+      id: "ev-1",
+      occurred_at: "2026-05-20T14:51:00.000Z",
+      event_type: "ticket_created",
+      label_da: "Sag oprettet",
+      actor_display_name: "Bo",
+      visibility: "external",
+      detail: "Kilde: Selvbetjening",
+    },
+    {
+      id: "ev-2",
+      occurred_at: "2026-05-20T14:51:00.000Z",
+      event_type: "assigned",
+      label_da: "Tildelt SF Service Desk",
+      actor_display_name: "System",
+      visibility: "system",
+      detail: "Emilio",
+    },
+    {
+      id: "ev-3",
+      occurred_at: "2026-05-30T16:29:00.000Z",
+      event_type: "status_changed",
+      label_da: "Status ændret til I arbejde",
+      actor_display_name: "Larrysanders",
+      visibility: "internal",
+      detail: null,
+    },
+    {
+      id: "ev-4",
+      occurred_at: "2026-05-30T20:03:00.000Z",
+      event_type: "comment_added",
+      label_da: "Ekstern kommentar tilføjet",
+      actor_display_name: "Larrysanders",
+      visibility: "external",
+      detail: "test",
+    },
+  ],
 };
 
 const RECOMMENDATIONS = [
@@ -82,7 +142,22 @@ const RECOMMENDATIONS = [
   "Vidensartikler kobles med flet-felter {{sag:…}} og {{kb:…}} — klikbare begge veje.",
   "Faner for E-mail / Hierarki / AI under hovedindhold — mindre scroll.",
   "Sticky handlingslinje: Tildel · Løs · Luk · Opret vidensartikel.",
+  "Detaljer + Tags redigeres via Tilpas layout (feltnavne, rækkefølge, skjul).",
+  "Aktivitet (tidsstempler + log) samlet i bunden — foldbare paneler.",
 ] as const;
+
+const DETAILS: Saglayout2DetailsData = {
+  category: MOCK.category,
+  subcategory: MOCK.subcategory,
+  team: MOCK.team,
+  assignee: MOCK.assignee,
+  priority: MOCK.priority,
+  reporter: MOCK.reporter,
+  slaLabel: MOCK.slaLabel,
+  slaDetail: MOCK.slaDetail,
+  tags: MOCK.tags,
+  emoji: MOCK.emoji,
+};
 
 type TabId = "beskeder" | "email" | "handlinger";
 
@@ -340,28 +415,7 @@ export function Saglayout2Prototype() {
           </div>
 
           <aside className="space-y-4 lg:col-span-1">
-            <section className="portal-v2-card p-4 sm:p-5 lg:sticky lg:top-4">
-              <h3 className="portal-v2-section-title mb-3">Detaljer</h3>
-              <dl className="space-y-1.5 text-[12px]">
-                {[
-                  ["Kategori", MOCK.category],
-                  ["Underkategori", MOCK.subcategory],
-                  ["Team", MOCK.team],
-                  ["Sagsbehandler", MOCK.assignee],
-                  ["Prioritet", MOCK.priority],
-                  ["Indmelder", MOCK.reporter],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-2 border-b border-border py-1.5">
-                    <dt className="text-muted-foreground">{k}</dt>
-                    <dd className="font-medium">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="border-destructive/40 bg-destructive/5 mt-3 rounded-[2px] border p-2.5">
-                <p className="text-destructive text-[11px] font-bold">{MOCK.slaLabel}</p>
-                <p className="text-destructive/90 text-[11px]">{MOCK.slaDetail}</p>
-              </div>
-            </section>
+            <Saglayout2EditableDetails data={DETAILS} />
 
             <section className="portal-v2-card p-4 sm:p-5">
               <h3 className="portal-v2-section-title mb-1">Billeder</h3>
@@ -396,6 +450,11 @@ export function Saglayout2Prototype() {
             </section>
           </aside>
         </div>
+
+        <Saglayout2ActivitySection
+          timestamps={MOCK.timestamps}
+          activity={MOCK.activity}
+        />
       </section>
     </div>
   );
