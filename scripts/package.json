@@ -15,6 +15,13 @@
     "security:audit": "node ./security-audit/run-audit.mjs",
     "sonar:agent": "node ./sonar-agent/run-sonar-agent.mjs",
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
-    "quality:loop": "node ./n8n-workflows/run-quality-loop.mjs"
+    "quality:loop": "node ./n8n-workflows/run-quality-loop.mjs",
+    "review:playwright": "node ./run-review-playwright.mjs",
+    "review:playwright:import": "node ./import-playwright-evidence-to-workboard.mjs",
+    "review:playwright:pipeline": "node ./run-review-playwright-pipeline.mjs",
+    "review:playwright:trigger": "node ./trigger-review-playwright-on-board.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.52.0"
   }
 }

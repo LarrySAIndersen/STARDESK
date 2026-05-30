@@ -1,0 +1,92 @@
+name: Review Playwright Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_number:
+        description: "Work Board task number (e.g. 54)"
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - "scripts/run-review-playwright*.mjs"
+      - "scripts/import-playwright-evidence-to-workboard.mjs"
+      - "scripts/trigger-review-playwright-on-board.mjs"
+      - "scripts/lib/workboard-*.mjs"
+      - ".github/workflows/review-playwright.yml"
+
+jobs:
+  playwright-single:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: scripts/package.json
+      - name: Install script dependencies
+        run: npm install
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+      - name: Run Playwright pipeline (API export + push)
+        working-directory: ..
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          STARDESK_API_URL: ${{ secrets.STARDESK_API_URL }}
+          STARDESK_API_TOKEN: ${{ secrets.STARDESK_API_TOKEN }}
+        run: |
+          node scripts/run-review-playwright-pipeline.mjs \
+            --task "${{ github.event.inputs.task_number }}" \
+            --export-from-api \
+            --push-to-api \
+            --continue-on-failure
+      - name: Upload evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-playwright-${{ github.event.inputs.task_number }}
+          path: reports/review-evidence/
+          if-no-files-found: ignore
+
+  playwright-scan-pending:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: scripts/package.json
+      - name: Install script dependencies
+        working-directory: scripts
+        run: npm install
+      - name: Install Playwright Chromium
+        working-directory: scripts
+        run: npx playwright install chromium --with-deps
+      - name: Scan pending Playwright evidence (API)
+        env:
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          STARDESK_API_URL: ${{ secrets.STARDESK_API_URL }}
+          STARDESK_API_TOKEN: ${{ secrets.STARDESK_API_TOKEN }}
+        run: |
+          if [ -z "$STARDESK_API_URL" ] || [ -z "$STARDESK_API_TOKEN" ] || [ -z "$TEST_USER_PASSWORD" ]; then
+            echo "::warning::Skipping pending scan — set STARDESK_API_URL, STARDESK_API_TOKEN, TEST_USER_PASSWORD secrets."
+            exit 0
+          fi
+          node scripts/trigger-review-playwright-on-board.mjs --export-from-api --push-to-api
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-playwright-pending-scan
+          path: reports/review-evidence/
+          if-no-files-found: ignore
