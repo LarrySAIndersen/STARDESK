@@ -19,7 +19,8 @@
     "review:playwright": "node ./run-review-playwright.mjs",
     "review:playwright:import": "node ./import-playwright-evidence-to-workboard.mjs",
     "review:playwright:pipeline": "node ./run-review-playwright-pipeline.mjs",
-    "review:playwright:trigger": "node ./trigger-review-playwright-on-board.mjs"
+    "review:playwright:trigger": "node ./trigger-review-playwright-on-board.mjs",
+    "workboard:sync": "node ./migrate-workboard-json-to-db.mjs"
   },
   "devDependencies": {
     "playwright": "^1.52.0"

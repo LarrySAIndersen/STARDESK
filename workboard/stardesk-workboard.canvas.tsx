@@ -4963,6 +4963,45 @@ type BulkImportResult = {
   soft_deleted?: number;
 };
 
+/** Lightweight probe: GET /health (no auth). Separates API+CORS vs canvas sandbox block. */
+async function probeWorkboardApiReachable(apiUrl: string): Promise<{
+  ok: boolean;
+  detail: string;
+}> {
+  const fetchFn = globalThis.fetch;
+  if (!fetchFn) {
+    return {
+      ok: false,
+      detail:
+        "Canvas har ikke fetch(). Brug: cd STARDESK && npm run workboard:sync (scripts/) med STARDESK_API_TOKEN.",
+    };
+  }
+  const base = apiUrl.replace(/\/$/, "");
+  const origin = getCanvasOriginHint();
+  try {
+    const res = await fetchFn(`${base}/health`, { method: "GET", mode: "cors" });
+    if (res.ok) {
+      return { ok: true, detail: "API /health OK" };
+    }
+    return {
+      ok: false,
+      detail: `API /health svarede ${res.status}${origin ? ` (Origin: ${origin})` : ""}.`,
+    };
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : String(err);
+    if (/fetch|network|Failed to fetch|Load failed/i.test(raw)) {
+      return {
+        ok: false,
+        detail:
+          `Canvas kan ikke kalde API (sandkasse/CSP — ikke manglende CORS på server).` +
+          (origin ? ` Origin: ${origin}.` : "") +
+          " Neon-sync: npm run workboard:sync i STARDESK/scripts (eller migrate-workboard-json-to-db.mjs).",
+      };
+    }
+    return { ok: false, detail: raw || "Ukendt fejl ved API-probe" };
+  }
+}
+
 async function bulkImportWorkboardTasks(
   tasks: Task[],
   apiUrl: string,
@@ -4971,6 +5010,10 @@ async function bulkImportWorkboardTasks(
   const fetchFn = globalThis.fetch;
   if (!fetchFn) {
     throw new Error("Network utilgængelig i canvas — kør migrate-workboard-json-to-db.mjs.");
+  }
+  const probe = await probeWorkboardApiReachable(apiUrl);
+  if (!probe.ok) {
+    throw new Error(probe.detail);
   }
   const base = apiUrl.replace(/\/$/, "");
   let res: Response;
@@ -5019,9 +5062,9 @@ function describeDbSyncFetchError(err: unknown): string {
     const origin = getCanvasOriginHint();
     const originPart = origin ? ` Origin: ${origin}.` : "";
     return (
-      `Netværksfejl (CORS eller canvas-sandbox).${originPart} ` +
-      "API skal tillade cursor.com / vscode-webview / null — vent på api-deploy. " +
-      "Midlertidigt: STARDESK/scripts/migrate-workboard-json-to-db.mjs med STARDESK_API_URL + STARDESK_API_TOKEN."
+      `Netværksfejl ved bulk-import.${originPart} ` +
+      "API tillader localhost (verificeret på server). Typisk blokerer Cursor canvas fetch — " +
+      "brug npm run workboard:sync i STARDESK/scripts med token fra canvas."
     );
   }
   return raw || "Ukendt fejl ved gem";
