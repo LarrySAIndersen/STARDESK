@@ -86,9 +86,12 @@ export function AgentTopBar({
       </div>
       <div className="wire-topbar__end flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
         <ApiHealthIndicator />
-        <div className="hidden items-center gap-1.5 sm:flex">
+        <div
+          className="flex max-sm:hidden shrink-0 items-center gap-1.5"
+          data-testid="agent-topbar-clock-duck-group"
+        >
           <AgentTopbarDuck />
-          <AgentClock />
+          <AgentClock groupedWithDuck />
         </div>
         {actions}
         {resolvedUser ? <TopBarUserMenu user={resolvedUser} /> : null}

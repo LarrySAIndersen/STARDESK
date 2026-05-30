@@ -4,11 +4,12 @@ import { cn } from "@/lib/utils";
 export function AgentTopbarDuck({ className }: { className?: string }) {
   return (
     <span
-      className={cn("inline-flex shrink-0 items-center justify-center", className)}
+      className={cn("inline-flex shrink-0 items-center justify-center drop-shadow-sm", className)}
+      data-testid="agent-topbar-duck"
       title="Quack!"
       aria-hidden
     >
-      <svg viewBox="0 0 32 32" className="size-7">
+      <svg viewBox="0 0 32 32" className="size-8" aria-hidden>
         <ellipse cx="14" cy="20" rx="9" ry="7" fill="#F5D547" stroke="#1A1A1A" strokeWidth="1.6" />
         <circle cx="20" cy="11" r="7" fill="#F5D547" stroke="#1A1A1A" strokeWidth="1.6" />
         <path
