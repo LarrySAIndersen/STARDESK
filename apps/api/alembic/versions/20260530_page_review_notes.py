@@ -35,7 +35,6 @@ def upgrade() -> None:
         sa.Column("position_x", sa.Float(), nullable=False),
         sa.Column("position_y", sa.Float(), nullable=False),
         sa.Column("position_selector", sa.String(length=512), nullable=True),
-        sa.Column("position_selector", sa.String(length=512), nullable=True),
         sa.Column(
             "created_by_user_id",
             postgresql.UUID(as_uuid=True),
