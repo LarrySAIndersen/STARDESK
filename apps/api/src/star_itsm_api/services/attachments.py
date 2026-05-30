@@ -13,6 +13,7 @@ from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.services.db_resilience import rollback_session
+from star_itsm_api.services.attachment_names import build_attachment_filename
 from star_itsm_api.services import file_storage
 from star_itsm_api.services.virus_scan import run_virus_scan
 
@@ -173,6 +174,7 @@ async def save_ticket_upload(
     db: AsyncSession,
     *,
     ticket_id: uuid.UUID,
+    ticket_number: str,
     user: User,
     upload: UploadFile,
 ) -> AttachmentRead:
@@ -190,7 +192,12 @@ async def save_ticket_upload(
         raise HTTPException(status_code=400, detail="File type not allowed")
 
     attachment_id = uuid.uuid4()
-    safe_name = Path(upload.filename).name
+    now = datetime.now(UTC)
+    safe_name = build_attachment_filename(
+        ticket_number=ticket_number,
+        created_at=now,
+        original_filename=Path(upload.filename).name,
+    )
     ticket_id_str = str(ticket_id)
     attachment_id_str = str(attachment_id)
 
@@ -218,7 +225,6 @@ async def save_ticket_upload(
             )
             storage_key = str(storage_path)
 
-        now = datetime.now(UTC)
         row = Attachment(
             id=attachment_id,
             ticket_id=ticket_id,

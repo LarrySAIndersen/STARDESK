@@ -2,12 +2,10 @@ import type { ReactNode } from "react";
 
 import { PortalCommentForm } from "@/components/portal/ticket/comment-form";
 import { CommentForm } from "@/components/comment-form";
-import { CommentThread } from "@/components/portal/ticket/comment-thread";
-import { PortalTicketAttachments } from "@/components/portal/ticket/portal-ticket-attachments";
 import { StatusTimeline } from "@/components/portal/ticket/status-timeline";
 import { TicketDetailsSidebar } from "@/components/portal/ticket/ticket-details-sidebar";
 import { TicketHeader } from "@/components/portal/ticket/ticket-header";
-import { TicketCaseAttachments } from "@/components/ticket/ticket-case-attachments";
+import { TicketCaseMessagesPanel } from "@/components/ticket/ticket-case-messages-panel";
 import type { TicketDetail } from "@/types/ticket";
 
 export type TicketCaseLayoutProps = {
@@ -54,32 +52,13 @@ export function TicketCaseLayout({
             )}
           </section>
 
-          <section className="portal-v2-card p-4 sm:p-5">
-            <h2 className="portal-v2-section-title mb-1">Beskeder</h2>
-            <p className="text-muted-foreground mb-4 text-[12px]">
-              {staffView
-                ? "Alle kommentarer og interne noter — nyeste nederst."
-                : "Kun beskeder synlige for dig — interne noter vises ikke."}
-            </p>
-            <CommentThread
-              ticketId={ticket.id}
-              comments={ticket.comments}
-              staffView={staffView}
-            />
-          </section>
-
-          {staffView ? (
-            <TicketCaseAttachments
-              ticketId={ticket.id}
-              attachments={ticket.attachments ?? []}
-              staffView
-            />
-          ) : (
-            <PortalTicketAttachments
-              ticketId={ticket.id}
-              attachments={ticket.attachments ?? []}
-            />
-          )}
+          <TicketCaseMessagesPanel
+            ticketId={ticket.id}
+            ticketNumber={ticket.ticket_number}
+            comments={ticket.comments}
+            attachments={ticket.attachments ?? []}
+            staffView={staffView}
+          />
 
           {showCommentForm ? (
             <section className="portal-v2-card p-4 sm:p-5">

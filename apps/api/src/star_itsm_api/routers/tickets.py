@@ -707,7 +707,13 @@ async def upload_ticket_attachment(
     if not is_staff(current_user) and current_user.id != ticket.reporter_user_id:
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     now = datetime.now(UTC)
-    read = await save_ticket_upload(db, ticket_id=ticket_id, user=current_user, upload=file)
+    read = await save_ticket_upload(
+        db,
+        ticket_id=ticket_id,
+        ticket_number=ticket.ticket_number,
+        user=current_user,
+        upload=file,
+    )
     touch_ticket_updated(ticket, now)
     db.add(
         TicketEvent(

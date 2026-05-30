@@ -11,10 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiPost } from "@/lib/api";
+import { IMAGE_ONLY_COMMENT_BODY } from "@/lib/comment-bodies";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Comment, CommentVisibility } from "@/types/comment";
-
-const IMAGE_ONLY_COMMENT_BODY = "(Vedhæftede billeder)";
 
 export function CommentForm({
   ticketId,

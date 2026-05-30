@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { CommentReactionBar } from "@/components/comment-reaction-bar";
 import { Badge } from "@/components/ui/badge";
+import { isImageOnlyCommentBody } from "@/lib/comment-bodies";
 import { formatDateTimeDa } from "@/lib/utils";
 import type { Comment } from "@/types/comment";
 
@@ -61,7 +62,9 @@ export function CommentThread({
 }) {
   const visible = useMemo(() => {
     const list = staffView ? comments : comments.filter((c) => !c.is_internal);
-    return [...list].sort(
+    return [...list]
+      .filter((c) => !isImageOnlyCommentBody(c.body))
+      .sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
   }, [comments, staffView]);
