@@ -4998,15 +4998,30 @@ async function bulkImportWorkboardTasks(
   }
 }
 
+function getCanvasOriginHint(): string {
+  try {
+    const loc = globalThis.location;
+    if (loc && typeof loc.origin === "string" && loc.origin) {
+      return loc.origin;
+    }
+  } catch {
+    /* canvas may hide location */
+  }
+  return "";
+}
+
 function describeDbSyncFetchError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   if (
     err instanceof TypeError &&
     /fetch|network|Failed to fetch|Load failed/i.test(raw)
   ) {
+    const origin = getCanvasOriginHint();
+    const originPart = origin ? ` Origin: ${origin}.` : "";
     return (
-      "Netværksfejl (ofte CORS): canvas-origin blokeres af API. " +
-      "Opdater API CORS (null / vscode-webview) eller brug scripts/migrate-workboard-json-to-db.mjs."
+      `Netværksfejl (CORS eller canvas-sandbox).${originPart} ` +
+      "API skal tillade cursor.com / vscode-webview / null — vent på api-deploy. " +
+      "Midlertidigt: STARDESK/scripts/migrate-workboard-json-to-db.mjs med STARDESK_API_URL + STARDESK_API_TOKEN."
     );
   }
   return raw || "Ukendt fejl ved gem";
