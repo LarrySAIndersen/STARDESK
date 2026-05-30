@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   BookOpen,
+  Check,
   ChevronRight,
+  Clock,
   ImageIcon,
   Lightbulb,
   Link2,
@@ -161,6 +163,119 @@ const DETAILS: Saglayout2DetailsData = {
 
 type TabId = "beskeder" | "email" | "handlinger";
 
+const MAIN_STEPS = [
+  { label: "Oprettet", ts: "26. maj, 20.03" },
+  { label: "Tildelt", ts: "26. maj, 20.03" },
+  { label: "I arbejde", ts: "28. maj, 14.19" },
+  { label: "Løst", ts: "30. maj, 20.50" },
+  { label: "Lukket", ts: null as string | null },
+] as const;
+
+function primaryHeaderButtonLabel(stepIndex: number, isWaiting: boolean): string {
+  if (isWaiting) return "Fortsæt sagsbehandling";
+  if (stepIndex >= MAIN_STEPS.length - 1) return "Opret ny sag";
+  return "Skriv opdatering";
+}
+
+function Saglayout2StatusTimeline({
+  stepIndex,
+  isWaiting,
+  onToggleWaiting,
+}: {
+  stepIndex: number;
+  isWaiting: boolean;
+  onToggleWaiting: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-6">
+      <ol
+        className="portal-v2-timeline flex flex-1 flex-col gap-0 sm:flex-row sm:items-start sm:justify-between"
+        aria-label="Sagsforløb"
+      >
+        {MAIN_STEPS.map((step, index) => {
+          const reached = !isWaiting && stepIndex >= index;
+          const active = !isWaiting && stepIndex === index;
+
+          return (
+            <li
+              key={step.label}
+              className="portal-v2-timeline-step relative flex flex-1 gap-3 sm:flex-col sm:items-center sm:gap-2 sm:text-center"
+            >
+              <div className="flex flex-col items-center sm:contents">
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-bold",
+                    reached
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-muted text-muted-foreground",
+                    active && reached && "ring-primary/35 ring-2",
+                    isWaiting && index <= stepIndex && "opacity-50",
+                  )}
+                  aria-current={active ? "step" : undefined}
+                >
+                  {reached && index < stepIndex ? (
+                    <Check className="size-4" aria-hidden />
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                {index < MAIN_STEPS.length - 1 ? (
+                  <span
+                    className="bg-border absolute top-4 left-10 hidden h-0.5 w-[calc(100%-2rem)] sm:block sm:static sm:mt-0 sm:h-0.5 sm:w-full sm:flex-1"
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
+              <div className="min-w-0 pb-4 sm:pb-0">
+                <p
+                  className={cn(
+                    "text-[13px] font-semibold",
+                    reached && !isWaiting ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {step.label}
+                </p>
+                <p className="text-muted-foreground text-[11px] tabular-nums">
+                  {step.ts ?? "—"}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="border-border flex shrink-0 flex-col items-stretch border-t pt-4 lg:w-36 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+        <button
+          type="button"
+          onClick={onToggleWaiting}
+          className={cn(
+            "flex flex-col items-center gap-2 rounded-[2px] border-2 border-dashed px-3 py-3 text-center transition-colors",
+            isWaiting
+              ? "border-amber-500 bg-amber-50 text-amber-950 shadow-sm"
+              : "border-amber-300/80 bg-amber-50/40 text-amber-900 hover:border-amber-400 hover:bg-amber-50",
+          )}
+          aria-pressed={isWaiting}
+        >
+          <span
+            className={cn(
+              "flex size-8 items-center justify-center rounded-full border-2",
+              isWaiting
+                ? "border-amber-600 bg-amber-100 text-amber-800"
+                : "border-amber-400/70 bg-white text-amber-700",
+            )}
+          >
+            <Clock className="size-4" aria-hidden />
+          </span>
+          <span className="text-[13px] font-semibold">Afventer</span>
+          <span className="text-[10px] leading-snug text-amber-800/80">
+            {isWaiting ? "Aktiv — venter på svar" : "Sæt sagen på pause"}
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MockImageThumb({ label, at }: { label: string; at: string }) {
   return (
     <div className="border-border flex gap-2 rounded-[2px] border p-2">
@@ -177,6 +292,24 @@ function MockImageThumb({ label, at }: { label: string; at: string }) {
 
 export function Saglayout2Prototype() {
   const [tab, setTab] = useState<TabId>("beskeder");
+  const [stepIndex, setStepIndex] = useState(2);
+  const [isWaiting, setIsWaiting] = useState(false);
+
+  const statusLabel = isWaiting ? "Afventer" : MAIN_STEPS[stepIndex].label;
+
+  function handlePrimaryAction() {
+    if (isWaiting) {
+      setIsWaiting(false);
+      return;
+    }
+    if (stepIndex < MAIN_STEPS.length - 1) {
+      setStepIndex((current) => current + 1);
+    }
+  }
+
+  function toggleWaiting() {
+    setIsWaiting((current) => !current);
+  }
 
   return (
     <div className="space-y-6">
@@ -234,7 +367,13 @@ export function Saglayout2Prototype() {
               {MOCK.ticketNumber} · {MOCK.title}
             </h2>
             <div className="mt-2 flex flex-wrap gap-2">
-              <Badge>{MOCK.status}</Badge>
+              <Badge
+                className={cn(
+                  isWaiting && "border-amber-400 bg-amber-100 text-amber-950 hover:bg-amber-100",
+                )}
+              >
+                {statusLabel}
+              </Badge>
               <Badge variant="outline">Kilde: {MOCK.source}</Badge>
             </div>
           </div>
@@ -245,24 +384,18 @@ export function Saglayout2Prototype() {
             <Button size="sm" variant="outline">
               Løs
             </Button>
-            <Button size="sm">Skriv opdatering</Button>
+            <Button size="sm" onClick={handlePrimaryAction}>
+              {primaryHeaderButtonLabel(stepIndex, isWaiting)}
+            </Button>
           </div>
         </div>
 
-        <div className="portal-v2-card px-4 py-3 sm:px-5">
-          <ol className="flex flex-wrap gap-4 text-[11px] sm:gap-8">
-            {["Oprettet", "Tildelt", "I arbejde", "Løst", "Lukket"].map((step, i) => (
-              <li
-                key={step}
-                className={cn(
-                  "font-medium",
-                  i === 2 ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                {i + 1}. {step}
-              </li>
-            ))}
-          </ol>
+        <div className="portal-v2-card px-4 py-4 sm:px-5">
+          <Saglayout2StatusTimeline
+            stepIndex={stepIndex}
+            isWaiting={isWaiting}
+            onToggleWaiting={toggleWaiting}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
