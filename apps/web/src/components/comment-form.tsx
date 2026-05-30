@@ -69,6 +69,9 @@ export function CommentForm({
     setIsSubmitting(true);
     setError(null);
     try {
+      if (pendingImages.length > 0) {
+        await uploadTicketAttachments(ticketId, pendingImages);
+      }
       const commentBody = body.trim() || IMAGE_ONLY_COMMENT_BODY;
       await apiPost<Comment>(`/api/v1/tickets/${ticketId}/comments`, {
         body: commentBody,
@@ -76,9 +79,6 @@ export function CommentForm({
         is_internal: staffMode ? visibility === "internal" : false,
         broadcast_to_children: showBroadcast && broadcastToChildren,
       });
-      if (pendingImages.length > 0) {
-        await uploadTicketAttachments(ticketId, pendingImages);
-      }
       setBody("");
       setVisibility("external");
       setBroadcastToChildren(false);

@@ -51,6 +51,9 @@ export function TicketEmailThread({
     setError(null);
     setNotice(null);
     try {
+      if (pendingImages.length > 0) {
+        await uploadTicketAttachments(ticketId, pendingImages);
+      }
       const replyBody =
         body.trim() ||
         "(Vedhæftede billeder — se vedhæftninger på sagen)";
@@ -58,9 +61,6 @@ export function TicketEmailThread({
         body: replyBody,
         to_email: toEmail.trim() || undefined,
       });
-      if (pendingImages.length > 0) {
-        await uploadTicketAttachments(ticketId, pendingImages);
-      }
       setBody("");
       setToEmail("");
       clear();

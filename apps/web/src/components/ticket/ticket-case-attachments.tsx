@@ -1,5 +1,6 @@
 "use client";
 
+import { AttachmentRemoveButton } from "@/components/attachment-remove-button";
 import { attachmentDownloadUrl } from "@/lib/api";
 import type { Attachment } from "@/types/attachment";
 
@@ -70,10 +71,20 @@ export function TicketCaseAttachments({
             ) : (
               <p className="text-foreground font-medium">{file.filename}</p>
             )}
-            <p className="text-muted-foreground text-[11px]">
-              {file.scan_status_label_da}
-              {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-muted-foreground text-[11px]">
+                {file.scan_status_label_da}
+                {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
+              </p>
+              {file.can_delete ? (
+                <AttachmentRemoveButton
+                  ticketId={ticketId}
+                  attachmentId={file.id}
+                  filename={file.filename}
+                  size="sm"
+                />
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

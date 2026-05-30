@@ -46,6 +46,11 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="BLOB_READ_WRITE_TOKEN",
     )
+    blob_access: str = Field(
+        default="private",
+        validation_alias="BLOB_ACCESS",
+        description='Vercel Blob upload access: "private" or "public" (match store type).',
+    )
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")
     slack_client_secret: str | None = Field(default=None, validation_alias="SLACK_CLIENT_SECRET")

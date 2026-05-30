@@ -18,3 +18,4 @@ class AttachmentRead(BaseModel):
     download_available: bool
     file_retrievable: bool
     file_unavailable_label_da: str | None = None
+    can_delete: bool = False

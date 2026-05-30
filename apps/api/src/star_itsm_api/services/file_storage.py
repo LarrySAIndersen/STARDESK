@@ -61,11 +61,14 @@ def storage_key_is_retrievable(storage_key: str) -> bool:
 
 
 def require_attachment_storage_configured() -> None:
-    """On Vercel serverless, local disk is ephemeral — Blob token is required in production."""
-    if settings.is_production and os.getenv("VERCEL") and not blob_storage_enabled():
+    """On Vercel serverless, local disk is ephemeral — Blob token is required (all environments)."""
+    if is_vercel_serverless() and not blob_storage_enabled():
         raise HTTPException(
             status_code=503,
-            detail="Attachment storage not configured (set BLOB_READ_WRITE_TOKEN on the API project)",
+            detail=(
+                "Vedhæftelser kan ikke gemmes på serveren (mangler BLOB_READ_WRITE_TOKEN på API-projektet). "
+                "Opret et Vercel Blob-store og link det til api-projektet, derefter redeploy."
+            ),
         )
 
 
@@ -83,13 +86,18 @@ def write_temp_upload(content: bytes, *, suffix: str) -> Path:
     return Path(tmp.name)
 
 
+def _blob_upload_access() -> str:
+    mode = (settings.blob_access or "private").strip().lower()
+    return mode if mode in {"private", "public"} else "private"
+
+
 async def persist_to_blob(*, pathname: str, content: bytes, content_type: str) -> str:
     token = settings.blob_read_write_token
     if not token:
         raise HTTPException(status_code=503, detail="BLOB_READ_WRITE_TOKEN is not configured")
 
     headers = {
-        "access": "public",
+        "access": _blob_upload_access(),
         "authorization": f"Bearer {token}",
         "x-api-version": _BLOB_API_VERSION,
         "x-content-type": content_type,

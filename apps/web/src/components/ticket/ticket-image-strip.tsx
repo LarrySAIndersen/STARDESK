@@ -3,6 +3,7 @@
 import { FileImage, ImagePlus, Paperclip, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
+import { AttachmentRemoveButton } from "@/components/attachment-remove-button";
 import { buttonVariants } from "@/components/ui/button";
 import { attachmentDownloadUrl } from "@/lib/api";
 import { CLIPBOARD_IMAGE_PASTE_HINT } from "@/lib/clipboard-images";
@@ -170,6 +171,18 @@ export function TicketImageStrip({
                 <span className="bg-star-navy/75 pointer-events-none absolute inset-x-0 bottom-0 px-1 py-0.5 text-center text-[9px] text-white">
                   {formatDate(file.created_at)}
                 </span>
+                {file.can_delete ? (
+                  <div className="absolute top-1 right-1 z-10">
+                    <AttachmentRemoveButton
+                      ticketId={ticketId}
+                      attachmentId={file.id}
+                      filename={file.filename}
+                      variant="ghost"
+                      iconOnly
+                      className="[&_button]:bg-star-navy/80 [&_button]:hover:bg-star-navy [&_button]:size-6 [&_button]:p-0 [&_button]:text-white"
+                    />
+                  </div>
+                ) : null}
               </li>
             ))}
             {pendingPreviews.map(({ file, url }, index) => (
@@ -206,7 +219,7 @@ export function TicketImageStrip({
           {attachments
             .filter((file) => !isImageAttachment(file))
             .map((file) => (
-              <li key={file.id}>
+              <li key={file.id} className="flex items-center gap-1">
                 {staffView && file.download_available ? (
                   <a
                     href={attachmentDownloadUrl(ticketId, file.id)}
@@ -234,6 +247,14 @@ export function TicketImageStrip({
                     {file.filename}
                   </span>
                 )}
+                {file.can_delete ? (
+                  <AttachmentRemoveButton
+                    ticketId={ticketId}
+                    attachmentId={file.id}
+                    filename={file.filename}
+                    iconOnly
+                  />
+                ) : null}
               </li>
             ))}
         </ul>

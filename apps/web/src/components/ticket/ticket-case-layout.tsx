@@ -75,7 +75,10 @@ export function TicketCaseLayout({
               staffView
             />
           ) : (
-            <PortalTicketAttachments attachments={ticket.attachments ?? []} />
+            <PortalTicketAttachments
+              ticketId={ticket.id}
+              attachments={ticket.attachments ?? []}
+            />
           )}
 
           {showCommentForm ? (

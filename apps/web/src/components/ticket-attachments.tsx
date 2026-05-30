@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { AttachmentRemoveButton } from "@/components/attachment-remove-button";
 import { attachmentDownloadUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { Attachment } from "@/types/attachment";
@@ -59,20 +60,29 @@ export function TicketAttachments({
                   {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
                 </p>
               </div>
-              {staffView && file.download_available ? (
-                <a
-                  href={attachmentDownloadUrl(ticketId, file.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
-                >
-                  Åbn
-                </a>
-              ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
-                <span className="text-muted-foreground text-xs">
-                  {file.file_unavailable_label_da ?? "Filen findes ikke længere — upload igen"}
-                </span>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {staffView && file.download_available ? (
+                  <a
+                    href={attachmentDownloadUrl(ticketId, file.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+                  >
+                    Åbn
+                  </a>
+                ) : staffView && file.scan_status === "clean" && !file.file_retrievable ? (
+                  <span className="text-muted-foreground text-xs">
+                    {file.file_unavailable_label_da ?? "Filen findes ikke længere — upload igen"}
+                  </span>
+                ) : null}
+                {file.can_delete ? (
+                  <AttachmentRemoveButton
+                    ticketId={ticketId}
+                    attachmentId={file.id}
+                    filename={file.filename}
+                  />
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>

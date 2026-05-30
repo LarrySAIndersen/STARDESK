@@ -10,4 +10,5 @@ export interface Attachment {
   download_available: boolean;
   file_retrievable: boolean;
   file_unavailable_label_da: string | null;
+  can_delete: boolean;
 }

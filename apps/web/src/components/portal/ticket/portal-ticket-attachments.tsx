@@ -1,3 +1,6 @@
+"use client";
+
+import { AttachmentRemoveButton } from "@/components/attachment-remove-button";
 import type { Attachment } from "@/types/attachment";
 
 function formatDate(iso: string | null): string {
@@ -8,7 +11,13 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-export function PortalTicketAttachments({ attachments }: { attachments: Attachment[] }) {
+export function PortalTicketAttachments({
+  ticketId,
+  attachments,
+}: {
+  ticketId: string;
+  attachments: Attachment[];
+}) {
   if (attachments.length === 0) {
     return (
       <section className="portal-v2-card p-4" aria-labelledby="attachments-heading">
@@ -35,10 +44,20 @@ export function PortalTicketAttachments({ attachments }: { attachments: Attachme
             className="border-[var(--gray-border)] rounded-[2px] border px-3 py-2 text-[13px]"
           >
             <p className="text-foreground font-medium">{file.filename}</p>
-            <p className="text-[var(--gray-mid)] text-[11px]">
-              {file.scan_status_label_da}
-              {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[var(--gray-mid)] text-[11px]">
+                {file.scan_status_label_da}
+                {file.scanned_at ? ` · ${formatDate(file.scanned_at)}` : null}
+              </p>
+              {file.can_delete ? (
+                <AttachmentRemoveButton
+                  ticketId={ticketId}
+                  attachmentId={file.id}
+                  filename={file.filename}
+                  size="sm"
+                />
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

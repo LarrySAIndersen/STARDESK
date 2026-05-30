@@ -185,13 +185,18 @@ async def test_build_attachment_download_vercel_local_returns_404(
     assert exc.value.detail == file_storage.FILE_NOT_FOUND_DETAIL_DA
 
 
-def test_require_attachment_storage_on_vercel_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "app_env", "production")
+@pytest.mark.parametrize("app_env", ["production", "development"])
+def test_require_attachment_storage_on_vercel_without_token(
+    monkeypatch: pytest.MonkeyPatch,
+    app_env: str,
+) -> None:
+    monkeypatch.setattr(settings, "app_env", app_env)
     monkeypatch.setattr(settings, "blob_read_write_token", None)
     monkeypatch.setenv("VERCEL", "1")
     with pytest.raises(HTTPException) as exc:
         file_storage.require_attachment_storage_configured()
     assert exc.value.status_code == 503
+    assert "BLOB_READ_WRITE_TOKEN" in str(exc.value.detail)
 
 
 @pytest.mark.asyncio
@@ -218,6 +223,18 @@ async def test_persist_to_blob_upload(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert key == "blob:https://store.public.blob.vercel-storage.com/attachments/x.png"
     mock_client.put.assert_awaited_once()
+    call_headers = mock_client.put.await_args.kwargs["headers"]
+    assert call_headers["access"] == "private"
+
+
+def test_can_delete_attachment_uploader_and_admin(clean_attachment) -> None:
+    uploader_id = clean_attachment.uploader_user_id
+    uploader = SimpleNamespace(id=uploader_id, role="agent")
+    other = SimpleNamespace(id=uuid.uuid4(), role="agent")
+    admin = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    assert attachments.can_delete_attachment(uploader, clean_attachment) is True
+    assert attachments.can_delete_attachment(admin, clean_attachment) is True
+    assert attachments.can_delete_attachment(other, clean_attachment) is False
 
 
 def test_attachment_to_read_marks_legacy_vercel_local_unavailable(

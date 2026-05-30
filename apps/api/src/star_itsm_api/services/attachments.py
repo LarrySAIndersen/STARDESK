@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import ROLE_SUBMITTER, is_staff
+from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUBMITTER, ROLE_TOP_ADMIN, is_staff
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
@@ -41,6 +41,13 @@ ALLOWED_CONTENT_TYPES = frozenset(
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 
+def can_delete_attachment(user: User, attachment: Attachment) -> bool:
+    """Uploader or administrator (admin / top_admin) may remove an attachment."""
+    if user.role in (ROLE_ADMIN, ROLE_TOP_ADMIN):
+        return True
+    return user.id == attachment.uploader_user_id
+
+
 def upload_root() -> Path:
     from star_itsm_api.core.config import settings
 
@@ -71,6 +78,7 @@ def attachment_to_read(row: Attachment, *, user: User) -> AttachmentRead:
         download_available=can_download and file_retrievable,
         file_retrievable=file_retrievable,
         file_unavailable_label_da=file_unavailable_label_da,
+        can_delete=can_delete_attachment(user, row),
     )
 
 
@@ -134,9 +142,31 @@ async def _list_ticket_attachments_for_detail(
                 if file_storage.storage_key_is_retrievable(row.storage_key)
                 else file_storage.FILE_UNAVAILABLE_LABEL_DA
             ),
+            can_delete=can_delete_attachment(user, row),
         )
         for row in rows
     ]
+
+
+async def delete_ticket_attachment(
+    db: AsyncSession,
+    *,
+    ticket_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    user: User,
+) -> AttachmentRead:
+    attachment = await db.get(Attachment, attachment_id)
+    if attachment is None or attachment.ticket_id != ticket_id:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    if not can_delete_attachment(user, attachment):
+        raise HTTPException(
+            status_code=403,
+            detail="Du har ikke tilladelse til at fjerne denne vedhæftning",
+        )
+    read = attachment_to_read(attachment, user=user)
+    await db.delete(attachment)
+    await db.flush()
+    return read
 
 
 async def save_ticket_upload(

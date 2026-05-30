@@ -96,6 +96,7 @@ from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.services.attachments import (
     build_attachment_download_response,
+    delete_ticket_attachment,
     list_ticket_attachments_for_detail,
     save_ticket_upload,
 )
@@ -745,6 +746,46 @@ async def download_ticket_attachment(
         raise HTTPException(status_code=404, detail="Attachment not found")
 
     return await build_attachment_download_response(attachment)
+
+
+@router.delete(
+    "/{ticket_id}/attachments/{attachment_id}",
+    status_code=204,
+)
+async def remove_ticket_attachment(
+    ticket_id: uuid.UUID,
+    attachment_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    if not is_staff(current_user) and current_user.id != ticket.reporter_user_id:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    now = datetime.now(UTC)
+    removed = await delete_ticket_attachment(
+        db,
+        ticket_id=ticket_id,
+        attachment_id=attachment_id,
+        user=current_user,
+    )
+    touch_ticket_updated(ticket, now)
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket_id,
+            actor_user_id=current_user.id,
+            event_type="ticket.attachment.deleted",
+            payload={
+                "attachment_id": str(attachment_id),
+                "filename": removed.filename,
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
 
 
 @router.patch("/{ticket_id}", response_model=TicketRead)
