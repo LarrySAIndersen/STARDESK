@@ -117,7 +117,14 @@ If no chat appeared:
 
 See `stardesk-workboard.mdc` and `STARDESK/.cursor/skills/stardesk-agent-review/SKILL.md`.
 
+## Agent Review AC-matrix (review agent)
+
+Playwright is **one proof** for functional criteria. The **review agent** must still verify **all** accept criteria in the task spec and fill `agentReviewEvidence.acceptCriteria` before `passed`.
+
+See `docs/agent-review-ac-matrix.md` and `docs/stardesk-agent-review-skill.md`.
+
 ## Related tasks
 
+- **#100** — AC-matrix, LEVERANCE Jan-guide, AcceptCriteriaMatrixPanel
 - **#74** — Playwright evidence (GitHub Action + canvas pending banner)
 - **#85** — Agent Review auto-verification + skill + Human Review gates
