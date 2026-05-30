@@ -46,6 +46,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="BLOB_READ_WRITE_TOKEN",
     )
+    blob_store_id: str | None = Field(
+        default=None,
+        validation_alias="BLOB_STORE_ID",
+    )
     blob_access: str = Field(
         default="private",
         validation_alias="BLOB_ACCESS",
@@ -96,6 +100,7 @@ class Settings(BaseSettings):
         "gmail_sync_from_email",
         "gmail_default_from",
         "blob_read_write_token",
+        "blob_store_id",
         mode="before",
     )
     @classmethod

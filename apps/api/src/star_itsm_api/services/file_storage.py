@@ -15,8 +15,8 @@ from star_itsm_api.core.config import settings
 logger = logging.getLogger(__name__)
 
 BLOB_STORAGE_PREFIX = "blob:"
-_BLOB_API_BASE = "https://blob.vercel-storage.com"
-_BLOB_API_VERSION = "10"
+_BLOB_API_BASE = "https://vercel.com/api/blob"
+_BLOB_API_VERSION = "12"
 FILE_NOT_FOUND_DETAIL_DA = "Filen findes ikke længere. Upload vedhæftningen igen."
 FILE_UNAVAILABLE_LABEL_DA = "Filen findes ikke længere — upload igen"
 
@@ -91,17 +91,48 @@ def _blob_upload_access() -> str:
     return mode if mode in {"private", "public"} else "private"
 
 
+def _parse_store_id_from_read_write_token(token: str) -> str | None:
+    """Extract store id from vercel_blob_rw_<storeId>_… tokens (matches @vercel/blob SDK)."""
+    parts = token.split("_")
+    if len(parts) >= 4 and parts[3]:
+        return parts[3]
+    return None
+
+
+def _normalize_store_id(store_id: str) -> str:
+    trimmed = store_id.strip()
+    if trimmed.startswith("store_"):
+        return trimmed[len("store_") :]
+    return trimmed
+
+
+def _resolve_blob_store_id(token: str) -> str:
+    configured = settings.blob_store_id
+    if configured:
+        return _normalize_store_id(configured)
+    parsed = _parse_store_id_from_read_write_token(token)
+    if parsed:
+        return parsed
+    raise HTTPException(
+        status_code=503,
+        detail="BLOB_STORE_ID is not configured and could not be derived from BLOB_READ_WRITE_TOKEN",
+    )
+
+
 async def persist_to_blob(*, pathname: str, content: bytes, content_type: str) -> str:
     token = settings.blob_read_write_token
     if not token:
         raise HTTPException(status_code=503, detail="BLOB_READ_WRITE_TOKEN is not configured")
 
+    store_id = _resolve_blob_store_id(token)
     headers = {
-        "access": _blob_upload_access(),
+        "x-vercel-blob-access": _blob_upload_access(),
         "authorization": f"Bearer {token}",
         "x-api-version": _BLOB_API_VERSION,
         "x-content-type": content_type,
         "x-allow-overwrite": "1",
+        "x-vercel-blob-store-id": store_id,
+        "x-content-length": str(len(content)),
     }
     async with httpx.AsyncClient(timeout=60.0) as client:
         response = await client.put(
@@ -147,4 +178,3 @@ def persist_to_local_disk(*, ticket_id: str, attachment_id: str, filename: str, 
     storage_path.parent.mkdir(parents=True, exist_ok=True)
     storage_path.write_bytes(content)
     return storage_path
-

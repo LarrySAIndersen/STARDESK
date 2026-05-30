@@ -201,12 +201,13 @@ def test_require_attachment_storage_on_vercel_without_token(
 
 @pytest.mark.asyncio
 async def test_persist_to_blob_upload(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(settings, "blob_read_write_token", "test-token")
+    monkeypatch.setattr(settings, "blob_read_write_token", "vercel_blob_rw_teststore_secret")
+    monkeypatch.setattr(settings, "blob_store_id", None)
 
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
-        "url": "https://store.public.blob.vercel-storage.com/attachments/x.png"
+        "url": "https://teststore.private.blob.vercel-storage.com/attachments/x.png"
     }
 
     mock_client = AsyncMock()
@@ -221,10 +222,16 @@ async def test_persist_to_blob_upload(monkeypatch: pytest.MonkeyPatch) -> None:
         content=b"png",
         content_type="image/png",
     )
-    assert key == "blob:https://store.public.blob.vercel-storage.com/attachments/x.png"
+    assert key == "blob:https://teststore.private.blob.vercel-storage.com/attachments/x.png"
     mock_client.put.assert_awaited_once()
+    call_url = mock_client.put.await_args.args[0]
+    assert call_url == "https://vercel.com/api/blob"
+    call_params = mock_client.put.await_args.kwargs["params"]
+    assert call_params == {"pathname": "attachments/ticket/id_file.png"}
     call_headers = mock_client.put.await_args.kwargs["headers"]
-    assert call_headers["access"] == "private"
+    assert call_headers["x-vercel-blob-access"] == "private"
+    assert call_headers["x-vercel-blob-store-id"] == "teststore"
+    assert call_headers["x-api-version"] == "12"
 
 
 def test_can_delete_attachment_uploader_and_admin(clean_attachment) -> None:
