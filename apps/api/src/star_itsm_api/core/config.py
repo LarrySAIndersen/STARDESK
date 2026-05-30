@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     cron_secret: str | None = Field(default=None, validation_alias="CRON_SECRET")
     webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
+    prototype_staff_password_hash: str | None = Field(
+        default=None,
+        validation_alias="PROTOTYPE_STAFF_PASSWORD_HASH",
+    )
     upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
     app_env: str = Field(default="development", validation_alias="APP_ENV")
     slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")

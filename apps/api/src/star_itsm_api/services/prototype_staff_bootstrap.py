@@ -6,16 +6,16 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUPPORTER
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
 from star_itsm_api.services.user_admin import sync_user_teams
 
-# bcrypt for "password" — keep in sync with docs/seed-larrysanders2.sql
-_LARRYSANDERS2_PASSWORD_HASH = (
-    "$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC"
-)
+# Optional bootstrap hash from env (PROTOTYPE_STAFF_PASSWORD_HASH).
+# Avoid embedding credential material directly in source code.
+_PROTOTYPE_STAFF_PASSWORD_HASH = settings.prototype_staff_password_hash
 
 
 @dataclass(frozen=True)
@@ -33,14 +33,14 @@ PROTOTYPE_STAFF_BY_EMAIL: dict[str, PrototypeStaffProfile] = {
         ui_mode="modern",
         display_name="Larrysanders",
         team_names=(),
-        password_hash=_LARRYSANDERS2_PASSWORD_HASH,
+        password_hash=_PROTOTYPE_STAFF_PASSWORD_HASH,
     ),
     "larrysanders2@example.dk": PrototypeStaffProfile(
         role=ROLE_SUPPORTER,
         ui_mode="classic",
         display_name="Larrysanders2",
         team_names=("Landssupport",),
-        password_hash=_LARRYSANDERS2_PASSWORD_HASH,
+        password_hash=_PROTOTYPE_STAFF_PASSWORD_HASH,
     ),
 }
 

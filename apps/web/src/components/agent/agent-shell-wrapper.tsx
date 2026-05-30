@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
+import { canEditPageLayout } from "@/lib/page-layout/access";
 import {
   firstAllowedStaffPathForUser,
   isStaffPathBlockedForUser,
@@ -43,6 +44,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   const currentUser = await getServerUser();
 
   const showUsersNav = canManageUsers(currentUser);
+  const showPageLayoutEdit = canEditPageLayout(currentUser);
 
   if (pathname.startsWith("/classic")) {
     return (
@@ -60,7 +62,11 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
     return (
       <div className="flex h-dvh min-h-0 w-full flex-1 flex-col overflow-hidden">
         <ClientSessionHydrator />
-        <AgentShell user={currentUser} showUsersNav={showUsersNav}>
+        <AgentShell
+          user={currentUser}
+          showUsersNav={showUsersNav}
+          showPageLayoutEdit={showPageLayoutEdit}
+        >
           {children}
         </AgentShell>
         <SfChatShellClient user={currentUser} />

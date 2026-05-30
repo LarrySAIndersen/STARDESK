@@ -133,6 +133,24 @@ from star_itsm_api.services.ticket_timestamps import (
     touch_ticket_updated,
 )
 from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
+from star_itsm_api.schemas.stakeholder import (
+    TicketStakeholderCreate,
+    TicketStakeholderRead,
+    TicketStakeholdersGroupedRead,
+    TicketStakeholderUpdate,
+)
+from star_itsm_api.services.ticket_stakeholders import (
+    apply_stakeholder_ticket_filter,
+    get_ticket_stakeholders_grouped,
+    process_comment_mentions,
+    soft_delete_stakeholder,
+    stakeholder_to_read,
+    sync_role_stakeholders,
+    sync_ticket_stakeholders_on_create,
+    upsert_stakeholder,
+    validate_stakeholder_user_ids,
+)
+from star_itsm_api.models.ticket_stakeholder import TicketStakeholder
 from star_itsm_api.schemas.ticket_intelligence import (
     TicketIntelligenceRead,
     TicketIntelligenceUpdate,
@@ -278,11 +296,24 @@ async def list_tickets(
             "sla_asc, ticket_number_asc, title_asc"
         ),
     ),
+    stakeholder: str | None = Query(
+        default=None,
+        description="Use 'me' for tickets you created or where you are a stakeholder",
+    ),
+    involving_user_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter tickets involving this user (reporter or stakeholder)",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
         if assignee_id is not None and not can_manage_users(current_user):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+        if stakeholder is not None and stakeholder != "me":
+            raise HTTPException(status_code=400, detail="Invalid stakeholder filter")
+        if involving_user_id is not None and not can_manage_users(current_user):
             raise HTTPException(status_code=403, detail="Insufficient permissions")
 
         parsed_scope = parse_dashboard_scope(scope)
@@ -353,6 +384,10 @@ async def list_tickets(
         if open_only:
             stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
         stmt = apply_ticket_search_filter(stmt, q)
+        if stakeholder == "me":
+            stmt = apply_stakeholder_ticket_filter(stmt, user_id=current_user.id)
+        elif involving_user_id is not None:
+            stmt = apply_stakeholder_ticket_filter(stmt, user_id=involving_user_id)
         stmt = apply_ticket_sort(stmt, parsed_sort).limit(limit)
         result = await db.execute(stmt)
         tickets = list(result.scalars().all())
@@ -487,6 +522,18 @@ async def create_ticket(
         maybe_set_assigned_at(ticket, now=now)
     if payload.sub_cause_ids:
         await replace_ticket_sub_causes(db, ticket.id, payload.sub_cause_ids)
+    try:
+        await sync_ticket_stakeholders_on_create(
+            db,
+            ticket_id=ticket.id,
+            reporter_user_id=current_user.id,
+            affected_user_ids=payload.affected_user_ids,
+            interested_user_ids=payload.interested_user_ids,
+            now=now,
+        )
+    except ValueError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     db.add(
         TicketEvent(
             id=uuid.uuid4(),
@@ -579,6 +626,7 @@ async def _get_ticket_detail(
         integration = await get_gmail_integration(db, organization_id=ticket.organization_id)
         integration_email = integration.connected_email if integration else None
     activity = await build_ticket_activity(db, ticket, current_user)
+    stakeholders = await get_ticket_stakeholders_grouped(db, ticket_id)
     intelligence = None
     if is_staff(current_user):
         try:
@@ -612,6 +660,7 @@ async def _get_ticket_detail(
             "linked_gmail_email": integration_email,
             "timestamps": ticket_timestamps_read(ticket),
             "activity": activity,
+            "stakeholders": stakeholders,
             **ticket_sensitive_fields(ticket, current_user),
         },
     )
@@ -802,6 +851,32 @@ async def update_ticket_metadata(
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         validate_ticket_source_value(updates["source"])
         ticket.source = updates["source"]
+    stakeholder_now = datetime.now(UTC)
+    try:
+        if "affected_user_ids" in updates and updates["affected_user_ids"] is not None:
+            if not is_staff(current_user):
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            await validate_stakeholder_user_ids(db, updates["affected_user_ids"])
+            await sync_role_stakeholders(
+                db,
+                ticket_id=ticket.id,
+                role="affected",
+                user_ids=updates["affected_user_ids"],
+                now=stakeholder_now,
+            )
+        if "interested_user_ids" in updates and updates["interested_user_ids"] is not None:
+            if not is_staff(current_user):
+                raise HTTPException(status_code=403, detail="Insufficient permissions")
+            await validate_stakeholder_user_ids(db, updates["interested_user_ids"])
+            await sync_role_stakeholders(
+                db,
+                ticket_id=ticket.id,
+                role="interested",
+                user_ids=updates["interested_user_ids"],
+                now=stakeholder_now,
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if updates:
         now = datetime.now(UTC)
@@ -1218,6 +1293,116 @@ async def assign_ticket(
     return await get_ticket(ticket_id, db, current_user)
 
 
+@router.get("/{ticket_id}/stakeholders", response_model=TicketStakeholdersGroupedRead)
+async def list_ticket_stakeholders(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> TicketStakeholdersGroupedRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    return await get_ticket_stakeholders_grouped(db, ticket_id)
+
+
+@router.post(
+    "/{ticket_id}/stakeholders",
+    response_model=TicketStakeholderRead,
+    status_code=201,
+)
+async def add_ticket_stakeholder(
+    ticket_id: uuid.UUID,
+    payload: TicketStakeholderCreate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketStakeholderRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        await validate_stakeholder_user_ids(db, [payload.user_id])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    now = datetime.now(UTC)
+    row = await upsert_stakeholder(
+        db,
+        ticket_id=ticket_id,
+        user_id=payload.user_id,
+        role=payload.role,
+        now=now,
+    )
+    touch_ticket_updated(ticket, now)
+    await db.commit()
+    await db.refresh(row)
+    return await stakeholder_to_read(db, row)
+
+
+@router.patch(
+    "/{ticket_id}/stakeholders/{stakeholder_id}",
+    response_model=TicketStakeholderRead,
+)
+async def update_ticket_stakeholder(
+    ticket_id: uuid.UUID,
+    stakeholder_id: uuid.UUID,
+    payload: TicketStakeholderUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketStakeholderRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    row = await db.get(TicketStakeholder, stakeholder_id)
+    if (
+        row is None
+        or row.deleted_at is not None
+        or row.ticket_id != ticket_id
+        or row.role not in ("affected", "interested")
+    ):
+        raise HTTPException(status_code=404, detail="Stakeholder not found")
+    now = datetime.now(UTC)
+    if row.role != payload.role and row.user_id is not None:
+        await soft_delete_stakeholder(db, row, now=now)
+        row = await upsert_stakeholder(
+            db,
+            ticket_id=ticket_id,
+            user_id=row.user_id,
+            role=payload.role,
+            now=now,
+        )
+    touch_ticket_updated(ticket, now)
+    await db.commit()
+    await db.refresh(row)
+    return await stakeholder_to_read(db, row)
+
+
+@router.delete("/{ticket_id}/stakeholders/{stakeholder_id}", status_code=204)
+async def remove_ticket_stakeholder(
+    ticket_id: uuid.UUID,
+    stakeholder_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> None:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await _ensure_ticket_access(db, ticket, current_user)
+    row = await db.get(TicketStakeholder, stakeholder_id)
+    if (
+        row is None
+        or row.deleted_at is not None
+        or row.ticket_id != ticket_id
+        or row.role not in ("affected", "interested")
+    ):
+        raise HTTPException(status_code=404, detail="Stakeholder not found")
+    now = datetime.now(UTC)
+    await soft_delete_stakeholder(db, row, now=now)
+    touch_ticket_updated(ticket, now)
+    await db.commit()
+
+
 @router.get("/{ticket_id}/llm-context", response_model=TicketLlmContextRead)
 async def get_ticket_llm_context(
     ticket_id: uuid.UUID,
@@ -1335,6 +1520,14 @@ async def create_comment(
             is_staff_author=is_staff(current_user),
             now=now,
         )
+    await process_comment_mentions(
+        db,
+        ticket_id=ticket_id,
+        comment_id=comment.id,
+        body=payload.body,
+        author_user_id=current_user.id,
+        now=now,
+    )
     await db.commit()
     await db.refresh(comment)
     if not is_internal:

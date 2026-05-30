@@ -190,7 +190,7 @@ export const options = {
     "authz-probe": {
       executor: "constant-vus",
       exec: "authzProbeScenario",
-      vus: smokeMode ? 5 : 5,
+      vus: 5,
       duration: smokeMode ? "15s" : writeDuration,
       tags: { scenario: "authz-probe" },
     },

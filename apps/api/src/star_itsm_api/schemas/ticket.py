@@ -10,6 +10,7 @@ from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, TicketTimestampsRead
 from star_itsm_api.schemas.ticket_intelligence import TicketIntelligenceRead
 from star_itsm_api.schemas.ticket_routing import TicketRoutingRead
+from star_itsm_api.schemas.stakeholder import TicketStakeholdersGroupedRead
 from star_itsm_api.services.cpr import assert_no_cpr_outside_field, validate_cpr
 from star_itsm_api.services.ticket_source import ticket_source_label_da
 from star_itsm_api.services.ticket_tags import normalize_tags, validate_emoji
@@ -110,6 +111,9 @@ class TicketDetailRead(TicketRead):
     linked_gmail_email: str | None = None
     timestamps: TicketTimestampsRead
     activity: list[TicketActivityItemRead] = Field(default_factory=list)
+    stakeholders: TicketStakeholdersGroupedRead = Field(
+        default_factory=TicketStakeholdersGroupedRead
+    )
 
 
 class TicketCreate(BaseModel):
@@ -132,6 +136,8 @@ class TicketCreate(BaseModel):
         default=None,
         description="Kun for agenter: hvordan sagen kom ind (selvbetjening/e-mail/telefon/chat).",
     )
+    affected_user_ids: list[UUID] = Field(default_factory=list)
+    interested_user_ids: list[UUID] = Field(default_factory=list)
 
     @field_validator("tags")
     @classmethod
@@ -194,6 +200,8 @@ class TicketMetadataUpdate(BaseModel):
     category_id: UUID | None = None
     subcategory_id: UUID | None = None
     source: Literal["portal", "email", "phone", "chat", "api", "knowledge"] | None = None
+    affected_user_ids: list[UUID] | None = None
+    interested_user_ids: list[UUID] | None = None
 
     @field_validator("tags")
     @classmethod

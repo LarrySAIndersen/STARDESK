@@ -381,7 +381,10 @@ export function AgentSidebar({
 
   return (
     <aside
-      className={cn("wire-sidebar flex flex-col", collapsed && "wire-sidebar--collapsed")}
+      className={cn(
+        "wire-sidebar wire-sidebar--container flex flex-col",
+        collapsed && "wire-sidebar--collapsed",
+      )}
       data-collapsed={collapsed ? "" : undefined}
     >
       <div
@@ -394,11 +397,28 @@ export function AgentSidebar({
       </div>
 
       {topAdmin && !collapsed && !editMode ? (
-        <p className="text-muted-foreground border-b border-[var(--gray-border)] px-4 py-2 text-[10px] leading-snug">
-          <span className="text-[#1a7a44] font-semibold">Grønt øje</span> = synlig for alle.{" "}
-          <span className="text-[#c41e2a] font-semibold">Rødt øje</span> = skjult for alle undtagen
-          topadministrator. Klik sektionsoverskrift for at folde ud/ind.
-        </p>
+        <div className="wire-sidebar-nav-legend border-b border-[var(--gray-border)]">
+          <p className="wire-sidebar-nav-legend--wide text-muted-foreground px-4 py-2 text-[10px] leading-snug">
+            <span className="text-[#1a7a44] font-semibold">Grønt øje</span> = synlig for alle.{" "}
+            <span className="text-[#c41e2a] font-semibold">Rødt øje</span> = skjult for alle undtagen
+            topadministrator. Klik sektionsoverskrift for at folde ud/ind.
+          </p>
+          <ul className="wire-sidebar-nav-legend--compact text-muted-foreground space-y-1.5 px-3 py-2.5 text-[10px] leading-snug">
+            <li className="flex items-start gap-2">
+              <span className="text-[#1a7a44] mt-0.5 shrink-0 font-bold" aria-hidden>
+                ●
+              </span>
+              <span>Synlig for alle</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#c41e2a] mt-0.5 shrink-0 font-bold" aria-hidden>
+                ●
+              </span>
+              <span>Kun topadmin</span>
+            </li>
+            <li className="text-muted-foreground/90 pl-4 text-[9px]">Klik sektion · fold ud</li>
+          </ul>
+        </div>
       ) : null}
 
       {editMode && !collapsed ? (

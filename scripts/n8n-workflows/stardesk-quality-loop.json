@@ -1,0 +1,136 @@
+{
+  "name": "STARDESK Quality Loop (Sonar + Destructive)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 2,
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Every 2 days 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "repo",
+              "name": "stardesk_repo",
+              "value": "={{ $env.STARDESK_REPO || 'C:/Users/kjaer/STARDESK Cursor/STARDESK' }}",
+              "type": "string"
+            },
+            {
+              "id": "allow",
+              "name": "allow_destructive",
+              "value": "={{ $env.ALLOW_DESTRUCTIVE || '1' }}",
+              "type": "string"
+            },
+            {
+              "id": "destructive_mode",
+              "name": "destructive_mode",
+              "value": "={{ $env.QUALITY_LOOP_DESTRUCTIVE || 'smoke' }}",
+              "type": "string"
+            },
+            {
+              "id": "base_url",
+              "name": "base_url",
+              "value": "={{ $env.BASE_URL || 'http://localhost:8000' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "command": "=powershell -NoProfile -ExecutionPolicy Bypass -File \"{{ $json.stardesk_repo }}/scripts/n8n-workflows/run-quality-loop.ps1\""
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Run quality loop",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $('Config').item.json.stardesk_repo + '/reports/quality-loop-latest.json' }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Read loop report",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.data ?? $input.first().binary?.data?.data;\nlet report = {};\ntry {\n  const text = typeof raw === 'string' ? raw : Buffer.from(raw, 'base64').toString('utf8');\n  report = JSON.parse(text);\n} catch (e) {\n  report = { parse_error: e.message };\n}\nconst ok = report.overall_ok === true;\nconst sonar = report.sonar?.status ?? 'unknown';\nconst destructive = report.destructive?.status ?? 'unknown';\nconst summary = [\n  'STARDESK Quality Loop',\n  `Sonar: ${sonar}`,\n  `Destructive: ${destructive}`,\n  `OK: ${ok}`,\n  '',\n  'Cursor: åbn reports/quality-loop-agent-prompt.md og kør skills:',\n  '- stardesk-destructive-test-review',\n  '- stardesk-sonar-review-loop',\n].join('\\n');\nreturn [{ json: { ok, sonar, destructive, summary, report } }];"
+      },
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Build notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1040, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.QUALITY_LOOP_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { text: $json.summary, ok: $json.ok, report: $json.report } }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
+      "name": "Webhook notify (optional)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "disabled": true,
+      "notes": "Enable and set QUALITY_LOOP_WEBHOOK_URL (Slack/Teams/Cursor hook)"
+    }
+  ],
+  "connections": {
+    "Every 2 days 06:00": {
+      "main": [[{ "node": "Config", "type": "main", "index": 0 }]]
+    },
+    "Config": {
+      "main": [[{ "node": "Run quality loop", "type": "main", "index": 0 }]]
+    },
+    "Run quality loop": {
+      "main": [[{ "node": "Read loop report", "type": "main", "index": 0 }]]
+    },
+    "Read loop report": {
+      "main": [[{ "node": "Build notification", "type": "main", "index": 0 }]]
+    },
+    "Build notification": {
+      "main": [[{ "node": "Webhook notify (optional)", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

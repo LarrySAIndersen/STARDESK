@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AgentClock } from "@/components/agent/agent-clock";
 import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
+import { PageLayoutEditTopBarControl } from "@/components/page-layout/page-layout-edit-top-bar-control";
 import { cn } from "@/lib/utils";
 import { resolveUserAvatar } from "@/lib/user-avatar";
 import type { User } from "@/types/user";
@@ -62,8 +63,8 @@ export function AgentTopBar({
   const resolvedUser = user ? (resolveUserAvatar(user) ?? user) : null;
 
   return (
-    <header className="wire-topbar">
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3">
+    <header className="wire-topbar wire-topbar--layout-edit">
+      <div className="wire-topbar__start flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
         {onOpenNav ? (
           <button
             type="button"
@@ -78,7 +79,10 @@ export function AgentTopBar({
           {displayTitle}
         </h1>
       </div>
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+      <div className="wire-topbar__center flex shrink-0 items-center justify-center px-1 sm:px-2">
+        <PageLayoutEditTopBarControl />
+      </div>
+      <div className="wire-topbar__end flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
         <ApiHealthIndicator />
         <AgentClock />
         {actions}

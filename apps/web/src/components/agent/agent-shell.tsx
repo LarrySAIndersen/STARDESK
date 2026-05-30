@@ -8,6 +8,10 @@ import { AgentErrorBoundary } from "@/components/agent/agent-error-boundary";
 import { AgentShellColumns } from "@/components/agent/agent-shell-columns";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
+import { PageLayoutEditProvider } from "@/components/page-layout/page-layout-edit-provider";
+import { PageLayoutEditMainChrome } from "@/components/page-layout/page-layout-edit-main-chrome";
+import { canEditPageLayout } from "@/lib/page-layout/access";
+import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import type { User } from "@/types/user";
@@ -18,6 +22,7 @@ export function AgentShell({
   topBarActions,
   user,
   showUsersNav,
+  showPageLayoutEdit,
 }: {
   children: React.ReactNode;
   topBarTitle?: string;
@@ -25,6 +30,8 @@ export function AgentShell({
   user?: User | null;
   /** Server-resolved admin nav — avoids JWT/cookie mismatch on client. */
   showUsersNav?: boolean;
+  /** Server-resolved layout design mode — same pattern as showUsersNav. */
+  showPageLayoutEdit?: boolean;
 }) {
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebarCollapsed();
@@ -43,7 +50,12 @@ export function AgentShell({
   }, [pathname, closeMobileNav]);
 
   return (
+    <PageLayoutEditProvider
+      user={user ?? null}
+      canEditFromServer={showPageLayoutEdit ?? canEditPageLayout(user ?? null)}
+    >
     <div className="agent-shell wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <PageLayoutEditToolbar />
       <AgentBrandHeader />
       <div className="wire-shell-accent" aria-hidden="true" />
       <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} title="Navigation">
@@ -74,15 +86,12 @@ export function AgentShell({
             user={user}
             onOpenNav={openMobileNav}
           />
-          <main
-            id="main-content"
-            tabIndex={-1}
-            className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden outline-none"
-          >
+          <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
-          </main>
+          </PageLayoutEditMainChrome>
         </div>
       </AgentShellColumns>
     </div>
+    </PageLayoutEditProvider>
   );
 }

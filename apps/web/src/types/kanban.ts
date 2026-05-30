@@ -2,7 +2,7 @@ import type { Ticket } from "@/types/ticket";
 
 export type KanbanMemberRole = "owner" | "editor" | "viewer";
 
-export type KanbanBoardTemplate = "itsm" | "simple" | "blank" | "custom";
+export type KanbanBoardTemplate = "itsm" | "simple" | "delivery" | "blank" | "custom";
 
 export type KanbanBoardSummary = {
   id: string;
@@ -80,6 +80,21 @@ export const KANBAN_BOARD_TEMPLATES: {
     label: "Simpel",
     description: "Tre kolonner til hurtig opstart — Backlog, I gang, Færdig.",
     columns: ["Backlog", "I gang", "Færdig"],
+  },
+  {
+    id: "delivery",
+    label: "Idéflow",
+    description:
+      "Produkt-/udviklingsflow fra idé til arkiv med backlog, refinement, review og done.",
+    columns: [
+      "Backlog",
+      "Refinement",
+      "Ready",
+      "In Progress",
+      "Review",
+      "Done",
+      "Archived",
+    ],
   },
   {
     id: "blank",

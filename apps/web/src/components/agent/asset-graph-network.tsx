@@ -292,12 +292,7 @@ export function AssetGraphNetwork({
                 selectedId && (edge.source === selectedId || edge.target === selectedId);
 
               const dimmed = selectedId && !active;
-              const accentNode =
-                edge.source === selectedId
-                  ? target
-                  : edge.target === selectedId
-                    ? source
-                    : source;
+              const accentNode = edge.source === selectedId ? target : source;
               const accentTheme = getCategoryTheme(accentNode.categorySystemId);
 
               return (

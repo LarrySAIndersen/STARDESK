@@ -11,6 +11,7 @@ import { KanbanBoardSettings } from "@/components/kanban/kanban-board-settings";
 import { KanbanCard } from "@/components/kanban/kanban-card";
 import { KanbanCloseBoardDialog } from "@/components/kanban/kanban-close-board-dialog";
 import { KanbanCreateBoardDialog } from "@/components/kanban/kanban-create-board-dialog";
+import { KanbanImportBacklogDialog } from "@/components/kanban/kanban-import-backlog-dialog";
 import { KanbanQuickCreateDialog } from "@/components/kanban/kanban-quick-create-dialog";
 import { KanbanTicketDrawer } from "@/components/kanban/kanban-ticket-drawer";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,14 @@ function readDraggedTicketId(dataTransfer: DataTransfer): string {
 
 function firstColumnId(detail: KanbanBoardDetail): string | null {
   return detail.columns[0]?.column.id ?? null;
+}
+
+function backlogColumnId(detail: KanbanBoardDetail): string | null {
+  const exact = detail.columns.find(
+    ({ column }) => column.name.trim().toLowerCase() === "backlog",
+  );
+  if (exact) return exact.column.id;
+  return firstColumnId(detail);
 }
 
 function wipHint(column: KanbanColumn, count: number): string | null {
@@ -120,6 +129,7 @@ export function KanbanBoardView({
   const [moveError, setMoveError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [addColumnOpen, setAddColumnOpen] = useState(false);
+  const [importBacklogOpen, setImportBacklogOpen] = useState(false);
   const [closeBoardOpen, setCloseBoardOpen] = useState(false);
   const [boardMenuOpen, setBoardMenuOpen] = useState(false);
   const [columnMenuId, setColumnMenuId] = useState<string | null>(null);
@@ -232,6 +242,27 @@ export function KanbanBoardView({
     setAddOpen(true);
   }
 
+  async function handleImportBacklogIdeas(
+    ideas: Array<{ title: string; description: string }>,
+  ) {
+    const targetId = backlogColumnId(detail);
+    if (!targetId) {
+      throw new Error("Boardet har ingen kolonner. Opret Backlog først.");
+    }
+    for (const idea of ideas) {
+      await apiPost(`/api/v1/kanban/boards/${detail.board.id}/cards`, {
+        column_id: targetId,
+        ticket: {
+          title: idea.title,
+          description: idea.description,
+          ticket_type: "incident",
+          priority: "medium",
+        },
+      });
+    }
+    await refreshBoard();
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3 px-1">
@@ -252,6 +283,14 @@ export function KanbanBoardView({
               </Button>
               <Button type="button" variant="outline" size="sm" onClick={() => openAddExisting()}>
                 Tilføj sag
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setImportBacklogOpen(true)}
+              >
+                Importér backlog-liste
               </Button>
             </>
           ) : null}
@@ -604,6 +643,12 @@ export function KanbanBoardView({
         columnId={targetColumnId}
         onClose={() => setQuickCreateOpen(false)}
         onCreated={() => void refreshBoard()}
+      />
+
+      <KanbanImportBacklogDialog
+        open={importBacklogOpen}
+        onClose={() => setImportBacklogOpen(false)}
+        onImport={handleImportBacklogIdeas}
       />
     </div>
   );

@@ -4,6 +4,7 @@ import { User } from "lucide-react";
 import { SlaCountdown } from "@/components/sla-countdown";
 import { TicketDetailTopBandCenter } from "@/components/ticket/ticket-detail-top-band-center";
 import { TicketMetadataEditablePanel } from "@/components/ticket/ticket-metadata-editable-panel";
+import { TicketStakeholdersPanel } from "@/components/ticket/ticket-stakeholders-panel";
 import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
@@ -54,7 +55,7 @@ export function TicketDetailTopBand({
   const canEdit = editableMetadata && teams.length > 0 && categories.length > 0;
 
   return (
-    <div className="ticket-detail-top-band mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(280px,340px)] lg:items-stretch">
+    <div className="ticket-detail-top-band mb-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,260px)_minmax(0,1fr)_minmax(220px,260px)_minmax(280px,340px)] lg:items-stretch">
       <section className="wire-card mb-0 lg:min-h-[280px]">
         <h2 className="wire-card-title">Indmelder</h2>
         <div className="flex items-start gap-3">
@@ -79,6 +80,15 @@ export function TicketDetailTopBand({
       </section>
 
       <TicketDetailTopBandCenter ticket={ticket} staffView={staffView} />
+
+      <section className="wire-card mb-0 lg:min-h-[280px]">
+        <h2 className="wire-card-title">Interessenter</h2>
+        <TicketStakeholdersPanel
+          ticket={ticket}
+          teams={teams}
+          editable={canEdit}
+        />
+      </section>
 
       <section className="wire-card mb-0 lg:min-h-[280px] lg:text-right">
         <h2 className="wire-card-title">Metadata</h2>

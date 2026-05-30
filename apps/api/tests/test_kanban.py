@@ -43,6 +43,21 @@ def test_simple_template_columns() -> None:
     assert [c.name for c in columns] == ["Backlog", "I gang", "Færdig"]
 
 
+def test_delivery_template_columns() -> None:
+    board_id = uuid.uuid4()
+    columns = build_columns_for_board(board_id, template="delivery")
+    assert len(columns) == 7
+    assert [c.name for c in columns] == [
+        "Backlog",
+        "Refinement",
+        "Ready",
+        "In Progress",
+        "Review",
+        "Done",
+        "Archived",
+    ]
+
+
 def test_blank_template_columns() -> None:
     board_id = uuid.uuid4()
     columns = build_columns_for_board(board_id, template="blank")

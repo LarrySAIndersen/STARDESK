@@ -1,0 +1,4 @@
+2.0.0
+2026-05-30
+
+Backup version 2 — Work Board DB persistence (workboard_tasks + REST API), canvas recovery scripts, agent rerun sync, and related API/web fixes.

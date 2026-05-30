@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from star_itsm_api.schemas.ticket import TicketCreate, TicketRead
 
 KanbanMemberRole = Literal["owner", "editor", "viewer"]
-KanbanBoardTemplate = Literal["itsm", "simple", "blank", "custom"]
+KanbanBoardTemplate = Literal["itsm", "simple", "delivery", "blank", "custom"]
 
 
 class KanbanBoardMemberRead(BaseModel):

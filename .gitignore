@@ -37,6 +37,9 @@ htmlcov/
 .coverage
 .tox/
 
+# Cursor work board (junction to ~/.cursor/projects/.../canvases)
+apps/stardesk-workboard/
+
 # IDE / OS
 .vscode/
 .idea/
@@ -70,6 +73,11 @@ Background/
 # Dependency / CVE audit reports (may reference local paths)
 reports/dependency-audit-latest.json
 reports/dependency-audit-*.json
+reports/sonar-agent-latest.json
+reports/sonar-agent-latest.md
+reports/quality-loop-latest.json
+reports/quality-loop-latest.md
+reports/quality-loop-agent-prompt.md
 
 # Destructive/load test local artifacts
 scripts/load-test/load-test-users.json

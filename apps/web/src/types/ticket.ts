@@ -3,7 +3,17 @@ import type { Comment } from "@/types/comment";
 import type { SubCause } from "@/types/sub-cause";
 import type { TicketActivityItem, TicketTimestamps } from "@/types/ticket-activity";
 
-export interface TicketSummary {
+export interface StakeholderUser {
+  user_id: string;
+  display_name: string;
+  email: string;
+}
+
+export interface TicketStakeholdersGrouped {
+  affected: StakeholderUser[];
+  interested: StakeholderUser[];
+  mentioned: StakeholderUser[];
+}
   id: string;
   ticket_number: string;
   title: string;
@@ -139,6 +149,7 @@ export interface TicketDetail extends Ticket {
   linked_gmail_email?: string | null;
   timestamps?: TicketTimestamps;
   activity?: TicketActivityItem[];
+  stakeholders?: TicketStakeholdersGrouped;
 }
 
 export interface TicketCreateInput {
@@ -159,4 +170,6 @@ export interface TicketCreateInput {
   intake_answers?: Record<string, string>;
   /** Kun agenter — sendes til API; slutbrugere ignorerer feltet (portal). */
   source?: "portal" | "email" | "phone" | "chat";
+  affected_user_ids?: string[];
+  interested_user_ids?: string[];
 }

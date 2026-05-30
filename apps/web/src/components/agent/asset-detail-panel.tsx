@@ -43,8 +43,6 @@ export function AssetDetailPanel({
     [assetId, systems, allEdges, metadata],
   );
 
-  const open = Boolean(detail);
-
   const connectionRows = useMemo(() => {
     if (!detail) return [];
     return detail.connectionEdgeIds
@@ -84,20 +82,20 @@ export function AssetDetailPanel({
     setConnectTarget("");
   };
 
+  if (!detail) {
+    return null;
+  }
+
   return (
     <>
       <aside
         className={cn(
-          "wire-asset-detail-panel",
-          open && "wire-asset-detail-panel--open",
+          "flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden border-l border-[var(--gray-border)] bg-white shadow-[-4px_0_16px_rgb(0_0_0/0.06)]",
           ticketsPanelOpen && "wire-asset-detail-panel--with-tickets",
         )}
-        aria-hidden={!open}
-        aria-label={detail ? `Detaljer for ${detail.name}` : undefined}
+        aria-label={`Detaljer for ${detail.name}`}
       >
-        {detail ? (
-          <>
-            <header className="wire-asset-detail-panel-header">
+        <header className="wire-asset-detail-panel-header">
               <div className="min-w-0 flex-1">
                 <p className="wire-asset-detail-panel-kicker">
                   {detail.kind === "system" ? "System" : "Undersystem"}
@@ -112,9 +110,9 @@ export function AssetDetailPanel({
               >
                 <X className="size-4" aria-hidden />
               </button>
-            </header>
+        </header>
 
-            <div className="wire-asset-detail-panel-body">
+        <div className="wire-asset-detail-panel-body">
               {isAdmin ? (
                 <div className="mb-3 flex flex-wrap gap-1.5">
                   <button
@@ -280,10 +278,8 @@ export function AssetDetailPanel({
                   <Ticket className="mr-1.5 inline size-3.5 align-[-2px]" aria-hidden />
                   {ticketsPanelOpen ? "Skjul sager" : "Vis sager"}
                 </button>
-              </footer>
-            </div>
-          </>
-        ) : null}
+        </footer>
+        </div>
       </aside>
 
       <AssetEditDialog

@@ -9,12 +9,22 @@ from typing import Literal
 from star_itsm_api.models.kanban import KanbanColumn
 from star_itsm_api.services.reports import BUCKET_DEFINITIONS
 
-KanbanBoardTemplate = Literal["itsm", "simple", "blank", "custom"]
+KanbanBoardTemplate = Literal["itsm", "simple", "delivery", "blank", "custom"]
 
 SIMPLE_COLUMN_SPECS: list[tuple[str, int, list[str], str]] = [
     ("Backlog", 0, ["assigned", "new"], "new"),
     ("I gang", 1, ["in_progress", "on_hold"], "in_progress"),
     ("Færdig", 2, ["cancelled", "closed", "resolved"], "resolved"),
+]
+
+DELIVERY_COLUMN_SPECS: list[tuple[str, int, list[str], str]] = [
+    ("Backlog", 0, ["new"], "new"),
+    ("Refinement", 1, ["assigned"], "assigned"),
+    ("Ready", 2, ["assigned"], "assigned"),
+    ("In Progress", 3, ["in_progress"], "in_progress"),
+    ("Review", 4, ["pending", "on_hold"], "pending"),
+    ("Done", 5, ["resolved"], "resolved"),
+    ("Archived", 6, ["closed", "cancelled"], "closed"),
 ]
 
 
@@ -36,6 +46,11 @@ def _column_specs_for_template(
         return []
     if template == "simple":
         return [(name, pos, statuses, default_status, False) for name, pos, statuses, default_status in SIMPLE_COLUMN_SPECS]
+    if template == "delivery":
+        return [
+            (name, pos, statuses, default_status, False)
+            for name, pos, statuses, default_status in DELIVERY_COLUMN_SPECS
+        ]
     if template == "custom":
         names = [name.strip() for name in (column_names or []) if name.strip()]
         if not names:

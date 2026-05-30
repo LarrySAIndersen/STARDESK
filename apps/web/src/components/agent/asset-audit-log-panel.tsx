@@ -78,7 +78,7 @@ export function AssetAuditLogPanel() {
 
   return (
     <aside
-      className="wire-assets-card flex w-full max-w-[240px] shrink-0 flex-col"
+      className="wire-assets-card flex h-full min-h-0 w-full flex-col"
       aria-label="CMDB ændringslog"
     >
       <div className="border-b border-[var(--gray-border)] px-3 py-2.5">

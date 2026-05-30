@@ -3,7 +3,7 @@
 Cloud-prototype af STAR ITSM. Ingen Docker, intet lokalt setup.
 Alt kører i skyen, du ser det i browseren.
 
-**Udviklere:** [CONTRIBUTING.md](./CONTRIBUTING.md) (kør web + API lokalt, test, env). Miljøer: [docs/environments.md](./docs/environments.md).
+**Udviklere:** [CONTRIBUTING.md](./CONTRIBUTING.md) (kør web + API lokalt, test, env). Miljøer: [docs/environments.md](./docs/environments.md). **Work Board DB:** [docs/workboard-persistence.md](./docs/workboard-persistence.md) (genskab sager fra Neon efter tab af canvas JSON).
 
 > Søsterprojekt til `star-itsm/` (on-prem K8s-versionen).
 > Cloud-versionen er til at validere designet hurtigt;

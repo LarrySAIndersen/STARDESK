@@ -9,6 +9,7 @@ import { AssetCatalogProvider, useAssetCatalog } from "@/components/agent/asset-
 import { AssetDetailPanel } from "@/components/agent/asset-detail-panel";
 import { AssetGraphNetwork } from "@/components/agent/asset-graph-network";
 import { AssetTicketsPanel } from "@/components/agent/asset-tickets-panel";
+import { AssetsResizableLayout } from "@/components/agent/assets-resizable-layout";
 import { AssetTree } from "@/components/agent/asset-tree";
 import { getAssetDetail } from "@/lib/asset-details";
 import { getAllAssetIds } from "@/lib/asset-graph";
@@ -78,13 +79,14 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
   }, [admin]);
 
   return (
-    <div className="wire-scroll-content wire-assets-page flex min-h-0 flex-1 flex-col p-5">
-      <p className="wire-page-lead mb-4">
-        Udforsk STAR&apos;s aktiver som et verdenskort — træk bobler, administrer forbindelser
-        {admin ? " (kun administrator)" : ""}, og åbn sager for det valgte aktiv.
-      </p>
+    <div className="wire-scroll-content wire-assets-page flex min-h-0 flex-1 flex-col overflow-hidden p-5">
+      <div className="shrink-0">
+        <p className="wire-page-lead mb-4">
+          Udforsk STAR&apos;s aktiver som et verdenskort — træk bobler, administrer forbindelser
+          {admin ? " (kun administrator)" : ""}, og åbn sager for det valgte aktiv.
+        </p>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
           className="wire-asset-graph-toggle"
@@ -106,14 +108,19 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
         ) : null}
         <span className="text-[10px] text-[var(--gray-mid)]">
           <ListTree className="mr-1 inline size-3 align-[-2px]" aria-hidden />
-          Træk bobler · træk baggrund for pan · scroll for zoom
+          Træk bobler · træk baggrund for pan · scroll for zoom · træk mellem kolonner for bredde
         </span>
+        </div>
       </div>
 
-      <div className="wire-assets-layout flex min-h-0 flex-1 gap-3 overflow-hidden">
-        {admin ? <AssetAuditLogPanel /> : null}
-        {showTree ? (
-          <div className="wire-assets-card wire-assets-card--tree flex w-full max-w-[260px] shrink-0 flex-col">
+      <div className="min-h-0 min-w-0 flex-1">
+      <AssetsResizableLayout
+        showAudit={admin}
+        showTree={showTree}
+        showDetail={Boolean(selectedId)}
+        auditPanel={<AssetAuditLogPanel />}
+        treePanel={
+          <div className="wire-assets-card wire-assets-card--tree flex h-full min-h-0 w-full flex-col">
             <Suspense fallback={<div className="wire-asset-panel-header">Aktiver</div>}>
               <AssetTree
                 showHeader
@@ -127,17 +134,16 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
               />
             </Suspense>
           </div>
-        ) : null}
-
-        <div className="wire-assets-card wire-assets-card--graph wire-assets-graph-row flex min-h-[min(70vh,640px)] min-w-0 flex-1 overflow-hidden">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <AssetGraphNetwork
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              visibleIds={visibleIds}
-              onAddClick={admin ? openAddDialog : undefined}
-            />
-          </div>
+        }
+        graphPanel={
+          <AssetGraphNetwork
+            selectedId={selectedId}
+            onSelect={handleSelect}
+            visibleIds={visibleIds}
+            onAddClick={admin ? openAddDialog : undefined}
+          />
+        }
+        detailPanel={
           <AssetDetailPanel
             assetId={selectedId}
             onClose={handleCloseDetail}
@@ -147,13 +153,16 @@ function AssetsPageContent({ serverUser }: { serverUser: User | null }) {
             isAdmin={admin}
             onAssetDeleted={handleAssetDeleted}
           />
+        }
+        ticketsPanel={
           <AssetTicketsPanel
             assetId={selectedId}
             assetName={selectedDetail?.name ?? null}
             open={ticketsPanelOpen && Boolean(selectedId)}
             onClose={() => setTicketsPanelOpen(false)}
           />
-        </div>
+        }
+      />
       </div>
 
       {admin ? (

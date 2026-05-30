@@ -20,3 +20,8 @@ export function useMediaQuery(query: string): boolean {
 export function useIsLgUp(): boolean {
   return useMediaQuery("(min-width: 1024px)");
 }
+
+/** True when viewport is at least Tailwind `md` (768px). */
+export function useIsMdUp(): boolean {
+  return useMediaQuery("(min-width: 768px)");
+}

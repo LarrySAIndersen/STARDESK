@@ -23,6 +23,7 @@ _EXT_BY_TYPE = {
     "image/gif": ".gif",
     "image/webp": ".webp",
 }
+_ALLOWED_EXTENSIONS = frozenset(_EXT_BY_TYPE.values())
 
 
 def avatar_public_path(user_id: uuid.UUID) -> str:
@@ -35,14 +36,23 @@ def avatars_dir() -> Path:
     return path
 
 
-def _avatar_file_path(user_id: uuid.UUID, ext: str) -> Path:
-    return avatars_dir() / f"{user_id}{ext}"
+def _safe_avatar_path(user_id: uuid.UUID, ext: str) -> Path:
+    """Resolve avatar path and ensure it stays inside the avatars upload directory."""
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Ugyldig filtype")
+
+    base = avatars_dir().resolve()
+    target = (base / f"{user_id}{ext}").resolve()
+    try:
+        target.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldig filsti") from None
+    return target
 
 
 def resolve_avatar_file(user_id: uuid.UUID) -> Path | None:
-    directory = avatars_dir()
-    for ext in _EXT_BY_TYPE.values():
-        candidate = directory / f"{user_id}{ext}"
+    for ext in _ALLOWED_EXTENSIONS:
+        candidate = _safe_avatar_path(user_id, ext)
         if candidate.is_file():
             return candidate
     return None
@@ -78,12 +88,12 @@ async def save_user_avatar(
         raise HTTPException(status_code=400, detail="Billedet er for stort (maks. 2 MB)")
 
     ext = _EXT_BY_TYPE[content_type]
-    directory = avatars_dir()
-    for existing in directory.glob(f"{user.id}.*"):
+    for existing_ext in _ALLOWED_EXTENSIONS:
+        existing = _safe_avatar_path(user.id, existing_ext)
         if existing.is_file():
             existing.unlink()
 
-    storage_path = _avatar_file_path(user.id, ext)
+    storage_path = _safe_avatar_path(user.id, ext)
     storage_path.write_bytes(content)
 
     public_url = avatar_public_path(user.id)

@@ -86,5 +86,5 @@ async def email_inbound(
     )
     await db.commit()
     await db.refresh(ticket)
-    logger.info("Created ticket %s from email %s", ticket.ticket_number, payload.message_id)
+    logger.info("Created ticket %s from inbound email webhook", ticket.ticket_number)
     return TicketRead.model_validate(ticket)
