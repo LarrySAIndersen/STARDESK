@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { AgentClock } from "@/components/agent/agent-clock";
+import { AgentTopbarDuck } from "@/components/agent/agent-topbar-duck";
 import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
 import { PageLayoutEditTopBarControl } from "@/components/page-layout/page-layout-edit-top-bar-control";
@@ -85,7 +86,10 @@ export function AgentTopBar({
       </div>
       <div className="wire-topbar__end flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
         <ApiHealthIndicator />
-        <AgentClock />
+        <div className="hidden items-center gap-1.5 sm:flex">
+          <AgentTopbarDuck />
+          <AgentClock />
+        </div>
         {actions}
         {resolvedUser ? <TopBarUserMenu user={resolvedUser} /> : null}
       </div>
