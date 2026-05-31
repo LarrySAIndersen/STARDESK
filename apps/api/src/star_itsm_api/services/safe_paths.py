@@ -1,0 +1,35 @@
+"""Safe path resolution under a fixed root (Sonar S2083 mitigation)."""
+
+import re
+from pathlib import Path
+
+from fastapi import HTTPException
+
+
+def resolve_path_under_root(*, root: Path, basename: str, pattern: re.Pattern[str]) -> Path:
+    """Map a validated basename to an absolute path under root."""
+    matched = pattern.fullmatch(basename)
+    if matched is None:
+        raise HTTPException(status_code=400, detail="Ugyldig filsti")
+    safe = matched.group(0)
+    if Path(safe).name != safe:
+        raise HTTPException(status_code=400, detail="Ugyldig filsti")
+
+    storage_root = root.resolve()
+    target = storage_root.joinpath(safe).resolve()
+    if not target.is_relative_to(storage_root):
+        raise HTTPException(status_code=400, detail="Ugyldig filsti")
+    return target
+
+
+def write_bytes_under_root(
+    *,
+    root: Path,
+    basename: str,
+    pattern: re.Pattern[str],
+    data: bytes,
+) -> Path:
+    """Write bytes to root/basename after regex + prefix validation."""
+    target = resolve_path_under_root(root=root, basename=basename, pattern=pattern)
+    target.write_bytes(data)
+    return target
