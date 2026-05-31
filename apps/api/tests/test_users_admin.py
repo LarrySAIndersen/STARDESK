@@ -21,6 +21,12 @@ from star_itsm_api.schemas.user_admin import (
     UserAdminRead,
     UserTeamSummary,
 )
+from tests.prototype_test_credentials import (
+    ADMIN_RESET_PASSWORD,
+    CLONE_INITIAL_PASSWORD,
+    PLACEHOLDER_HASH,
+    TEMP_ADMIN_PASSWORD,
+)
 
 CLONE_SOURCE_ID = uuid.UUID("00000000-0000-0000-0000-000000000042")
 NEW_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000043")
@@ -127,7 +133,7 @@ async def test_reset_password_success(
         display_name="Anna",
         role=ROLE_TOP_ADMIN,
         is_active=True,
-        password_hash="old",
+        password_hash=PLACEHOLDER_HASH,
         deleted_at=None,
         organization_id=None,
     )
@@ -139,7 +145,7 @@ async def test_reset_password_success(
     ) as reset_mock:
         response = await api_client.post(
             f"/api/v1/users/{TARGET_USER_ID}/reset-password",
-            json={"new_password": "NyAdgang2026!"},
+            json={"new_password": ADMIN_RESET_PASSWORD},
         )
 
     assert response.status_code == 204
@@ -300,7 +306,7 @@ async def test_create_user_success(
     assert response.status_code == 201
     body = response.json()
     assert body["user"]["email"] == "ny@example.dk"
-    assert body["temporary_password"] == "TempPass1234"
+    assert body["temporary_password"] == TEMP_ADMIN_PASSWORD
 
 
 @pytest.mark.asyncio
@@ -381,7 +387,7 @@ async def test_create_user_clone_applies_source_settings(
                 "organization_id": None,
                 "team_ids": [],
                 "clone_from_user_id": str(CLONE_SOURCE_ID),
-                "initial_password": "NyAdgang2026",
+                "initial_password": CLONE_INITIAL_PASSWORD,
             },
         )
 
@@ -391,7 +397,7 @@ async def test_create_user_clone_applies_source_settings(
     assert kwargs["role"] == "admin"
     assert kwargs["organization_id"] == source.organization_id
     assert kwargs["team_ids"] == [team_id]
-    assert kwargs["initial_password"] == "NyAdgang2026"
+    assert kwargs["initial_password"] == CLONE_INITIAL_PASSWORD
 
 
 @pytest.mark.asyncio
