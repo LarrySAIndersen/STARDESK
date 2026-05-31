@@ -31,7 +31,7 @@ Ved push til `main` kører GitHub Actions job **`database-migrate`** i `security
 |--------|----------|
 | GitHub Actions | Actions → **Database migrate (manual)** → Run workflow |
 | Lokal med Vercel env | `cd apps/api && npx vercel env pull .env.local && python ../../scripts/run-migrate.py` |
-| Lokal med `DATABASE_URL` | `export DATABASE_URL=postgresql+asyncpg://… && scripts/migrate-db.sh` |
+| Lokal med `DATABASE_URL` | `bash scripts/bootstrap-dev-database.sh` eller `scripts/migrate-db.sh` efter SQL-setup |
 | Neon SQL Editor | Kun til engangs-SQL i `docs/*.sql` — Alembic-revisioner skal køres via Alembic |
 
 ### Vigtige revisioner

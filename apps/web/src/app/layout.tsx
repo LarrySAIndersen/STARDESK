@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 
 import { AgentShellWrapper } from "@/components/agent/agent-shell-wrapper";
+import { EnvironmentBanner } from "@/components/environment-banner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SkipLink } from "@/components/skip-link";
+import { getStardeskEnv } from "@/lib/stardesk-env";
 
 import "./globals.css";
 
@@ -19,8 +21,12 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
+const stardeskEnv = getStardeskEnv();
+const envTitleSuffix =
+  stardeskEnv === "production" ? "" : ` [${stardeskEnv === "development" ? "dev" : stardeskEnv}]`;
+
 export const metadata: Metadata = {
-  title: "STARdesk — Sagsstyring",
+  title: `STARdesk — Sagsstyring${envTitleSuffix}`,
   description: "STAR ITSM cloud prototype",
 };
 
@@ -35,6 +41,7 @@ export default function RootLayout({
         className={`${inter.variable} ${ibmPlexMono.variable} font-sans flex min-h-dvh flex-col overflow-x-hidden antialiased`}
       >
         <ThemeProvider>
+          <EnvironmentBanner />
           <SkipLink />
           <AgentShellWrapper>{children}</AgentShellWrapper>
         </ThemeProvider>

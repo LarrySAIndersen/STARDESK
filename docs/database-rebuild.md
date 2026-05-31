@@ -16,6 +16,9 @@ Scriptet:
 1. Kører `init.sql` **kun** hvis `tickets`-tabellen mangler
 2. Kører alle migrationer i rækkefølge
 3. Kører alle seeds (idempotente hvor muligt)
+4. Med `--with-alembic`: kører `scripts/alembic_after_sql_setup.py` (stamp + `upgrade head`)
+
+**Lokal / Cloud Agent:** `bash scripts/bootstrap-dev-database.sh` (evt. `--local-postgres`) gør trin 1–4 + opretter `.env` fra eksempler.
 
 Kilde: `scripts/run_neon_setup.py`
 

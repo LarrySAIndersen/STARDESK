@@ -56,6 +56,11 @@ class Settings(BaseSettings):
         description='Vercel Blob upload access: "private" or "public" (match store type).',
     )
     app_env: str = Field(default="development", validation_alias="APP_ENV")
+    stardesk_env: str = Field(
+        default="development",
+        validation_alias="STARDESK_ENV",
+        description="Logical target: development | test | production | prod-clone (see docs/environments.md).",
+    )
     slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")
     slack_client_secret: str | None = Field(default=None, validation_alias="SLACK_CLIENT_SECRET")
     slack_signing_secret: str | None = Field(default=None, validation_alias="SLACK_SIGNING_SECRET")
@@ -116,7 +121,7 @@ class Settings(BaseSettings):
             return "http://localhost:3000"
         return value
 
-    @field_validator("app_env", mode="before")
+    @field_validator("app_env", "stardesk_env", mode="before")
     @classmethod
     def _blank_app_env_to_development(cls, value: Any) -> Any:
         if isinstance(value, str) and not value.strip():

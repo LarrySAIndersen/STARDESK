@@ -20,7 +20,11 @@
     "review:playwright:import": "node ./import-playwright-evidence-to-workboard.mjs",
     "review:playwright:pipeline": "node ./run-review-playwright-pipeline.mjs",
     "review:playwright:trigger": "node ./trigger-review-playwright-on-board.mjs",
-    "workboard:sync": "node ./migrate-workboard-json-to-db.mjs"
+    "workboard:sync": "node ./migrate-workboard-json-to-db.mjs",
+    "gate:hello-world": "bash ./hello-world-gate-api.sh",
+    "gate:hello-world:ui": "node ./hello-world-gate.mjs",
+    "gate:deliverable": "bash ./run-deliverable-gate.sh",
+    "gate:deliverable:full": "bash ./run-deliverable-gate.sh --full"
   },
   "devDependencies": {
     "playwright": "^1.52.0"

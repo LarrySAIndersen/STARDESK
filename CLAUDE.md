@@ -91,7 +91,7 @@ eller slettet.
 
 - Hver endpoint: mindst én happy-path test (pytest + httpx)
 - Mutations: mindst én auth-fejl test
-- Frontend: kritiske flows (opret ticket, vis liste) får E2E senere
+- **Alle leverancer:** kør deliverable gate før du siger færdig — `bash scripts/run-deliverable-gate.sh` (UI: `--full`). Se `docs/deliverable-gate.md`.
 
 ## Hvad du SKAL gøre når du begynder en task
 
@@ -99,8 +99,8 @@ eller slettet.
 2. Tjek om der findes lignende kode — ikke parallel-implementér
 3. Lav planen først (3-5 punkter) hvis task er > 30 min arbejde
 4. Skriv koden
-5. Kør tests og linter inden du siger du er færdig
-6. Rapporter: præcis hvilke filer er oprettet/ændret/slettet
+5. Kør tests, linter og **deliverable gate** inden du siger du er færdig
+6. Rapporter: præcis hvilke filer er oprettet/ændret/slettet + gate passed (vedhæft output/screenshots ved UI)
 
 ## Hvad du IKKE må uden at spørge
 

@@ -10,6 +10,15 @@ Focused guide for developers working in this monorepo (`apps/web` + `apps/api`).
 
 ## Environment setup
 
+**Fast path (schema + seeds + Alembic):** from repo root:
+
+```bash
+bash scripts/bootstrap-dev-database.sh              # uses DATABASE_URL from apps/api/.env
+bash scripts/bootstrap-dev-database.sh --local-postgres   # VM without Neon
+```
+
+See [AGENTS.md](./AGENTS.md) for Cloud Agent details.
+
 | App | Local env file | Template |
 |-----|----------------|----------|
 | Web | `apps/web/.env.local` | `apps/web/.env.example` |
@@ -47,6 +56,16 @@ Open http://localhost:3000
 
 ## Verify changes
 
+**Deliverable gate (obligatorisk for alle PR/leverancer):**
+
+```bash
+bash scripts/dev-up.sh                    # if not already running
+bash scripts/run-deliverable-gate.sh      # API hello-world
+bash scripts/run-deliverable-gate.sh --full   # + UI /tickets (ved web/auth ændringer)
+```
+
+See [docs/deliverable-gate.md](./docs/deliverable-gate.md).
+
 ```powershell
 cd apps\web
 npm run build
@@ -70,7 +89,9 @@ $env:DATABASE_URL = "postgresql+asyncpg://..."
 alembic upgrade head
 ```
 
-Or from repo root: `bash scripts/migrate-db.sh` (Git Bash / WSL).
+Or from repo root: `bash scripts/migrate-db.sh` (stamps post-SQL revision, then `upgrade head`).
+
+After `run_neon_setup.py`, prefer `bash scripts/migrate-db.sh` or `run_neon_setup.py --with-alembic` instead of raw `alembic upgrade head` alone.
 
 ## Deploy (Vercel)
 

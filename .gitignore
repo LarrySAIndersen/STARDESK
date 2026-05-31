@@ -1,3 +1,6 @@
+# Deliverable gate (local screenshots)
+artifacts/hello-world-gate/
+
 # Environment
 .env
 .env.local

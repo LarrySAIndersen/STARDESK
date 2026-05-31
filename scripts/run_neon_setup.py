@@ -99,10 +99,26 @@ def table_exists(conn: psycopg.Connection, table: str) -> bool:
         return bool(row and row[0])
 
 
+def _maybe_run_alembic() -> int:
+    if "--with-alembic" not in sys.argv:
+        return 0
+    script = ROOT / "scripts" / "alembic_after_sql_setup.py"
+    import subprocess
+
+    print("\nAlembic (post-SQL):")
+    result = subprocess.run(
+        ["uv", "run", "python", str(script)],
+        cwd=ROOT / "apps" / "api",
+        env=os.environ.copy(),
+        check=False,
+    )
+    return result.returncode
+
+
 def main() -> int:
     migrations_only = "--migrations-only" in sys.argv
     dsn = load_database_url()
-    print("Connecting to Neon...")
+    print("Connecting to database...")
     with psycopg.connect(dsn, autocommit=False) as conn:
         if not table_exists(conn, "tickets"):
             init_path = ROOT / "init.sql"
@@ -148,7 +164,9 @@ def main() -> int:
             cur.execute("SELECT COUNT(*) FROM organizations")
             orgs = cur.fetchone()[0]
         print(f"\nDone. tickets={tickets}, users={users}, organizations={orgs}")
-    return 0
+
+    alembic_rc = _maybe_run_alembic()
+    return alembic_rc if alembic_rc != 0 else 0
 
 
 if __name__ == "__main__":
