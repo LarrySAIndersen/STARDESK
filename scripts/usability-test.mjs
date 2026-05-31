@@ -3,10 +3,12 @@
  * Run: node scripts/usability-test.mjs
  */
 import { chromium } from "playwright";
+import { requirePrototypeDemoPassword } from "./lib/prototype-demo-password.mjs";
 
-const BASE = "https://web-seven-neon-6bvmcoel7n.vercel.app";
-const API = "https://api-gamma-amber.vercel.app";
-const DEMO_PASSWORD = "Stardesk2026!";
+const BASE = process.env.STARDESK_WEB_URL ?? "https://web-seven-neon-6bvmcoel7n.vercel.app";
+const API = process.env.STARDESK_API_URL ?? "https://api-gamma-amber.vercel.app";
+const DEMO_PASSWORD = requirePrototypeDemoPassword();
+const LARRY_PASSWORD = process.env.LARRY_DEMO_PASSWORD ?? "password"; // NOSONAR javascript:S2068
 const TOKEN_COOKIE = "stardesk_token";
 const USER_COOKIE = "stardesk_user";
 
@@ -14,7 +16,7 @@ const USERS = [
   {
     label: "Administrator (fuld adgang)",
     email: "larrysanders@example.dk",
-    password: "password",
+    password: LARRY_PASSWORD,
     staff: true,
   },
   {

@@ -17,9 +17,13 @@ export const options = {
 };
 
 export default function () {
+  const badPassword = __ENV.BAD_LOGIN_PASSWORD;
+  if (!badPassword) {
+    throw new Error("Set BAD_LOGIN_PASSWORD for auth-flood destructive test");
+  }
   const payload = JSON.stringify({
     email: `flood-${__VU}-${__ITER}@invalid.example`,
-    password: "not-a-real-password",
+    password: badPassword,
   });
   const res = http.post(`${BASE_URL}/api/v1/auth/login`, payload, {
     headers: { "Content-Type": "application/json" },

@@ -6,6 +6,7 @@ import pytest
 
 from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUBMITTER, ROLE_SUPPORTER
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
+from tests.prototype_test_credentials import PLACEHOLDER_HASH
 
 
 @pytest.mark.asyncio
@@ -18,7 +19,7 @@ async def test_ensure_prototype_staff_account_upgrades_larrysanders2() -> None:
         ui_mode=None,
         is_active=True,
         deleted_at=None,
-        password_hash="old",
+        password_hash=PLACEHOLDER_HASH,
         must_change_password=True,
     )
     db = AsyncMock()
@@ -56,7 +57,7 @@ async def test_ensure_prototype_staff_account_clears_larrysanders_must_change() 
         ui_mode=None,
         is_active=True,
         deleted_at=None,
-        password_hash="old",
+        password_hash=PLACEHOLDER_HASH,
         must_change_password=True,
     )
     db = AsyncMock()

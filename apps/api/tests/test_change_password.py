@@ -6,14 +6,18 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
 from star_itsm_api.core.security import hash_password, verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
+from tests.prototype_test_credentials import (
+    KNOWN_PASSWORD,
+    LARRY_PASSWORD,
+    NEW_INVALID_PASSWORD,
+    NEW_VALID_PASSWORD,
+)
 
-KNOWN_PASSWORD = "Stardesk2026!"
-NEW_PASSWORD = "nyadgang2026"
-INVALID_NEW_PASSWORD = "invalid1!"
+NEW_PASSWORD = NEW_VALID_PASSWORD
+INVALID_NEW_PASSWORD = NEW_INVALID_PASSWORD
 TEST_EMAIL = "sf01@example.dk"
 
 
@@ -84,7 +88,7 @@ async def test_change_password_with_prototype_bootstrap(
     user = SimpleNamespace(
         id=uuid.uuid4(),
         email=TEST_EMAIL,
-        password_hash=hash_password("password"),
+        password_hash=hash_password(LARRY_PASSWORD),
         is_active=True,
         deleted_at=None,
         must_change_password=True,
@@ -99,7 +103,7 @@ async def test_change_password_with_prototype_bootstrap(
             "/api/v1/auth/change-password",
             json={
                 "email": TEST_EMAIL,
-                "current_password": PROTOTYPE_BOOTSTRAP_PASSWORD,
+                "current_password": KNOWN_PASSWORD,
                 "new_password": NEW_PASSWORD,
             },
         )

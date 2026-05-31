@@ -14,6 +14,7 @@ from star_itsm_api.core.security import (
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
+from tests.prototype_test_credentials import BOOTSTRAP_HASH
 
 USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 
@@ -26,7 +27,7 @@ def pending_user() -> User:
         display_name="Pending User",
         role="agent",
         is_active=True,
-        password_hash="$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC",
+        password_hash=BOOTSTRAP_HASH,
         organization_id=None,
         deleted_at=None,
         must_change_password=True,

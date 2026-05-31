@@ -170,7 +170,10 @@ export function stressToFailureScenario() {
 
 export function authFloodScenario() {
   const badEmail = __ENV.BAD_LOGIN_EMAIL || "invalid@example.dk";
-  const badPassword = __ENV.BAD_LOGIN_PASSWORD || "totally-wrong-password";
+  const badPassword = __ENV.BAD_LOGIN_PASSWORD;
+  if (!badPassword) {
+    throw new Error("Set BAD_LOGIN_PASSWORD for destructive auth flood scenario");
+  }
 
   const requests = [];
   for (let i = 0; i < 20; i += 1) {
