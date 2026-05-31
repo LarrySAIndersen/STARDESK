@@ -1,0 +1,26 @@
+---
+description: Permanent PR-only policy — never push to main or staging; all changes via GitHub PR to staging
+alwaysApply: true
+---
+
+# PR-only politik (permanent)
+
+Read `docs/pr-only-policy.md`.
+
+## Forbidden
+
+- `git push origin main`
+- `git push origin staging`
+- Merging to `main` without Jan's release PR (`staging` → `main`)
+- Feature PRs with **base `main`**
+
+## Required
+
+1. Branch from latest `staging`
+2. Commits only on feature branch (`cursor/…` or `opgave-NN-…`)
+3. `git push -u origin <branch>`
+4. **Draft PR** with base **`staging`**
+5. Deliverable gate before done
+6. Final message must include **PR URL**
+
+Production: only Jan merges **`staging` → `main`**.

@@ -120,7 +120,7 @@ eller slettet.
 
 ## Brugerens præferencer (Jan, IT Operations)
 
-- **PR-only periode:** Push aldrig til `main`/`staging` — kun via PR til `staging`. Se `docs/pr-only-period.md`.
+- **PR-only (permanent):** Push aldrig til `main`/`staging` — kun via PR til `staging`. Se `docs/pr-only-policy.md`.
 - **Git/Vercel:** Se `docs/release-process.md` og `docs/proces-visuelt.md`.
 - Korte konkrete svar — ikke lange forklaringer medmindre der spørges
 - Få det til at virke først, optimer bagefter

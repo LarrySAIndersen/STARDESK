@@ -2,9 +2,9 @@
 
 Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
 
-## PR-only periode (aktiv — alle ændringer)
+## PR-only politik (permanent)
 
-**`docs/pr-only-period.md`** — gælder indtil andet aftales.
+**`docs/pr-only-policy.md`** — alle ændringer, altid.
 
 - **FORBUDT:** `git push` til `main` eller `staging`.
 - **KRAV:** feature-gren → **PR mod `staging`** → auto-merge (CI grøn) → prod kun Jan via PR `staging` → `main`.

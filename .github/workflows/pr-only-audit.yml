@@ -1,5 +1,5 @@
-# Warn when someone pushes directly to main/staging (not via merge commit).
-# Real block requires GitHub branch protection — see docs/pr-only-period.md
+# Audit direct pushes to main/staging (permanent PR-only policy).
+# Hard block: GitHub branch protection — docs/pr-only-policy.md
 name: PR-only audit
 
 on:
@@ -19,19 +19,19 @@ jobs:
             const isMerge =
               msg.startsWith('Merge pull request') ||
               msg.startsWith('Merge branch') ||
-              msg.includes('(#' ) && msg.includes(')');
+              (msg.includes('(#') && msg.includes(')'));
             if (isMerge) {
               core.info(`Merge commit on ${branch} — OK.`);
               return;
             }
             core.warning(
-              `Direct push to ${branch} detected during PR-only period. ` +
-                `Use feature branch + PR. See docs/pr-only-period.md. Commit: ${msg.split('\n')[0]}`
+              `Direct push to ${branch} violates permanent PR-only policy. ` +
+                `Use feature branch + PR. See docs/pr-only-policy.md. Commit: ${msg.split('\n')[0]}`
             );
             await core.summary
               .addHeading(`PR-only audit: direct push to ${branch}`)
               .addRaw(
-                'Enable branch protection on GitHub (Settings → Branches). ' +
-                  'See [pr-only-period.md](docs/pr-only-period.md).'
+                'Enable branch protection (Settings → Branches). ' +
+                  'See [pr-only-policy.md](docs/pr-only-policy.md).'
               )
               .write();

@@ -9,7 +9,7 @@ Erstat `NN` med opgavenummer og `TITEL` med kort titel.
 ```text
 STARDESK opgave #NN: TITEL
 
-PR-ONLY (obligatorisk — docs/pr-only-period.md):
+PR-ONLY permanent (docs/pr-only-policy.md):
 - Push ALDRIG til main eller staging.
 - Checkout staging, pull, opret gren cursor/opgave-NN-kort-slug.
 - Push kun feature-gren; opret draft PR base staging (ALDRIG main).
