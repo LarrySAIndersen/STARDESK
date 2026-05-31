@@ -30,6 +30,8 @@ export function AdminUserCard({
   const initials = displayNameInitials(user.display_name);
   const groupsLabel =
     user.team_names.length > 0 ? user.team_names.join(", ") : "Ingen gruppe";
+  const rolesLabel =
+    user.role_labels?.length ? user.role_labels.join(", ") : user.role_label;
 
   return (
     <article className="wire-card admin-user-card mb-0 flex h-full min-h-[200px] flex-col">
@@ -58,7 +60,7 @@ export function AdminUserCard({
             <span className="truncate">{user.email}</span>
           </p>
           <p className="text-muted-foreground mt-2 text-xs">
-            <span className="text-star-navy font-medium">{user.role_label}</span>
+            <span className="text-star-navy font-medium">{rolesLabel}</span>
             {user.organization_name ? ` · ${user.organization_name}` : null}
           </p>
           <p className="text-muted-foreground mt-1 text-xs" title={groupsLabel}>

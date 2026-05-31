@@ -29,6 +29,8 @@ class UserRead(BaseModel):
     display_name: str
     role: str
     role_label: str
+    roles: list[str] = Field(default_factory=list)
+    role_labels: list[str] = Field(default_factory=list)
     organization_id: UUID | None = None
     organization_name: str | None = None
     must_change_password: bool = False
@@ -58,14 +60,20 @@ def user_to_read(
     user,  # noqa: ANN001
     *,
     organization_name: str | None = None,
+    roles: list[str] | None = None,
 ) -> UserRead:
     org_id = getattr(user, "organization_id", None)
+    role_values = roles if roles is not None else [user.role]
+    role_labels = [ROLE_LABELS.get(r, r) for r in role_values]
+    primary = user.role
     return UserRead(
         id=user.id,
         email=user.email,
         display_name=user.display_name,
-        role=user.role,
-        role_label=ROLE_LABELS.get(user.role, user.role),
+        role=primary,
+        role_label=ROLE_LABELS.get(primary, primary),
+        roles=role_values,
+        role_labels=role_labels,
         organization_id=org_id,
         organization_name=organization_name,
         must_change_password=effective_must_change_password(user),

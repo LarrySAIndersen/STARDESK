@@ -47,6 +47,8 @@ class UserAdminRead(BaseModel):
     display_name: str
     role: str
     role_label: str
+    roles: list[str] = Field(default_factory=list)
+    role_labels: list[str] = Field(default_factory=list)
     is_active: bool
     password_policy_exempt: bool = False
     organization_id: UUID | None = None
@@ -61,6 +63,8 @@ class UserAdminListItem(BaseModel):
     display_name: str
     role: str
     role_label: str
+    roles: list[str] = Field(default_factory=list)
+    role_labels: list[str] = Field(default_factory=list)
     is_active: bool
     organization_name: str | None = None
     team_ids: list[UUID] = Field(default_factory=list)
@@ -78,6 +82,7 @@ class UserAdminUpdate(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=255)
     email: str | None = Field(default=None, min_length=3, max_length=255)
     role: str | None = Field(default=None, pattern=USER_ROLE_PATTERN)
+    roles: list[str] | None = Field(default=None, min_length=1)
     is_active: bool | None = None
     password_policy_exempt: bool | None = None
     organization_id: UUID | None = None
@@ -91,7 +96,8 @@ class UserAdminPasswordReset(BaseModel):
 class UserAdminCreate(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     display_name: str = Field(min_length=1, max_length=255)
-    role: str = Field(pattern=USER_ROLE_PATTERN)
+    role: str | None = Field(default=None, pattern=USER_ROLE_PATTERN)
+    roles: list[str] | None = Field(default=None, min_length=1)
     is_active: bool = True
     organization_id: UUID | None = None
     team_ids: list[UUID] = Field(default_factory=list)
@@ -160,13 +166,19 @@ def user_to_admin_read(
     *,
     organization_name: str | None,
     teams: list[UserTeamSummary],
+    roles: list[str] | None = None,
 ) -> UserAdminRead:
+    role_values = roles if roles is not None else [user.role]
+    role_labels = [ROLE_LABELS.get(r, r) for r in role_values]
+    primary = user.role
     return UserAdminRead(
         id=user.id,
         email=user.email,
         display_name=user.display_name,
-        role=user.role,
-        role_label=ROLE_LABELS.get(user.role, user.role),
+        role=primary,
+        role_label=ROLE_LABELS.get(primary, primary),
+        roles=role_values,
+        role_labels=role_labels,
         is_active=user.is_active,
         password_policy_exempt=bool(getattr(user, "password_policy_exempt", False)),
         organization_id=getattr(user, "organization_id", None),

@@ -36,6 +36,12 @@ export function filterAdminUsers(
     if (user.role_label.toLowerCase().includes(q)) {
       return true;
     }
+    if (user.role_labels?.some((label) => label.toLowerCase().includes(q))) {
+      return true;
+    }
+    if (user.roles?.some((role) => role.toLowerCase().includes(q))) {
+      return true;
+    }
     if (user.organization_name?.toLowerCase().includes(q)) {
       return true;
     }
@@ -97,8 +103,11 @@ function compareAdminUsers(
       return b.display_name.localeCompare(a.display_name, "da");
     case "email":
       return a.email.localeCompare(b.email, "da");
-    case "role":
-      return a.role_label.localeCompare(b.role_label, "da");
+    case "role": {
+      const aLabel = a.role_labels?.join(", ") ?? a.role_label;
+      const bLabel = b.role_labels?.join(", ") ?? b.role_label;
+      return aLabel.localeCompare(bLabel, "da");
+    }
     case "status":
       return Number(b.is_active) - Number(a.is_active);
     case "name_asc":
@@ -120,8 +129,11 @@ export function applyAdminUsersListFilters(
     if (!userMatchesUsersTab(user, tab, internalIds, externalIds)) {
       return false;
     }
-    if (filters.role && user.role !== filters.role) {
-      return false;
+    if (filters.role) {
+      const userRoles = user.roles?.length ? user.roles : user.role ? [user.role] : [];
+      if (!userRoles.includes(filters.role)) {
+        return false;
+      }
     }
     if (filters.status === "active" && !user.is_active) {
       return false;

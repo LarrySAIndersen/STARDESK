@@ -31,14 +31,43 @@ export function normalizeUserRole(role: string | undefined): UserRole | null {
   return null;
 }
 
+const ROLE_PRIORITY: UserRole[] = [
+  "top_admin",
+  "admin",
+  "supporter",
+  "agent",
+  "stardesk_reviewer",
+  "end_user",
+];
+
 /** Resolve canonical role from `role` and Danish `role_label`. */
-export function resolveUserRole(user: Pick<User, "role" | "role_label">): UserRole | string | null {
+export function resolveUserRole(
+  user: Pick<User, "role" | "role_label" | "roles">,
+): UserRole | string | null {
+  const roles = resolveUserRoles(user);
+  for (const role of ROLE_PRIORITY) {
+    if (roles.includes(role)) {
+      return role;
+    }
+  }
   return (
     normalizeUserRole(user.role) ??
     normalizeUserRole(user.role_label) ??
     user.role ??
     null
   );
+}
+
+/** Resolve all assigned roles; falls back to legacy single `role`. */
+export function resolveUserRoles(user: Pick<User, "role" | "role_label" | "roles">): UserRole[] {
+  const fromArray = (user.roles ?? [])
+    .map((role) => normalizeUserRole(role))
+    .filter((role): role is UserRole => role !== null);
+  if (fromArray.length > 0) {
+    return [...new Set(fromArray)];
+  }
+  const single = normalizeUserRole(user.role) ?? normalizeUserRole(user.role_label);
+  return single ? [single] : [];
 }
 
 function roleLabelIndicatesAdmin(roleLabel: string | undefined): boolean {
@@ -66,10 +95,24 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
       if (!parsed?.email) {
         continue;
       }
-      const role = normalizeUserRole(parsed.role) ?? parsed.role;
+      const parsedRoles = Array.isArray(parsed.roles)
+        ? parsed.roles
+            .map((role) => normalizeUserRole(String(role)))
+            .filter((role): role is UserRole => role !== null)
+        : [];
+      const role =
+        normalizeUserRole(parsed.role) ??
+        parsedRoles[0] ??
+        parsed.role;
+      const roles = parsedRoles.length > 0 ? parsedRoles : role ? [role as UserRole] : undefined;
+      const roleLabels = Array.isArray(parsed.role_labels)
+        ? parsed.role_labels.map(String)
+        : undefined;
       return {
         ...parsed,
         role,
+        roles,
+        role_labels: roleLabels,
         must_change_password: Boolean(parsed.must_change_password),
         password_policy_exempt: Boolean(parsed.password_policy_exempt),
       };
@@ -140,12 +183,13 @@ export function isStaff(user: User | null): boolean {
   if (!user) {
     return false;
   }
-  const role = resolveUserRole(user);
-  return (
-    role === "agent" ||
-    role === "admin" ||
-    role === "top_admin" ||
-    role === "supporter"
+  const roles = resolveUserRoles(user);
+  return roles.some(
+    (role) =>
+      role === "agent" ||
+      role === "admin" ||
+      role === "top_admin" ||
+      role === "supporter",
   );
 }
 
@@ -157,8 +201,11 @@ export function isAdmin(user: User | null): boolean {
   if (!user) {
     return false;
   }
-  const role = resolveUserRole(user);
-  if (role === "admin" || role === "top_admin") {
+  const roles = resolveUserRoles(user);
+  if (roles.some((role) => role === "admin" || role === "top_admin")) {
+    return true;
+  }
+  if (user.role_labels?.some(roleLabelIndicatesAdmin)) {
     return true;
   }
   return roleLabelIndicatesAdmin(user.role_label);
@@ -173,14 +220,17 @@ export function canExportTickets(user: User | null): boolean {
 }
 
 export function isSubmitter(user: User | null): boolean {
-  return user?.role === "end_user";
+  if (!user) {
+    return false;
+  }
+  return resolveUserRoles(user).includes("end_user");
 }
 
 export function isStardeskReviewer(user: User | null): boolean {
   if (!user) {
     return false;
   }
-  return resolveUserRole(user) === "stardesk_reviewer";
+  return resolveUserRoles(user).includes("stardesk_reviewer");
 }
 
 /** Staff or Stardesk Reviewer — agent shell and browse access. */

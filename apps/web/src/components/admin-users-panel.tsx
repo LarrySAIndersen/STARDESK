@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { AdminUserCreateDialog } from "@/components/admin-user-create-dialog";
+import { AdminRoleCheckboxList } from "@/components/admin-role-checkbox-list";
 import { AdminUsersGroupedSections } from "@/components/admin-users-grouped-sections";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { Button } from "@/components/ui/button";
@@ -34,10 +35,19 @@ import type { UserRole } from "@/types/user";
 const selectClassName =
   "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
 
+const userRoleValues = [
+  "end_user",
+  "agent",
+  "admin",
+  "top_admin",
+  "supporter",
+  "stardesk_reviewer",
+] as const;
+
 const profileSchema = z.object({
   display_name: z.string().min(1, "Navn er påkrævet"),
   email: z.string().email("Ugyldig e-mail"),
-  role: z.enum(["end_user", "agent", "admin", "top_admin", "supporter", "stardesk_reviewer"]),
+  roles: z.array(z.enum(userRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
   is_active: z.boolean(),
   password_policy_exempt: z.boolean(),
   organization_id: z.string(),
@@ -214,6 +224,7 @@ function AdminUserEditDialog({
   });
 
   const selectedTeamIds = watch("team_ids") ?? [];
+  const selectedRoles = watch("roles") ?? [];
 
   const {
     register: registerPassword,
@@ -236,7 +247,9 @@ function AdminUserEditDialog({
         reset({
           display_name: detail.display_name,
           email: detail.email,
-          role: detail.role as ProfileFormValues["role"],
+          roles: (detail.roles?.length
+            ? detail.roles
+            : [detail.role]) as ProfileFormValues["roles"],
           is_active: detail.is_active,
           password_policy_exempt: detail.password_policy_exempt,
           organization_id: detail.organization_id ?? "",
@@ -260,7 +273,7 @@ function AdminUserEditDialog({
       const payload: UserAdminUpdateInput = {
         display_name: values.display_name.trim(),
         email: values.email.trim().toLowerCase(),
-        role: values.role,
+        roles: values.roles,
         is_active: values.is_active,
         password_policy_exempt: values.password_policy_exempt,
         organization_id: values.organization_id ? values.organization_id : null,
@@ -327,16 +340,12 @@ function AdminUserEditDialog({
                 ) : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="admin-user-role">Rettighedsgruppe</Label>
-                <select id="admin-user-role" className={selectClassName} {...register("role")}>
-                  {roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <AdminRoleCheckboxList
+                roleOptions={roleOptions}
+                selectedRoles={selectedRoles}
+                onChange={(roles) => setValue("roles", roles, { shouldDirty: true, shouldValidate: true })}
+                error={errors.roles?.message}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="admin-user-org">Organisation</Label>

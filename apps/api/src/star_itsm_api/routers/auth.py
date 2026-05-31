@@ -31,6 +31,7 @@ from star_itsm_api.schemas.auth import (
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
 from star_itsm_api.services.sole_top_admin import enforce_sole_top_admin_on_login
+from star_itsm_api.services.user_roles import attach_roles_to_user, ensure_user_roles_loaded, fetch_user_roles
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -83,6 +84,15 @@ async def login(
     await ensure_prototype_staff_account(db, user)
     await enforce_sole_top_admin_on_login(db, user)
 
+    roles = [user.role]
+    try:
+        loaded = await fetch_user_roles(db, user.id)
+        if loaded:
+            roles = loaded
+            attach_roles_to_user(user, loaded)
+    except Exception:
+        attach_roles_to_user(user, roles)
+
     token = create_access_token(
         user_id=user.id,
         role=user.role,
@@ -90,7 +100,10 @@ async def login(
         must_change_password=effective_must_change_password(user),
     )
     org_name = await _organization_name(db, user)
-    return TokenResponse(access_token=token, user=user_to_read(user, organization_name=org_name))
+    return TokenResponse(
+        access_token=token,
+        user=user_to_read(user, organization_name=org_name, roles=roles),
+    )
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
@@ -132,7 +145,8 @@ async def me(
 ) -> UserRead:
     await enforce_sole_top_admin_on_login(db, current_user)
     org_name = await _organization_name(db, current_user)
-    return user_to_read(current_user, organization_name=org_name)
+    roles = await ensure_user_roles_loaded(db, current_user)
+    return user_to_read(current_user, organization_name=org_name, roles=roles)
 
 
 @router.patch("/me/avatar")

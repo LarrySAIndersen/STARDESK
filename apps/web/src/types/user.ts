@@ -6,6 +6,8 @@ export interface User {
   display_name: string;
   role: UserRole;
   role_label: string;
+  roles?: UserRole[];
+  role_labels?: string[];
   organization_id?: string | null;
   organization_name?: string | null;
   must_change_password?: boolean;

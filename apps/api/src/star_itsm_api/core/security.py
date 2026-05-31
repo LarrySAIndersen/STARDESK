@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.core.config import settings
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
+from star_itsm_api.services.user_roles import ensure_user_roles_loaded, user_has_any_role, user_role_set
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 12
@@ -125,6 +126,7 @@ async def get_current_user_session(
     user = await db.get(User, UUID(str(user_id)))
     if user is None or not user.is_active or user.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    await ensure_user_roles_loaded(db, user)
     return user
 
 
@@ -140,8 +142,10 @@ async def get_current_user(
 
 
 def require_roles(*roles: str):
+    allowed = frozenset(roles)
+
     async def _checker(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles:
+        if not (user_role_set(user) & allowed):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
@@ -152,12 +156,13 @@ def require_roles(*roles: str):
 
 
 def is_staff(user: User) -> bool:
-    return user.role in {
+    return user_has_any_role(
+        user,
         ROLE_AGENT,
         ROLE_ADMIN,
         ROLE_TOP_ADMIN,
         ROLE_SUPPORTER,
-    }
+    )
 
 
 def require_staff():
@@ -181,7 +186,7 @@ def require_admin_session():
     """
 
     async def _checker(user: User = Depends(get_current_user_session)) -> User:
-        if user.role not in (ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
+        if not user_has_any_role(user, ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Insufficient permissions",
