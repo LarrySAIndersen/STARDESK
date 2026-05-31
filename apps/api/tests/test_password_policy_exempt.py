@@ -11,9 +11,9 @@ from star_itsm_api.core.security import ensure_password_changed, hash_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
+from tests.prototype_test_credentials import KNOWN_PASSWORD, NEW_INVALID_PASSWORD
 
-KNOWN_PASSWORD = "Stardesk2026!"
-NEW_PASSWORD = "invalid1!"
+NEW_PASSWORD = NEW_INVALID_PASSWORD
 TEST_EMAIL = "exempt@example.dk"
 
 

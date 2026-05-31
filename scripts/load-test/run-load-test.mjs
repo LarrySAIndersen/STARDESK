@@ -100,6 +100,9 @@ class Metrics {
   }
 }
 
+const TICKET_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 async function measuredFetch(metrics, endpoint, url, options = {}, parseJson = false) {
   const started = performance.now();
   try {
@@ -182,7 +185,7 @@ async function runUserJourney(config, metrics, vuId, iteration) {
     firstTicketId = picked?.id ? String(picked.id) : null;
   }
 
-  if (firstTicketId) {
+  if (firstTicketId && TICKET_ID_RE.test(firstTicketId)) {
     await measuredFetch(
       metrics,
       "ticket-detail",
