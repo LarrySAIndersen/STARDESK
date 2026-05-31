@@ -49,8 +49,10 @@ apps/stardesk-workboard/
 .DS_Store
 Thumbs.db
 
-# Cursor
-.cursor/
+# Cursor (keep committed agent skills under .cursor/skills/)
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**
 
 # Local credentials / test accounts (never commit)
 Background/Passwords and users
