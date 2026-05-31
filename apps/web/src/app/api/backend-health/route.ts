@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import { buildBackendUrl, getApiBackendBase } from "@/lib/api-backend";
 
 /** Proxies Vercel API `/health` for client-side API status checks (no JWT required). */
 export async function GET() {
+  const upstreamBase = getApiBackendBase();
   try {
     const response = await fetch(buildBackendUrl("/health"), {
       signal: AbortSignal.timeout(8000),
@@ -12,23 +13,32 @@ export async function GET() {
 
     if (!response.ok) {
       return NextResponse.json(
-        { status: "error", detail: `Backend HTTP ${response.status}` },
+        { status: "error", detail: `Backend HTTP ${response.status}`, upstream: upstreamBase },
         { status: 503 },
       );
     }
 
-    const body = (await response.json()) as { status?: string };
+    const body = (await response.json()) as {
+      status?: string;
+      deployment?: string;
+      stardesk_env?: string;
+    };
     if (body.status !== "ok") {
       return NextResponse.json(
-        { status: "degraded", detail: "Backend rapporterer ikke ok." },
+        { status: "degraded", detail: "Backend rapporterer ikke ok.", upstream: upstreamBase },
         { status: 503 },
       );
     }
 
-    return NextResponse.json({ status: "ok" });
+    return NextResponse.json({
+      status: "ok",
+      upstream: upstreamBase,
+      backend_deployment: body.deployment ?? null,
+      stardesk_env: body.stardesk_env ?? null,
+    });
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Kunne ikke kontakte backend.";
-    return NextResponse.json({ status: "error", detail }, { status: 503 });
+    return NextResponse.json({ status: "error", detail, upstream: upstreamBase }, { status: 503 });
   }
 }
