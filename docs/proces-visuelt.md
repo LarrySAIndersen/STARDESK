@@ -1,6 +1,8 @@
 # STARdesk — proces (visuelt overblik for Jan)
 
-> Fuld tekst: [release-process.md](./release-process.md) · Agent-tekst: [workboard-agent-prompt.md](./workboard-agent-prompt.md)  
+> **Work Board pensioneret (2026-05):** Diagrammet nedenfor beskriver den gamle kanban/agent-pipeline. I praksis: opgaver startes i chat → feature-gren → PR mod `staging`. Se [pr-only-period.md](./pr-only-period.md).
+
+> Fuld tekst: [release-process.md](./release-process.md) · ~~Agent-tekst: [workboard-agent-prompt.md](./workboard-agent-prompt.md)~~ (pensioneret)  
 > **PR-only periode:** [pr-only-period.md](./pr-only-period.md)
 
 ---

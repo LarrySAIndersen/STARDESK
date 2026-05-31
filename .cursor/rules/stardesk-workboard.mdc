@@ -1,0 +1,20 @@
+---
+description: Work Board workflow — decommissioned (do not use)
+alwaysApply: false
+---
+
+# Work Board — decommissioned
+
+The Cursor Work Board / kanban agent pipeline **does not work reliably** and is **retired**.
+
+**Agents must NOT:**
+
+- Read or update `stardesk-workboard.canvas.data.json` at session start
+- Create Work Board tasks before coding
+- Follow In Progress → Agent Review → Human Review gates from the board
+- Run `migrate-workboard-json-to-db.mjs` or sync canvas to Neon for task workflow
+- Build or reference `/workboard` in the STARdesk web app
+
+**Instead:** work directly from the user's request in chat. Use normal git/PR flow (`staging` branch). Run deliverable gate before handoff.
+
+Legacy docs (`docs/workboard-*.md`, canvas mirror in `STARDESK/workboard/`) are kept for history only — **ignore** unless the user explicitly asks to revive the board.

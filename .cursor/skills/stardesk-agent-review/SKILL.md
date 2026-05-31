@@ -1,9 +1,3 @@
-# Skill: stardesk-agent-review (git copy)
-
-Live path (Cursor, gitignored): `STARDESK/.cursor/skills/stardesk-agent-review/SKILL.md`
-
-This file is a **tracked mirror** for commits. Keep in sync when changing the skill.
-
 ---
 name: stardesk-agent-review
 description: Self-review before handoff (Playwright/code). Work Board integration is retired — use for PR verification only when user asks, not for canvas kanban tasks.
