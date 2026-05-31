@@ -1,10 +1,21 @@
 # Sonar remediation loop — one tick
 
-**Mode:** Autonomous Sonar loop (user override). Skip Human Review, Work Board gates, and manual Jan approval **for this loop only**. PR-only rules still apply via feature branch + PR merge — never direct push to `staging` or `main`.
-
 **Branch:** `cursor/sonar-remediation-loop` (create from latest `origin/staging` if missing).
 
 **Never commit:** `SONAR_TOKEN`, `.env` secrets, or credentials.
+
+---
+
+## SCOPE (hard boundary)
+
+Autonomous override (no manual control, auto merge/commit/push/deploy) applies **ONLY** to this Sonar remediation loop. Do not extend it to other work.
+
+| Context | Rules |
+|---------|-------|
+| **Sonar loop ONLY** | Autonomous: skip Human Review and Work Board gates. Auto-commit/push on `cursor/sonar-remediation-loop`. Auto-merge PR to `staging` and Flow-2 `staging`→`main` when CI is green. |
+| **Everything else** | MUST follow `docs/pr-only-period.md`: feature branch → PR → `staging` (never direct push to `main` or `staging`). Flow 2 production: Jan merges `staging`→`main`. Deliverable gate required before handoff. Work Board / Human Review pipeline when active. No autonomous prod merge. |
+
+Fixes must come from the Sonar Agent canvas queue (security vulnerabilities and code smells). Do not use this loop for unrelated features, general refactors, or non-Sonar PRs.
 
 ---
 
