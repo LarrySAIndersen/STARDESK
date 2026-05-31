@@ -17,7 +17,7 @@ import {
   failWithCode,
   formatSafeLogLabel,
   logScript,
-  logScriptError,
+  runScriptMain,
 } from "./lib/script-security.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -108,7 +108,4 @@ async function main() {
   }
 }
 
-main().catch(() => {
-  logScriptError("TRIGGER_REVIEW_PLAYWRIGHT_FAILED");
-  process.exit(1);
-});
+runScriptMain(main);

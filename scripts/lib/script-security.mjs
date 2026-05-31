@@ -15,21 +15,51 @@ export function formatSafeLogLabel(value) {
   return "[redacted]";
 }
 
+/** Log a static script event code (no user- or API-controlled text). */
+export function logScriptCode(code) {
+  const safe = String(code ?? "").replace(/[^A-Z0-9_]/g, "");
+  console.log(`[${safe || "SCRIPT"}]`);
+}
+
+/** Log a pre-sanitized CLI line (callers must not pass raw API/argv text). */
 export function logScript(message) {
-  console.log(message);
+  console.log(sanitizeCliLogLine(String(message ?? "")));
+}
+
+function sanitizeCliLogLine(line) {
+  const segments = line.split(/(\btask#\d{1,8}\b|\bt-\d{1,8}\b|\(unset\)|\[redacted\])/g);
+  return segments
+    .map((part, index) => {
+      if (index % 2 === 1) return part;
+      return part.replace(/[^\n\r\t !"#$%&'()*+,\-./0-9:;<=>?@[\]^_`{|}~A-Za-z«»]/g, "?");
+    })
+    .join("")
+    .slice(0, 800);
 }
 
 export function logScriptError(code, detail) {
+  const safeCode = String(code ?? "ERROR").replace(/[^A-Z0-9_]/g, "") || "ERROR";
   if (detail) {
-    console.error(`[${code}] ${detail}`);
+    const safeDetail = String(detail).replace(/[^0-9A-Za-z _./:-]/g, "");
+    console.error(`[${safeCode}] ${safeDetail}`);
   } else {
-    console.error(`[${code}]`);
+    console.error(`[${safeCode}]`);
   }
 }
 
-export function failWithCode(code) {
-  logScriptError(code);
+export function failWithCode(code, detail) {
+  logScriptError(code, detail);
   process.exit(1);
+}
+
+/** Run async script main with uniform crash handling (reduces duplicated catch blocks). */
+export async function runScriptMain(fn) {
+  try {
+    await fn();
+  } catch {
+    logScriptError("SCRIPT_CRASH");
+    process.exit(1);
+  }
 }
 
 /** Validate workboard task id before embedding in request URL path. */

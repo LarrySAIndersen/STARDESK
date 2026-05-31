@@ -16,8 +16,9 @@ import { fileURLToPath } from "node:url";
 import {
   assertConfiguredApiBaseUrl,
   failWithCode,
-  logScript,
+  logScriptCode,
   logScriptError,
+  runScriptMain,
 } from "./lib/script-security.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,10 +68,7 @@ async function main() {
     logScriptError("import_failed", `status=${res.status}`);
     process.exit(1);
   }
-  logScript("Work Board import OK");
+  logScriptCode("WORKBOARD_IMPORT_OK");
 }
 
-main().catch(() => {
-  logScriptError("import_error");
-  process.exit(1);
-});
+runScriptMain(main);
