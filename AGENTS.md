@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
 
@@ -106,6 +106,18 @@ cd apps/api && uv run pytest -q
 cd apps/web && npm run lint && npm run build
 bash scripts/run-deliverable-gate.sh
 ```
+
+### STARDESK watchdog (VM)
+
+Autonomous repair for Sonar loop + release path stalls. See **`docs/stardesk-watchdog.md`**.
+
+```powershell
+pwsh scripts/stardesk-watchdog.ps1 -Once -DryRun   # test
+pwsh scripts/stardesk-watchdog.ps1                 # start (15 min interval)
+pwsh scripts/stardesk-watchdog.ps1 -Stop           # stop
+```
+
+From `scripts/`: `npm run watchdog:start` / `watchdog:stop`.
 
 ### Gotchas
 
