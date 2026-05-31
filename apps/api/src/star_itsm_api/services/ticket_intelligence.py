@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -19,6 +18,7 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketLlmOperationalRead,
     TicketSemanticBundleRead,
 )
+
 SCORE_LABELS_DA: dict[int, str] = {
     1: "Meget lav",
     2: "Lav",
@@ -393,10 +393,10 @@ async def build_ticket_llm_context(
 
     prompt = build_prompt_snippet(ticket, intelligence, operational)
     team_rows = (
-        await db.execute(
-            select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())
-        )
-    ).scalars().all()
+        (await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())))
+        .scalars()
+        .all()
+    )
     active_teams = [_TeamRef(id=t.id, name=t.name) for t in team_rows]
     sc_result = await db.execute(
         select(func.count())

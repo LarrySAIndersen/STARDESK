@@ -36,9 +36,7 @@ async def reset_all_ticket_sla(
     dry_run: bool = False,
 ) -> SlaResetResult:
     """Recalculate SLA due dates and clear escalation for all non-deleted tickets."""
-    tickets = (
-        await db.execute(select(Ticket).where(Ticket.deleted_at.is_(None)))
-    ).scalars().all()
+    tickets = (await db.execute(select(Ticket).where(Ticket.deleted_at.is_(None)))).scalars().all()
     count = len(tickets)
     if dry_run:
         return SlaResetResult(

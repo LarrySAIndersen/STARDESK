@@ -167,7 +167,10 @@ DEFAULT_CATEGORIES: tuple[DefaultCategory, ...] = (
         "other",
         "Andet",
         999,
-        (DefaultSubcategory("general", "Generelt", 0), DefaultSubcategory("uncategorized", "Ikke kategoriseret", 10)),
+        (
+            DefaultSubcategory("general", "Generelt", 0),
+            DefaultSubcategory("uncategorized", "Ikke kategoriseret", 10),
+        ),
     ),
 )
 

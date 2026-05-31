@@ -39,6 +39,7 @@ Rule: `.cursor/rules/deliverable-gate.mdc` · Skill: `.cursor/skills/stardesk-de
 | UAT | `prod-clone` | `prod-clone` | Rare; isolated copy |
 
 **Required VM/repo secret:** `DATABASE_URL` = `postgresql+asyncpg://…` from Neon **`test`** branch (see [docs/environments.md](docs/environments.md)).
+- **Sonar live-scan:** `SONAR_TOKEN` (SonarCloud PAT) in Cursor Cloud Agent secrets **or** gitignored `scripts/sonar-agent/.env`; optional in file/env: `SONAR_PROJECT_KEY=LarrySAIndersen_STARDESK`, `SONAR_HOST_URL=https://sonarcloud.io`
 
 ```bash
 # 1) VM has DATABASE_URL → sync into gitignored .env

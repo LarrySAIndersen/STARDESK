@@ -6,7 +6,6 @@ Create Date: 2026-05-31
 """
 
 from alembic import op
-
 from star_itsm_api.core.prototype_credentials import (
     larry_prototype_password_hash,
     prototype_bootstrap_password_hash,

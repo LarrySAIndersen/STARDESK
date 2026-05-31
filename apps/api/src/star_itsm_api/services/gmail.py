@@ -166,7 +166,9 @@ def decrypt_refresh_token(value: str | None) -> str:
     if encoded.startswith("enc:"):
         f = _fernet()
         if f is None:
-            raise GmailApiError("Refresh token er krypteret, men GMAIL_TOKEN_ENCRYPTION_KEY mangler.")
+            raise GmailApiError(
+                "Refresh token er krypteret, men GMAIL_TOKEN_ENCRYPTION_KEY mangler."
+            )
         return f.decrypt(encoded[4:].encode("utf-8")).decode("utf-8")
     if settings.gmail_allow_plaintext_tokens:
         return encoded
@@ -416,7 +418,9 @@ def parse_gmail_message(message_json: dict) -> InboundEmailMessage | None:
     if not gmail_message_id or not gmail_thread_id:
         return None
     internal_ms = int(message_json.get("internalDate") or "0")
-    received_at = datetime.fromtimestamp(internal_ms / 1000, tz=UTC) if internal_ms else datetime.now(UTC)
+    received_at = (
+        datetime.fromtimestamp(internal_ms / 1000, tz=UTC) if internal_ms else datetime.now(UTC)
+    )
     return InboundEmailMessage(
         gmail_message_id=gmail_message_id,
         gmail_thread_id=gmail_thread_id,
@@ -670,7 +674,9 @@ async def sync_gmail_inbox(
                     references=None,
                 )
                 exists = await db.execute(
-                    select(TicketEmail).where(TicketEmail.gmail_message_id == message.gmail_message_id)
+                    select(TicketEmail).where(
+                        TicketEmail.gmail_message_id == message.gmail_message_id
+                    )
                 )
                 if exists.scalar_one_or_none() is not None:
                     stats.skipped_duplicates += 1
@@ -715,7 +721,9 @@ async def sync_gmail_inbox(
 
     access_token = await refresh_access_token(integration)
     if integration.last_history_id:
-        message_ids, newest_history_id = await _gmail_history_ids(access_token, integration.last_history_id)
+        message_ids, newest_history_id = await _gmail_history_ids(
+            access_token, integration.last_history_id
+        )
         if newest_history_id is None:
             message_ids, newest_history_id = await _gmail_unread_ids(access_token)
     else:
@@ -728,7 +736,9 @@ async def sync_gmail_inbox(
         if existing.scalar_one_or_none() is not None:
             stats.skipped_duplicates += 1
             continue
-        raw = await _gmail_get_json(access_token, f"/users/me/messages/{gmail_message_id}", params={"format": "full"})
+        raw = await _gmail_get_json(
+            access_token, f"/users/me/messages/{gmail_message_id}", params={"format": "full"}
+        )
         message = parse_gmail_message(raw)
         if message is None:
             continue
@@ -786,7 +796,9 @@ async def list_ticket_emails(
     ticket_id: uuid.UUID,
 ) -> list[TicketEmail]:
     result = await db.execute(
-        select(TicketEmail).where(TicketEmail.ticket_id == ticket_id).order_by(TicketEmail.received_at.asc())
+        select(TicketEmail)
+        .where(TicketEmail.ticket_id == ticket_id)
+        .order_by(TicketEmail.received_at.asc())
     )
     return list(result.scalars().all())
 
@@ -825,7 +837,9 @@ async def send_ticket_email_reply(
         latest = await db.execute(_latest_thread_email_stmt(ticket.id))
         latest_email = latest.scalar_one_or_none()
         thread_id = latest_email.gmail_thread_id if latest_email else f"mock-thread-{ticket.id}"
-        subject = build_reply_subject(ticket.ticket_number, latest_email.subject if latest_email else ticket.title)
+        subject = build_reply_subject(
+            ticket.ticket_number, latest_email.subject if latest_email else ticket.title
+        )
         outbound = InboundEmailMessage(
             gmail_message_id=f"mock-outbound-{uuid.uuid4()}",
             gmail_thread_id=thread_id,

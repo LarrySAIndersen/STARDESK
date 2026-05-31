@@ -8,13 +8,14 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.password_policy import validate_password, validate_password_for_user
-from star_itsm_api.core.security import ROLE_TOP_ADMIN, hash_password
+from star_itsm_api.core.security import hash_password
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.auth import ROLE_LABELS
 from star_itsm_api.schemas.user_admin import (
+    ASSIGNABLE_ROLES,
     OrganizationOption,
     RoleOption,
     UserAdminListItem,
@@ -24,7 +25,6 @@ from star_itsm_api.schemas.user_admin import (
     UserTeamSummary,
     user_to_admin_read,
 )
-from star_itsm_api.schemas.user_admin import ASSIGNABLE_ROLES
 from star_itsm_api.services.user_roles import (
     attach_roles_to_user,
     fetch_user_roles,
@@ -46,8 +46,7 @@ async def list_organizations(db: AsyncSession) -> list[OrganizationOption]:
 def build_admin_meta(organizations: list[OrganizationOption]) -> UserAdminMeta:
     return UserAdminMeta(
         roles=[
-            RoleOption(value=role, label=ROLE_LABELS.get(role, role))
-            for role in ASSIGNABLE_ROLES
+            RoleOption(value=role, label=ROLE_LABELS.get(role, role)) for role in ASSIGNABLE_ROLES
         ],
         organizations=organizations,
     )

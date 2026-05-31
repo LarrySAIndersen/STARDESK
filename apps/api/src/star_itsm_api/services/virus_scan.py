@@ -1,7 +1,6 @@
 """Virus scan placeholder — replace with ClamAV / cloud scanner in production."""
 
 import logging
-import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -64,7 +63,6 @@ async def run_virus_scan(db: AsyncSession, attachment: Attachment, file_path: Pa
 
 
 async def scan_pending_attachments(db: AsyncSession, limit: int = 20) -> int:
-    import tempfile
 
     from sqlalchemy import select
 

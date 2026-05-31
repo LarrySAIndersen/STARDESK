@@ -13,12 +13,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { fetchTasksFromApi } from "./lib/workboard-api.mjs";
 import { readWorkboardTasks, resolveWorkboardDataPath } from "./lib/workboard-paths.mjs";
+import {
+  failWithCode,
+  formatSafeLogLabel,
+  logScript,
+  logScriptError,
+} from "./lib/script-security.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
+function fail(code) {
+  failWithCode(code);
 }
 
 function parseArgs(argv) {
@@ -38,7 +43,7 @@ async function loadTasks(exportFromApi) {
   }
   const dataPath = resolveWorkboardDataPath();
   if (!fs.existsSync(dataPath)) {
-    fail(`Work Board data not found: ${dataPath}. Use --export-from-api in CI.`);
+    fail("WORKBOARD_DATA_NOT_FOUND");
   }
   return readWorkboardTasks(dataPath).tasks;
 }
@@ -76,37 +81,34 @@ async function main() {
   const pending = findPendingTasks(tasks);
 
   if (pending.length === 0) {
-    console.log("No Review tasks with pending Playwright evidence.");
+    logScript("No Review tasks with pending Playwright evidence.");
     return;
   }
 
-  console.log(
-    `Found ${pending.length} task(s) with pending Playwright evidence:`,
-    pending.map((t) => `#${t.number}`).join(", "),
+  logScript(
+    `Found ${pending.length} task(s) with pending Playwright evidence: ${pending.map((t) => formatSafeLogLabel(t.number)).join(", ")}`,
   );
 
   if (args.dryRun) {
     for (const task of pending) {
-      console.log(
-        `- #${task.number} (${task.id}): ${task.reviewPlaywrightEvidence?.verificationUrl ?? task.reviewVerificationUrl ?? "no url"}`,
-      );
+      logScript(`- ${formatSafeLogLabel(task.number)} (${formatSafeLogLabel(task.id)})`);
     }
     return;
   }
 
   let failures = 0;
   for (const task of pending) {
-    console.log(`\n--- Running pipeline for #${task.number} ---`);
+    logScript(`\n--- Running pipeline for ${formatSafeLogLabel(task.number)} ---`);
     const status = runPipeline(task.number, args);
     if (status !== 0) failures += 1;
   }
 
   if (failures > 0) {
-    fail(`${failures} pipeline run(s) failed.`);
+    fail("PIPELINE_RUNS_FAILED");
   }
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  logScriptError("TRIGGER_REVIEW_PLAYWRIGHT_FAILED");
   process.exit(1);
 });

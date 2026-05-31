@@ -4,7 +4,6 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.sla_settings import SLA_SETTINGS_SINGLETON_ID, SlaSettings

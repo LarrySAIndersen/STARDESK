@@ -28,13 +28,25 @@ class CategorySyncCounts:
 
 async def list_categories_admin(db: AsyncSession) -> list[CategoryAdminRead]:
     categories = (
-        await db.execute(select(Category).order_by(Category.sort_order.asc(), Category.name_da.asc()))
-    ).scalars().all()
-    subcategories = (
-        await db.execute(
-            select(Subcategory).order_by(Subcategory.sort_order.asc(), Subcategory.name_da.asc())
+        (
+            await db.execute(
+                select(Category).order_by(Category.sort_order.asc(), Category.name_da.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
+    subcategories = (
+        (
+            await db.execute(
+                select(Subcategory).order_by(
+                    Subcategory.sort_order.asc(), Subcategory.name_da.asc()
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
     subs_by_cat: dict[uuid.UUID, list[SubcategoryAdminRead]] = {}
     for sub in subcategories:
         subs_by_cat.setdefault(sub.category_id, []).append(
@@ -103,7 +115,9 @@ async def update_category(
             await db.execute(select(Category).where(Category.name == updates["name"]))
         ).scalar_one_or_none()
         if clash is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Kategorinavn er optaget")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Kategorinavn er optaget"
+            )
     for key, value in updates.items():
         setattr(row, key, value)
     await db.commit()
@@ -111,7 +125,9 @@ async def update_category(
     all_cats = await list_categories_admin(db)
     match = next((c for c in all_cats if c.id == row.id), None)
     if match is None:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Kategori mangler efter gem")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Kategori mangler efter gem"
+        )
     return match
 
 
@@ -160,7 +176,9 @@ async def update_subcategory(
 ) -> SubcategoryAdminRead:
     row = await db.get(Subcategory, subcategory_id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Underkategori ikke fundet")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Underkategori ikke fundet"
+        )
     updates = payload.model_dump(exclude_unset=True)
     new_name = updates.get("name")
     if new_name is not None and new_name != row.name:
@@ -173,7 +191,9 @@ async def update_subcategory(
             )
         ).scalar_one_or_none()
         if clash is not None:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Underkategorinavn er optaget")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="Underkategorinavn er optaget"
+            )
     for key, value in updates.items():
         setattr(row, key, value)
     await db.commit()

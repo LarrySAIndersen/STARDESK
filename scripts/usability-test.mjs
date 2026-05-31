@@ -4,6 +4,7 @@
  */
 import { chromium } from "playwright";
 import { requirePrototypeDemoPassword } from "./lib/prototype-demo-password.mjs";
+import { logScript, logScriptError } from "./lib/script-security.mjs";
 
 const BASE = process.env.STARDESK_WEB_URL ?? "https://web-seven-neon-6bvmcoel7n.vercel.app";
 const API = process.env.STARDESK_API_URL ?? "https://api-gamma-amber.vercel.app";
@@ -46,8 +47,7 @@ const findings = [];
 
 function record(step, ok, note) {
   findings.push({ step, ok, note });
-  const icon = ok ? "PASS" : "FAIL";
-  console.log(`  [${icon}] ${step}${note ? ` — ${note}` : ""}`);
+  logScript(ok ? "  [PASS]" : "  [FAIL]");
 }
 
 async function loginViaApi(context, email, password) {
@@ -137,8 +137,8 @@ async function logout(page) {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
 }
 
-async function testUser(browser, user) {
-  console.log(`\n=== ${user.label} (${user.email}) ===`);
+async function testUser(browser, user, userIndex) {
+  logScript(`\n=== Brugerprofil ${userIndex + 1} ===`);
   const context = await browser.newContext({ locale: "da-DK" });
   const page = await context.newPage();
 
@@ -242,7 +242,7 @@ async function testUser(browser, user) {
 }
 
 async function testWebBffLogin() {
-  console.log("\n=== Web BFF /api/auth/login ===");
+  logScript("\n=== Web BFF /api/auth/login ===");
   const res = await fetch(`${BASE}/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -258,7 +258,7 @@ async function testWebBffLogin() {
 }
 
 async function testLoginPageDemo() {
-  console.log("\n=== Login-UI (demo picker) ===");
+  logScript("\n=== Login-UI (demo picker) ===");
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   try {
@@ -284,7 +284,7 @@ async function testLoginPageDemo() {
 }
 
 async function checkApiHealth() {
-  console.log("\n=== API health ===");
+  logScript("\n=== API health ===");
   try {
     const res = await fetch("https://api-gamma-amber.vercel.app/health");
     const ok = res.ok;
@@ -295,26 +295,23 @@ async function checkApiHealth() {
   }
 }
 
-console.log(`STARdesk usability test — ${BASE}`);
-console.log(`Tid: ${new Date().toISOString()}\n`);
+logScript("STARdesk usability test");
+logScript("Starter testkørsel\n");
 
 await checkApiHealth();
 await testWebBffLogin();
 await testLoginPageDemo();
 
 const browser = await chromium.launch({ headless: true });
-for (const user of USERS) {
-  await testUser(browser, user);
+for (let i = 0; i < USERS.length; i += 1) {
+  await testUser(browser, USERS[i], i);
 }
 await browser.close();
 
 const passed = findings.filter((f) => f.ok).length;
 const failed = findings.filter((f) => !f.ok).length;
-console.log(`\n--- Opsummering: ${passed} bestået, ${failed} fejlet (${findings.length} tjek) ---`);
+logScript(`\n--- Opsummering: ${passed} bestået, ${failed} fejlet (${findings.length} tjek) ---`);
 if (failed > 0) {
-  console.log("\nFejl:");
-  for (const f of findings.filter((x) => !x.ok)) {
-    console.log(`  • ${f.step}${f.note ? `: ${f.note}` : ""}`);
-  }
+  logScriptError("usability_failures", `count=${failed}`);
   process.exit(1);
 }

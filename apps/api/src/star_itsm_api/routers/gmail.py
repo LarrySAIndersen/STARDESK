@@ -5,6 +5,7 @@ from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import require_admin, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
+from star_itsm_api.routers.integration_org import require_integration_org_id
 from star_itsm_api.schemas.gmail import (
     GmailOAuthCallbackResponse,
     GmailOAuthStartResponse,
@@ -28,7 +29,6 @@ from star_itsm_api.services.gmail import (
     upsert_email_integration,
 )
 from star_itsm_api.services.gmail_mock import MOCK_GMAIL_EMAIL
-from star_itsm_api.routers.integration_org import require_integration_org_id
 
 router = APIRouter(prefix="/integrations/gmail", tags=["gmail"])
 
@@ -154,7 +154,9 @@ async def gmail_test_connection(
     integration = await get_email_integration(db, organization_id=org_id)
     if integration is None or not integration.refresh_token_encrypted:
         if settings.gmail_mock:
-            return GmailTestResponse(ok=True, connected_email=MOCK_GMAIL_EMAIL, detail="Mock mode aktiv")
+            return GmailTestResponse(
+                ok=True, connected_email=MOCK_GMAIL_EMAIL, detail="Mock mode aktiv"
+            )
         raise HTTPException(status_code=400, detail="Gmail er ikke forbundet.")
     try:
         access_token = await refresh_access_token(integration)

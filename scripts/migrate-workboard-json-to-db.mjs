@@ -13,6 +13,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  assertConfiguredApiBaseUrl,
+  failWithCode,
+  logScript,
+  logScriptError,
+} from "./lib/script-security.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const home = process.env.USERPROFILE || process.env.HOME || "";
@@ -25,20 +31,19 @@ const defaultDataPath = path.join(
   "stardesk-workboard.canvas.data.json",
 );
 
-const apiUrl = (process.env.STARDESK_API_URL || "").replace(/\/$/, "");
 const token = process.env.STARDESK_API_TOKEN || "";
 const dataPath = process.env.WORKBOARD_DATA_PATH || defaultDataPath;
 const replaceMissing = process.env.WORKBOARD_REPLACE_MISSING === "1";
 
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
-}
-
 async function main() {
-  if (!apiUrl) fail("Set STARDESK_API_URL (Vercel API base URL).");
-  if (!token) fail("Set STARDESK_API_TOKEN (staff JWT from /api/v1/auth/login).");
-  if (!fs.existsSync(dataPath)) fail(`Work Board data not found: ${dataPath}`);
+  let apiUrl;
+  try {
+    apiUrl = assertConfiguredApiBaseUrl(process.env.STARDESK_API_URL || "");
+  } catch {
+    failWithCode("missing_api_url");
+  }
+  if (!token) failWithCode("missing_api_token");
+  if (!fs.existsSync(dataPath)) failWithCode("workboard_data_not_found");
 
   const raw = JSON.parse(fs.readFileSync(dataPath, "utf8"));
   const tasks = Array.isArray(raw["stardesk-tasks-v1"])
@@ -46,7 +51,7 @@ async function main() {
     : Array.isArray(raw.tasks)
       ? raw.tasks
       : [];
-  if (tasks.length === 0) fail("No tasks in stardesk-tasks-v1.");
+  if (tasks.length === 0) failWithCode("no_tasks_in_json");
 
   const res = await fetch(`${apiUrl}/api/v1/workboard/tasks/bulk-import`, {
     method: "POST",
@@ -57,15 +62,15 @@ async function main() {
     body: JSON.stringify({ tasks, replace_missing: replaceMissing }),
   });
 
-  const body = await res.text();
   if (!res.ok) {
-    fail(`Import failed (${res.status}): ${body}`);
+    await res.text();
+    logScriptError("import_failed", `status=${res.status}`);
+    process.exit(1);
   }
-  console.log("Work Board import OK:", body);
-  console.log(`Source: ${dataPath} (${tasks.length} tasks)`);
+  logScript("Work Board import OK");
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  logScriptError("import_error");
   process.exit(1);
 });

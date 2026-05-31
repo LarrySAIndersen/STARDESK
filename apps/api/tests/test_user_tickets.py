@@ -98,14 +98,17 @@ async def test_get_user_tickets_success(
     )
     grouped = UserTicketsGroupedRead(reported=[sample_ticket])
 
-    with patch(
-        "star_itsm_api.routers.users.get_user_admin",
-        new_callable=AsyncMock,
-        return_value=SimpleNamespace(id=TARGET_USER_ID),
-    ), patch(
-        "star_itsm_api.routers.users.list_user_tickets_grouped",
-        new_callable=AsyncMock,
-        return_value=grouped,
+    with (
+        patch(
+            "star_itsm_api.routers.users.get_user_admin",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id=TARGET_USER_ID),
+        ),
+        patch(
+            "star_itsm_api.routers.users.list_user_tickets_grouped",
+            new_callable=AsyncMock,
+            return_value=grouped,
+        ),
     ):
         try:
             response = await api_client.get(f"/api/v1/users/{TARGET_USER_ID}/tickets")
@@ -148,40 +151,47 @@ async def test_create_ticket_sets_reporter_to_current_user(
     override_db.commit = AsyncMock()
     override_db.refresh = AsyncMock()
 
-    with patch(
-        "star_itsm_api.routers.tickets.apply_routing",
-        new_callable=AsyncMock,
-        return_value=SimpleNamespace(
-            assigned_team_id=None,
-            assigned_user_id=None,
-            priority="medium",
+    with (
+        patch(
+            "star_itsm_api.routers.tickets.apply_routing",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(
+                assigned_team_id=None,
+                assigned_user_id=None,
+                priority="medium",
+            ),
         ),
-    ), patch(
-        "star_itsm_api.routers.tickets.validate_sub_cause_ids",
-        new_callable=AsyncMock,
-    ), patch(
-        "star_itsm_api.routers.tickets.generate_ticket_number",
-        new_callable=AsyncMock,
-        return_value="INC-2001",
-    ), patch(
-        "star_itsm_api.routers.tickets.apply_sla_to_ticket",
-        new_callable=AsyncMock,
-    ), patch(
-        "star_itsm_api.routers.tickets.sync_ticket_stakeholders_on_create",
-        new_callable=AsyncMock,
-    ), patch(
-        "star_itsm_api.routers.tickets.ticket_to_read",
-        new_callable=AsyncMock,
-        return_value=TicketRead(
-            id=uuid.uuid4(),
-            ticket_number="INC-2001",
-            title="Ny sag",
-            status="new",
-            priority="medium",
-            ticket_type="incident",
-            reporter_user_id=actor_id,
-            reporter_display_name="Indmelder",
-            created_at=datetime.now(UTC),
+        patch(
+            "star_itsm_api.routers.tickets.validate_sub_cause_ids",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.generate_ticket_number",
+            new_callable=AsyncMock,
+            return_value="INC-2001",
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.apply_sla_to_ticket",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.sync_ticket_stakeholders_on_create",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.ticket_to_read",
+            new_callable=AsyncMock,
+            return_value=TicketRead(
+                id=uuid.uuid4(),
+                ticket_number="INC-2001",
+                title="Ny sag",
+                status="new",
+                priority="medium",
+                ticket_type="incident",
+                reporter_user_id=actor_id,
+                reporter_display_name="Indmelder",
+                created_at=datetime.now(UTC),
+            ),
         ),
     ):
         try:

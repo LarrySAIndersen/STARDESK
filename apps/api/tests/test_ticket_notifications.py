@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from star_itsm_api.services.ticket_notifications import (
-    TicketUpdateNotification,
     TicketUpdateKind,
+    TicketUpdateNotification,
     _compose_email,
     _reporter_may_receive_email,
     build_status_notification,

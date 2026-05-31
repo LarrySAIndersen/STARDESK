@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import require_admin, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
+from star_itsm_api.routers.integration_org import require_integration_org_id
 from star_itsm_api.schemas.slack import (
     SlackChannelRead,
     SlackOAuthCallbackResponse,
@@ -11,7 +13,6 @@ from star_itsm_api.schemas.slack import (
     SlackSettingsUpdate,
     SlackStatusRead,
 )
-from star_itsm_api.routers.integration_org import require_integration_org_id
 from star_itsm_api.services.slack import (
     SlackApiError,
     build_oauth_authorize_url,
@@ -25,7 +26,6 @@ from star_itsm_api.services.slack import (
     upsert_slack_integration,
 )
 from star_itsm_api.services.slack_mock import MOCK_SLACK_CHANNELS
-from star_itsm_api.core.config import settings
 
 router = APIRouter(prefix="/integrations/slack", tags=["slack"])
 

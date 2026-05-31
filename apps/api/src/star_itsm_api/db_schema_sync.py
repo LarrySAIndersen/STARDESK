@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 logger = logging.getLogger(__name__)
 
-MIGRATION_FILES = sorted(Path(__file__).resolve().parent.joinpath("sql", "migrations").glob("*.sql"))
+MIGRATION_FILES = sorted(
+    Path(__file__).resolve().parent.joinpath("sql", "migrations").glob("*.sql")
+)
 
 
 def _sync_database_url(url: str) -> str:
@@ -218,13 +220,17 @@ async def ensure_ticket_schema_current(
                 logger.info("Database schema sync completed")
         if await _needs_sf_groups_migration(engine):
             logger.warning("SF group names outdated — applying SF group migrations")
-            await asyncio.to_thread(_run_single_migration, database_url, "13_sf-groups-rename-migration.sql")
+            await asyncio.to_thread(
+                _run_single_migration, database_url, "13_sf-groups-rename-migration.sql"
+            )
             await asyncio.to_thread(
                 _run_single_migration, database_url, "14_sf-operations-master-group.sql"
             )
         if await _needs_ticket_source_chat_migration(engine):
             logger.warning("tickets.source constraint outdated — applying ticket source migration")
-            await asyncio.to_thread(_run_single_migration, database_url, "22_ticket-source-chat.sql")
+            await asyncio.to_thread(
+                _run_single_migration, database_url, "22_ticket-source-chat.sql"
+            )
     except Exception:
         logger.exception("Schema sync failed — some endpoints may return 500")
 

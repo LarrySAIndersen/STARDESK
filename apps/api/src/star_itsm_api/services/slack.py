@@ -115,7 +115,9 @@ async def exchange_oauth_code(code: str) -> SlackWorkspaceConnection:
     team_name = str(team.get("name") or "").strip()
     if not token or not team_id:
         raise SlackApiError("Slack OAuth svar manglede bot-token eller team-id.")
-    return SlackWorkspaceConnection(team_id=team_id, team_name=team_name or team_id, bot_token=token)
+    return SlackWorkspaceConnection(
+        team_id=team_id, team_name=team_name or team_id, bot_token=token
+    )
 
 
 async def get_slack_integration(

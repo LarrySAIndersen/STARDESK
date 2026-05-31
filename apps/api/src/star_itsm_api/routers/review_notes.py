@@ -10,8 +10,8 @@ from star_itsm_api.core.security import (
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.review_note import ReviewNoteCreate, ReviewNoteRead, ReviewNoteUpdate
-from star_itsm_api.services.permissions import is_staff_role, is_stardesk_reviewer
 from star_itsm_api.services import review_notes
+from star_itsm_api.services.permissions import is_staff_role, is_stardesk_reviewer
 
 router = APIRouter(prefix="/review-notes", tags=["review-notes"])
 

@@ -21,8 +21,8 @@ from star_itsm_api.schemas.sf_chat import (
     SfChatStatusRead,
 )
 from star_itsm_api.schemas.ticket import TicketRead
-from star_itsm_api.services.ticket_read import ticket_to_read
 from star_itsm_api.services import sf_chat as chat_svc
+from star_itsm_api.services.ticket_read import ticket_to_read
 
 router = APIRouter(prefix="/sf-chat", tags=["sf-chat"])
 
@@ -124,11 +124,7 @@ async def post_message(
             raise HTTPException(status_code=403, detail="Ingen adgang til denne chat") from exc
         raise HTTPException(status_code=400, detail="Kunne ikke sende besked") from exc
 
-    name = (
-        await chat_svc._user_display(db, msg.sender_user_id)
-        if msg.sender_user_id
-        else "System"
-    )
+    name = await chat_svc._user_display(db, msg.sender_user_id) if msg.sender_user_id else "System"
     return SfChatMessageRead(
         id=msg.id,
         session_id=msg.session_id,
@@ -185,7 +181,9 @@ async def create_ticket_from_sf_chat(
     except ValueError as exc:
         code = str(exc)
         if code == "not_sf_member":
-            raise HTTPException(status_code=403, detail="Kun SF-gruppen kan oprette sager fra chat") from exc
+            raise HTTPException(
+                status_code=403, detail="Kun SF-gruppen kan oprette sager fra chat"
+            ) from exc
         if code == "session_not_closed":
             raise HTTPException(
                 status_code=409,
@@ -275,7 +273,9 @@ async def start_bot_assistant(
     except ValueError as exc:
         code = str(exc)
         if code == "not_sf_member":
-            raise HTTPException(status_code=403, detail="Kun SF-agenter kan starte chat-service bot") from exc
+            raise HTTPException(
+                status_code=403, detail="Kun SF-agenter kan starte chat-service bot"
+            ) from exc
         if code == "session_not_found":
             raise HTTPException(status_code=404, detail="Chat ikke fundet") from exc
         if code == "not_waiting":

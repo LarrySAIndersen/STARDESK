@@ -28,7 +28,9 @@ class SfChatSession(Base):
         nullable=True,
     )
     status: Mapped[str] = mapped_column(String(32), nullable=False, default=SESSION_WAITING)
-    queue_rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    queue_rejected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     customer_last_typing_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

@@ -9,7 +9,6 @@ from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.attachment import Attachment
@@ -105,7 +104,9 @@ async def test_read_blob_bytes_happy_path(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(file_storage.httpx, "AsyncClient", lambda **_: mock_client)
     monkeypatch.setattr(settings, "blob_read_write_token", "test-token")
 
-    data = await file_storage.read_blob_bytes("blob:https://store.public.blob.vercel-storage.com/t.png")
+    data = await file_storage.read_blob_bytes(
+        "blob:https://store.public.blob.vercel-storage.com/t.png"
+    )
     assert data == b"\x89PNG"
     mock_client.get.assert_awaited()
     call_kwargs = mock_client.get.await_args.kwargs
@@ -142,7 +143,9 @@ async def test_build_attachment_download_public_blob_redirect(clean_attachment) 
 
 
 @pytest.mark.asyncio
-async def test_build_attachment_download_private_blob(monkeypatch: pytest.MonkeyPatch, clean_attachment) -> None:
+async def test_build_attachment_download_private_blob(
+    monkeypatch: pytest.MonkeyPatch, clean_attachment
+) -> None:
     clean_attachment.storage_key = "blob:https://store.private.blob.vercel-storage.com/t.png"
     monkeypatch.setattr(
         file_storage,
@@ -157,9 +160,7 @@ async def test_build_attachment_download_private_blob(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
-async def test_build_attachment_download_local_file(
-    tmp_path: Path, clean_attachment
-) -> None:
+async def test_build_attachment_download_local_file(tmp_path: Path, clean_attachment) -> None:
     local_file = tmp_path / "photo.png"
     local_file.write_bytes(b"data")
     clean_attachment.storage_key = str(local_file)

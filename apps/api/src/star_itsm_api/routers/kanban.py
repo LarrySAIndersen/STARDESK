@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import require_staff
@@ -194,9 +194,7 @@ async def update_column(
     current_user: User = Depends(require_staff()),
 ) -> KanbanColumnRead:
     try:
-        return await kanban_service.update_column(
-            db, current_user, board_id, column_id, payload
-        )
+        return await kanban_service.update_column(db, current_user, board_id, column_id, payload)
     except LookupError as exc:
         detail = "Not found"
         if str(exc) == "column_not_found":
@@ -239,9 +237,7 @@ async def search_tickets(
     current_user: User = Depends(require_staff()),
 ) -> list[KanbanTicketSearchResult]:
     try:
-        return await kanban_service.search_tickets_for_board(
-            db, current_user, board_id, q
-        )
+        return await kanban_service.search_tickets_for_board(db, current_user, board_id, q)
     except LookupError:
         raise HTTPException(status_code=404, detail="Board not found") from None
     except PermissionError:

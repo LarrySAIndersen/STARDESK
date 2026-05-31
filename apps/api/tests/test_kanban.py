@@ -6,12 +6,12 @@ from httpx import AsyncClient
 from star_itsm_api.models.kanban import KanbanBoard, KanbanColumn
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services.kanban_access import (
+    sees_all_boards,
     user_can_delete_board,
     user_can_delete_tickets,
     user_can_move_cards,
     user_can_remove_cards,
     user_can_view_board,
-    sees_all_boards,
 )
 from star_itsm_api.services.kanban_defaults import (
     build_columns_for_board,

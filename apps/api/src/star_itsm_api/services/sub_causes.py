@@ -16,9 +16,7 @@ async def list_sub_causes(
 ) -> list[SubCauseRead]:
     stmt = select(SubCause).where(SubCause.is_active.is_(True)).order_by(SubCause.sort_order.asc())
     if category_id is not None:
-        stmt = stmt.where(
-            (SubCause.category_id == category_id) | (SubCause.category_id.is_(None))
-        )
+        stmt = stmt.where((SubCause.category_id == category_id) | (SubCause.category_id.is_(None)))
     result = await db.execute(stmt)
     return [SubCauseRead.model_validate(row) for row in result.scalars().all()]
 

@@ -247,13 +247,10 @@ async def test_add_stakeholder_happy_path(
 
 
 @pytest.mark.asyncio
-async def test_get_ticket_stakeholders_grouped_returns_empty_when_query_fails(
-) -> None:
+async def test_get_ticket_stakeholders_grouped_returns_empty_when_query_fails() -> None:
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(
-        side_effect=Exception(
-            "relation ticket_stakeholders does not exist"
-        )
+        side_effect=Exception("relation ticket_stakeholders does not exist")
     )
     nested = AsyncMock()
     nested.__aenter__ = AsyncMock(return_value=nested)
