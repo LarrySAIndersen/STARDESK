@@ -122,6 +122,7 @@ export function ProfileModal({
             <h3 className="text-star-navy text-xs font-bold">Upload eget billede</h3>
             <div className="flex items-center gap-3">
               {previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- blob preview before upload
                 <img
                   src={previewUrl}
                   alt="Forhåndsvisning"
