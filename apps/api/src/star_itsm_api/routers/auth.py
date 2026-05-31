@@ -62,7 +62,7 @@ async def _organization_name(db: AsyncSession, user: User) -> str | None:
     return org.name if org else None
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 async def login(
     payload: LoginRequest,
     db: AsyncSession = Depends(require_db),
@@ -125,7 +125,7 @@ async def change_password(
     await db.commit()
 
 
-@router.get("/me", response_model=UserRead)
+@router.get("/me")
 async def me(
     current_user: User = Depends(get_current_user_session),
     db: AsyncSession = Depends(require_db),
@@ -135,7 +135,7 @@ async def me(
     return user_to_read(current_user, organization_name=org_name)
 
 
-@router.patch("/me/avatar", response_model=UserRead)
+@router.patch("/me/avatar")
 async def update_avatar(
     payload: AvatarUpdateRequest,
     current_user: User = Depends(get_current_user_session),

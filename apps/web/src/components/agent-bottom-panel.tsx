@@ -20,7 +20,7 @@ import type { Ticket } from "@/types/ticket";
 
 type TabId = "teams" | "content" | "slack";
 
-type TechTarget = {
+type TechTarget = Readonly<{
   key: string;
   displayName: string;
   role: string;
@@ -28,13 +28,13 @@ type TechTarget = {
   teamName: string;
   color: string;
   loadPct: number;
-};
+}>;
 
-type PendingAssign = {
+type PendingAssign = Readonly<{
   ticket: Ticket;
   target: TechTarget;
   confidence: number;
-};
+}>;
 
 function memberInitials(name: string): string {
   return name

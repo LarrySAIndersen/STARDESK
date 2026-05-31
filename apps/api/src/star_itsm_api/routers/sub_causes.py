@@ -12,7 +12,7 @@ from star_itsm_api.services.sub_causes import list_sub_causes
 router = APIRouter(prefix="/sub-causes", tags=["sub-causes"])
 
 
-@router.get("", response_model=list[SubCauseRead])
+@router.get("")
 async def get_sub_causes(
     category_id: uuid.UUID | None = Query(default=None),
     db: AsyncSession = Depends(require_db),

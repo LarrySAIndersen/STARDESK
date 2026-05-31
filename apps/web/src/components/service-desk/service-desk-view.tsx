@@ -58,12 +58,12 @@ const QUEUE_TABS: { id: ServiceDeskQueueFilter; label: string }[] = [
   { id: "teams", label: "Ude i teams" },
 ];
 
-type PendingDrop = {
+type PendingDrop = Readonly<{
   ticketId: string;
   ticketTitle: string;
   teamId?: string;
   teamName?: string;
-};
+}>;
 
 function buildTicketsByTeam(openTickets: Ticket[]): Map<string, Ticket[]> {
   const map = new Map<string, Ticket[]>();

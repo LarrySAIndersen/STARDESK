@@ -82,7 +82,7 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
 ]
 
 
-@router.get("", response_model=list[AssetSystemRead])
+@router.get("")
 async def list_assets(
     _current_user: User = Depends(get_current_user),
 ) -> list[AssetSystemRead]:
@@ -90,7 +90,7 @@ async def list_assets(
     return _MOCK_ASSETS
 
 
-@router.get("/catalog", response_model=CmdbCatalogRead)
+@router.get("/catalog")
 async def read_cmdb_catalog(
     db: AsyncSession = Depends(require_db),
     _current_user: User = Depends(require_staff()),
@@ -98,7 +98,7 @@ async def read_cmdb_catalog(
     return await get_catalog(db)
 
 
-@router.put("/catalog", response_model=CmdbCatalogRead)
+@router.put("/catalog")
 async def write_cmdb_catalog(
     body: CmdbCatalogWrite,
     db: AsyncSession = Depends(require_db),
@@ -107,7 +107,7 @@ async def write_cmdb_catalog(
     return await save_catalog(db, actor=current_user, body=body)
 
 
-@router.post("/audit-log", response_model=CmdbAuditEntryRead, status_code=201)
+@router.post("/audit-log", status_code=201)
 async def create_cmdb_audit_entry(
     body: CmdbAuditCreate,
     db: AsyncSession = Depends(require_db),
@@ -128,7 +128,7 @@ async def create_cmdb_audit_entry(
     )
 
 
-@router.get("/audit-log", response_model=CmdbAuditLogPage)
+@router.get("/audit-log")
 async def read_cmdb_audit_log(
     before_id: uuid.UUID | None = None,
     byte_budget: int = Query(default=1_048_576, ge=64_000, le=4_194_304),

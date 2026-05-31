@@ -23,13 +23,13 @@ import { DEMO_PASSWORD } from "@/lib/demo-users";
 import { PASSWORD_VALIDATION_MESSAGE, validatePassword } from "@/lib/password-policy";
 import { cn } from "@/lib/utils";
 
-type ChangePasswordFormProps = {
+type ChangePasswordFormProps = Readonly<{
   required?: boolean;
   initialEmail?: string;
   /** Logged-in staff with legacy `must_change_password` may continue to the app. */
   showSkipToDashboard?: boolean;
   dashboardHref?: string;
-};
+}>;
 
 export function ChangePasswordForm({
   required = false,

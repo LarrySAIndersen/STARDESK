@@ -26,7 +26,7 @@ import {
   type ClassicTab,
 } from "@/lib/classic-work-tabs";
 
-type ClassicWorkTabsContextValue = {
+type ClassicWorkTabsContextValue = Readonly<{
   tabs: ClassicTab[];
   activeTabId: string;
   recentCards: ClassicRecentCard[];
@@ -42,7 +42,7 @@ type ClassicWorkTabsContextValue = {
     title: string;
     subtitle: string;
   }) => void;
-};
+}>;
 
 const ClassicWorkTabsContext = createContext<ClassicWorkTabsContextValue | null>(
   null,

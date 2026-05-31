@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/knowledge-articles", tags=["knowledge-articles"])
 
 
-@router.get("", response_model=list[KnowledgeArticleRead])
+@router.get("")
 async def list_articles(
     portal: bool = Query(
         default=False,
@@ -63,7 +63,7 @@ async def list_articles(
         raise HTTPException(status_code=500, detail="Could not load knowledge articles") from None
 
 
-@router.get("/{article_id}", response_model=KnowledgeArticleRead)
+@router.get("/{article_id}")
 async def get_article(
     article_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -77,7 +77,7 @@ async def get_article(
     return knowledge_article_to_read(ticket)
 
 
-@router.post("", response_model=KnowledgeArticleRead, status_code=201)
+@router.post("", status_code=201)
 async def create_article(
     payload: KnowledgeArticleCreate,
     db: AsyncSession = Depends(require_db),
@@ -103,7 +103,7 @@ async def create_article(
         raise HTTPException(status_code=500, detail="Could not create knowledge article") from None
 
 
-@router.patch("/{article_id}", response_model=KnowledgeArticleRead)
+@router.patch("/{article_id}")
 async def update_article(
     article_id: uuid.UUID,
     payload: KnowledgeArticleUpdate,
@@ -132,7 +132,7 @@ async def update_article(
         raise HTTPException(status_code=500, detail="Could not update knowledge article") from None
 
 
-@router.post("/promote/{ticket_id}", response_model=KnowledgeArticleRead)
+@router.post("/promote/{ticket_id}")
 async def promote_from_ticket(
     ticket_id: uuid.UUID,
     payload: KnowledgeArticlePromote,

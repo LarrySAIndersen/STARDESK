@@ -7,37 +7,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
 
-type SubcategoryRow = {
+type SubcategoryRow = Readonly<{
   id: string;
   category_id: string;
   name: string;
   name_da: string;
   sort_order: number;
   is_active: boolean;
-};
+}>;
 
-type CategoryRow = {
+type CategoryRow = Readonly<{
   id: string;
   name: string;
   name_da: string;
   sort_order: number;
   is_active: boolean;
   subcategories: SubcategoryRow[];
-};
+}>;
 
-type SyncResult = {
+type SyncResult = Readonly<{
   categories_created: number;
   subcategories_created: number;
   categories_total: number;
-};
+}>;
 
-type FillResult = {
+type FillResult = Readonly<{
   ticket_count: number;
   updated_count: number;
   dry_run: boolean;
   category_name: string;
   subcategory_name: string;
-};
+}>;
 
 const emptyCategory = {
   name: "ny_kategori",

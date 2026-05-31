@@ -2,13 +2,13 @@
 
 import { X } from "lucide-react";
 
-type ClearFiltersButtonProps = {
+type ClearFiltersButtonProps = Readonly<{
   onClick: () => void;
   visible?: boolean;
   /** @default "Nulstil filter" */
   label?: string;
   className?: string;
-};
+}>;
 
 export function ClearFiltersButton({
   onClick,

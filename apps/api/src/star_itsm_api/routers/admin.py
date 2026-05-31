@@ -49,7 +49,7 @@ from star_itsm_api.services.ticket_import import import_tickets_admin
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-@router.post("/reset-sla", response_model=SlaResetResponse)
+@router.post("/reset-sla")
 async def reset_sla(
     dry_run: bool = Query(
         default=False,
@@ -80,7 +80,7 @@ async def reset_sla(
     )
 
 
-@router.get("/sla/policies", response_model=list[SlaPolicyRead])
+@router.get("/sla/policies")
 async def get_sla_policies(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
@@ -90,7 +90,7 @@ async def get_sla_policies(
     return await list_sla_policies(db)
 
 
-@router.get("/sla/standard-rules", response_model=list[SlaStandardRuleRead])
+@router.get("/sla/standard-rules")
 async def get_sla_standard_rules(
     current_user: User = Depends(require_admin()),
 ) -> list[SlaStandardRuleRead]:
@@ -99,7 +99,7 @@ async def get_sla_standard_rules(
     return list_standard_sla_rules()
 
 
-@router.get("/sla/settings", response_model=SlaSettingsRead)
+@router.get("/sla/settings")
 async def get_sla_settings(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
@@ -109,7 +109,7 @@ async def get_sla_settings(
     return await get_sla_settings_admin(db)
 
 
-@router.patch("/sla/settings", response_model=SlaSettingsRead)
+@router.patch("/sla/settings")
 async def patch_sla_settings(
     payload: SlaSettingsUpdate,
     db: AsyncSession = Depends(require_db),
@@ -120,7 +120,7 @@ async def patch_sla_settings(
     return await update_sla_settings_admin(db, payload)
 
 
-@router.patch("/sla/policies/{policy_id}", response_model=SlaPolicyRead)
+@router.patch("/sla/policies/{policy_id}")
 async def patch_sla_policy(
     policy_id: UUID,
     payload: SlaPolicyUpdate,
@@ -132,7 +132,7 @@ async def patch_sla_policy(
     return await update_sla_policy(db, policy_id, payload)
 
 
-@router.get("/categories", response_model=list[CategoryAdminRead])
+@router.get("/categories")
 async def get_admin_categories(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
@@ -142,7 +142,7 @@ async def get_admin_categories(
     return await list_categories_admin(db)
 
 
-@router.post("/categories", response_model=CategoryAdminRead, status_code=status.HTTP_201_CREATED)
+@router.post("/categories", status_code=status.HTTP_201_CREATED)
 async def post_admin_category(
     payload: CategoryCreate,
     db: AsyncSession = Depends(require_db),
@@ -153,7 +153,7 @@ async def post_admin_category(
     return await create_category(db, payload)
 
 
-@router.patch("/categories/{category_id}", response_model=CategoryAdminRead)
+@router.patch("/categories/{category_id}")
 async def patch_admin_category(
     category_id: UUID,
     payload: CategoryUpdate,
@@ -165,7 +165,7 @@ async def patch_admin_category(
     return await update_category(db, category_id, payload)
 
 
-@router.post("/categories/subcategories", response_model=SubcategoryAdminRead, status_code=status.HTTP_201_CREATED)
+@router.post("/categories/subcategories", status_code=status.HTTP_201_CREATED)
 async def post_admin_subcategory(
     payload: SubcategoryCreate,
     db: AsyncSession = Depends(require_db),
@@ -176,7 +176,7 @@ async def post_admin_subcategory(
     return await create_subcategory(db, payload)
 
 
-@router.patch("/categories/subcategories/{subcategory_id}", response_model=SubcategoryAdminRead)
+@router.patch("/categories/subcategories/{subcategory_id}")
 async def patch_admin_subcategory(
     subcategory_id: UUID,
     payload: SubcategoryUpdate,
@@ -188,7 +188,7 @@ async def patch_admin_subcategory(
     return await update_subcategory(db, subcategory_id, payload)
 
 
-@router.post("/categories/sync-defaults", response_model=CategorySyncResult)
+@router.post("/categories/sync-defaults")
 async def post_sync_default_categories(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
@@ -203,7 +203,7 @@ async def post_sync_default_categories(
     )
 
 
-@router.post("/categories/fill-tickets", response_model=CategoryFillTicketsResult)
+@router.post("/categories/fill-tickets")
 async def post_fill_ticket_categories(
     dry_run: bool = Query(default=False, description="Tæl sager uden at gemme"),
     db: AsyncSession = Depends(require_db),
@@ -224,7 +224,7 @@ async def post_fill_ticket_categories(
     )
 
 
-@router.post("/tickets/import", response_model=TicketImportResult)
+@router.post("/tickets/import")
 async def import_tickets(
     payload: TicketImportRequest,
     db: AsyncSession = Depends(require_db),

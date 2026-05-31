@@ -30,7 +30,7 @@ from star_itsm_api.core.config import settings
 router = APIRouter(prefix="/integrations/slack", tags=["slack"])
 
 
-@router.get("/oauth/start", response_model=SlackOAuthStartResponse)
+@router.get("/oauth/start")
 async def start_slack_oauth(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
@@ -44,7 +44,7 @@ async def start_slack_oauth(
     return SlackOAuthStartResponse(authorize_url=authorize_url)
 
 
-@router.get("/oauth/callback", response_model=SlackOAuthCallbackResponse)
+@router.get("/oauth/callback")
 async def slack_oauth_callback(
     code: str | None = Query(default=None),
     state: str | None = Query(default=None),
@@ -74,7 +74,7 @@ async def slack_oauth_callback(
     )
 
 
-@router.get("/status", response_model=SlackStatusRead)
+@router.get("/status")
 async def slack_status(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),
@@ -98,7 +98,7 @@ async def slack_status(
     )
 
 
-@router.patch("/settings", response_model=SlackStatusRead)
+@router.patch("/settings")
 async def update_slack_settings(
     payload: SlackSettingsUpdate,
     current_user: User = Depends(require_admin()),
@@ -124,7 +124,7 @@ async def update_slack_settings(
     )
 
 
-@router.post("/disconnect", response_model=SlackStatusRead)
+@router.post("/disconnect")
 async def disconnect_slack_integration(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
@@ -138,7 +138,7 @@ async def disconnect_slack_integration(
     )
 
 
-@router.get("/channels", response_model=list[SlackChannelRead])
+@router.get("/channels")
 async def list_slack_channels(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),

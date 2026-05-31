@@ -18,7 +18,7 @@ from star_itsm_api.services.ticket_export import build_tickets_export_xlsx
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
-@router.get("/dashboard", response_model=DashboardRead)
+@router.get("/dashboard")
 async def get_operations_dashboard(
     scope: str | None = Query(
         default=None,
@@ -34,7 +34,7 @@ async def get_operations_dashboard(
     return await build_dashboard(db, current_user, scope=effective)
 
 
-@router.get("/standard", response_model=StandardReportRead)
+@router.get("/standard")
 async def get_standard_report(
     period_days: int | None = Query(default=30, ge=0, le=365),
     db: AsyncSession = Depends(require_db),

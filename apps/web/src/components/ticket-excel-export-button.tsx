@@ -4,10 +4,10 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
-type TicketExcelExportButtonProps = {
+type TicketExcelExportButtonProps = Readonly<{
   className?: string;
   size?: "default" | "sm";
-};
+}>;
 
 export function TicketExcelExportButton({
   className,

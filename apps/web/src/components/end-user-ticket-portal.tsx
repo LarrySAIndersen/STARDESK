@@ -6,9 +6,9 @@ import { PORTAL_V2_CATEGORY_TILES } from "@/lib/portal-category";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
 
-type EndUserTicketPortalProps = {
+type EndUserTicketPortalProps = Readonly<{
   currentUser: User | null;
-};
+}>;
 
 export async function EndUserTicketPortal({ currentUser }: EndUserTicketPortalProps) {
   let tickets: Ticket[] = [];

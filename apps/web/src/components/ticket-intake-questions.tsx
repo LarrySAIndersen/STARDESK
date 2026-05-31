@@ -8,12 +8,12 @@ const VPN_PATTERN = /\bvpn\b|hjemmefra|remote|fjern/i;
 const DEVICE_PATTERN = /\blaptop|pc|mobil|telefon|printer|enhed\b/i;
 const URGENCY_PATTERN = /\bmøde|deadline|akut|straks|kritisk|haster\b/i;
 
-type IntakeQuestion = {
+type IntakeQuestion = Readonly<{
   id: string;
   label: string;
   hint: string;
   options: { value: string; label: string }[];
-};
+}>;
 
 const ALL_QUESTIONS: IntakeQuestion[] = [
   {

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 const PANEL_IDS = ["panel-a", "panel-b"] as const;
 
-type ResizableSplitProps = {
+type ResizableSplitProps = Readonly<{
   children: [ReactNode, ReactNode];
   /** Persists panel sizes in localStorage when set */
   storageKey?: string;
@@ -26,7 +26,7 @@ type ResizableSplitProps = {
   panelClassName?: string;
   /** Below lg, render panels stacked without resize handles. */
   stackBelowLg?: boolean;
-};
+}>;
 
 export function ResizableSplit({
   children,

@@ -9,14 +9,14 @@ import { getServerUser } from "@/lib/auth-server";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
-type SiteHeaderProps = {
+type SiteHeaderProps = Readonly<{
   /** Dark industrial shell for forced first-time password change. */
   shellVariant?: "default" | "firstLoginIndustrial";
   /** Hide Sager + Opret sag (e.g. while `must_change_password`). */
   hideCasesAndNewTicketNav?: boolean;
   /** Session user from server (avoids relying on `document.cookie` alone). */
   user?: User | null;
-};
+}>;
 
 export async function SiteHeader({
   shellVariant = "default",

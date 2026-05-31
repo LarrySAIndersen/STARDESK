@@ -7,10 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
-type BacklogIdea = {
+type BacklogIdea = Readonly<{
   title: string;
   description: string;
-};
+}>;
 
 function cleanLine(line: string): string {
   return line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, "").trim();

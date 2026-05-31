@@ -18,7 +18,7 @@ from star_itsm_api.services import workboard_service
 router = APIRouter(prefix="/workboard", tags=["workboard"])
 
 
-@router.get("/tasks", response_model=list[WorkboardTaskRead])
+@router.get("/tasks")
 async def list_tasks(
     status: str | None = Query(default=None, description="Filter by kanban status"),
     db: AsyncSession = Depends(require_db),
@@ -27,7 +27,7 @@ async def list_tasks(
     return await workboard_service.list_tasks(db, status=status)
 
 
-@router.get("/tasks/export", response_model=list[dict])
+@router.get("/tasks/export")
 async def export_tasks(
     db: AsyncSession = Depends(require_db),
     _current_user: User = Depends(require_staff()),
@@ -36,7 +36,7 @@ async def export_tasks(
     return await workboard_service.export_all_tasks(db)
 
 
-@router.get("/tasks/by-number/{number}", response_model=WorkboardTaskRead)
+@router.get("/tasks/by-number/{number}")
 async def get_task_by_number(
     number: int,
     db: AsyncSession = Depends(require_db),
@@ -48,7 +48,7 @@ async def get_task_by_number(
         raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
 
 
-@router.get("/tasks/{task_ref}", response_model=WorkboardTaskRead)
+@router.get("/tasks/{task_ref}")
 async def get_task(
     task_ref: str,
     db: AsyncSession = Depends(require_db),
@@ -67,7 +67,7 @@ async def get_task(
         raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
 
 
-@router.post("/tasks", response_model=WorkboardTaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("/tasks", status_code=status.HTTP_201_CREATED)
 async def create_task(
     payload: WorkboardTaskCreate,
     db: AsyncSession = Depends(require_db),
@@ -79,7 +79,7 @@ async def create_task(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.patch("/tasks/{task_ref}", response_model=WorkboardTaskRead)
+@router.patch("/tasks/{task_ref}")
 async def update_task(
     task_ref: str,
     payload: WorkboardTaskUpdate,
@@ -96,7 +96,7 @@ async def update_task(
             raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
 
 
-@router.put("/tasks/{canvas_id}", response_model=WorkboardTaskRead)
+@router.put("/tasks/{canvas_id}")
 async def upsert_task_from_canvas(
     canvas_id: str,
     body: dict,
@@ -111,7 +111,7 @@ async def upsert_task_from_canvas(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/tasks/bulk-import", response_model=WorkboardBulkImportResult)
+@router.post("/tasks/bulk-import")
 async def bulk_import_tasks(
     payload: WorkboardBulkImportRequest,
     db: AsyncSession = Depends(require_db),
