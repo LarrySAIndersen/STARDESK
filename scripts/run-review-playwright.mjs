@@ -27,7 +27,7 @@ import {
   failWithCode,
   formatSafeLogLabel,
   logScript,
-  logScriptError,
+  runScriptMain,
 } from "./lib/script-security.mjs";
 
 const DEFAULT_WEB_URL = "https://web-seven-neon-6bvmcoel7n.vercel.app";
@@ -279,7 +279,4 @@ async function main() {
   process.exit(status === "passed" ? 0 : 1);
 }
 
-main().catch(() => {
-  logScriptError("RUN_REVIEW_PLAYWRIGHT_FAILED");
-  process.exit(1);
-});
+runScriptMain(main);

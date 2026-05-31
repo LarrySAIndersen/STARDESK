@@ -26,7 +26,7 @@ import {
   failWithCode,
   formatSafeLogLabel,
   logScript,
-  logScriptError,
+  runScriptMain,
 } from "./lib/script-security.mjs";
 
 const MAX_DATA_URL_CHARS = 520_000;
@@ -179,8 +179,5 @@ async function main() {
   }
 }
 
-main().catch(() => {
-  logScriptError("IMPORT_PLAYWRIGHT_FAILED");
-  process.exit(1);
-});
+runScriptMain(main);
 
