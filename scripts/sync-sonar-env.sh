@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Write scripts/sonar-agent/.env from shell/VM secret (SonarCloud PAT).
 # Never commits secrets — only updates local gitignored .env
 set -euo pipefail
