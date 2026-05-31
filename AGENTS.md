@@ -44,6 +44,7 @@ Rule: `.cursor/rules/deliverable-gate.mdc` · Skill: `.cursor/skills/stardesk-de
 ```bash
 # 1) VM has DATABASE_URL → sync into gitignored .env
 bash scripts/sync-neon-env.sh
+bash scripts/sync-sonar-env.sh  # after SONAR_TOKEN is in Cloud Agent secrets
 
 # 2) Full setup (deps + Neon bootstrap + Alembic)
 bash scripts/setup-dev-environment.sh

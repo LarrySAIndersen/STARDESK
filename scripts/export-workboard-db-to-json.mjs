@@ -10,8 +10,9 @@ import path from "node:path";
 import {
   assertConfiguredApiBaseUrl,
   failWithCode,
-  logScript,
+  logScriptCode,
   logScriptError,
+  runScriptMain,
 } from "./lib/script-security.mjs";
 
 const token = process.env.STARDESK_API_TOKEN || "";
@@ -40,10 +41,7 @@ async function main() {
     JSON.stringify({ "stardesk-tasks-v1": tasks }, null, 2),
     "utf8",
   );
-  logScript(`Wrote ${tasks.length} tasks to export file`);
+  logScriptCode("WORKBOARD_EXPORT_OK");
 }
 
-main().catch(() => {
-  logScriptError("WORKBOARD_EXPORT_CRASH");
-  process.exit(1);
-});
+runScriptMain(main);
