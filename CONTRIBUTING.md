@@ -107,6 +107,7 @@ After `run_neon_setup.py`, prefer `bash scripts/migrate-db.sh` or `run_neon_setu
 
 ## Related docs
 
+- [docs/dev-only-workflow.md](./docs/dev-only-workflow.md) — **Jan-opsætning:** kun dev via `staging`, prod kun ved merge til `main`
 - [docs/environments.md](./docs/environments.md) — test vs prod vs prod-klon
 - [docs/deploy.md](./docs/deploy.md) — first deploy checklist
 - [docs/DOCUMENTATION.md](./docs/DOCUMENTATION.md) — full reference

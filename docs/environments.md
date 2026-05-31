@@ -57,6 +57,8 @@ flowchart TB
 
 ### Anbefalet strategi for STARdesk
 
+> **Kort dansk guide (kun dev, ikke prod ved et uheld):** [dev-only-workflow.md](./dev-only-workflow.md)
+
 1. **Behold** nuværende `web` + `api` som **produktion** (`main` → Production).
 2. Opret Neon-gren **`test`** og kør `scripts/run_neon_setup.py` + `docs/test-data.sql` der.
 3. Udfyld **Preview**-miljøvariabler på begge Vercel-projekter (i dag er Preview **tom** — se [Nuværende Vercel-tilstand](#nuværende-vercel-tilstand)).
