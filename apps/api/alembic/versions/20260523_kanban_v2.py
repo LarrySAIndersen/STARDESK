@@ -6,8 +6,9 @@ Create Date: 2026-05-23
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "20260523_kanban_v2"
 down_revision = "20260523_kanban"

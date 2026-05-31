@@ -62,12 +62,12 @@ async function main() {
     body: JSON.stringify({ tasks, replace_missing: replaceMissing }),
   });
 
-  const body = await res.text();
   if (!res.ok) {
+    await res.text();
     logScriptError("import_failed", `status=${res.status}`);
     process.exit(1);
   }
-  logScript(`Work Board import OK (${tasks.length} tasks)`);
+  logScript("Work Board import OK");
 }
 
 main().catch(() => {

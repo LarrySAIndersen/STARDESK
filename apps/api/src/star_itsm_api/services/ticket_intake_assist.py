@@ -82,8 +82,7 @@ _RULES: tuple[tuple[re.Pattern[str], dict], ...] = (
             "ticket_type": "incident",
             "intake": {"urgency": "møde_snart"},
             "reply": (
-                "Jeg markerer sagen som hastende med høj prioritet "
-                "og urgency-spørgsmål udfyldt."
+                "Jeg markerer sagen som hastende med høj prioritet og urgency-spørgsmål udfyldt."
             ),
         },
     ),

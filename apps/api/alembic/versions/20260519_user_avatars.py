@@ -6,6 +6,7 @@ Create Date: 2026-05-19
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20260519_avatars"

@@ -117,8 +117,7 @@ def _resolve_blob_store_id(token: str) -> str:
     raise HTTPException(
         status_code=503,
         detail=(
-            "BLOB_STORE_ID is not configured and could not be derived "
-            "from BLOB_READ_WRITE_TOKEN"
+            "BLOB_STORE_ID is not configured and could not be derived from BLOB_READ_WRITE_TOKEN"
         ),
     )
 
