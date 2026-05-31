@@ -7,24 +7,31 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import {
+  assertConfiguredApiBaseUrl,
+  failWithCode,
+  logScript,
+  logScriptError,
+} from "./lib/script-security.mjs";
 
-const apiUrl = (process.env.STARDESK_API_URL || "").replace(/\/$/, "");
 const token = process.env.STARDESK_API_TOKEN || "";
 const outPath =
   process.env.WORKBOARD_EXPORT_PATH ||
   path.join(process.cwd(), "workboard-tasks-export.json");
 
 async function main() {
-  if (!apiUrl || !token) {
-    console.error("Set STARDESK_API_URL and STARDESK_API_TOKEN.");
-    process.exit(1);
+  if (!token) {
+    failWithCode("MISSING_API_TOKEN");
   }
+  const apiUrl = assertConfiguredApiBaseUrl(
+    (process.env.STARDESK_API_URL || "").replace(/\/$/, ""),
+  );
   const res = await fetch(`${apiUrl}/api/v1/workboard/tasks/export`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const text = await res.text();
   if (!res.ok) {
-    console.error(`Export failed (${res.status}):`, text);
+    logScriptError("WORKBOARD_EXPORT_FAILED", `HTTP ${res.status}`);
     process.exit(1);
   }
   const tasks = JSON.parse(text);
@@ -33,10 +40,10 @@ async function main() {
     JSON.stringify({ "stardesk-tasks-v1": tasks }, null, 2),
     "utf8",
   );
-  console.log(`Wrote ${tasks.length} tasks to ${outPath}`);
+  logScript(`Wrote ${tasks.length} tasks to export file`);
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  logScriptError("WORKBOARD_EXPORT_CRASH");
   process.exit(1);
 });

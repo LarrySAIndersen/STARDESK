@@ -23,13 +23,18 @@ import {
   resolveReviewEvidenceDir,
   resolveWorkboardDataPath,
 } from "./lib/workboard-paths.mjs";
+import {
+  failWithCode,
+  formatSafeLogLabel,
+  logScript,
+  logScriptError,
+} from "./lib/script-security.mjs";
 
 const DEFAULT_WEB_URL = "https://web-seven-neon-6bvmcoel7n.vercel.app";
 const DEFAULT_EMAIL = "sf01@example.dk";
 
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
+function fail(code) {
+  failWithCode(code);
 }
 
 function parseArgs(argv) {
@@ -90,16 +95,16 @@ async function loadTaskContext(args) {
     tasks = await fetchTasksFromApi();
   } else {
     const dataPath = resolveWorkboardDataPath();
-    if (!fs.existsSync(dataPath)) fail(`Work Board data not found: ${dataPath}`);
+    if (!fs.existsSync(dataPath)) fail("WORKBOARD_DATA_NOT_FOUND");
     ({ tasks } = readWorkboardTasks(dataPath));
   }
 
   if (args.taskNumber != null) {
     task = findTaskByNumber(tasks, args.taskNumber);
-    if (!task) fail(`No task with number ${args.taskNumber}`);
+    if (!task) fail("TASK_NOT_FOUND");
   } else if (args.taskId) {
     task = tasks.find((t) => t.id === args.taskId) ?? null;
-    if (!task) fail(`No task with id ${args.taskId}`);
+    if (!task) fail("TASK_NOT_FOUND");
   }
 
   const verificationUrl =
@@ -107,7 +112,7 @@ async function loadTaskContext(args) {
     task?.reviewVerificationUrl?.trim() ||
     null;
   if (!verificationUrl) {
-    fail("Missing --url or task.reviewVerificationUrl (scope stardesk).");
+    fail("MISSING_VERIFICATION_URL");
   }
 
   const taskId = task?.id ?? args.taskId ?? `manual-${Date.now()}`;
@@ -237,9 +242,7 @@ async function main() {
   const email = args.username || process.env.TEST_USER_EMAIL || DEFAULT_EMAIL;
   const password = args.password || process.env.TEST_USER_PASSWORD || "";
   if (!password) {
-    fail(
-      "Set TEST_USER_PASSWORD (prototype demo password — see apps/web/src/lib/demo-users.ts).",
-    );
+    fail("MISSING_TEST_PASSWORD");
   }
 
   const { task, taskId, taskNumber, verificationUrl } = await loadTaskContext(args);
@@ -269,12 +272,14 @@ async function main() {
 
   const manifestPath = path.join(outDir, "manifest.json");
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  console.log(`\nWrote ${manifestPath} (${status})`);
-  console.log(`Import: node scripts/import-playwright-evidence-to-workboard.mjs --task ${taskNumber}`);
+  logScript(`\nWrote manifest (${status})`);
+  logScript(
+    `Import: node scripts/import-playwright-evidence-to-workboard.mjs --task ${formatSafeLogLabel(taskNumber)}`,
+  );
   process.exit(status === "passed" ? 0 : 1);
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  logScriptError("RUN_REVIEW_PLAYWRIGHT_FAILED");
   process.exit(1);
 });
