@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "stardesk-scripts",
   "private": true,
   "type": "module",
@@ -29,6 +29,6 @@
     "gate:deliverable:full": "bash ./run-deliverable-gate.sh --full"
   },
   "devDependencies": {
-    "playwright": "^1.52.0"
+    "playwright": "^1.55.1"
   }
 }
