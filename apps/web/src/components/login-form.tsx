@@ -15,18 +15,21 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DEMO_PASSWORD, DEMO_USERS, type DemoUser } from "@/lib/demo-users";
+import { DEMO_USERS, type DemoUser } from "@/lib/demo-users";
 import { isDemoLoginEnabled } from "@/lib/demo-login";
 import { staffLandingPath } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
+function findDemoUser(email: string): DemoUser | undefined {
+  return DEMO_USERS.find((user) => user.email === email);
+}
+
 export function LoginForm() {
   const showDemoPicker = isDemoLoginEnabled();
-  const [email, setEmail] = useState(
-    showDemoPicker ? (DEMO_USERS[1]?.email ?? "sf01@example.dk") : "",
-  );
-  const [password, setPassword] = useState(showDemoPicker ? DEMO_PASSWORD : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedDemoEmail, setSelectedDemoEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,21 +83,29 @@ export function LoginForm() {
     }
   }
 
+  function resolveLoginCredentials(): { email: string; password: string } {
+    if (showDemoPicker && selectedDemoEmail) {
+      const demoUser = findDemoUser(selectedDemoEmail);
+      if (demoUser) {
+        return { email: demoUser.email, password: demoUser.password };
+      }
+    }
+    return { email, password };
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    await performLogin(email, password);
+    const creds = resolveLoginCredentials();
+    await performLogin(creds.email, creds.password);
   }
 
   function selectUser(user: DemoUser) {
-    setEmail(user.email);
-    setPassword(user.password);
+    setSelectedDemoEmail(user.email);
     setError(null);
     setFieldError(false);
   }
 
   function quickLogin(user: DemoUser) {
-    setEmail(user.email);
-    setPassword(user.password);
     void performLogin(user.email, user.password);
   }
 
@@ -108,7 +119,7 @@ export function LoginForm() {
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             {showDemoPicker
-              ? "Vælg en testbruger i tabellen eller indtast e-mail og adgangskode."
+              ? "Vælg en testbruger i tabellen — eller indtast e-mail og adgangskode."
               : "Indtast din e-mail og adgangskode."}
           </p>
         </div>
@@ -124,18 +135,15 @@ export function LoginForm() {
             <CardHeader className="bg-star-navy text-white">
               <CardTitle className="text-white">Login</CardTitle>
               <CardDescription className="text-white/80">
-                {showDemoPicker ? (
-                  <>
-                    Standardadgangskode:{" "}
-                    <span className="font-mono text-white">{DEMO_PASSWORD}</span>
-                  </>
-                ) : (
-                  "STAR ITSM prototype"
-                )}
+                STAR ITSM prototype
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-4"
+                noValidate={showDemoPicker}
+              >
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail</Label>
                   <Input
@@ -145,10 +153,11 @@ export function LoginForm() {
                     value={email}
                     onChange={(event) => {
                       setEmail(event.target.value);
+                      setSelectedDemoEmail("");
                       if (fieldError) setFieldError(false);
                     }}
                     className={inputClass}
-                    required
+                    required={!showDemoPicker}
                   />
                 </div>
                 <label className="flex cursor-pointer items-start gap-2 text-sm">
@@ -174,10 +183,11 @@ export function LoginForm() {
                     value={password}
                     onChange={(event) => {
                       setPassword(event.target.value);
+                      setSelectedDemoEmail("");
                       if (fieldError) setFieldError(false);
                     }}
                     className={inputClass}
-                    required
+                    required={!showDemoPicker}
                   />
                 </div>
                 {error ? (
@@ -219,7 +229,7 @@ export function LoginForm() {
             <Card className="star-section-card overflow-hidden shadow-lg">
               <CardContent className="pt-6">
                 <DemoUserPicker
-                  selectedEmail={email}
+                  selectedEmail={selectedDemoEmail}
                   onSelect={selectUser}
                   onQuickLogin={quickLogin}
                   isSubmitting={isSubmitting}
