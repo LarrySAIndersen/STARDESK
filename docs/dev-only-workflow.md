@@ -2,6 +2,8 @@
 
 Kort guide når du **kun bruger Cursor** og **reviewer PR’er på GitHub**. Målet: dagligt arbejde rammer **test/dev**, og **produktion** kun når du selv merger til `main`.
 
+**Fuld proces (board → auto staging → manuel prod):** [release-process.md](./release-process.md)
+
 Se også: [environments.md](./environments.md), [deliverable-gate.md](./deliverable-gate.md), [deploy.md](./deploy.md).
 
 ---

@@ -1,0 +1,39 @@
+# Manual checklist before you merge staging → main on GitHub (prod release).
+# Does NOT merge automatically — open PR in browser after this passes.
+name: Promote staging to main (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type RELEASE to confirm you will open/merge staging→main PR manually'
+        required: true
+
+jobs:
+  checklist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        if: inputs.confirm != 'RELEASE'
+        run: |
+          echo "::error::Input must be exactly RELEASE"
+          exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compare staging vs main
+        run: |
+          git fetch origin staging main
+          echo "## Staging vs main" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          git log --oneline origin/main..origin/staging | head -30 >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next: open PR **base main** ← **compare staging** and merge when tested." >> "$GITHUB_STEP_SUMMARY"
+          echo "https://github.com/LarrySAIndersen/STARDESK/compare/main...staging?expand=1" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Reminder
+        run: |
+          echo "No auto-merge to main. Create and merge PR in GitHub UI after Preview/prod-clone test."

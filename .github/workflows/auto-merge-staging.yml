@@ -1,0 +1,105 @@
+# Auto-merge PRs into staging when Security check succeeds (dev path).
+# Does NOT touch main — prod stays manual (staging → main PR).
+name: Auto-merge to staging
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [staging]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows:
+      - Security
+      - Deliverable gate
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge staging PR when checks pass
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            let prNumber = context.payload.pull_request?.number;
+
+            if (!prNumber && context.payload.workflow_run) {
+              for (const pr of context.payload.workflow_run.pull_requests || []) {
+                if (pr.base?.ref === 'staging') {
+                  prNumber = pr.number;
+                  break;
+                }
+              }
+            }
+
+            if (!prNumber && context.payload.check_suite?.pull_requests) {
+              for (const pr of context.payload.check_suite.pull_requests) {
+                if (pr.base?.ref === 'staging') {
+                  prNumber = pr.number;
+                  break;
+                }
+              }
+            }
+
+            if (!prNumber) {
+              core.info('No staging PR — skip.');
+              return;
+            }
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            if (pr.base.ref !== 'staging' || pr.merged || pr.draft) {
+              core.info(`Skip PR #${prNumber} (base=${pr.base.ref}, merged=${pr.merged}, draft=${pr.draft})`);
+              return;
+            }
+
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref: pr.head.sha,
+            });
+
+            const latestByName = new Map();
+            for (const run of checks.check_runs) {
+              const prev = latestByName.get(run.name);
+              if (!prev || new Date(run.started_at) > new Date(prev.started_at)) {
+                latestByName.set(run.name, run);
+              }
+            }
+
+            const security = latestByName.get('api-security') || latestByName.get('Security');
+            if (!security || security.status !== 'completed' || security.conclusion !== 'success') {
+              core.info('Security check not success yet — skip merge.');
+              return;
+            }
+
+            const gate = latestByName.get('hello-world-api');
+            if (gate && gate.status === 'completed' && gate.conclusion === 'failure') {
+              core.info('Deliverable gate failed — skip merge.');
+              return;
+            }
+
+            if (pr.mergeable_state === 'blocked' || pr.mergeable_state === 'dirty') {
+              core.info(`PR not mergeable: ${pr.mergeable_state}`);
+              return;
+            }
+
+            await github.rest.pulls.merge({
+              owner,
+              repo,
+              pull_number: prNumber,
+              merge_method: 'squash',
+            });
+            core.info(`Auto-merged PR #${prNumber} into staging.`);

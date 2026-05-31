@@ -2,6 +2,14 @@
 
 Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
 
+## Git / release (never push to main)
+
+- Default branch for work: **`staging`** (not `main`).
+- Open PRs with **base `staging`**; auto-merge when CI passes (`.github/workflows/auto-merge-staging.yml`).
+- **Production:** only via manual PR **`staging` → `main`** — never merge feature branches to `main`.
+- New board tasks: use prompt in `docs/workboard-agent-prompt.md`.
+- Full process: `docs/release-process.md`.
+
 ## Mandatory: deliverable gate (never skip)
 
 **Before every final response, PR, or handoff:**

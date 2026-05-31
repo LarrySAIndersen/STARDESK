@@ -120,7 +120,7 @@ eller slettet.
 
 ## Brugerens præferencer (Jan, IT Operations)
 
-- **Git/Vercel:** Dagligt arbejde på `staging` + Preview — prod kun ved manuel merge til `main`. Se `docs/dev-only-workflow.md`.
+- **Git/Vercel:** PR mod `staging` (auto-merge når CI grøn); prod kun via manuel PR `staging` → `main`. Se `docs/release-process.md` og `docs/workboard-agent-prompt.md`.
 - Korte konkrete svar — ikke lange forklaringer medmindre der spørges
 - Få det til at virke først, optimer bagefter
 - Dansk i UI, engelsk i kode
