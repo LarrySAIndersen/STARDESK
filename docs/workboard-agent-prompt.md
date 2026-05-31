@@ -9,12 +9,11 @@ Erstat `NN` med opgavenummer og `TITEL` med kort titel.
 ```text
 STARDESK opgave #NN: TITEL
 
-Git/release (obligatorisk):
-- Checkout staging og pull seneste.
-- Opret gren: cursor/opgave-NN-kort-slug fra staging.
-- Arbejd kun på den gren.
-- Opret draft PR med base staging (ALDRIG main).
-- Når CI er grøn, må auto-merge til staging ske — merge IKKE til main.
+PR-ONLY (obligatorisk — docs/pr-only-period.md):
+- Push ALDRIG til main eller staging.
+- Checkout staging, pull, opret gren cursor/opgave-NN-kort-slug.
+- Push kun feature-gren; opret draft PR base staging (ALDRIG main).
+- Når CI grøn: auto-merge til staging — merge IKKE til main.
 - Ved afslutning: kør bash scripts/run-deliverable-gate.sh (og --full ved UI).
 - Skriv i PR: Deliverable gate: PASSED + output.
 - Prod: Jan merger senere staging → main manuelt — gør det ikke for mig.

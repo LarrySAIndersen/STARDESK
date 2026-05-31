@@ -1,6 +1,7 @@
 # STARdesk — proces (visuelt overblik for Jan)
 
-> Fuld tekst: [release-process.md](./release-process.md) · Agent-tekst: [workboard-agent-prompt.md](./workboard-agent-prompt.md)
+> Fuld tekst: [release-process.md](./release-process.md) · Agent-tekst: [workboard-agent-prompt.md](./workboard-agent-prompt.md)  
+> **PR-only periode:** [pr-only-period.md](./pr-only-period.md)
 
 ---
 
