@@ -8,7 +8,7 @@ Minimal VM watchdog that keeps the Sonar remediation loop and release path healt
 |-------|-----------|----------|
 | Sonar loop scheduler | Process dead / no PID file | Restart `scripts/sonar-agent/run-sonar-loop-scheduler.ps1` |
 | Sonar tick freshness | Last tick > 2× interval (60 min) | Run `run-sonar-loop-tick.ps1` |
-| Staging sync | `origin/staging` behind `origin/main` | Merge `origin/main` → `staging`, push |
+| Staging sync | `origin/staging` behind `origin/main` | Log + escalate (no direct push) |
 | Flow-2 prod PR | Open PR `staging`→`main`, CI green | `gh pr merge` (Sonar loop exception) |
 | Sonar scan age | Last scan > 2 h, `.env` present | `npm run sonar:pipeline` in `scripts/` |
 
@@ -61,13 +61,13 @@ pwsh scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 **Auto-fixes (Sonar loop / release path only):**
 
 - Restart stalled scheduler or trigger a tick
-- Sync `main` into `staging` when staging lags prod
-- Merge green `staging`→`main` PR (narrow Sonar remediation exception per `.cursor/rules/pr-only-period.mdc`)
+- Merge green Sonar loop PR to `staging` and Flow-2 `staging`→`main` (Sonar loop exception)
 - Re-run Sonar pipeline when scan is stale
 
 **Escalates (log only — no auto-fix):**
 
-- Merge conflicts on staging sync
+- Staging behind main (needs PR sync — PR-only, no direct push)
+- **Vercel production env** or prod deploy → Jan
 - CI red on open PRs
 - Missing `gh` auth or Sonar `.env`
 - Deliverable gate / app failures (not in watchdog scope)

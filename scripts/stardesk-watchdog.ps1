@@ -202,17 +202,8 @@ function Invoke-WatchdogTick {
         if ($behindCount.ok -and $behindCount.output -match '^\d+$') { $behind = [int]$behindCount.output }
         $results["staging_sync"] = @{ status = if ($behind -gt 0) { "behind_main" } else { "ok" }; commits_behind = $behind }
         if ($behind -gt 0) {
-            $results["staging_sync"].repair = Invoke-RepairAction -Name "merge_main_into_staging" -Action {
-                $checkout = Invoke-RepoGit -Args @("checkout", "staging")
-                if (-not $checkout.ok) { throw $checkout.output }
-                $pull = Invoke-RepoGit -Args @("pull", "--ff-only", "origin", "staging")
-                if (-not $pull.ok) { throw $pull.output }
-                $merge = Invoke-RepoGit -Args @("merge", "origin/main", "--no-edit")
-                if (-not $merge.ok) { throw $merge.output }
-                $push = Invoke-RepoGit -Args @("push", "origin", "staging")
-                if (-not $push.ok) { throw $push.output }
-                return "merged origin/main into staging ($behind commits)"
-            }
+            Write-WatchdogLog "ESCALATE: origin/staging is $behind commit(s) behind origin/main — manual PR sync required (PR-only)" "WARN"
+            $results["staging_sync"].escalate = "staging behind main by $behind commits — Jan or PR sync"
         }
     }
 
