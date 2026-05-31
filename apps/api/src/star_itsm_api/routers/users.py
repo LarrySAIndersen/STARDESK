@@ -50,6 +50,7 @@ from star_itsm_api.services.user_admin import (
     sync_user_teams,
 )
 from star_itsm_api.services.user_import import import_users_admin
+from star_itsm_api.services.user_roles import primary_role_from_set, sync_user_roles
 from star_itsm_api.services.user_tickets import list_user_tickets_grouped
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -125,6 +126,7 @@ async def create_user(
         raise HTTPException(status_code=403, detail="Insufficient permissions")
 
     role = payload.role
+    roles = list(payload.roles) if payload.roles else None
     organization_id = payload.organization_id
     team_ids = list(payload.team_ids)
 
@@ -133,19 +135,36 @@ async def create_user(
         if source is None:
             raise HTTPException(status_code=404, detail="Kildebruger blev ikke fundet")
         role = source.role
+        roles = list(source.roles) if source.roles else [source.role]
         organization_id = source.organization_id
         team_ids = [team.id for team in source.teams]
 
+    if not roles:
+        if role is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Mindst én rettighedsgruppe er påkrævet",
+            )
+        roles = [role]
+
     email = payload.email.lower().strip()
-    _assert_can_assign_role(current_user, role, target_email=email)
-    role = role_after_top_admin_policy(email, role)
+    for assigned_role in roles:
+        _assert_can_assign_role(current_user, assigned_role, target_email=email)
+    normalized_roles = [
+        role_after_top_admin_policy(email, assigned_role) for assigned_role in roles
+    ]
+    if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(email):
+        normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
+        if ROLE_ADMIN not in normalized_roles:
+            normalized_roles.append(ROLE_ADMIN)
 
     try:
         created, temporary_password = await create_user_admin(
             db,
             email=email,
             display_name=payload.display_name,
-            role=role,
+            role=primary_role_from_set(set(normalized_roles)),
+            roles=normalized_roles,
             is_active=payload.is_active,
             organization_id=organization_id,
             team_ids=team_ids,
@@ -250,14 +269,44 @@ async def update_user(
 
     updates = payload.model_dump(exclude_unset=True)
 
-    if "role" in updates:
+    if "roles" in updates or "role" in updates:
         target_email = (
             str(updates["email"]).lower().strip()
             if "email" in updates
             else user.email
         )
-        _assert_can_assign_role(current_user, updates["role"], target_email=target_email)
-        user.role = role_after_top_admin_policy(target_email, updates["role"])
+        if "roles" in updates:
+            next_roles = list(updates["roles"])
+        elif "role" in updates:
+            next_roles = [updates["role"]]
+        else:
+            next_roles = []
+
+        if not next_roles:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Mindst én rettighedsgruppe er påkrævet",
+            )
+
+        for assigned_role in next_roles:
+            _assert_can_assign_role(current_user, assigned_role, target_email=target_email)
+
+        normalized_roles = [
+            role_after_top_admin_policy(target_email, assigned_role)
+            for assigned_role in next_roles
+        ]
+        if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(target_email):
+            normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
+            if ROLE_ADMIN not in normalized_roles:
+                normalized_roles.append(ROLE_ADMIN)
+
+        try:
+            user.role = await sync_user_roles(db, user.id, normalized_roles)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Mindst én rettighedsgruppe er påkrævet",
+            ) from None
 
     if "display_name" in updates:
         user.display_name = updates["display_name"].strip()

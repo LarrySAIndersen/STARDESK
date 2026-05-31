@@ -1,4 +1,5 @@
 ﻿import type { Ticket } from "@/types/ticket";
+import type { UserRole } from "@/types/user";
 
 export interface UserTeamSummary {
   id: string;
@@ -19,6 +20,8 @@ export interface UserAdminListItem {
   display_name: string;
   role: string;
   role_label: string;
+  roles: UserRole[];
+  role_labels: string[];
   is_active: boolean;
   organization_name: string | null;
   team_ids: string[];
@@ -38,6 +41,8 @@ export interface UserAdminRead {
   display_name: string;
   role: string;
   role_label: string;
+  roles: UserRole[];
+  role_labels: string[];
   is_active: boolean;
   password_policy_exempt: boolean;
   organization_id: string | null;
@@ -64,7 +69,7 @@ export interface UserAdminMeta {
 export interface UserAdminUpdateInput {
   display_name?: string;
   email?: string;
-  role?: string;
+  roles?: UserRole[];
   is_active?: boolean;
   organization_id?: string | null;
   team_ids?: string[];
@@ -74,7 +79,7 @@ export interface UserAdminUpdateInput {
 export interface UserAdminCreateInput {
   email: string;
   display_name: string;
-  role: string;
+  roles: UserRole[];
   is_active: boolean;
   organization_id: string | null;
   team_ids: string[];

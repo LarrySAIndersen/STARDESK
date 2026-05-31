@@ -25,6 +25,13 @@ from star_itsm_api.schemas.user_admin import (
     user_to_admin_read,
 )
 from star_itsm_api.schemas.user_admin import ASSIGNABLE_ROLES
+from star_itsm_api.services.user_roles import (
+    attach_roles_to_user,
+    fetch_user_roles,
+    fetch_user_roles_bulk,
+    role_labels_for_values,
+    sync_user_roles,
+)
 
 
 async def list_organizations(db: AsyncSession) -> list[OrganizationOption]:
@@ -110,6 +117,7 @@ async def list_users_admin(
         org_names = {o.id: o.name for o in org_rows.scalars().all()}
 
     team_map = await _team_summaries_for_users(db, [u.id for u in users])
+    roles_map = await fetch_user_roles_bulk(db, [u.id for u in users])
     items = [
         UserAdminListItem(
             id=user.id,
@@ -117,6 +125,11 @@ async def list_users_admin(
             display_name=user.display_name,
             role=user.role,
             role_label=ROLE_LABELS.get(user.role, user.role),
+            roles=roles_map.get(user.id, [user.role]),
+            role_labels=role_labels_for_values(
+                roles_map.get(user.id, [user.role]),
+                ROLE_LABELS,
+            ),
             is_active=user.is_active,
             organization_name=org_names.get(user.organization_id) if user.organization_id else None,
             team_ids=[t.id for t in team_map.get(user.id, [])],
@@ -143,7 +156,11 @@ async def get_user_admin(db: AsyncSession, user_id: uuid.UUID) -> UserAdminRead 
         org_name = org.name if org else None
 
     teams = (await _team_summaries_for_users(db, [user.id])).get(user.id, [])
-    return user_to_admin_read(user, organization_name=org_name, teams=teams)
+    roles = await fetch_user_roles(db, user.id)
+    if not roles:
+        roles = [user.role]
+    attach_roles_to_user(user, roles)
+    return user_to_admin_read(user, organization_name=org_name, teams=teams, roles=roles)
 
 
 async def email_taken(db: AsyncSession, email: str, *, exclude_user_id: uuid.UUID | None) -> bool:
@@ -197,6 +214,7 @@ async def create_user_admin(
     email: str,
     display_name: str,
     role: str,
+    roles: list[str] | None = None,
     is_active: bool,
     organization_id: uuid.UUID | None,
     team_ids: list[uuid.UUID],
@@ -227,6 +245,12 @@ async def create_user_admin(
     )
     db.add(user)
     await db.flush()
+
+    role_values = roles if roles else [role]
+    try:
+        user.role = await sync_user_roles(db, user.id, role_values)
+    except ValueError:
+        raise ValueError("roles_required") from None
 
     try:
         await sync_user_teams(db, user.id, team_ids)

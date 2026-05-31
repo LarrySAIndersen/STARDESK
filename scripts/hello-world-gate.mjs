@@ -40,26 +40,40 @@ try {
   console.log(`==> Hello-world gate (UI) — ${webUrl}`);
 
   await page.goto(`${webUrl}/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(outDir, "01-login.png") });
 
-  const demoQuickLogin = page.getByRole("button", { name: "Log ind" }).filter({ hasText: /^Log ind$/ });
   const annaRow = page.getByRole("row", { name: new RegExp(email.replace(".", "\\."), "i") });
+  const emailField = page.locator("#email");
 
-  if (await annaRow.isVisible().catch(() => false)) {
+  if (await annaRow.isVisible({ timeout: 8_000 }).catch(() => false)) {
     await annaRow.getByRole("button", { name: "Log ind" }).click();
     pass("Demo picker quick login");
-  } else {
-    await page.locator("#email").fill(email);
+  } else if (await emailField.isVisible({ timeout: 8_000 }).catch(() => false)) {
+    await emailField.fill(email);
     await page.locator("#password").fill(password);
     await page.getByRole("button", { name: "Log ind" }).first().click();
     pass("Email/password login");
+  } else if (await page.getByText(/alle sager/i).isVisible({ timeout: 3_000 }).catch(() => false)) {
+    pass("Already authenticated — skipping login");
+  } else {
+    await page.goto(`${webUrl}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await emailField.waitFor({ state: "visible", timeout: 30_000 });
+    await emailField.fill(email);
+    await page.locator("#password").fill(password);
+    await page.getByRole("button", { name: "Log ind" }).first().click();
+    pass("Email/password login via /login");
   }
 
   await page.waitForLoadState("networkidle", { timeout: 60_000 }).catch(() => {});
 
   const banner = page.getByRole("status");
   const bannerText = (await banner.textContent().catch(() => "")) ?? "";
-  if (bannerText && /produktion/i.test(bannerText) && !/ikke produktion/i.test(bannerText)) {
+  if (
+    bannerText &&
+    /produktion/i.test(bannerText) &&
+    !/ikke (?:live )?produktion/i.test(bannerText)
+  ) {
     fail(`Environment banner looks like production: ${bannerText.slice(0, 80)}`);
   }
   if (bannerText) {

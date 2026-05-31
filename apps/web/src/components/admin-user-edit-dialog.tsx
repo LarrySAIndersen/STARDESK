@@ -10,6 +10,7 @@ import {
   AdminUserModalBackdrop,
   adminUserSelectClassName,
 } from "@/components/admin-user-dialog-panel";
+import { AdminRoleCheckboxList } from "@/components/admin-role-checkbox-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,10 +24,19 @@ import type {
 import type { Team } from "@/types/team";
 import type { UserRole } from "@/types/user";
 
+const userRoleValues = [
+  "end_user",
+  "agent",
+  "admin",
+  "top_admin",
+  "supporter",
+  "stardesk_reviewer",
+] as const;
+
 const profileSchema = z.object({
   display_name: z.string().min(1, "Navn er påkrævet"),
   email: z.string().email("Ugyldig e-mail"),
-  role: z.enum(["end_user", "agent", "admin", "top_admin", "supporter", "stardesk_reviewer"]),
+  roles: z.array(z.enum(userRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
   is_active: z.boolean(),
   organization_id: z.string(),
   team_ids: z.array(z.string()),
@@ -90,6 +100,7 @@ export function AdminUserEditDialog({
   });
 
   const selectedTeamIds = watch("team_ids") ?? [];
+  const selectedRoles = watch("roles") ?? [];
 
   const {
     register: registerPassword,
@@ -112,7 +123,9 @@ export function AdminUserEditDialog({
         reset({
           display_name: detail.display_name,
           email: detail.email,
-          role: detail.role as ProfileFormValues["role"],
+          roles: (detail.roles?.length
+            ? detail.roles
+            : [detail.role]) as ProfileFormValues["roles"],
           is_active: detail.is_active,
           organization_id: detail.organization_id ?? "",
           team_ids: detail.teams.map((t) => t.id),
@@ -135,7 +148,7 @@ export function AdminUserEditDialog({
       const payload: UserAdminUpdateInput = {
         display_name: values.display_name.trim(),
         email: values.email.trim().toLowerCase(),
-        role: values.role,
+        roles: values.roles,
         is_active: values.is_active,
         organization_id: values.organization_id ? values.organization_id : null,
         team_ids: values.team_ids,
@@ -199,16 +212,12 @@ export function AdminUserEditDialog({
                 ) : null}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="admin-user-role">Rettighedsgruppe</Label>
-                <select id="admin-user-role" className={adminUserSelectClassName} {...register("role")}>
-                  {roleOptions.map((role) => (
-                    <option key={role.value} value={role.value}>
-                      {role.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <AdminRoleCheckboxList
+                roleOptions={roleOptions}
+                selectedRoles={selectedRoles}
+                onChange={(roles) => setValue("roles", roles, { shouldDirty: true, shouldValidate: true })}
+                error={errors.roles?.message}
+              />
 
               <div className="space-y-2">
                 <Label htmlFor="admin-user-org">Organisation</Label>
