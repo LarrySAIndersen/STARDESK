@@ -218,7 +218,7 @@ async def _comment_to_read(
     )
 
 
-@router.get("", response_model=list[TicketRead])
+@router.get("")
 async def list_tickets(
     board: bool = Query(
         default=False,
@@ -408,7 +408,7 @@ async def list_tickets(
         raise HTTPException(status_code=500, detail="Could not load tickets") from None
 
 
-@router.get("/llm-eval-pack", response_model=TicketLlmEvalPackRead)
+@router.get("/llm-eval-pack")
 async def get_llm_eval_pack(
     board: bool = Query(
         default=True,
@@ -441,7 +441,7 @@ async def get_llm_eval_pack(
     )
 
 
-@router.post("/intake-assist", response_model=IntakeAssistResponse)
+@router.post("/intake-assist")
 async def ticket_intake_assist(
     payload: IntakeAssistRequest,
     _current_user: User = Depends(get_current_user),
@@ -450,7 +450,7 @@ async def ticket_intake_assist(
     return build_intake_assist_draft(payload.messages)
 
 
-@router.post("", response_model=TicketRead, status_code=201)
+@router.post("", status_code=201)
 async def create_ticket(
     payload: TicketCreate,
     db: AsyncSession = Depends(require_db),
@@ -551,7 +551,7 @@ async def create_ticket(
     return await ticket_to_read(db, ticket)
 
 
-@router.get("/{ticket_id}", response_model=TicketDetailRead)
+@router.get("/{ticket_id}")
 async def get_ticket(
     ticket_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -794,7 +794,7 @@ async def remove_ticket_attachment(
     await db.commit()
 
 
-@router.patch("/{ticket_id}", response_model=TicketRead)
+@router.patch("/{ticket_id}")
 async def update_ticket_status(
     ticket_id: uuid.UUID,
     payload: TicketStatusUpdate,
@@ -850,7 +850,7 @@ async def update_ticket_status(
     return await ticket_to_read(db, ticket)
 
 
-@router.patch("/{ticket_id}/metadata", response_model=TicketDetailRead)
+@router.patch("/{ticket_id}/metadata")
 async def update_ticket_metadata(
     ticket_id: uuid.UUID,
     payload: TicketMetadataUpdate,
@@ -956,7 +956,7 @@ async def update_ticket_metadata(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.patch("/{ticket_id}/priority", response_model=TicketDetailRead)
+@router.patch("/{ticket_id}/priority")
 async def update_ticket_priority(
     ticket_id: uuid.UUID,
     payload: TicketPriorityUpdate,
@@ -1020,7 +1020,7 @@ async def update_ticket_priority(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.patch("/{ticket_id}/ticket-type", response_model=TicketDetailRead)
+@router.patch("/{ticket_id}/ticket-type")
 async def update_ticket_type(
     ticket_id: uuid.UUID,
     payload: TicketTypeUpdate,
@@ -1068,7 +1068,7 @@ async def update_ticket_type(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.post("/{ticket_id}/slack-push", response_model=SlackPushResponse)
+@router.post("/{ticket_id}/slack-push")
 async def push_ticket_to_slack(
     ticket_id: uuid.UUID,
     payload: SlackPushRequest,
@@ -1145,7 +1145,7 @@ async def push_ticket_to_slack(
     )
 
 
-@router.patch("/{ticket_id}/parent", response_model=TicketDetailRead)
+@router.patch("/{ticket_id}/parent")
 async def update_ticket_parent(
     ticket_id: uuid.UUID,
     payload: TicketParentUpdate,
@@ -1182,9 +1182,7 @@ async def update_ticket_parent(
 
 @router.post(
     "/{ticket_id}/related-majors",
-    response_model=TicketDetailRead,
-    status_code=201,
-)
+    status_code=201)
 async def link_related_major_ticket(
     ticket_id: uuid.UUID,
     payload: TicketRelatedMajorCreate,
@@ -1254,7 +1252,7 @@ async def unlink_related_major_ticket(
     await db.commit()
 
 
-@router.patch("/{ticket_id}/assignment", response_model=TicketDetailRead)
+@router.patch("/{ticket_id}/assignment")
 async def assign_ticket(
     ticket_id: uuid.UUID,
     payload: TicketAssignmentUpdate,
@@ -1354,7 +1352,7 @@ async def assign_ticket(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.get("/{ticket_id}/stakeholders", response_model=TicketStakeholdersGroupedRead)
+@router.get("/{ticket_id}/stakeholders")
 async def list_ticket_stakeholders(
     ticket_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -1369,9 +1367,7 @@ async def list_ticket_stakeholders(
 
 @router.post(
     "/{ticket_id}/stakeholders",
-    response_model=TicketStakeholderRead,
-    status_code=201,
-)
+    status_code=201)
 async def add_ticket_stakeholder(
     ticket_id: uuid.UUID,
     payload: TicketStakeholderCreate,
@@ -1401,9 +1397,7 @@ async def add_ticket_stakeholder(
 
 
 @router.patch(
-    "/{ticket_id}/stakeholders/{stakeholder_id}",
-    response_model=TicketStakeholderRead,
-)
+    "/{ticket_id}/stakeholders/{stakeholder_id}")
 async def update_ticket_stakeholder(
     ticket_id: uuid.UUID,
     stakeholder_id: uuid.UUID,
@@ -1464,7 +1458,7 @@ async def remove_ticket_stakeholder(
     await db.commit()
 
 
-@router.get("/{ticket_id}/llm-context", response_model=TicketLlmContextRead)
+@router.get("/{ticket_id}/llm-context")
 async def get_ticket_llm_context(
     ticket_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -1477,7 +1471,7 @@ async def get_ticket_llm_context(
     return await build_ticket_llm_context(db, ticket)
 
 
-@router.patch("/{ticket_id}/intelligence", response_model=TicketIntelligenceRead)
+@router.patch("/{ticket_id}/intelligence")
 async def update_ticket_intelligence(
     ticket_id: uuid.UUID,
     payload: TicketIntelligenceUpdate,
@@ -1512,7 +1506,7 @@ async def update_ticket_intelligence(
     return intelligence_from_ticket(ticket)
 
 
-@router.post("/{ticket_id}/comments", response_model=CommentRead, status_code=201)
+@router.post("/{ticket_id}/comments", status_code=201)
 async def create_comment(
     ticket_id: uuid.UUID,
     payload: CommentCreate,
@@ -1606,7 +1600,7 @@ async def create_comment(
     return enriched[0]
 
 
-@router.post("/{ticket_id}/email-reply", response_model=TicketDetailRead)
+@router.post("/{ticket_id}/email-reply")
 async def reply_ticket_email(
     ticket_id: uuid.UUID,
     payload: TicketEmailReplyRequest,
@@ -1631,9 +1625,7 @@ async def reply_ticket_email(
 
 
 @router.put(
-    "/{ticket_id}/comments/{comment_id}/reactions",
-    response_model=CommentReactionSummary,
-)
+    "/{ticket_id}/comments/{comment_id}/reactions")
 async def upsert_comment_reaction(
     ticket_id: uuid.UUID,
     comment_id: uuid.UUID,

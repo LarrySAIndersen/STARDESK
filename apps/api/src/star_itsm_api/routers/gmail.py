@@ -33,7 +33,7 @@ from star_itsm_api.routers.integration_org import require_integration_org_id
 router = APIRouter(prefix="/integrations/gmail", tags=["gmail"])
 
 
-@router.get("/oauth/start", response_model=GmailOAuthStartResponse)
+@router.get("/oauth/start")
 async def start_gmail_oauth(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
@@ -47,7 +47,7 @@ async def start_gmail_oauth(
     return GmailOAuthStartResponse(authorize_url=authorize_url)
 
 
-@router.get("/oauth/callback", response_model=GmailOAuthCallbackResponse)
+@router.get("/oauth/callback")
 async def gmail_oauth_callback(
     code: str | None = Query(default=None),
     state: str | None = Query(default=None),
@@ -75,7 +75,7 @@ async def gmail_oauth_callback(
     return GmailOAuthCallbackResponse(connected=True, connected_email=connected_email)
 
 
-@router.get("/status", response_model=GmailStatusRead)
+@router.get("/status")
 async def gmail_status(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),
@@ -99,7 +99,7 @@ async def gmail_status(
     )
 
 
-@router.patch("/settings", response_model=GmailStatusRead)
+@router.patch("/settings")
 async def update_gmail_settings(
     payload: GmailSettingsUpdate,
     current_user: User = Depends(require_admin()),
@@ -122,7 +122,7 @@ async def update_gmail_settings(
     )
 
 
-@router.post("/sync", response_model=GmailSyncResponse)
+@router.post("/sync")
 async def gmail_sync(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
@@ -145,7 +145,7 @@ async def gmail_sync(
     )
 
 
-@router.get("/test", response_model=GmailTestResponse)
+@router.get("/test")
 async def gmail_test_connection(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),
@@ -164,7 +164,7 @@ async def gmail_test_connection(
     return GmailTestResponse(ok=True, connected_email=connected_email, detail="Forbindelse OK")
 
 
-@router.post("/disconnect", response_model=GmailStatusRead)
+@router.post("/disconnect")
 async def disconnect_gmail_integration(
     current_user: User = Depends(require_admin()),
     db: AsyncSession = Depends(require_db),

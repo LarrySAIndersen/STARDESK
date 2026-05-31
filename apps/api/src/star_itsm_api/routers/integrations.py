@@ -12,7 +12,7 @@ from star_itsm_api.schemas.integration import IntegrationScopeRead
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
-@router.get("/scope", response_model=IntegrationScopeRead)
+@router.get("/scope")
 async def integration_scope(
     current_user: User = Depends(require_staff()),
     db: AsyncSession = Depends(require_db),

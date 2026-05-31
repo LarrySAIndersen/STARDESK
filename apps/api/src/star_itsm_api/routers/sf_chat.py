@@ -27,7 +27,7 @@ from star_itsm_api.services import sf_chat as chat_svc
 router = APIRouter(prefix="/sf-chat", tags=["sf-chat"])
 
 
-@router.get("/status", response_model=SfChatStatusRead)
+@router.get("/status")
 async def chat_status(
     db: AsyncSession = Depends(require_db),
     _current_user: User = Depends(get_current_user),
@@ -35,7 +35,7 @@ async def chat_status(
     return await chat_svc.get_chat_status(db)
 
 
-@router.post("/sessions", response_model=SfChatSessionCreateResponse)
+@router.post("/sessions")
 async def start_session(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
@@ -67,7 +67,7 @@ async def start_session(
     )
 
 
-@router.get("/sessions/{session_id}/poll", response_model=SfChatPollRead)
+@router.get("/sessions/{session_id}/poll")
 async def poll_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -96,7 +96,7 @@ async def poll_session(
     )
 
 
-@router.post("/sessions/{session_id}/messages", response_model=SfChatMessageRead, status_code=201)
+@router.post("/sessions/{session_id}/messages", status_code=201)
 async def post_message(
     session_id: uuid.UUID,
     payload: SfChatMessageCreate,
@@ -150,7 +150,7 @@ async def customer_typing(
     await chat_svc.record_customer_typing(db, session_id, current_user.id)
 
 
-@router.post("/sessions/{session_id}/abandon", response_model=SfChatSessionRead)
+@router.post("/sessions/{session_id}/abandon")
 async def abandon_session(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -165,7 +165,7 @@ async def abandon_session(
     return chat_svc._session_read(session, queue_message=queue_message)
 
 
-@router.post("/sessions/{session_id}/create-ticket", response_model=TicketRead, status_code=201)
+@router.post("/sessions/{session_id}/create-ticket", status_code=201)
 async def create_ticket_from_sf_chat(
     session_id: uuid.UUID,
     payload: SfChatCreateTicketBody,
@@ -202,7 +202,7 @@ async def create_ticket_from_sf_chat(
     return await ticket_to_read(db, ticket)
 
 
-@router.get("/presence", response_model=SfChatPresenceRead)
+@router.get("/presence")
 async def get_presence(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -210,7 +210,7 @@ async def get_presence(
     return await chat_svc.get_presence(db, current_user)
 
 
-@router.put("/presence", response_model=SfChatPresenceRead)
+@router.put("/presence")
 async def update_presence(
     payload: SfChatPresenceUpdate,
     db: AsyncSession = Depends(require_db),
@@ -244,7 +244,7 @@ async def presence_heartbeat(
     await chat_svc.heartbeat_presence(db, current_user)
 
 
-@router.get("/presence/logout-check", response_model=SfChatLogoutCheckRead)
+@router.get("/presence/logout-check")
 async def presence_logout_check(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -252,7 +252,7 @@ async def presence_logout_check(
     return await chat_svc.logout_check(db, current_user)
 
 
-@router.get("/agent/inbox", response_model=SfChatAgentInboxRead)
+@router.get("/agent/inbox")
 async def agent_inbox(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -260,7 +260,7 @@ async def agent_inbox(
     return await chat_svc.build_agent_inbox(db, current_user)
 
 
-@router.post("/sessions/{session_id}/start-bot", response_model=SfChatSessionRead)
+@router.post("/sessions/{session_id}/start-bot")
 async def start_bot_assistant(
     session_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),

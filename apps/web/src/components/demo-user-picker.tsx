@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { DEMO_PASSWORD, groupDemoUsers, type DemoUser } from "@/lib/demo-users";
+import { groupDemoUsers, type DemoUser } from "@/lib/demo-users";
 
 export function DemoUserPicker({
   selectedEmail,
@@ -30,9 +30,8 @@ export function DemoUserPicker({
       <div>
         <h2 className="text-star-navy text-lg font-semibold">Vælg testbruger</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Klik en række for at udfylde login — eller brug{" "}
-          <span className="font-medium">Log ind</span> direkte. Standardadgangskode:{" "}
-          <span className="font-mono">{DEMO_PASSWORD}</span>
+          Klik en række for at vælge bruger — eller brug{" "}
+          <span className="font-medium">Log ind</span> direkte.
         </p>
       </div>
       {groups.map((group) => (
@@ -46,8 +45,6 @@ export function DemoUserPicker({
                 <TableRow>
                   <TableHead scope="col">Rolle</TableHead>
                   <TableHead scope="col">Navn</TableHead>
-                  <TableHead scope="col">E-mail</TableHead>
-                  <TableHead scope="col">Adgangskode</TableHead>
                   <TableHead scope="col">
                     <span className="sr-only">Handling</span>
                   </TableHead>
@@ -69,8 +66,6 @@ export function DemoUserPicker({
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">{user.displayName}</TableCell>
-                      <TableCell className="font-mono text-xs">{user.email}</TableCell>
-                      <TableCell className="font-mono text-xs">{user.password}</TableCell>
                       <TableCell>
                         <Button
                           type="button"

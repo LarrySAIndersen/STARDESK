@@ -16,12 +16,12 @@ import {
 import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 import { cn } from "@/lib/utils";
 
-type AgentShellColumnsProps = {
+type AgentShellColumnsProps = Readonly<{
   sidebar: ReactNode;
   children: ReactNode;
   collapsed: boolean;
   onToggle: () => void;
-};
+}>;
 
 const FALLBACK_LAYOUT = {
   [SHELL_PANEL_NAV]: SHELL_NAV.default,

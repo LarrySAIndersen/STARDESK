@@ -19,12 +19,12 @@ import type { AssetSystem } from "@/types/asset";
 import type { Ticket } from "@/types/ticket";
 import type { User } from "@/types/user";
 
-type ChatMessage = {
+type ChatMessage = Readonly<{
   id: string;
   role: "user" | "assistant";
   body: string;
   links?: CaseAssistantLink[];
-};
+}>;
 
 function renderBody(body: string): ReactNode {
   const parts = body.split(/(\*\*[^*]+\*\*)/g);

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPatch } from "@/lib/api";
 
-type SlaPolicy = {
+type SlaPolicy = Readonly<{
   id: string;
   name: string;
   description: string | null;
@@ -15,9 +15,9 @@ type SlaPolicy = {
   resolution_time_minutes: number;
   business_hours_only: boolean;
   is_active: boolean;
-};
+}>;
 
-type StandardRule = {
+type StandardRule = Readonly<{
   priority: string;
   label_da: string;
   policy_name: string;
@@ -25,21 +25,21 @@ type StandardRule = {
   response_amount: number;
   resolution_kind: string;
   resolution_amount: number;
-};
+}>;
 
-type TeamOption = {
+type TeamOption = Readonly<{
   id: string;
   name: string;
-};
+}>;
 
-type SlaSettings = {
+type SlaSettings = Readonly<{
   pause_on_hold: boolean;
   pause_statuses: string[];
   trigger_team_ids: string[];
   sla_starts_on_team_assignment: boolean;
   due_soon_minutes: number;
   teams: TeamOption[];
-};
+}>;
 
 const PAUSE_STATUS_OPTIONS = [
   { value: "on_hold", label: "På hold (on_hold)" },

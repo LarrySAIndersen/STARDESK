@@ -22,10 +22,10 @@ import {
 import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 import type { User } from "@/types/user";
 
-type PortalShellColumnsProps = {
+type PortalShellColumnsProps = Readonly<{
   children: ReactNode;
   user?: User | null;
-};
+}>;
 
 export function PortalShellColumns({ children, user: serverUser }: PortalShellColumnsProps) {
   const { collapsed, toggle } = useSidebarCollapsed();

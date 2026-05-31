@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { staffLandingPath } from "@/lib/classic-ui-mode";
-import { DEMO_PASSWORD, DEMO_USERS } from "@/lib/demo-users";
-import { isDemoLoginEnabled } from "@/lib/demo-login";
 import { isStaff } from "@/lib/auth";
 import type { User } from "@/types/user";
 
@@ -226,11 +224,6 @@ export function HelpdeskLoginPage() {
         submitButtons && submitButtons.length > 1
           ? submitButtons[submitButtons.length - 1]
           : submitButtons?.[0];
-
-      if (viewId === "#view-star-city" && isDemoLoginEnabled() && loginInput && !loginInput.value) {
-        loginInput.value = DEMO_USERS[1]?.email ?? "sf01@example.dk";
-        if (passwordInput) passwordInput.value = DEMO_PASSWORD;
-      }
 
       function onSubmit(event: Event) {
         event.preventDefault();

@@ -38,7 +38,7 @@ async def require_reviewer(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-@router.get("", response_model=list[ReviewNoteRead])
+@router.get("")
 async def list_review_notes(
     page_path: str | None = Query(default=None),
     status: str | None = Query(default=None, pattern=r"^(open|resolved)$"),
@@ -48,7 +48,7 @@ async def list_review_notes(
     return await review_notes.list_review_notes(db, page_path=page_path, status=status)
 
 
-@router.post("", response_model=ReviewNoteRead, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_review_note(
     payload: ReviewNoteCreate,
     db: AsyncSession = Depends(require_db),
@@ -57,7 +57,7 @@ async def create_review_note(
     return await review_notes.create_review_note(db, payload=payload, author=current_user)
 
 
-@router.patch("/{note_id}", response_model=ReviewNoteRead)
+@router.patch("/{note_id}")
 async def update_review_note(
     note_id: uuid.UUID,
     payload: ReviewNoteUpdate,

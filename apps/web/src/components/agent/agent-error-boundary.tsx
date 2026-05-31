@@ -2,13 +2,13 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-type AgentErrorBoundaryProps = {
+type AgentErrorBoundaryProps = Readonly<{
   children: ReactNode;
-};
+}>;
 
-type AgentErrorBoundaryState = {
+type AgentErrorBoundaryState = Readonly<{
   error: Error | null;
-};
+}>;
 
 /** Catches client render errors in the agent shell so navigation does not fail silently. */
 export class AgentErrorBoundary extends Component<

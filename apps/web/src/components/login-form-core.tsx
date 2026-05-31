@@ -18,7 +18,7 @@ import { staffLandingPath } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
-type LoginFormCoreProps = {
+type LoginFormCoreProps = Readonly<{
   initialEmail?: string;
   initialPassword?: string;
   loginDescription?: string;
@@ -27,7 +27,7 @@ type LoginFormCoreProps = {
   layoutClassName?: string;
   onEmailChange?: (email: string) => void;
   onPasswordChange?: (password: string) => void;
-};
+}>;
 
 export function LoginFormCore({
   initialEmail = "",

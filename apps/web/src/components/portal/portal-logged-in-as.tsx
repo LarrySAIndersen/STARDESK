@@ -42,7 +42,7 @@ export function portalUserInitials(user: Pick<User, "display_name" | "email">): 
   return "?";
 }
 
-type PortalLoggedInAsProps = {
+type PortalLoggedInAsProps = Readonly<{
   user?: User | null;
   /** White SiteHeader bar (Sager / Opret sag). */
   variant?: "header" | "topbar";
@@ -50,7 +50,7 @@ type PortalLoggedInAsProps = {
   /** When false, only label text (pair with UserAvatar in wire top bar). */
   showAvatar?: boolean;
   className?: string;
-};
+}>;
 
 export function PortalLoggedInAs({
   user: userProp,

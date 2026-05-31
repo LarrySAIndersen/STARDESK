@@ -19,17 +19,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getClientUser } from "@/lib/auth";
-import { DEMO_PASSWORD } from "@/lib/demo-users";
 import { PASSWORD_VALIDATION_MESSAGE, validatePassword } from "@/lib/password-policy";
 import { cn } from "@/lib/utils";
 
-type ChangePasswordFormProps = {
+type ChangePasswordFormProps = Readonly<{
   required?: boolean;
   initialEmail?: string;
   /** Logged-in staff with legacy `must_change_password` may continue to the app. */
   showSkipToDashboard?: boolean;
   dashboardHref?: string;
-};
+}>;
 
 export function ChangePasswordForm({
   required = false,
@@ -39,7 +38,7 @@ export function ChangePasswordForm({
 }: ChangePasswordFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState(initialEmail);
-  const [currentPassword, setCurrentPassword] = useState(required ? "" : DEMO_PASSWORD);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -250,11 +249,7 @@ export function ChangePasswordForm({
         <CardHeader className="bg-star-navy text-white">
           <CardTitle className="text-white">Skift adgangskode</CardTitle>
           <CardDescription className="text-white/80">
-            <>
-              Angiv din e-mail og prototype-adgangskoden{" "}
-              <span className="font-medium text-white">{DEMO_PASSWORD}</span> som nuværende
-              adgangskode — også hvis du allerede har skiftet den før.
-            </>
+            Angiv din e-mail og din nuværende adgangskode for at opdatere den.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -277,13 +272,9 @@ export function ChangePasswordForm({
                 autoComplete="current-password"
                 value={currentPassword}
                 onChange={(event) => setCurrentPassword(event.target.value)}
-                placeholder={DEMO_PASSWORD}
                 className={inputClass}
                 required
               />
-              <p className="text-muted-foreground text-xs">
-                Brug altid <span className="font-medium">{DEMO_PASSWORD}</span> her i prototypen.
-              </p>
             </PasswordField>
             <PasswordField label="Ny adgangskode" htmlFor="new-password">
               <Input

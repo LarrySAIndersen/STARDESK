@@ -15,6 +15,8 @@
     "security:audit": "node ./security-audit/run-audit.mjs",
     "sonar:agent": "node ./sonar-agent/run-sonar-agent.mjs",
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
+    "sonar:codemod:fastapi": "python ./sonar-agent/codemods/fastapi_router_style.py",
+    "sonar:codemod:readonly-props": "node ./sonar-agent/codemods/react_readonly_props.mjs",
     "quality:loop": "node ./n8n-workflows/run-quality-loop.mjs",
     "review:playwright": "node ./run-review-playwright.mjs",
     "review:playwright:import": "node ./import-playwright-evidence-to-workboard.mjs",

@@ -18,11 +18,11 @@ export type IntakeAssistDraft = {
   emoji: string | null;
 };
 
-type ChatMessage = {
+type ChatMessage = Readonly<{
   id: string;
   role: "user" | "assistant";
   content: string;
-};
+}>;
 
 const MOCK_SPEECH_SAMPLE =
   "Jeg kan ikke logge ind på VPN fra hjemmefra — det skete efter weekenden.";

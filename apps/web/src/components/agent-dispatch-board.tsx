@@ -79,12 +79,12 @@ function sortTeams(teams: Team[]): Team[] {
   });
 }
 
-type PendingDrop = {
+type PendingDrop = Readonly<{
   ticketId: string;
   ticketTitle: string;
   teamId?: string;
   teamName?: string;
-};
+}>;
 
 export function AgentDispatchBoard({
   tickets,

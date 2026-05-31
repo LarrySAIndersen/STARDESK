@@ -1,6 +1,6 @@
-type SiteFooterProps = {
+type SiteFooterProps = Readonly<{
   variant?: "default" | "firstLoginIndustrial";
-};
+}>;
 
 export function SiteFooter({ variant = "default" }: SiteFooterProps) {
   if (variant === "firstLoginIndustrial") {

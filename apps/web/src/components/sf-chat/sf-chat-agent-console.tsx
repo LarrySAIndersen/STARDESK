@@ -22,11 +22,11 @@ import type { Ticket } from "@/types/ticket";
 const POLL_MS = 4000;
 const HEARTBEAT_MS = 25000;
 
-type PollResponse = {
+type PollResponse = Readonly<{
   session: SfChatSession | null;
   messages: SfChatMessage[];
   status: SfChatStatus;
-};
+}>;
 
 export function SfChatAgentConsole() {
   const router = useRouter();
