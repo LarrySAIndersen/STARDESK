@@ -139,7 +139,9 @@ def _fernet():
     try:
         return Fernet(key.encode("utf-8"))
     except Exception as exc:
-        raise GmailApiError("GMAIL_TOKEN_ENCRYPTION_KEY er ugyldig (forventet Fernet-nøgle).") from exc
+        raise GmailApiError(
+            "GMAIL_TOKEN_ENCRYPTION_KEY er ugyldig (forventet Fernet-nøgle)."
+        ) from exc
 
 
 def encrypt_refresh_token(token: str) -> str:
