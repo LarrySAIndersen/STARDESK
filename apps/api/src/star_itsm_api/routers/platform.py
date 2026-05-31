@@ -12,7 +12,7 @@ from star_itsm_api.services.permissions import is_staff_role
 router = APIRouter(prefix="/platform", tags=["platform"])
 
 
-@router.get("/sidebar-nav-visibility", response_model=SidebarNavVisibilityRead)
+@router.get("/sidebar-nav-visibility")
 async def read_sidebar_nav_visibility(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
@@ -23,7 +23,7 @@ async def read_sidebar_nav_visibility(
     return SidebarNavVisibilityRead(hidden_nav_ids=hidden)
 
 
-@router.put("/sidebar-nav-visibility", response_model=SidebarNavVisibilityRead)
+@router.put("/sidebar-nav-visibility")
 async def update_sidebar_nav_visibility(
     payload: SidebarNavVisibilityUpdate,
     db: AsyncSession = Depends(require_db),

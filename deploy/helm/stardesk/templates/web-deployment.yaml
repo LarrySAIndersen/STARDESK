@@ -16,6 +16,7 @@ spec:
       labels:
         app: stardesk-web
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: web
           image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"

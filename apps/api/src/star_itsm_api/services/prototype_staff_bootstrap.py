@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.prototype_credentials import LARRY_BCRYPT_HASH
-from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUPPORTER
+from star_itsm_api.core.prototype_credentials import (
+    LARRY_PROTOTYPE_PASSWORD,
+    LARRY_PROTOTYPE_PEPPER,
+)
+from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUPPORTER, hash_prototype_password, verify_password
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
@@ -20,7 +23,8 @@ class PrototypeStaffProfile:
     ui_mode: str
     display_name: str
     team_names: tuple[str, ...]
-    password_hash: str | None = None
+    prototype_password: str | None = None
+    password_pepper: str | None = None
 
 
 PROTOTYPE_STAFF_BY_EMAIL: dict[str, PrototypeStaffProfile] = {
@@ -29,14 +33,16 @@ PROTOTYPE_STAFF_BY_EMAIL: dict[str, PrototypeStaffProfile] = {
         ui_mode="modern",
         display_name="Larrysanders",
         team_names=(),
-        password_hash=LARRY_BCRYPT_HASH,
+        prototype_password=LARRY_PROTOTYPE_PASSWORD,
+        password_pepper=LARRY_PROTOTYPE_PEPPER,
     ),
     "larrysanders2@example.dk": PrototypeStaffProfile(
         role=ROLE_SUPPORTER,
         ui_mode="classic",
         display_name="Larrysanders2",
         team_names=("Landssupport",),
-        password_hash=LARRY_BCRYPT_HASH,
+        prototype_password=LARRY_PROTOTYPE_PASSWORD,
+        password_pepper=LARRY_PROTOTYPE_PEPPER,
     ),
 }
 
@@ -63,9 +69,11 @@ async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
     if user.deleted_at is not None:
         user.deleted_at = None
         changed = True
-    if profile.password_hash and user.password_hash != profile.password_hash:
-        user.password_hash = profile.password_hash
-        changed = True
+    if profile.prototype_password:
+        if not verify_password(profile.prototype_password, user.password_hash):
+            pepper = profile.password_pepper or "default"
+            user.password_hash = hash_prototype_password(profile.prototype_password, pepper=pepper)
+            changed = True
 
     if user.must_change_password:
         user.must_change_password = False

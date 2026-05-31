@@ -12,11 +12,11 @@ import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
 import type { User } from "@/types/user";
 
-type DraftNote = {
+type DraftNote = Readonly<{
   x: number;
   y: number;
   comment: string;
-};
+}>;
 
 function pageTitleFromPath(pathname: string): string {
   if (pathname === "/") return "Dashboard";

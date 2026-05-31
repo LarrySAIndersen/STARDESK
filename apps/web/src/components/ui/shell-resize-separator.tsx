@@ -4,11 +4,11 @@ import { Separator } from "react-resizable-panels";
 
 import { cn } from "@/lib/utils";
 
-type ShellResizeSeparatorProps = {
+type ShellResizeSeparatorProps = Readonly<{
   id?: string;
   orientation?: "horizontal" | "vertical";
   label?: string;
-};
+}>;
 
 /** Wide drag hit area with a subtle divider line between shell columns. */
 export function ShellResizeSeparator({

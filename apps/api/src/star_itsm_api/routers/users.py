@@ -71,7 +71,7 @@ def _assert_can_assign_role(actor: User, new_role: str, *, target_email: str) ->
         ) from exc
 
 
-@router.get("/meta", response_model=UserAdminMeta)
+@router.get("/meta")
 async def users_meta(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
@@ -82,7 +82,7 @@ async def users_meta(
     return build_admin_meta(organizations)
 
 
-@router.get("", response_model=UserAdminListResponse)
+@router.get("")
 async def list_users(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
@@ -95,7 +95,7 @@ async def list_users(
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
 
 
-@router.post("/import", response_model=UserImportResult)
+@router.post("/import")
 async def import_users(
     payload: UserImportRequest,
     db: AsyncSession = Depends(require_db),
@@ -115,7 +115,7 @@ async def import_users(
     )
 
 
-@router.post("", response_model=UserAdminCreated, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: UserAdminCreate,
     db: AsyncSession = Depends(require_db),
@@ -176,7 +176,7 @@ async def create_user(
     return UserAdminCreated(user=created, temporary_password=temporary_password)
 
 
-@router.post("/me/avatar", response_model=UserRead)
+@router.post("/me/avatar")
 async def upload_my_avatar(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(require_db),
@@ -203,7 +203,7 @@ async def get_user_avatar(
     return FileResponse(path, media_type=resolve_avatar_media_type(path))
 
 
-@router.get("/{user_id}/tickets", response_model=UserTicketsGroupedRead)
+@router.get("/{user_id}/tickets")
 async def get_user_tickets(
     user_id: uuid.UUID,
     limit: int = Query(default=100, ge=1, le=500),
@@ -219,7 +219,7 @@ async def get_user_tickets(
     return await list_user_tickets_grouped(db, user_id=user_id, limit=limit)
 
 
-@router.get("/{user_id}", response_model=UserAdminRead)
+@router.get("/{user_id}")
 async def get_user(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -234,7 +234,7 @@ async def get_user(
     return user
 
 
-@router.patch("/{user_id}", response_model=UserAdminRead)
+@router.patch("/{user_id}")
 async def update_user(
     user_id: uuid.UUID,
     payload: UserAdminUpdate,

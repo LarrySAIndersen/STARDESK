@@ -28,7 +28,7 @@ class EmailInboundPayload(BaseModel):
     body: str = Field(min_length=1)
 
 
-@router.post("/email-inbound", response_model=TicketRead, status_code=201)
+@router.post("/email-inbound", status_code=201)
 async def email_inbound(
     payload: EmailInboundPayload,
     db: AsyncSession = Depends(require_db),

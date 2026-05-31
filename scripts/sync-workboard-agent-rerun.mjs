@@ -2,10 +2,12 @@
 /**
  * Skriver STARDESK/Background/AGENT-RERUN-QUEUE.md fra Work Board canvas-data.
  * Lister alle opgaver i In Progress (auto-start agent + session-prioritet).
+ * Eksporterer reviewRejectAttachments til disk så Cursor kan læse keyframes/video.
  */
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -42,7 +44,26 @@ function priorityRank(priority) {
   return order[priority] ?? 9;
 }
 
+function hasRejectAttachments(task) {
+  const attachments = task.reviewRejectAttachments ?? task.reviewRejectImages ?? [];
+  return attachments.length > 0;
+}
+
+function exportRejectMediaForInProgress() {
+  const script = path.join(__dirname, "export-review-reject-attachments.mjs");
+  if (!fs.existsSync(script)) return;
+  const result = spawnSync(process.execPath, [script, "--all-in-progress"], {
+    cwd: path.resolve(__dirname, ".."),
+    encoding: "utf8",
+  });
+  if (result.stdout?.trim()) console.log(result.stdout.trim());
+  if (result.status !== 0 && result.stderr?.trim()) {
+    console.error(result.stderr.trim());
+  }
+}
+
 function main() {
+  exportRejectMediaForInProgress();
   if (!fs.existsSync(dataPath)) {
     console.error("Work Board data ikke fundet:", dataPath);
     process.exit(1);
@@ -93,6 +114,31 @@ function main() {
           reason || "(ingen begrundelse fundet)",
           "",
         );
+        if (hasRejectAttachments(task)) {
+          const attachments = task.reviewRejectAttachments ?? task.reviewRejectImages ?? [];
+          const exported = attachments.filter((a) => a.exportPath?.trim());
+          lines.push("### Agent-medier (video/billeder)", "");
+          if (exported.length > 0) {
+            for (const entry of exported) {
+              const label = entry.videoKeyFrame
+                ? "keyframe"
+                : entry.kind === "video"
+                  ? "video"
+                  : "billede";
+              lines.push(`- \`${entry.exportPath}\` (${label})`);
+            }
+          } else {
+            lines.push(
+              "_Kør export:_ `node STARDESK/scripts/export-review-reject-attachments.mjs --task " +
+                `${task.number}`,
+              "",
+            );
+          }
+          lines.push(
+            "Cursor Read kan **ikke** parse video fra JSON — læs **keyframe-JPEG** efter export.",
+            "",
+          );
+        }
       } else {
         lines.push(
           "### Handling",

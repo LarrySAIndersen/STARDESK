@@ -25,7 +25,7 @@ import {
 import type { PageLayoutFieldConfig, PageLayoutPageConfig } from "@/lib/page-layout/types";
 import type { User } from "@/types/user";
 
-type PageLayoutEditContextValue = {
+type PageLayoutEditContextValue = Readonly<{
   canEdit: boolean;
   editMode: boolean;
   setEditMode: (value: boolean) => void;
@@ -40,7 +40,7 @@ type PageLayoutEditContextValue = {
   undoLayout: () => void;
   canUndo: boolean;
   undoStackDepth: number;
-};
+}>;
 
 const PageLayoutEditContext = createContext<PageLayoutEditContextValue | null>(null);
 

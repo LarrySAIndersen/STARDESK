@@ -4,11 +4,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type SidebarCollapseToggleProps = {
+type SidebarCollapseToggleProps = Readonly<{
   collapsed: boolean;
   onToggle: () => void;
   className?: string;
-};
+}>;
 
 export function SidebarCollapseToggle({
   collapsed,

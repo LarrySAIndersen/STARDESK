@@ -33,16 +33,16 @@ function proxyAbandonUrl(sessionId: string): string {
   return path;
 }
 
-type SessionResponse = {
+type SessionResponse = Readonly<{
   session: SfChatSession;
   messages: SfChatMessage[];
-};
+}>;
 
-type PollResponse = {
+type PollResponse = Readonly<{
   session: SfChatSession | null;
   messages: SfChatMessage[];
   status: SfChatStatus;
-};
+}>;
 
 export function SfChatWidget() {
   const router = useRouter();

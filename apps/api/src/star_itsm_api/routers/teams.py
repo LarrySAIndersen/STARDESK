@@ -16,7 +16,7 @@ from star_itsm_api.services.teams import build_team_read, get_user_team_ids, syn
 router = APIRouter(prefix="/teams", tags=["teams"])
 
 
-@router.get("", response_model=list[TeamRead])
+@router.get("")
 async def list_teams(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -32,7 +32,7 @@ async def list_teams(
     return [await build_team_read(db, team) for team in teams]
 
 
-@router.get("/{team_id}", response_model=TeamRead)
+@router.get("/{team_id}")
 async def get_team(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -50,7 +50,7 @@ async def get_team(
     return await build_team_read(db, team)
 
 
-@router.patch("/{team_id}", response_model=TeamRead)
+@router.patch("/{team_id}")
 async def update_team_members(
     team_id: uuid.UUID,
     payload: TeamAdminUpdate,

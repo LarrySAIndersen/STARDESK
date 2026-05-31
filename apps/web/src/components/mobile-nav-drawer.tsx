@@ -5,13 +5,13 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type MobileNavDrawerProps = {
+type MobileNavDrawerProps = Readonly<{
   open: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
   className?: string;
-};
+}>;
 
 export function MobileNavDrawer({
   open,

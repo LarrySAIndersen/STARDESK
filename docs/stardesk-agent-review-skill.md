@@ -5,25 +5,15 @@ Live path (Cursor, gitignored): `STARDESK/.cursor/skills/stardesk-agent-review/S
 This file is a **tracked mirror** for commits. Keep in sync when changing the skill.
 
 ---
----
 name: stardesk-agent-review
-description: Verifies Work Board tasks in Agent Review (status Review) using Playwright, code/canvas inspection, or hybrid methods. Updates agentReviewEvidence and prepares Danish handoff for Human Review. Use when a task enters Agent Review, when reviewPlaywrightEvidence is pending, or when starting review subagents.
+description: Self-review before handoff (Playwright/code). Work Board integration is retired — use for PR verification only when user asks, not for canvas kanban tasks.
 ---
 
 # STARdesk Agent Review
 
-Guide for Cursor agents verifying Work Board tasks in **Agent Review** (`status: "Review"`) before handoff to **Human Review** (Jan).
+> **Work Board pensioneret:** Ignorér kanban/canvas task-flow (`stardesk-workboard.canvas.data.json`, Agent Review kolonner, `agentReviewEvidence`). Brug denne skill kun til **PR/leverance-verifikation** når brugeren beder om det — deliverable gate, Playwright, kodegennemgang.
 
-Work Board flow: **In Progress → Agent Review → Human Review → Done**.
-
-## When to run
-
-- Task moves to **Agent Review** — Work Board auto-starts a review agent chat (`newComposerChat`).
-- `agentReviewEvidence.status` is `pending` or `running`.
-- `reviewVerificationScope: "stardesk"` and `reviewPlaywrightEvidence.status === "pending"` — run or wait for Playwright, then complete agent review.
-- User clicks **Start Agent Review-agent** in task detail.
-
-Read task context from `canvases/stardesk-workboard.canvas.data.json` → `stardesk-tasks-v1` (find by `"number"` or `"id"`).
+## When to run (without Work Board)
 
 ## Task context fields
 

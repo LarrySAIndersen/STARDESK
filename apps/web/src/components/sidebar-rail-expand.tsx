@@ -4,10 +4,10 @@ import { ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type SidebarRailExpandProps = {
+type SidebarRailExpandProps = Readonly<{
   onExpand: () => void;
   className?: string;
-};
+}>;
 
 /** Always-visible expand control on the collapsed nav rail edge. */
 export function SidebarRailExpand({ onExpand, className }: SidebarRailExpandProps) {

@@ -1,15 +1,9 @@
-# Work Board canvas (git mirror)
+# Work Board canvas (git mirror) — retired
 
-Canonical live files for Cursor Canvas:
+> **Pensioneret:** Cursor Work Board / web `/workboard` og kanban agent-pipeline bruges ikke længere. Denne mappe er historisk spejl af canvas-TSX.
+
+Canonical live files (hvis canvas stadig findes lokalt i Cursor):
 
 - `~/.cursor/projects/.../canvases/stardesk-workboard.canvas.tsx`
-- `stardesk-workboard.canvas.data.json` (UI cache — do not commit tokens)
 
-This folder mirrors `stardesk-workboard.canvas.tsx` for version control. After editing the canvas in Cursor, copy the TSX here before commit:
-
-```powershell
-Copy-Item "$env:USERPROFILE\.cursor\projects\c-Users-kjaer-STARDESK-Cursor\canvases\stardesk-workboard.canvas.tsx" `
-  "STARDESK/workboard/stardesk-workboard.canvas.tsx"
-```
-
-See `docs/agent-review-ac-matrix.md` and `docs/stardesk-agent-review-skill.md`.
+Agenter skal **ikke** synce, opdatere eller bygge mod Work Board medmindre brugeren eksplicit genaktiverer det.

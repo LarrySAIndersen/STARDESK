@@ -24,7 +24,7 @@ from star_itsm_api.services import kanban_service
 router = APIRouter(prefix="/kanban", tags=["kanban"])
 
 
-@router.get("/boards", response_model=list[KanbanBoardSummaryRead])
+@router.get("/boards")
 async def list_boards(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_staff()),
@@ -32,7 +32,7 @@ async def list_boards(
     return await kanban_service.list_boards(db, current_user)
 
 
-@router.post("/boards", response_model=KanbanBoardSummaryRead, status_code=201)
+@router.post("/boards", status_code=201)
 async def create_board(
     payload: KanbanBoardCreate,
     db: AsyncSession = Depends(require_db),
@@ -41,7 +41,7 @@ async def create_board(
     return await kanban_service.create_board(db, current_user, payload)
 
 
-@router.get("/boards/{board_id}", response_model=KanbanBoardDetailRead)
+@router.get("/boards/{board_id}")
 async def get_board(
     board_id: uuid.UUID,
     db: AsyncSession = Depends(require_db),
@@ -55,7 +55,7 @@ async def get_board(
         raise HTTPException(status_code=403, detail="Insufficient permissions") from None
 
 
-@router.patch("/boards/{board_id}", response_model=KanbanBoardSummaryRead)
+@router.patch("/boards/{board_id}")
 async def update_board(
     board_id: uuid.UUID,
     payload: KanbanBoardUpdate,
@@ -84,7 +84,7 @@ async def delete_board(
         raise HTTPException(status_code=403, detail="Insufficient permissions") from None
 
 
-@router.post("/boards/{board_id}/cards", response_model=TicketRead, status_code=201)
+@router.post("/boards/{board_id}/cards", status_code=201)
 async def add_card(
     board_id: uuid.UUID,
     payload: KanbanCardAdd,
@@ -140,7 +140,7 @@ async def remove_card(
         raise HTTPException(status_code=403, detail="Insufficient permissions") from None
 
 
-@router.patch("/boards/{board_id}/cards/{ticket_id}/move", response_model=TicketRead)
+@router.patch("/boards/{board_id}/cards/{ticket_id}/move")
 async def move_card(
     board_id: uuid.UUID,
     ticket_id: uuid.UUID,
@@ -170,7 +170,7 @@ async def move_card(
         raise HTTPException(status_code=403, detail="Insufficient permissions") from None
 
 
-@router.post("/boards/{board_id}/columns", response_model=KanbanColumnRead, status_code=201)
+@router.post("/boards/{board_id}/columns", status_code=201)
 async def create_column(
     board_id: uuid.UUID,
     payload: KanbanColumnCreate,
@@ -185,7 +185,7 @@ async def create_column(
         raise HTTPException(status_code=403, detail="Insufficient permissions") from None
 
 
-@router.patch("/boards/{board_id}/columns/{column_id}", response_model=KanbanColumnRead)
+@router.patch("/boards/{board_id}/columns/{column_id}")
 async def update_column(
     board_id: uuid.UUID,
     column_id: uuid.UUID,
@@ -231,7 +231,7 @@ async def delete_column(
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
-@router.get("/boards/{board_id}/ticket-search", response_model=list[KanbanTicketSearchResult])
+@router.get("/boards/{board_id}/ticket-search")
 async def search_tickets(
     board_id: uuid.UUID,
     q: str = Query(min_length=0, max_length=128),

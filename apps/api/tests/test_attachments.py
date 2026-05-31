@@ -18,7 +18,9 @@ from star_itsm_api.services import attachments, file_storage
 
 
 @pytest.fixture
-def clean_attachment() -> Attachment:
+def clean_attachment(tmp_path: Path) -> Attachment:
+    local = tmp_path / "photo.png"
+    local.write_bytes(b"test")
     return Attachment(
         id=uuid.uuid4(),
         ticket_id=uuid.uuid4(),
@@ -27,7 +29,7 @@ def clean_attachment() -> Attachment:
         filename="photo.png",
         content_type="image/png",
         size_bytes=4,
-        storage_key="/tmp/photo.png",
+        storage_key=str(local),
         scan_status="clean",
         scanned_at=None,
         scan_detail=None,
@@ -60,9 +62,9 @@ async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
         yield client
 
 
-def test_is_blob_storage_key() -> None:
+def test_is_blob_storage_key(tmp_path: Path) -> None:
     assert file_storage.is_blob_storage_key("blob:https://x.blob.vercel-storage.com/a.png")
-    assert not file_storage.is_blob_storage_key("/tmp/a.png")
+    assert not file_storage.is_blob_storage_key(str(tmp_path / "a.png"))
 
 
 def test_storage_key_is_retrievable_blob() -> None:
@@ -71,8 +73,8 @@ def test_storage_key_is_retrievable_blob() -> None:
     )
 
 
-def test_storage_key_is_retrievable_local_missing() -> None:
-    assert not file_storage.storage_key_is_retrievable("/tmp/does-not-exist.png")
+def test_storage_key_is_retrievable_local_missing(tmp_path: Path) -> None:
+    assert not file_storage.storage_key_is_retrievable(str(tmp_path / "does-not-exist.png"))
 
 
 def test_storage_key_is_retrievable_local_present(tmp_path: Path) -> None:
@@ -81,9 +83,12 @@ def test_storage_key_is_retrievable_local_present(tmp_path: Path) -> None:
     assert file_storage.storage_key_is_retrievable(str(local))
 
 
-def test_storage_key_not_retrievable_on_vercel_local(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_storage_key_not_retrievable_on_vercel_local(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("VERCEL", "1")
-    assert not file_storage.storage_key_is_retrievable("/tmp/stardesk-uploads/ticket/file.png")
+    local = tmp_path / "uploads" / "ticket" / "file.png"
+    assert not file_storage.storage_key_is_retrievable(str(local))
 
 
 @pytest.mark.asyncio
@@ -165,8 +170,10 @@ async def test_build_attachment_download_local_file(
 
 
 @pytest.mark.asyncio
-async def test_build_attachment_download_missing_local_returns_404(clean_attachment) -> None:
-    clean_attachment.storage_key = "/tmp/does-not-exist-attachment.png"
+async def test_build_attachment_download_missing_local_returns_404(
+    clean_attachment, tmp_path: Path
+) -> None:
+    clean_attachment.storage_key = str(tmp_path / "does-not-exist-attachment.png")
     with pytest.raises(HTTPException) as exc:
         await attachments.build_attachment_download_response(clean_attachment)
     assert exc.value.status_code == 404
@@ -175,10 +182,10 @@ async def test_build_attachment_download_missing_local_returns_404(clean_attachm
 
 @pytest.mark.asyncio
 async def test_build_attachment_download_vercel_local_returns_404(
-    monkeypatch: pytest.MonkeyPatch, clean_attachment
+    monkeypatch: pytest.MonkeyPatch, clean_attachment, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("VERCEL", "1")
-    clean_attachment.storage_key = "/tmp/stardesk-uploads/ticket/file.png"
+    clean_attachment.storage_key = str(tmp_path / "uploads" / "ticket" / "file.png")
     with pytest.raises(HTTPException) as exc:
         await attachments.build_attachment_download_response(clean_attachment)
     assert exc.value.status_code == 404
@@ -245,10 +252,10 @@ def test_can_delete_attachment_uploader_and_admin(clean_attachment) -> None:
 
 
 def test_attachment_to_read_marks_legacy_vercel_local_unavailable(
-    monkeypatch: pytest.MonkeyPatch, clean_attachment
+    monkeypatch: pytest.MonkeyPatch, clean_attachment, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("VERCEL", "1")
-    clean_attachment.storage_key = "/tmp/stardesk-uploads/ticket/file.png"
+    clean_attachment.storage_key = str(tmp_path / "uploads" / "ticket" / "file.png")
     staff = SimpleNamespace(role="admin")
     read = attachments.attachment_to_read(clean_attachment, user=staff)
     assert read.file_retrievable is False
@@ -298,6 +305,7 @@ async def test_download_ticket_attachment_missing_file(
     mock_db: AsyncMock,
     clean_attachment,
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     ticket_id = clean_attachment.ticket_id
     attachment_id = clean_attachment.id
@@ -306,7 +314,7 @@ async def test_download_ticket_attachment_missing_file(
         reporter_user_id=uuid.uuid4(),
         deleted_at=None,
     )
-    clean_attachment.storage_key = "/tmp/stardesk-uploads/missing.png"
+    clean_attachment.storage_key = str(tmp_path / "uploads" / "missing.png")
 
     async def _get(model, pk):
         if model is Ticket:

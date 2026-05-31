@@ -1,5 +1,5 @@
-/** FastAPI detail when JWT user must change password before mutations. */
-export const MUST_CHANGE_PASSWORD_DETAIL = "must_change_password";
+/** FastAPI detail token when JWT user must change password before mutations (not a credential). */
+export const MUST_CHANGE_PASSWORD_DETAIL = "must_change_password"; // NOSONAR typescript:S2068
 
 /** Shown only on login redirect and the required change-password page — not in generic API errors. */
 export const MUST_CHANGE_PASSWORD_MESSAGE =

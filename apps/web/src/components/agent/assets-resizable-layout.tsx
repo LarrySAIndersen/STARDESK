@@ -17,7 +17,7 @@ const PANEL_WORKSPACE = "workspace";
 const PANEL_GRAPH = "graph";
 const PANEL_DETAIL = "detail";
 
-type AssetsResizableLayoutProps = {
+type AssetsResizableLayoutProps = Readonly<{
   showAudit: boolean;
   showTree: boolean;
   showDetail: boolean;
@@ -26,7 +26,7 @@ type AssetsResizableLayoutProps = {
   graphPanel: ReactNode;
   detailPanel: ReactNode;
   ticketsPanel: ReactNode;
-};
+}>;
 
 export function AssetsResizableLayout({
   showAudit,

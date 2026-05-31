@@ -1,5 +1,7 @@
 # Copy-paste: Cursor-agent for ny Work Board-opgave
 
+> **Pensioneret (2026-05):** Work Board / kanban agent-pipeline virker ikke — **brug ikke** denne prompt. Agenter arbejder direkte fra brugerens anmodning i chat og åbner PR mod `staging`. Filen beholdes kun som historik.
+
 **Proces-diagram:** [proces-visuelt.md](./proces-visuelt.md)
 
 **På board-kort:** `PR → staging | prod: manuel release` — se også bund af proces-visuelt.md.

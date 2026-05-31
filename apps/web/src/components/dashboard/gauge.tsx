@@ -1,11 +1,11 @@
-type GaugeProps = {
+type GaugeProps = Readonly<{
   label: string;
   value: number;
   max: number;
   unit?: string;
   hint?: string;
   accent?: "blue" | "navy" | "red" | "green";
-};
+}>;
 
 const ACCENT: Record<NonNullable<GaugeProps["accent"]>, string> = {
   blue: "#3b5a95",

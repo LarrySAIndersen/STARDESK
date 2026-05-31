@@ -33,7 +33,7 @@ def test_resolve_avatar_file_only_returns_paths_inside_avatars_dir(
     avatars_root.mkdir(parents=True)
 
     user_id = uuid.uuid4()
-    avatar_file = avatars_root / f"{user_id}.jpg"
+    avatar_file = avatars_root / f"{user_id.hex}.jpg"
     avatar_file.write_bytes(b"fake-image")
 
     monkeypatch.setattr(avatars, "upload_root", lambda: upload_root)
