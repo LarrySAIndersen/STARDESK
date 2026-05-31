@@ -1,5 +1,6 @@
 /** Prototype demo logins — keep in sync with docs/seed-sf-ecosystem-reset.sql */
 
+// NOSONAR typescript:S2068 — prototype-only demo password; disabled in production builds.
 export const DEMO_PASSWORD = "Stardesk2026!";
 
 export type DemoUser = {

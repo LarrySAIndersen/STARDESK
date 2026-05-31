@@ -28,6 +28,16 @@ done
 
 export PATH="${HOME}/.local/bin:${PATH}"
 
+resolve_prototype_demo_password() {
+  if [[ -n "${TEST_USER_PASSWORD:-}" ]]; then
+    return 0
+  fi
+  export TEST_USER_PASSWORD="$(
+    cd "$ROOT/apps/api" && uv run python -c \
+      "from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD; print(PROTOTYPE_BOOTSTRAP_PASSWORD, end='')"
+  )"
+}
+
 echo "=============================================="
 echo " STARDESK deliverable gate (hello-world)"
 echo "=============================================="
@@ -44,6 +54,7 @@ if [[ "$SKIP_TESTS" -eq 0 ]]; then
 fi
 
 echo ""
+resolve_prototype_demo_password
 bash "$ROOT/scripts/hello-world-gate-api.sh"
 
 if [[ "$FULL" -eq 1 ]]; then

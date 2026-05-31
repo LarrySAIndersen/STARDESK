@@ -14,6 +14,8 @@
     "test:destructive": "cd ../apps/api && pytest -m destructive tests/destructive -v",
     "security:audit": "node ./security-audit/run-audit.mjs",
     "sonar:agent": "node ./sonar-agent/run-sonar-agent.mjs",
+    "sonar:sync-canvas": "node ./sonar-agent/sync-sonar-to-canvas.mjs",
+    "sonar:pipeline": "node ./sonar-agent/run-sonar-pipeline.mjs",
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
     "sonar:codemod:fastapi": "python ./sonar-agent/codemods/fastapi_router_style.py",
     "sonar:codemod:readonly-props": "node ./sonar-agent/codemods/react_readonly_props.mjs",

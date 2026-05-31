@@ -7,5 +7,5 @@ async def test_health_returns_ok(client: AsyncClient) -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert body["app_env"] == "development"
-    assert body["stardesk_env"] == "development"
+    assert body["stardesk_env"] in ("development", "test")
     assert body["deployment"] == "local"

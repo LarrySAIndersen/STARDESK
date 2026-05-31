@@ -16,6 +16,7 @@ spec:
       labels:
         app: stardesk-api
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: api
           image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"

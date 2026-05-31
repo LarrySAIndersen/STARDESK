@@ -1,12 +1,11 @@
 """Documented prototype login passwords — keep in sync with docs/demo-users-and-access.md."""
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
+from star_itsm_api.core.security import hash_prototype_password
 
-# bcrypt for "password": $2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC
 LARRY_PROTOTYPE_PASSWORD = "password"
-
-# bcrypt for LARRY_PROTOTYPE_PASSWORD
-LARRY_BCRYPT_HASH = "$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC"
+LARRY_PROTOTYPE_PEPPER = "larry-demo-v1"
+BOOTSTRAP_PROTOTYPE_PEPPER = "example-dk-v1"
 
 PROTOTYPE_STAFF_PASSWORDS: dict[str, str] = {
     "larrysanders@example.dk": LARRY_PROTOTYPE_PASSWORD,
@@ -20,3 +19,11 @@ def documented_prototype_password(email: str) -> str | None:
     if not normalized.endswith("@example.dk"):
         return None
     return PROTOTYPE_STAFF_PASSWORDS.get(normalized, PROTOTYPE_BOOTSTRAP_PASSWORD)
+
+
+def larry_prototype_password_hash() -> str:
+    return hash_prototype_password(LARRY_PROTOTYPE_PASSWORD, pepper=LARRY_PROTOTYPE_PEPPER)
+
+
+def prototype_bootstrap_password_hash() -> str:
+    return hash_prototype_password(PROTOTYPE_BOOTSTRAP_PASSWORD, pepper=BOOTSTRAP_PROTOTYPE_PEPPER)

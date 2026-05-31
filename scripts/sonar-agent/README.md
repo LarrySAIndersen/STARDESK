@@ -66,6 +66,6 @@ npm run sonar:codemod:fastapi          # S8409: drop redundant response_model in
 npm run sonar:codemod:readonly-props   # S6759: Readonly<> on type XProps aliases (web)
 ```
 
-Repo root `sonar-project.properties` excludes seed SQL, docs, helpdesk prototype HTML, and workboard canvas from analysis.
+Repo root `sonar-project.properties` excludes seed SQL, docs, and helpdesk prototype HTML from analysis.
 
 Rollback: revert branch or run `git checkout main -- <paths>` before re-applying codemods.

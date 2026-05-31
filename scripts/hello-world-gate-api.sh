@@ -2,10 +2,18 @@
 # API-only hello-world gate (login + list tickets + environment identity).
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_URL="${STARDESK_API_URL:-http://localhost:8000}"
 EMAIL="${TEST_USER_EMAIL:-sf01@example.dk}"
-PASSWORD="${TEST_USER_PASSWORD:-Stardesk2026!}"
 REQUIRE_NON_PROD="${GATE_REQUIRE_NON_PROD:-1}"
+
+if [[ -z "${TEST_USER_PASSWORD:-}" ]]; then
+  export TEST_USER_PASSWORD="$(
+    cd "$ROOT/apps/api" && uv run python -c \
+      "from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD; print(PROTOTYPE_BOOTSTRAP_PASSWORD, end='')"
+  )"
+fi
+PASSWORD="$TEST_USER_PASSWORD"
 
 fail() {
   echo "GATE FAIL: $*" >&2

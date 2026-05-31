@@ -5,16 +5,17 @@
  * Env:
  *   STARDESK_WEB_URL     default http://localhost:3000
  *   TEST_USER_EMAIL      default sf01@example.dk
- *   TEST_USER_PASSWORD   default Stardesk2026!
+ *   TEST_USER_PASSWORD   required (prototype demo — see demo.py / demo-users.ts)
  *   GATE_ARTIFACT_DIR    default artifacts/hello-world-gate
  */
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright";
+import { requirePrototypeDemoPassword } from "./lib/prototype-demo-password.mjs";
 
 const webUrl = (process.env.STARDESK_WEB_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const email = process.env.TEST_USER_EMAIL ?? "sf01@example.dk";
-const password = process.env.TEST_USER_PASSWORD ?? "Stardesk2026!";
+const password = requirePrototypeDemoPassword();
 const artifactRoot = process.env.GATE_ARTIFACT_DIR ?? "artifacts/hello-world-gate";
 
 function fail(msg) {
