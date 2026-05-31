@@ -18,7 +18,6 @@ from star_itsm_api.schemas.knowledge_article import (
     knowledge_article_to_read,
 )
 from star_itsm_api.services.knowledge_articles import (
-    KNOWLEDGE_STATUS_PUBLISHED,
     can_read_knowledge_article,
     create_knowledge_article,
     get_knowledge_article,

@@ -2,13 +2,13 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.core.constants import SYSTEM_USER_ID
+from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
@@ -42,16 +42,20 @@ async def sla_check(
 
     now = datetime.now(UTC)
     overdue = (
-        await db.execute(
-            select(Ticket).where(
-                Ticket.deleted_at.is_(None),
-                Ticket.status.in_(OPEN_STATUSES),
-                Ticket.resolution_due_at.is_not(None),
-                Ticket.resolution_due_at < now,
-                Ticket.escalation_level < 3,
+        (
+            await db.execute(
+                select(Ticket).where(
+                    Ticket.deleted_at.is_(None),
+                    Ticket.status.in_(OPEN_STATUSES),
+                    Ticket.resolution_due_at.is_not(None),
+                    Ticket.resolution_due_at < now,
+                    Ticket.escalation_level < 3,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     escalated = 0
     for ticket in overdue:

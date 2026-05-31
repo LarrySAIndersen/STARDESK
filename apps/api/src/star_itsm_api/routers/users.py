@@ -270,11 +270,7 @@ async def update_user(
     updates = payload.model_dump(exclude_unset=True)
 
     if "roles" in updates or "role" in updates:
-        target_email = (
-            str(updates["email"]).lower().strip()
-            if "email" in updates
-            else user.email
-        )
+        target_email = str(updates["email"]).lower().strip() if "email" in updates else user.email
         if "roles" in updates:
             next_roles = list(updates["roles"])
         elif "role" in updates:
@@ -292,8 +288,7 @@ async def update_user(
             _assert_can_assign_role(current_user, assigned_role, target_email=target_email)
 
         normalized_roles = [
-            role_after_top_admin_policy(target_email, assigned_role)
-            for assigned_role in next_roles
+            role_after_top_admin_policy(target_email, assigned_role) for assigned_role in next_roles
         ]
         if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(target_email):
             normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]

@@ -130,10 +130,7 @@ async def list_audit_log(
         if anchor is not None:
             stmt = stmt.where(
                 (CmdbAuditLog.created_at < anchor.created_at)
-                | (
-                    (CmdbAuditLog.created_at == anchor.created_at)
-                    & (CmdbAuditLog.id < anchor.id)
-                )
+                | ((CmdbAuditLog.created_at == anchor.created_at) & (CmdbAuditLog.id < anchor.id))
             )
 
     q = (search or "").strip().lower()

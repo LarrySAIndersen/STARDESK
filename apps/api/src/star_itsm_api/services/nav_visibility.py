@@ -1,6 +1,5 @@
 """Sidebar navigation visibility — hidden items are top-admin only."""
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.platform_setting import PlatformSetting

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.comment_reaction import CommentReaction
-from star_itsm_api.schemas.comment import CommentRead, CommentReactionSummary
+from star_itsm_api.schemas.comment import CommentReactionSummary, CommentRead
 
 
 async def load_reaction_summaries(

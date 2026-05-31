@@ -20,9 +20,7 @@ from star_itsm_api.services.sla_settings_store import get_sla_settings_row
 
 
 async def list_sla_policies(db: AsyncSession) -> list[SlaPolicyRead]:
-    rows = (
-        await db.execute(select(SlaPolicy).order_by(SlaPolicy.name.asc()))
-    ).scalars().all()
+    rows = (await db.execute(select(SlaPolicy).order_by(SlaPolicy.name.asc()))).scalars().all()
     return [
         SlaPolicyRead(
             id=p.id,
@@ -81,8 +79,10 @@ async def update_sla_policy(
 
 async def _list_active_teams(db: AsyncSession) -> list[SlaTeamOptionRead]:
     rows = (
-        await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc()))
-    ).scalars().all()
+        (await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())))
+        .scalars()
+        .all()
+    )
     return [SlaTeamOptionRead(id=t.id, name=t.name) for t in rows]
 
 

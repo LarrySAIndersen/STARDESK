@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.security import is_staff
 from star_itsm_api.models.kanban import (
     KANBAN_ROLE_OWNER,
     KanbanBoard,
@@ -35,7 +36,6 @@ from star_itsm_api.schemas.kanban import (
     KanbanTicketSearchResult,
 )
 from star_itsm_api.schemas.ticket import TicketCreate, TicketRead
-from star_itsm_api.core.security import is_staff
 from star_itsm_api.services.kanban_access import (
     resolve_member_role,
     sees_all_boards,
@@ -45,7 +45,6 @@ from star_itsm_api.services.kanban_access import (
     user_can_move_cards,
     user_can_remove_cards,
     user_can_view_board,
-    user_created_board,
 )
 from star_itsm_api.services.kanban_defaults import build_columns_for_board
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
@@ -56,7 +55,10 @@ from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
-from star_itsm_api.services.ticket_timestamps import apply_status_milestone_timestamps, maybe_set_assigned_at
+from star_itsm_api.services.ticket_timestamps import (
+    apply_status_milestone_timestamps,
+    maybe_set_assigned_at,
+)
 
 
 async def _load_member_maps(
@@ -66,10 +68,14 @@ async def _load_member_maps(
     if not board_ids:
         return {}, {}
     rows = (
-        await db.execute(
-            select(KanbanBoardMember).where(KanbanBoardMember.board_id.in_(board_ids))
+        (
+            await db.execute(
+                select(KanbanBoardMember).where(KanbanBoardMember.board_id.in_(board_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     role_by_board: dict[uuid.UUID, dict[uuid.UUID, str]] = {}
     members_by_board: dict[uuid.UUID, list[KanbanBoardMember]] = {}
     for member in rows:
@@ -232,18 +238,18 @@ async def _create_ticket_for_board(
 
 
 async def list_boards(db: AsyncSession, user: User) -> list[KanbanBoardSummaryRead]:
-    stmt = select(KanbanBoard).where(KanbanBoard.deleted_at.is_(None)).order_by(
-        KanbanBoard.name.asc()
+    stmt = (
+        select(KanbanBoard).where(KanbanBoard.deleted_at.is_(None)).order_by(KanbanBoard.name.asc())
     )
     if not sees_all_boards(user):
         member_board_ids = list(
             (
                 await db.execute(
-                    select(KanbanBoardMember.board_id).where(
-                        KanbanBoardMember.user_id == user.id
-                    )
+                    select(KanbanBoardMember.board_id).where(KanbanBoardMember.user_id == user.id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         visibility = [KanbanBoard.created_by_user_id == user.id]
         if member_board_ids:
@@ -448,20 +454,28 @@ async def get_board_detail(
     my_role = resolve_member_role(board, user, roles)
 
     columns = (
-        await db.execute(
-            select(KanbanColumn)
-            .where(KanbanColumn.board_id == board_id)
-            .order_by(KanbanColumn.position.asc())
+        (
+            await db.execute(
+                select(KanbanColumn)
+                .where(KanbanColumn.board_id == board_id)
+                .order_by(KanbanColumn.position.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     placements = (
-        await db.execute(
-            select(KanbanBoardTicket)
-            .where(KanbanBoardTicket.board_id == board_id)
-            .order_by(KanbanBoardTicket.column_id.asc(), KanbanBoardTicket.position.asc())
+        (
+            await db.execute(
+                select(KanbanBoardTicket)
+                .where(KanbanBoardTicket.board_id == board_id)
+                .order_by(KanbanBoardTicket.column_id.asc(), KanbanBoardTicket.position.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     ticket_ids = [p.ticket_id for p in placements]
     tickets: list[Ticket] = []
@@ -474,7 +488,6 @@ async def get_board_detail(
         stmt = apply_ticket_list_filter(stmt, user)
         tickets = list((await db.execute(stmt)).scalars().all())
 
-    tickets_by_id = {t.id: t for t in tickets}
     ticket_reads = await tickets_to_read_list(db, tickets)
     reads_by_id = {r.id: r for r in ticket_reads}
 
@@ -658,8 +671,8 @@ async def move_card(
         raise LookupError("ticket_not_found")
 
     now = datetime.now(UTC)
-    new_position = position if position is not None else await _next_card_position(
-        db, board_id, column_id
+    new_position = (
+        position if position is not None else await _next_card_position(db, board_id, column_id)
     )
     placement.column_id = column_id
     placement.position = new_position
@@ -708,12 +721,16 @@ async def create_column(
     await _require_edit_access(db, board, user)
 
     columns = (
-        await db.execute(
-            select(KanbanColumn)
-            .where(KanbanColumn.board_id == board_id)
-            .order_by(KanbanColumn.position.asc())
+        (
+            await db.execute(
+                select(KanbanColumn)
+                .where(KanbanColumn.board_id == board_id)
+                .order_by(KanbanColumn.position.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     position = payload.position
     if position is None:
@@ -770,12 +787,16 @@ async def update_column(
 
     if payload.position is not None and payload.position != column.position:
         columns = (
-            await db.execute(
-                select(KanbanColumn)
-                .where(KanbanColumn.board_id == board_id)
-                .order_by(KanbanColumn.position.asc())
+            (
+                await db.execute(
+                    select(KanbanColumn)
+                    .where(KanbanColumn.board_id == board_id)
+                    .order_by(KanbanColumn.position.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         old_pos = column.position
         new_pos = payload.position
         for col in columns:
@@ -827,12 +848,16 @@ async def delete_column(
     await db.delete(column)
 
     remaining = (
-        await db.execute(
-            select(KanbanColumn)
-            .where(KanbanColumn.board_id == board_id, KanbanColumn.position > removed_pos)
-            .order_by(KanbanColumn.position.asc())
+        (
+            await db.execute(
+                select(KanbanColumn)
+                .where(KanbanColumn.board_id == board_id, KanbanColumn.position > removed_pos)
+                .order_by(KanbanColumn.position.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for col in remaining:
         col.position -= 1
         col.updated_at = now
@@ -860,11 +885,11 @@ async def search_tickets_for_board(
     on_board = set(
         (
             await db.execute(
-                select(KanbanBoardTicket.ticket_id).where(
-                    KanbanBoardTicket.board_id == board_id
-                )
+                select(KanbanBoardTicket.ticket_id).where(KanbanBoardTicket.board_id == board_id)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
@@ -876,12 +901,16 @@ async def search_tickets_for_board(
         stmt = stmt.where(Ticket.id.notin_(on_board))
 
     pattern = f"%{q}%"
-    stmt = stmt.where(
-        or_(
-            Ticket.title.ilike(pattern),
-            Ticket.ticket_number.ilike(pattern),
+    stmt = (
+        stmt.where(
+            or_(
+                Ticket.title.ilike(pattern),
+                Ticket.ticket_number.ilike(pattern),
+            )
         )
-    ).order_by(Ticket.updated_at.desc()).limit(limit)
+        .order_by(Ticket.updated_at.desc())
+        .limit(limit)
+    )
 
     tickets = (await db.execute(stmt)).scalars().all()
     reads = await tickets_to_read_list(db, tickets)

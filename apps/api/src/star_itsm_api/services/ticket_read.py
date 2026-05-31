@@ -11,20 +11,20 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead, TicketSummaryRead
-from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
-from star_itsm_api.services.sla_settings_store import SlaRuntimeSettings, get_sla_runtime_settings
-from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
-from star_itsm_api.services.sub_causes import get_sub_causes_by_ticket_ids
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_STATUS_LABELS_DA,
     KNOWLEDGE_VISIBILITY_LABELS_DA,
 )
-from star_itsm_api.services.db_resilience import rollback_session
+from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
+from star_itsm_api.services.sla_settings_store import SlaRuntimeSettings, get_sla_runtime_settings
+from star_itsm_api.services.sub_causes import get_sub_causes_by_ticket_ids
 from star_itsm_api.services.ticket_hierarchy import (
     get_child_tickets,
     get_related_major_tickets,
     tickets_to_summaries,
 )
+from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
 
 logger = logging.getLogger(__name__)
 
@@ -203,9 +203,7 @@ def _ticket_to_read(
         emoji=getattr(ticket, "emoji", None),
         routing=build_ticket_routing(
             ticket,
-            category_name_da=categories.get(ticket.category_id)
-            if ticket.category_id
-            else None,
+            category_name_da=categories.get(ticket.category_id) if ticket.category_id else None,
             sub_causes_count=len(sub_causes),
             teams=active_teams,
         ),
@@ -225,9 +223,7 @@ def _ticket_to_read(
 
 
 async def _load_active_teams(db: AsyncSession) -> list[_TeamRef]:
-    rows = await db.execute(
-        select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc())
-    )
+    rows = await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc()))
     return [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
 
 

@@ -1,6 +1,6 @@
+import uuid
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
-import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient

@@ -12,9 +12,9 @@ from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUBMITTER, ROLE_TOP_ADM
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
-from star_itsm_api.services.db_resilience import rollback_session
-from star_itsm_api.services.attachment_names import build_attachment_filename
 from star_itsm_api.services import file_storage
+from star_itsm_api.services.attachment_names import build_attachment_filename
+from star_itsm_api.services.db_resilience import rollback_session
 from star_itsm_api.services.virus_scan import run_virus_scan
 
 logger = logging.getLogger(__name__)
@@ -62,11 +62,7 @@ def attachment_to_read(row: Attachment, *, user: User) -> AttachmentRead:
         is_staff(user) or (user.role == ROLE_SUBMITTER and row.visible_to_submitter)
     )
     file_retrievable = file_storage.storage_key_is_retrievable(row.storage_key)
-    file_unavailable_label_da = (
-        None
-        if file_retrievable
-        else file_storage.FILE_UNAVAILABLE_LABEL_DA
-    )
+    file_unavailable_label_da = None if file_retrievable else file_storage.FILE_UNAVAILABLE_LABEL_DA
     return AttachmentRead(
         id=row.id,
         filename=row.filename,
@@ -295,4 +291,3 @@ async def build_attachment_download_response(
         filename=attachment.filename,
         content_disposition_type=disposition,
     )
-

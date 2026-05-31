@@ -12,7 +12,10 @@ from star_itsm_api.services.ticket_routing import (
 def _ticket(**overrides: object) -> MagicMock:
     ticket = MagicMock()
     ticket.title = "VPN virker ikke"
-    ticket.description = "Jeg kan ikke oprette forbindelse til STAR netværk fra hjemmekontor. Fejlen startede i morges."
+    ticket.description = (
+        "Jeg kan ikke oprette forbindelse til STAR netværk fra hjemmekontor. "
+        "Fejlen startede i morges."
+    )
     ticket.category_id = "cat-1"
     ticket.subcategory_id = "sub-1"
     ticket.priority = "medium"
@@ -80,7 +83,10 @@ def test_suggest_vpn_team() -> None:
 
 def test_computed_priority_critical_keyword() -> None:
     routing = build_ticket_routing(
-        _ticket(title="Kritisk nedetid i produktion", description="Hele systemet er nede for alle brugere."),
+        _ticket(
+            title="Kritisk nedetid i produktion",
+            description="Hele systemet er nede for alle brugere.",
+        ),
         teams=[],
     )
     assert routing.computed_priority == "critical"

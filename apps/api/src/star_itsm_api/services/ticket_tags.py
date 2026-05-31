@@ -1,18 +1,20 @@
 import re
 
 # Curated set for ITSM — must match frontend TICKET_EMOJI_OPTIONS
-ALLOWED_TICKET_EMOJIS: frozenset[str] = frozenset({
-    "🔥",
-    "⚠️",
-    "🛠️",
-    "💻",
-    "📞",
-    "🔒",
-    "📎",
-    "✅",
-    "🚀",
-    "❓",
-})
+ALLOWED_TICKET_EMOJIS: frozenset[str] = frozenset(
+    {
+        "🔥",
+        "⚠️",
+        "🛠️",
+        "💻",
+        "📞",
+        "🔒",
+        "📎",
+        "✅",
+        "🚀",
+        "❓",
+    }
+)
 
 _TAG_PATTERN = re.compile(r"^[a-z0-9æøåÆØÅ][a-z0-9æøåÆØÅ\-_.]{0,31}$", re.IGNORECASE)
 _MAX_TAGS = 10
@@ -28,9 +30,7 @@ def normalize_tags(raw: list[str] | None) -> list[str]:
         if not tag or tag in seen:
             continue
         if not _TAG_PATTERN.match(tag):
-            raise ValueError(
-                f"Ugyldigt tag «{item}». Brug 2–32 tegn: bogstaver, tal, bindestreg."
-            )
+            raise ValueError(f"Ugyldigt tag «{item}». Brug 2–32 tegn: bogstaver, tal, bindestreg.")
         seen.add(tag)
         result.append(tag)
         if len(result) >= _MAX_TAGS:

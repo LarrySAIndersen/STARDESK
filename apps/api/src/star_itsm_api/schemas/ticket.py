@@ -6,15 +6,14 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 
 from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.schemas.comment import CommentRead
+from star_itsm_api.schemas.stakeholder import TicketStakeholdersGroupedRead
 from star_itsm_api.schemas.sub_cause import SubCauseRead
 from star_itsm_api.schemas.ticket_activity import TicketActivityItemRead, TicketTimestampsRead
 from star_itsm_api.schemas.ticket_intelligence import TicketIntelligenceRead
 from star_itsm_api.schemas.ticket_routing import TicketRoutingRead
-from star_itsm_api.schemas.stakeholder import TicketStakeholdersGroupedRead
 from star_itsm_api.services.cpr import assert_no_cpr_outside_field, validate_cpr
 from star_itsm_api.services.ticket_source import ticket_source_label_da
 from star_itsm_api.services.ticket_tags import normalize_tags, validate_emoji
-
 
 CLOSED_STATUSES = frozenset({"closed", "cancelled"})
 

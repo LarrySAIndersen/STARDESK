@@ -2,8 +2,8 @@ import pytest
 
 from star_itsm_api.services.ticket_sort import (
     DEFAULT_TICKET_SORT,
-    parse_ticket_sort,
     VALID_TICKET_SORTS,
+    parse_ticket_sort,
 )
 
 

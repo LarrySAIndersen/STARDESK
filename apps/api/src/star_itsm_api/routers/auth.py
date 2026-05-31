@@ -5,11 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
-from star_itsm_api.core.prototype_credentials import documented_prototype_password
 from star_itsm_api.core.password_policy import (
     effective_must_change_password,
     validate_password_for_user,
 )
+from star_itsm_api.core.prototype_credentials import documented_prototype_password
 from star_itsm_api.core.security import (
     create_access_token,
     get_current_user_session,
@@ -31,7 +31,11 @@ from star_itsm_api.schemas.auth import (
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
 from star_itsm_api.services.sole_top_admin import enforce_sole_top_admin_on_login
-from star_itsm_api.services.user_roles import attach_roles_to_user, ensure_user_roles_loaded, fetch_user_roles
+from star_itsm_api.services.user_roles import (
+    attach_roles_to_user,
+    ensure_user_roles_loaded,
+    fetch_user_roles,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

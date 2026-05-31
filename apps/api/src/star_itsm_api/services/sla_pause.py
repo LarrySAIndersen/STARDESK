@@ -11,7 +11,6 @@ from star_itsm_api.services.sla_settings_store import (
     get_sla_runtime_settings,
     is_status_sla_paused,
     sla_applies_to_team,
-    sla_clock_should_run,
 )
 
 
@@ -104,4 +103,3 @@ async def maybe_start_sla_on_assignment(
         ticket.resolution_due_at = None
         ticket.sla_policy_id = None
         ticket.sla_paused_at = None
-

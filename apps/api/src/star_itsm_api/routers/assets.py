@@ -24,8 +24,12 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         name="STAR Platform",
         code="STAR",
         subsystems=[
-            AssetSubsystemRead(id="sub-auth", system_id="sys-star-platform", name="Auth", code="AUTH"),
-            AssetSubsystemRead(id="sub-portal", system_id="sys-star-platform", name="Portal", code="PORTAL"),
+            AssetSubsystemRead(
+                id="sub-auth", system_id="sys-star-platform", name="Auth", code="AUTH"
+            ),
+            AssetSubsystemRead(
+                id="sub-portal", system_id="sys-star-platform", name="Portal", code="PORTAL"
+            ),
             AssetSubsystemRead(id="sub-api", system_id="sys-star-platform", name="API", code="API"),
         ],
     ),
@@ -34,8 +38,12 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         name="Infrastruktur",
         code="INFRA",
         subsystems=[
-            AssetSubsystemRead(id="sub-netvaerk", system_id="sys-infrastruktur", name="Netværk", code="NET"),
-            AssetSubsystemRead(id="sub-database", system_id="sys-infrastruktur", name="Database", code="DB"),
+            AssetSubsystemRead(
+                id="sub-netvaerk", system_id="sys-infrastruktur", name="Netværk", code="NET"
+            ),
+            AssetSubsystemRead(
+                id="sub-database", system_id="sys-infrastruktur", name="Database", code="DB"
+            ),
             AssetSubsystemRead(id="sub-dns", system_id="sys-infrastruktur", name="DNS", code="DNS"),
         ],
     ),
@@ -44,9 +52,15 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         name="Integration",
         code="INT",
         subsystems=[
-            AssetSubsystemRead(id="sub-teams", system_id="sys-integration", name="Microsoft Teams", code="TEAMS"),
-            AssetSubsystemRead(id="sub-slack", system_id="sys-integration", name="Slack", code="SLACK"),
-            AssetSubsystemRead(id="sub-email", system_id="sys-integration", name="E-mail gateway", code="MAIL"),
+            AssetSubsystemRead(
+                id="sub-teams", system_id="sys-integration", name="Microsoft Teams", code="TEAMS"
+            ),
+            AssetSubsystemRead(
+                id="sub-slack", system_id="sys-integration", name="Slack", code="SLACK"
+            ),
+            AssetSubsystemRead(
+                id="sub-email", system_id="sys-integration", name="E-mail gateway", code="MAIL"
+            ),
         ],
     ),
     AssetSystemRead(
@@ -56,8 +70,12 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         subsystems=[
             AssetSubsystemRead(id="sub-erp", system_id="sys-forretning", name="ERP", code="ERP"),
             AssetSubsystemRead(id="sub-crm", system_id="sys-forretning", name="CRM", code="CRM"),
-            AssetSubsystemRead(id="sub-rapportering", system_id="sys-forretning", name="Rapportering", code="BI"),
-            AssetSubsystemRead(id="sub-dokument", system_id="sys-forretning", name="Dokumenthåndtering", code="DOC"),
+            AssetSubsystemRead(
+                id="sub-rapportering", system_id="sys-forretning", name="Rapportering", code="BI"
+            ),
+            AssetSubsystemRead(
+                id="sub-dokument", system_id="sys-forretning", name="Dokumenthåndtering", code="DOC"
+            ),
         ],
     ),
     AssetSystemRead(
@@ -66,7 +84,9 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         code="SEC",
         subsystems=[
             AssetSubsystemRead(id="sub-iam", system_id="sys-sikkerhed", name="IAM", code="IAM"),
-            AssetSubsystemRead(id="sub-overvaagning", system_id="sys-sikkerhed", name="Overvågning", code="MON"),
+            AssetSubsystemRead(
+                id="sub-overvaagning", system_id="sys-sikkerhed", name="Overvågning", code="MON"
+            ),
         ],
     ),
     AssetSystemRead(
@@ -76,7 +96,9 @@ _MOCK_ASSETS: list[AssetSystemRead] = [
         subsystems=[
             AssetSubsystemRead(id="sub-backup", system_id="sys-drift", name="Backup", code="BKP"),
             AssetSubsystemRead(id="sub-logging", system_id="sys-drift", name="Logning", code="LOG"),
-            AssetSubsystemRead(id="sub-alerting", system_id="sys-drift", name="Alerting", code="ALRT"),
+            AssetSubsystemRead(
+                id="sub-alerting", system_id="sys-drift", name="Alerting", code="ALRT"
+            ),
         ],
     ),
 ]

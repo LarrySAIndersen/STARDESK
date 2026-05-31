@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -80,7 +79,10 @@ def mock_bot_reply(text: str, tickets: list[Ticket], *, display_name: str | None
     if "mine sager" in lower or "egne sager" in lower or "mine egne" in lower:
         mine = [t for t in tickets if not t.is_major]
         if not mine:
-            return "Du har ingen egne sager endnu. Opret en sag via portalen, hvis du har brug for hjælp."
+            return (
+                "Du har ingen egne sager endnu. "
+                "Opret en sag via portalen, hvis du har brug for hjælp."
+            )
         lines = [f"Du har {len(mine)} sag(er):", ""]
         for t in mine[:8]:
             lines.append(f"• {t.ticket_number}: {t.title} ({_STATUS_DA.get(t.status, t.status)})")
@@ -105,7 +107,8 @@ def mock_bot_reply(text: str, tickets: list[Ticket], *, display_name: str | None
         return "\n".join(lines)
 
     return (
-        "Det forstod jeg ikke helt. Prøv «vis mine sager», «systemer» eller et sagsnummer fra listen."
+        "Det forstod jeg ikke helt. "
+        "Prøv «vis mine sager», «systemer» eller et sagsnummer fra listen."
     )
 
 

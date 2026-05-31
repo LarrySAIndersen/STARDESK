@@ -15,17 +15,16 @@ from star_itsm_api.services.dashboard_scope import (
     DashboardScope,
     default_dashboard_scope,
     filter_tickets_by_scope,
-    parse_dashboard_scope,
 )
 from star_itsm_api.services.reports import (
     BUCKET_DEFINITIONS,
     OPEN_STATUSES,
-    status_label_da,
     _ticket_scope_stmt,
+    status_label_da,
 )
-from star_itsm_api.services.teams import get_user_team_ids
 from star_itsm_api.services.sla_enrichment import effective_resolution_due_at
 from star_itsm_api.services.sla_status import sla_breached, sla_due_soon
+from star_itsm_api.services.teams import get_user_team_ids
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 
 PRIORITY_ORDER = ("critical", "high", "medium", "low")
@@ -198,12 +197,10 @@ async def build_dashboard(
     ]
 
     daily_created = [
-        DailyCount(date=day, count=created_by_day[day])
-        for day in sorted(created_by_day.keys())
+        DailyCount(date=day, count=created_by_day[day]) for day in sorted(created_by_day.keys())
     ]
     daily_closed = [
-        DailyCount(date=day, count=closed_by_day[day])
-        for day in sorted(closed_by_day.keys())
+        DailyCount(date=day, count=closed_by_day[day]) for day in sorted(closed_by_day.keys())
     ]
 
     return DashboardRead(

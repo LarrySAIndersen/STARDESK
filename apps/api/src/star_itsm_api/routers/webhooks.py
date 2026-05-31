@@ -2,12 +2,12 @@ import logging
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.core.constants import SYSTEM_USER_ID
+from star_itsm_api.core.integration_auth import verify_integration_secret
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent

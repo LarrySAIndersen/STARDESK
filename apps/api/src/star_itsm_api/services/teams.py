@@ -11,9 +11,7 @@ from star_itsm_api.schemas.team import TeamMemberRead, TeamRead
 
 
 async def get_user_team_ids(db: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
-    result = await db.execute(
-        select(TeamMember.team_id).where(TeamMember.user_id == user_id)
-    )
+    result = await db.execute(select(TeamMember.team_id).where(TeamMember.user_id == user_id))
     return list(result.scalars().all())
 
 

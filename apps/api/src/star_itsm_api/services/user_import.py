@@ -271,9 +271,7 @@ async def import_users_admin(
                         )
                     except ValueError:
                         errors.append(
-                            UserImportRowError(
-                                row=index, email=email, message="Ugyldig gruppe"
-                            ),
+                            UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
                         )
                         continue
                     updated += 1

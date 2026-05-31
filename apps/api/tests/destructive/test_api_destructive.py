@@ -10,9 +10,7 @@ pytestmark = pytest.mark.destructive
 
 def _base_url() -> str:
     return str(
-        os.getenv("DESTRUCTIVE_API_BASE_URL")
-        or os.getenv("BASE_URL")
-        or "http://localhost:8000"
+        os.getenv("DESTRUCTIVE_API_BASE_URL") or os.getenv("BASE_URL") or "http://localhost:8000"
     ).rstrip("/")
 
 
@@ -73,7 +71,9 @@ def auth_headers(destructive_base_url: str) -> dict[str, str]:
         json={"email": user["email"], "password": user["password"]},
         timeout=5.0,
     )
-    assert response.status_code == 200, f"Expected login 200, got {response.status_code}: {response.text}"
+    assert response.status_code == 200, (
+        f"Expected login 200, got {response.status_code}: {response.text}"
+    )
     token = response.json().get("access_token")
     assert token, "Login did not return access_token"
     return {"Authorization": f"Bearer {token}"}
