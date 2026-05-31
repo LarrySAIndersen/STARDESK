@@ -5,7 +5,7 @@ import { AgentShellWrapper } from "@/components/agent/agent-shell-wrapper";
 import { EnvironmentBanner } from "@/components/environment-banner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SkipLink } from "@/components/skip-link";
-import { getStardeskEnv } from "@/lib/stardesk-env";
+import { getEnvironmentShortLabel } from "@/lib/stardesk-env";
 
 import "./globals.css";
 
@@ -21,9 +21,7 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-const stardeskEnv = getStardeskEnv();
-const envTitleSuffix =
-  stardeskEnv === "production" ? "" : ` [${stardeskEnv === "development" ? "dev" : stardeskEnv}]`;
+const envTitleSuffix = ` [${getEnvironmentShortLabel()}]`;
 
 export const metadata: Metadata = {
   title: `STARdesk — Sagsstyring${envTitleSuffix}`,
