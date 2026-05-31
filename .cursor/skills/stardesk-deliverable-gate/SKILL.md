@@ -1,6 +1,6 @@
 ---
 name: stardesk-deliverable-gate
-description: Mandatory hello-world verification before completing any STARDESK deliverable (PR, task, handoff). Login as demo Anna, list tickets on Alle sager, confirm non-production environment.
+description: ALWAYS run before marking any STARDESK work complete. Mandatory hello-world gate — bash scripts/run-deliverable-gate.sh (add --full for UI). Login Anna sf01@example.dk, Alle sager, non-production /health. Use on every PR, Cloud Agent task, and handoff without exception.
 ---
 
 # STARDESK deliverable gate

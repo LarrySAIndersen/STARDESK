@@ -3,6 +3,14 @@
 Du arbejder på **star-itsm-cloud**, en cloud-prototype af STAR's ITSM-system.
 Læs `ARCHITECTURE.md` før du gør noget i denne repo.
 
+## Before done (alle leverancer — obligatorisk)
+
+```bash
+bash scripts/run-deliverable-gate.sh
+```
+
+UI/auth/routing: tilføj `--full`. Se `docs/deliverable-gate.md` og `AGENTS.md`.
+
 ## Sprog
 
 - **Kode, database, API**: Engelsk

@@ -2,6 +2,18 @@
 
 Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
 
+## Mandatory: deliverable gate (never skip)
+
+**Before every final response, PR, or handoff:**
+
+```bash
+bash scripts/run-deliverable-gate.sh
+```
+
+Add `--full` for web/UI/auth changes. Your summary **must** include `Deliverable gate: PASSED` and the command output. If you cannot run it, stop and say what is blocking (DB URL, servers down) — do not claim done.
+
+Rule: `.cursor/rules/deliverable-gate.mdc` · Skill: `.cursor/skills/stardesk-deliverable-gate/SKILL.md` · Doc: `docs/deliverable-gate.md`
+
 ## Cursor Cloud specific instructions
 
 ### Database: Neon first (not local Postgres)

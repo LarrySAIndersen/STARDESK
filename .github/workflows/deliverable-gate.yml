@@ -1,0 +1,71 @@
+# Hello-world deliverable gate (API). Requires repo secret DATABASE_URL (Neon test branch).
+# UI gate (--full) remains local/Cloud Agent — Playwright + dev servers.
+name: Deliverable gate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  hello-world-api:
+    if: ${{ secrets.DATABASE_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      GATE_REQUIRE_NON_PROD: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+
+      - name: Install dependencies
+        run: |
+          cd apps/web && npm ci
+          cd ../api && uv sync --group dev
+
+      - name: Sync Neon env and bootstrap database
+        run: |
+          bash scripts/sync-neon-env.sh
+          bash scripts/bootstrap-dev-database.sh --no-write-env
+
+      - name: Start API
+        working-directory: apps/api
+        run: |
+          set -a && source .env && set +a
+          uv run uvicorn star_itsm_api.main:app --host 127.0.0.1 --port 8000 &
+          echo $! > /tmp/stardesk-api.pid
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:8000/health && exit 0
+            sleep 2
+          done
+          echo "API failed to start" >&2
+          exit 1
+
+      - name: Run deliverable gate (API)
+        env:
+          STARDESK_API_URL: http://127.0.0.1:8000
+        run: bash scripts/hello-world-gate-api.sh
+
+      - name: Stop API
+        if: always()
+        run: kill "$(cat /tmp/stardesk-api.pid)" 2>/dev/null || true
+
+  hello-world-api-skipped:
+    if: ${{ secrets.DATABASE_URL == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip notice
+        run: |
+          echo "::warning::DATABASE_URL secret not set — API deliverable gate skipped."
+          echo "Set Neon test branch URL in repo secrets to enable CI gate."

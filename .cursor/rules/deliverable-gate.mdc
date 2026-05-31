@@ -1,0 +1,33 @@
+---
+description: Mandatory deliverable gate before any STARDESK task is marked complete or PR is finalized
+alwaysApply: true
+---
+
+# Deliverable gate (mandatory)
+
+You **must not** mark a task complete, merge a PR, or give a final summary until the hello-world gate passes.
+
+## Before done (always run)
+
+```bash
+bash scripts/run-deliverable-gate.sh
+```
+
+For UI, auth, routing, portal, or ticket list changes, also run:
+
+```bash
+bash scripts/run-deliverable-gate.sh --full
+```
+
+## Prerequisites
+
+- Database: `bash scripts/sync-neon-env.sh` then `bash scripts/setup-dev-environment.sh` (Neon **test** branch — never `main`)
+- Servers: `bash scripts/dev-up.sh` (API :8000, Web :3000)
+
+## In your final message
+
+- State explicitly: **Deliverable gate: PASSED**
+- Paste the gate terminal output (and mention screenshots if `--full`)
+- If the gate was not run, say why and do **not** claim the deliverable is done
+
+References: `docs/deliverable-gate.md`, `AGENTS.md`, skill `.cursor/skills/stardesk-deliverable-gate/SKILL.md`

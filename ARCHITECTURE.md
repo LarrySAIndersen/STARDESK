@@ -116,6 +116,12 @@ Når cloud-versionen har bevist konceptet og I vil flytte til on-prem:
 5. **Workers**: Tilføj ARQ-worker service til at erstatte cron-jobs
 6. **Deployment**: Helm charts til K8s i stedet for Vercel serverless
 
+## Agent leverancer
+
+Alle agent-PR'er og Cloud Agent-opgaver skal passere **deliverable gate** før done:
+`bash scripts/run-deliverable-gate.sh` (UI: `--full`). Se `docs/deliverable-gate.md`, `AGENTS.md`,
+`.cursor/rules/deliverable-gate.mdc`.
+
 ## Agentic roadmap
 
 Samme som on-prem. Cloud-versionen er faktisk **lettere** at eksperimentere

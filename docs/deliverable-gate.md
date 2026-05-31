@@ -59,9 +59,15 @@ npm run gate:deliverable:full
 
 Task-specific review URLs remain required for feature work; **hello-world** is the shared baseline for all deliverables.
 
-## CI (optional)
+## CI (API gate on pull requests)
 
-Not on every PR by default (needs secrets + running stack). Use locally and in Cloud Agent VMs. To add CI later: call `run-deliverable-gate.sh` after spinning up services in a job.
+Workflow: `.github/workflows/deliverable-gate.yml`
+
+- Runs on **pull requests** to `main` when repo secret **`DATABASE_URL`** is set (Neon **`test`** branch, `postgresql+asyncpg://…`).
+- Boots API, runs `hello-world-gate-api.sh` (login + tickets + non-prod `/health`).
+- **UI gate (`--full`)** is still required locally/Cloud Agent for web changes — CI does not run Playwright yet.
+
+Agents and humans must still run `bash scripts/run-deliverable-gate.sh` locally before handoff; CI is an extra check, not a substitute.
 
 ## Related docs
 
