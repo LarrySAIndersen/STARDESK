@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
+from star_itsm_api.core.prototype_credentials import documented_prototype_password
 from star_itsm_api.core.password_policy import (
     effective_must_change_password,
     validate_password_for_user,
@@ -40,6 +41,19 @@ def _current_password_valid(user: User, current_password: str) -> bool:
     return secrets.compare_digest(current_password, PROTOTYPE_BOOTSTRAP_PASSWORD)
 
 
+def _login_password_valid(user: User, password: str) -> bool:
+    try:
+        if verify_password(password, user.password_hash):
+            return True
+    except ValueError:
+        pass
+    documented = documented_prototype_password(user.email)
+    if documented is None or not secrets.compare_digest(password, documented):
+        return False
+    user.password_hash = hash_password(password)
+    return True
+
+
 async def _organization_name(db: AsyncSession, user: User) -> str | None:
     org_id = get_user_organization_id(user)
     if org_id is None:
@@ -54,12 +68,17 @@ async def login(
     db: AsyncSession = Depends(require_db),
 ) -> TokenResponse:
     user = await get_user_by_email(db, payload.email)
-    if user is None or not verify_password(payload.password, user.password_hash):
+    password_hash_before = user.password_hash if user is not None else None
+    if user is None or not _login_password_valid(user, payload.password):
         await asyncio.sleep(0.4)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Forkert e-mail eller adgangskode",
         )
+
+    if user.password_hash != password_hash_before:
+        await db.commit()
+        await db.refresh(user)
 
     await ensure_prototype_staff_account(db, user)
     await enforce_sole_top_admin_on_login(db, user)

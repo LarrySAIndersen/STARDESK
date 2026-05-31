@@ -15,6 +15,8 @@ export function userMustChangePassword(user: User | null | undefined): boolean {
 export function userForSessionCookie(user: User): User {
   return {
     ...user,
+    // Base64 uploads exceed the ~4KB cookie limit and break Set-Cookie in browsers.
+    avatar_url: null,
     must_change_password: userMustChangePassword(user),
     password_policy_exempt: Boolean(user.password_policy_exempt),
   };
