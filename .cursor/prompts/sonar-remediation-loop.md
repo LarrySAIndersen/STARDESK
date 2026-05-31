@@ -8,7 +8,7 @@
 
 ## SCOPE (hard boundary)
 
-Autonomous override (no manual control, auto merge/commit/push/deploy) applies **ONLY** to this Sonar remediation loop. Do not extend it to other work.
+Autonomous override (no manual control, auto merge/commit/push/deploy) applies **ONLY** to this Sonar remediation loop. **USER ABSENT:** never ask Jan; on CI failure fix and retry (e.g. ruff/Sonar) until green or log blocker in activityLog. Do not extend this override to other work.
 
 | Context | Rules |
 |---------|-------|
