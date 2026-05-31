@@ -25,6 +25,10 @@ feature-gren → PR → staging (auto-merge når CI grøn) → [manuel] PR → m
 
 Se [proces-visuelt.md](./proces-visuelt.md).
 
+## Flow 2 — Production (hårdt krav)
+
+**Production (main) opdateres KUN via åben PR staging → main — aldrig direkte push eller merge til main.** Når staging er foran main og bruger beder om deploy/prod, skal agent **altid** oprette denne PR (Jan merger).
+
 ---
 
 ## GitHub — slå direkte push fra (én gangs)

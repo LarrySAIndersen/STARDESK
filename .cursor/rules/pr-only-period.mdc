@@ -24,3 +24,8 @@ Read `docs/pr-only-period.md`.
 6. Final message must include **PR URL** — not "pushed to main"
 
 Production release: only Jan merges **`staging` → `main`** via separate PR.
+## Production (Flow 2 — hard requirement)
+
+- **main updates ONLY via open PR staging → main** — never direct push/merge to main
+- When staging is ahead of main and user asks for deploy/prod: **always create this PR** (Jan merges)
+
