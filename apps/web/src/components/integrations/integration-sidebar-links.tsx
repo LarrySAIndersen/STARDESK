@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Mail, MessageSquare, Ticket, Wrench } from "lucide-react";
 
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";

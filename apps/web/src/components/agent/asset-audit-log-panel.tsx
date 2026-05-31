@@ -50,6 +50,8 @@ export function AssetAuditLogPanel() {
 
   useEffect(() => {
     void loadInitial(query);
+    // query omitted: search reloads via handleSearch; here we only react to catalog refresh
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadInitial, auditLogVersion]);
 
   const handleSearch = (event: React.FormEvent) => {

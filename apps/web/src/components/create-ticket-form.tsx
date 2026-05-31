@@ -111,7 +111,6 @@ export function CreateTicketForm({
     onPaste: onDescriptionPaste,
     removeAt: removeAttachmentAt,
     addFiles: addAttachments,
-    clear: clearAttachments,
   } = usePendingImageAttachments();
   const [tagsInput, setTagsInput] = useState("");
   const [emoji, setEmoji] = useState<string | null>(null);
