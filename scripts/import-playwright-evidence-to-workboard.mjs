@@ -22,13 +22,14 @@ import {
   resolveWorkboardDataPath,
   safeJoinUnderDir,
 } from "./lib/workboard-paths.mjs";
+import {
+  failWithCode,
+  formatSafeLogLabel,
+  logScript,
+  logScriptError,
+} from "./lib/script-security.mjs";
 
 const MAX_DATA_URL_CHARS = 520_000;
-
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
-}
 
 function parseArgs(argv) {
   const out = {
@@ -65,7 +66,7 @@ function loadManifestForTask(task) {
   const dir = resolveReviewEvidenceDir(task.id);
   const manifestPath = path.join(dir, "manifest.json");
   if (!fs.existsSync(manifestPath)) {
-    fail(`Manifest not found: ${manifestPath}. Run run-review-playwright.mjs first.`);
+    failWithCode("MANIFEST_NOT_FOUND");
   }
   return { dir, manifest: JSON.parse(fs.readFileSync(manifestPath, "utf8")) };
 }
@@ -126,19 +127,19 @@ async function resolveTaskContext(args) {
     tasks = await fetchTasksFromApi();
   } else {
     dataPath = resolveWorkboardDataPath();
-    if (!fs.existsSync(dataPath)) fail(`Work Board data not found: ${dataPath}`);
+    if (!fs.existsSync(dataPath)) failWithCode("WORKBOARD_DATA_NOT_FOUND");
     ({ raw, tasks } = readWorkboardTasks(dataPath));
   }
 
   let task = null;
   if (args.taskNumber != null) {
     task = findTaskByNumber(tasks, args.taskNumber);
-    if (!task) fail(`No task #${args.taskNumber}`);
+    if (!task) failWithCode("TASK_NOT_FOUND", formatSafeLogLabel(args.taskNumber));
   } else if (args.taskId) {
     task = tasks.find((t) => t.id === args.taskId) ?? null;
-    if (!task) fail(`No task id ${args.taskId}`);
+    if (!task) failWithCode("TASK_NOT_FOUND", formatSafeLogLabel(args.taskId));
   } else {
-    fail("Provide --task <number> or --task-id <id>.");
+    failWithCode("TASK_ARG_REQUIRED");
   }
 
   return { task, tasks, raw, dataPath };
@@ -155,29 +156,31 @@ async function main() {
   if (args.pushToApi) {
     const { apiUrl, token } = resolveApiConfig();
     if (!apiUrl || !token) {
-      fail("Set STARDESK_API_URL and STARDESK_API_TOKEN for --push-to-api.");
+      failWithCode("API_ENV_REQUIRED");
     }
     await pushTaskToApi(updated);
-    console.log(`Pushed #${task.number} (${task.id}) to API: ${evidence.status}`);
+    logScript(
+      `Pushed ${formatSafeLogLabel(task.number)} to API: ${evidence.status}`,
+    );
   }
 
   if (!args.exportFromApi && dataPath && raw) {
     const nextTasks = tasks.map((t) => (t.id === task.id ? updated : t));
     const out = { ...raw, "stardesk-tasks-v1": nextTasks };
     fs.writeFileSync(dataPath, `${JSON.stringify(out, null, 2)}\n`, "utf8");
-    console.log(
-      `Updated #${task.number} (${task.id}) reviewPlaywrightEvidence: ${evidence.status}, ${evidence.screenshots.length} images`,
+    logScript(
+      `Updated ${formatSafeLogLabel(task.number)} reviewPlaywrightEvidence: ${evidence.status}, ${evidence.screenshots.length} images`,
     );
-    console.log(`Source: ${dataPath}`);
+    logScript("Work board JSON updated.");
   } else if (args.exportFromApi && !args.pushToApi) {
-    console.log(
-      `Built evidence for #${task.number} (${evidence.status}, ${evidence.screenshots.length} images). Use --push-to-api to persist.`,
+    logScript(
+      `Built evidence for ${formatSafeLogLabel(task.number)} (${evidence.status}, ${evidence.screenshots.length} images). Use --push-to-api to persist.`,
     );
   }
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  logScriptError("IMPORT_PLAYWRIGHT_FAILED");
   process.exit(1);
 });
 

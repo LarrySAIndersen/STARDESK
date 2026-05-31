@@ -29,3 +29,7 @@ Production release: only Jan merges **`staging` → `main`** via separate PR.
 - **main updates ONLY via open PR staging → main** — never direct push/merge to main
 - When staging is ahead of main and user asks for deploy/prod: **always create this PR** (Jan merges)
 
+## Exception — Sonar remediation loop only
+
+The Sonar remediation loop (`cursor/sonar-remediation-loop`, prompt `.cursor/prompts/sonar-remediation-loop.md`) is the **only** exception to the manual production flow above: it may auto-merge to `staging` and `staging`→`main` when CI is green, with no Human Review, narrowly scoped to Sonar security/code-smell fixes from the Sonar Agent canvas queue. All other work remains subject to every rule in this file and `docs/pr-only-period.md`.
+

@@ -2,6 +2,11 @@
  * Work Board API helpers for CI / headless scripts (export + canvas upsert).
  */
 
+import {
+  assertConfiguredApiBaseUrl,
+  assertWorkboardCanvasId,
+} from "./script-security.mjs";
+
 export function resolveApiConfig() {
   const apiUrl = (process.env.STARDESK_API_URL || "").replace(/\/$/, "");
   const token = process.env.STARDESK_API_TOKEN || "";
@@ -18,7 +23,8 @@ export function requireApiConfig() {
 
 export async function fetchTasksFromApi() {
   const { apiUrl, token } = requireApiConfig();
-  const res = await fetch(`${apiUrl}/api/v1/workboard/tasks/export`, {
+  const safeBase = assertConfiguredApiBaseUrl(apiUrl);
+  const res = await fetch(`${safeBase}/api/v1/workboard/tasks/export`, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
   });
   if (!res.ok) {
@@ -30,9 +36,9 @@ export async function fetchTasksFromApi() {
 
 export async function pushTaskToApi(task) {
   const { apiUrl, token } = requireApiConfig();
-  const canvasId = task.id;
-  if (!canvasId) throw new Error("Task missing canvas id.");
-  const res = await fetch(`${apiUrl}/api/v1/workboard/tasks/${encodeURIComponent(canvasId)}`, {
+  const safeBase = assertConfiguredApiBaseUrl(apiUrl);
+  const canvasId = assertWorkboardCanvasId(task.id);
+  const res = await fetch(`${safeBase}/api/v1/workboard/tasks/${encodeURIComponent(canvasId)}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
