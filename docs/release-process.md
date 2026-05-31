@@ -1,5 +1,7 @@
 # Release-proces: Board → staging (auto) → prod (manuel)
 
+**Visuelt overblik (Jan):** [proces-visuelt.md](./proces-visuelt.md)
+
 To-trins model for **STARdesk** når du bruger **Cursor**, **GitHub PR’er** og **Vercel**:
 
 1. **Alt ny kode** lander på **`staging`** via PR (Preview/dev) — ikke direkte på prod.

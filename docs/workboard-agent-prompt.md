@@ -1,5 +1,9 @@
 # Copy-paste: Cursor-agent for ny Work Board-opgave
 
+**Proces-diagram:** [proces-visuelt.md](./proces-visuelt.md)
+
+**På board-kort:** `PR → staging | prod: manuel release` — se også bund af proces-visuelt.md.
+
 Erstat `NN` med opgavenummer og `TITEL` med kort titel.
 
 ```text
