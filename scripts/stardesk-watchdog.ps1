@@ -163,9 +163,12 @@ function Invoke-WatchdogTick {
             Start-Process $shell -ArgumentList @(
                 "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $SchedulerScript
             ) -WorkingDirectory $RepoRoot -WindowStyle Hidden
-            Start-Sleep -Seconds 2
-            if (Test-ProcessAlive -PidPath $SchedulerPidFile) { return "scheduler restarted" }
-            throw "scheduler did not write PID file"
+            $deadline = (Get-Date).AddSeconds(10)
+            while ((Get-Date) -lt $deadline) {
+                Start-Sleep -Seconds 1
+                if (Test-ProcessAlive -PidPath $SchedulerPidFile) { return "scheduler restarted" }
+            }
+            throw "scheduler did not write PID file within 10s"
         }
     }
 
