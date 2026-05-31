@@ -1,7 +1,6 @@
 import "server-only";
 
 import { apiGetServer } from "@/lib/api-server";
-import { isTopAdmin } from "@/lib/auth";
 import { firstAllowedStaffPath, isStaffPathBlocked } from "@/lib/agent-nav";
 import { canManageNavVisibility } from "@/lib/top-admin";
 import type { User } from "@/types/user";

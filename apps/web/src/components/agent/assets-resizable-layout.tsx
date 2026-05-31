@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
 
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";

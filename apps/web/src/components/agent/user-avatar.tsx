@@ -18,6 +18,7 @@ export function UserAvatar({
 
   if (display.type === "image") {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- dynamic user avatar URLs (blob/external)
       <img
         src={display.src}
         alt={display.alt}
