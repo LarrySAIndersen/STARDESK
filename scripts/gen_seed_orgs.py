@@ -1,8 +1,16 @@
-"""Generate docs/seed-orgs-30.sql — run from repo root: python scripts/gen_seed_orgs.py"""
+"""Generate docs/seed-orgs-30.sql — run from repo root: uv run python scripts/gen_seed_orgs.py"""
 
+import sys
 from pathlib import Path
 
-PWD = "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(repo_root / "apps" / "api" / "src"))
+
+from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
+from star_itsm_api.core.prototype_credentials import BOOTSTRAP_PROTOTYPE_PEPPER
+from star_itsm_api.core.security import hash_prototype_password
+
+PWD = hash_prototype_password(PROTOTYPE_BOOTSTRAP_PASSWORD, pepper=BOOTSTRAP_PROTOTYPE_PEPPER)
 
 ORGS = [
     ("Virksomhed", "estrifft"),
@@ -57,6 +65,6 @@ for i, (name, slug) in enumerate(ORGS, 1):
         )
     lines.append("")
 
-out = Path(__file__).resolve().parents[1] / "docs" / "seed-orgs-30.sql"
+out = repo_root / "docs" / "seed-orgs-30.sql"
 out.write_text("\n".join(lines), encoding="utf-8")
 print(f"Wrote {out} ({len(lines)} lines)")

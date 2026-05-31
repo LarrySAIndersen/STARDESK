@@ -17,6 +17,7 @@ spec:
       labels:
         app.kubernetes.io/component: schema-sync
     spec:
+      automountServiceAccountToken: false
       restartPolicy: Never
       containers:
         - name: schema-sync

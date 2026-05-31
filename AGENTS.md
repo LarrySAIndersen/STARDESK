@@ -14,7 +14,7 @@ Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`,
 
 - Default branch for work: **`staging`** (not `main`).
 - Open PRs with **base `staging`**; auto-merge when CI passes (`.github/workflows/auto-merge-staging.yml`).
-- New board tasks: `docs/workboard-agent-prompt.md` · Visuelt: `docs/proces-visuelt.md`.
+- **Work Board er pensioneret** — brug ikke `docs/workboard-agent-prompt.md` eller canvas-kanban til agent-flow. Arbejd direkte fra brugerens chat + PR mod `staging`.
 
 ## Mandatory: deliverable gate (never skip)
 

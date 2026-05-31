@@ -85,6 +85,7 @@ reports/sonar-agent-latest.md
 reports/quality-loop-latest.json
 reports/quality-loop-latest.md
 reports/quality-loop-agent-prompt.md
+reports/review-reject-attachments/
 
 # Destructive/load test local artifacts
 scripts/load-test/load-test-users.json

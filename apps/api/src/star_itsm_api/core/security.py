@@ -34,10 +34,30 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
+def _prototype_bcrypt_salt(pepper: str) -> bytes:
+    """Fixed bcrypt salt prefix per prototype pepper (29 chars — not a password hash)."""
+    salts: dict[str, str] = {
+        "larry-demo-v1": "$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1R",
+        "example-dk-v1": "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"[:29],
+        "default": "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"[:29],
+    }
+    salt = salts.get(pepper) or salts["default"]
+    return salt.encode("utf-8")
+
+
+def hash_prototype_password(password: str, *, pepper: str = "default") -> str:
+    """Deterministic bcrypt for documented demo/seed accounts (prototype only)."""
+    salt = _prototype_bcrypt_salt(pepper)
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
+
 def verify_password(password: str, password_hash: str | None) -> bool:
     if not password_hash:
         return False
-    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except ValueError:
+        return False
 
 
 def create_access_token(

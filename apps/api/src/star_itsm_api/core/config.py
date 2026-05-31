@@ -13,6 +13,11 @@ ENV_FILES = (
 LOCAL_JWT_SECRET = "local-development-only-jwt-secret-do-not-use-in-production"
 
 
+def default_upload_dir() -> str:
+    """App-local upload directory (avoid world-writable /tmp defaults)."""
+    return str(API_ROOT / "data" / "uploads")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=ENV_FILES,
@@ -41,7 +46,7 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="PROTOTYPE_STAFF_PASSWORD_HASH",
     )
-    upload_dir: str = Field(default="/tmp/stardesk-uploads", validation_alias="UPLOAD_DIR")
+    upload_dir: str = Field(default_factory=default_upload_dir, validation_alias="UPLOAD_DIR")
     blob_read_write_token: str | None = Field(
         default=None,
         validation_alias="BLOB_READ_WRITE_TOKEN",
@@ -130,9 +135,9 @@ class Settings(BaseSettings):
 
     @field_validator("upload_dir", mode="before")
     @classmethod
-    def _blank_upload_dir_to_tmp(cls, value: Any) -> Any:
+    def _blank_upload_dir_to_default(cls, value: Any) -> Any:
         if isinstance(value, str) and not value.strip():
-            return "/tmp/stardesk-uploads"
+            return default_upload_dir()
         return value
 
     @model_validator(mode="after")

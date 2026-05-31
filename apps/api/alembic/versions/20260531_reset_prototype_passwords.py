@@ -7,13 +7,15 @@ Create Date: 2026-05-31
 
 from alembic import op
 
+from star_itsm_api.core.prototype_credentials import (
+    larry_prototype_password_hash,
+    prototype_bootstrap_password_hash,
+)
+
 revision = "20260531_proto_passwords"
 down_revision = "20260530_page_review_notes"
 branch_labels = None
 depends_on = None
-
-STARDESK_HASH = "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"
-LARRY_HASH = "$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC"
 
 LARRY_EMAILS = (
     "larrysanders@example.dk",
@@ -22,11 +24,13 @@ LARRY_EMAILS = (
 
 
 def upgrade() -> None:
+    larry_hash = larry_prototype_password_hash().replace("'", "''")
+    stardesk_hash = prototype_bootstrap_password_hash().replace("'", "''")
     larry = ", ".join(f"'{email}'" for email in LARRY_EMAILS)
     op.execute(
         f"""
         UPDATE users
-        SET password_hash = '{LARRY_HASH}',
+        SET password_hash = '{larry_hash}',
             is_active = TRUE,
             deleted_at = NULL,
             must_change_password = FALSE,
@@ -39,7 +43,7 @@ def upgrade() -> None:
     op.execute(
         f"""
         UPDATE users
-        SET password_hash = '{STARDESK_HASH}',
+        SET password_hash = '{stardesk_hash}',
             is_active = TRUE,
             deleted_at = NULL,
             must_change_password = FALSE,

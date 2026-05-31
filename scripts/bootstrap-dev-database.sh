@@ -13,6 +13,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+load_local_postgres_env() {
+  if [[ -f "$ROOT/scripts/local-postgres.env" ]]; then
+    # shellcheck disable=SC1091
+    source "$ROOT/scripts/local-postgres.env"
+  elif [[ -f "$ROOT/scripts/local-postgres.env.example" ]]; then
+    # shellcheck disable=SC1091
+    source "$ROOT/scripts/local-postgres.env.example"
+  fi
+  STARDESK_LOCAL_PG_USER="${STARDESK_LOCAL_PG_USER:-stardesk}"
+  if [[ -z "${STARDESK_LOCAL_PG_PASSWORD:-}" ]]; then
+    echo "Set STARDESK_LOCAL_PG_PASSWORD (see scripts/local-postgres.env.example)" >&2
+    exit 1
+  fi
+}
+
 LOCAL_POSTGRES=0
 MIGRATIONS_ONLY=0
 WITH_ALEMBIC=1
@@ -55,7 +70,8 @@ write_dev_env_files() {
   if [[ ! -f "$ROOT/apps/api/.env" ]]; then
     cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
     if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
-      sed -i 's|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://stardesk:stardesk_dev@localhost:5432/stardesk|' \
+      load_local_postgres_env
+      sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://${STARDESK_LOCAL_PG_USER}:${STARDESK_LOCAL_PG_PASSWORD}@localhost:5432/stardesk|" \
         "$ROOT/apps/api/.env"
     fi
     echo "Created apps/api/.env from .env.development.example"
@@ -67,6 +83,7 @@ write_dev_env_files() {
 }
 
 setup_local_postgres() {
+  load_local_postgres_env
   if ! command -v psql >/dev/null 2>&1; then
     echo "Installing PostgreSQL 16..."
     sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
@@ -75,16 +92,16 @@ setup_local_postgres() {
   fi
   sudo pg_ctlcluster 16 main start 2>/dev/null || sudo service postgresql start 2>/dev/null || true
 
-  sudo -u postgres psql -v ON_ERROR_STOP=1 <<'SQL'
-DO $$
+  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'stardesk') THEN
-    CREATE ROLE stardesk WITH LOGIN PASSWORD 'stardesk_dev' CREATEDB;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${STARDESK_LOCAL_PG_USER}') THEN
+    CREATE ROLE ${STARDESK_LOCAL_PG_USER} WITH LOGIN PASSWORD '${STARDESK_LOCAL_PG_PASSWORD}' CREATEDB;
   END IF;
 END
-$$;
-SELECT 'CREATE DATABASE stardesk OWNER stardesk'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'stardesk')\gexec
+\$\$;
+SELECT 'CREATE DATABASE stardesk OWNER ${STARDESK_LOCAL_PG_USER}'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'stardesk')\\gexec
 SQL
 
   sudo -u postgres psql -d stardesk -v ON_ERROR_STOP=1 <<'SQL'
@@ -92,7 +109,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS vector;
 SQL
-  echo "Local PostgreSQL ready (stardesk / stardesk_dev @ localhost:5432/stardesk)"
+  echo "Local PostgreSQL ready (${STARDESK_LOCAL_PG_USER} @ localhost:5432/stardesk)"
 }
 
 ensure_uv
