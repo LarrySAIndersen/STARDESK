@@ -6,6 +6,7 @@ Create Date: 2026-05-21
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "20260521_ui_mode"

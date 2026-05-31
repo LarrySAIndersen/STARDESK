@@ -6,8 +6,9 @@ Create Date: 2026-05-24
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "20260524_sla_settings"
 down_revision = "20260523_clear_must_change"
