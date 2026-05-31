@@ -6,12 +6,12 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.services.permissions import has_full_ticket_visibility
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.report import ReportBucket, ReportTicketRow, StandardReportRead
 from star_itsm_api.services.org_access import get_user_organization_id
+from star_itsm_api.services.permissions import has_full_ticket_visibility
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 
 BUCKET_MODTAGET = "modtaget"
@@ -154,10 +154,7 @@ async def build_standard_report(
     for key, label, description, statuses in BUCKET_DEFINITIONS:
         rows: list[ReportTicketRow] = []
         bucket_tickets = [t for t in tickets if t.status in statuses]
-        enrich_by_id = {
-            t.id: t
-            for t in await tickets_to_read_list(db, bucket_tickets)
-        }
+        enrich_by_id = {t.id: t for t in await tickets_to_read_list(db, bucket_tickets)}
         for ticket in bucket_tickets:
             enriched_row = enrich_by_id.get(ticket.id)
             row = _to_report_row(ticket, reopened_at=reopened_map.get(ticket.id))
@@ -180,9 +177,7 @@ async def build_standard_report(
         )
 
     reopen_tickets = [t for t in tickets if t.id in reopened_map]
-    reopen_enrich_by_id = {
-        t.id: t for t in await tickets_to_read_list(db, reopen_tickets)
-    }
+    reopen_enrich_by_id = {t.id: t for t in await tickets_to_read_list(db, reopen_tickets)}
 
     reopen_rows: list[ReportTicketRow] = []
     for ticket in reopen_tickets:

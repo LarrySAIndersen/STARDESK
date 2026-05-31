@@ -45,7 +45,10 @@ def _column_specs_for_template(
     if template == "blank":
         return []
     if template == "simple":
-        return [(name, pos, statuses, default_status, False) for name, pos, statuses, default_status in SIMPLE_COLUMN_SPECS]
+        return [
+            (name, pos, statuses, default_status, False)
+            for name, pos, statuses, default_status in SIMPLE_COLUMN_SPECS
+        ]
     if template == "delivery":
         return [
             (name, pos, statuses, default_status, False)

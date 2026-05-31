@@ -33,10 +33,10 @@ from star_itsm_api.schemas.sf_chat import (
 )
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.routing import apply_routing
+from star_itsm_api.services.sf_chat_bot import BOT_SENDER_LABEL, build_bot_reply_for_customer
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.ticket_security import resolve_create_security_flag
-from star_itsm_api.services.sf_chat_bot import BOT_SENDER_LABEL, build_bot_reply_for_customer
 from star_itsm_api.services.ticket_timestamps import maybe_set_assigned_at
 
 SF_TEAM_NAME = "SF"
@@ -46,8 +46,7 @@ TYPING_ABANDON_SECONDS = 45
 
 MSG_CHAT_CLOSED = "Chatten er ikke åben lige nu. Prøv igen senere."
 MSG_QUEUE_REJECTED = (
-    "Der er meget lange køer lige nu, så chatten er utilgængelig. "
-    "Prøv venligst igen senere."
+    "Der er meget lange køer lige nu, så chatten er utilgængelig. Prøv venligst igen senere."
 )
 MSG_CHAT_OPEN = "SF er klar til at chatte."
 
@@ -282,9 +281,6 @@ async def get_or_create_customer_session(
     session = existing.scalar_one_or_none()
 
     if session is not None:
-        agent_name = None
-        if session.assigned_agent_id:
-            agent_name = await _user_display(db, session.assigned_agent_id)
         queue_msg = MSG_QUEUE_REJECTED if session.status == SESSION_REJECTED_QUEUE else None
         messages = await _message_reads(db, session.id, customer.id)
         return session, messages, status, queue_msg
@@ -300,9 +296,6 @@ async def get_or_create_customer_session(
     await _try_assign_agent(db, session)
     await db.commit()
     await db.refresh(session)
-    agent_name = None
-    if session.assigned_agent_id:
-        agent_name = await _user_display(db, session.assigned_agent_id)
     messages = await _message_reads(db, session.id, customer.id)
     return session, messages, status, None
 
@@ -397,7 +390,9 @@ async def _try_assign_agent(db: AsyncSession, session: SfChatSession) -> None:
         presence.updated_at = _now()
 
 
-async def record_customer_typing(db: AsyncSession, session_id: uuid.UUID, customer_id: uuid.UUID) -> None:
+async def record_customer_typing(
+    db: AsyncSession, session_id: uuid.UUID, customer_id: uuid.UUID
+) -> None:
     session = await db.get(SfChatSession, session_id)
     if session is None or session.customer_user_id != customer_id:
         return
@@ -500,11 +495,7 @@ async def add_message(
     await db.commit()
     await db.refresh(msg)
 
-    if (
-        is_customer
-        and session.status == SESSION_WAITING
-        and session.bot_assistant_active
-    ):
+    if is_customer and session.status == SESSION_WAITING and session.bot_assistant_active:
         customer = await db.get(User, session.customer_user_id)
         if customer is not None:
             reply = await build_bot_reply_for_customer(
@@ -540,7 +531,9 @@ async def get_presence(db: AsyncSession, user: User) -> SfChatPresenceRead:
     )
 
 
-async def set_presence_online(db: AsyncSession, user: User, *, online: bool, force: bool) -> SfChatPresenceRead:
+async def set_presence_online(
+    db: AsyncSession, user: User, *, online: bool, force: bool
+) -> SfChatPresenceRead:
     if not await is_sf_team_member(db, user.id):
         raise ValueError("not_sf_member")
 
@@ -552,13 +545,17 @@ async def set_presence_online(db: AsyncSession, user: User, *, online: bool, for
     now = _now()
     if not online:
         active_sessions = (
-            await db.execute(
-                select(SfChatSession).where(
-                    SfChatSession.assigned_agent_id == user.id,
-                    SfChatSession.status == SESSION_ACTIVE,
+            (
+                await db.execute(
+                    select(SfChatSession).where(
+                        SfChatSession.assigned_agent_id == user.id,
+                        SfChatSession.status == SESSION_ACTIVE,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for session in active_sessions:
             db.add(
                 SfChatMessage(
@@ -702,7 +699,11 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
         )
         last_msg = last_msg_result.scalar_one_or_none()
         unread = 0
-        if last_msg and not last_msg.is_system and last_msg.sender_user_id == session.customer_user_id:
+        if (
+            last_msg
+            and not last_msg.is_system
+            and last_msg.sender_user_id == session.customer_user_id
+        ):
             if last_msg.created_at >= recent_cutoff:
                 unread = 1
                 notification_count += 1

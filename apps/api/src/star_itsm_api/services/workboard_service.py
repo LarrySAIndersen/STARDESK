@@ -52,9 +52,7 @@ async def _resolve_parent_id(
 
 
 async def _next_task_number(db: AsyncSession) -> int:
-    result = await db.execute(
-        select(func.coalesce(func.max(WorkboardTask.number), 0))
-    )
+    result = await db.execute(select(func.coalesce(func.max(WorkboardTask.number), 0)))
     current = int(result.scalar_one())
     return current + 1
 
@@ -77,9 +75,7 @@ async def list_tasks(
 
 
 async def get_task_by_canvas_id(db: AsyncSession, canvas_id: str) -> WorkboardTaskRead:
-    result = await db.execute(
-        _task_query().where(WorkboardTask.canvas_id == canvas_id)
-    )
+    result = await db.execute(_task_query().where(WorkboardTask.canvas_id == canvas_id))
     row = result.scalar_one_or_none()
     if row is None:
         raise LookupError(canvas_id)
@@ -180,9 +176,7 @@ async def patch_task_from_canvas_dict(
     canvas_id = str(raw.get("id") or "").strip()
     if not canvas_id:
         raise ValueError("Canvas task id is required")
-    result = await db.execute(
-        _task_query().where(WorkboardTask.canvas_id == canvas_id)
-    )
+    result = await db.execute(_task_query().where(WorkboardTask.canvas_id == canvas_id))
     row = result.scalar_one_or_none()
     parent_uuid = await _resolve_parent_id(
         db,
@@ -230,9 +224,7 @@ async def bulk_import(
         canvas_id = columns["canvas_id"]
         if not canvas_id:
             continue
-        result = await db.execute(
-            select(WorkboardTask).where(WorkboardTask.canvas_id == canvas_id)
-        )
+        result = await db.execute(select(WorkboardTask).where(WorkboardTask.canvas_id == canvas_id))
         existing = result.scalar_one_or_none()
         if existing is None:
             row = new_row_from_canvas(raw, parent_uuid=None)
@@ -291,7 +283,5 @@ async def bulk_import(
 
 
 async def export_all_tasks(db: AsyncSession) -> list[dict[str, Any]]:
-    result = await db.execute(
-        _task_query().order_by(WorkboardTask.number.asc())
-    )
+    result = await db.execute(_task_query().order_by(WorkboardTask.number.asc()))
     return [row_to_canvas_dict(row) for row in result.scalars().all()]

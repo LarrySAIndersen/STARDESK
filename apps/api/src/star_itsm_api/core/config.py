@@ -64,7 +64,10 @@ class Settings(BaseSettings):
     stardesk_env: str = Field(
         default="development",
         validation_alias="STARDESK_ENV",
-        description="Logical target: development | test | production | prod-clone (see docs/environments.md).",
+        description=(
+            "Logical target: development | test | production | prod-clone "
+            "(see docs/environments.md)."
+        ),
     )
     slack_client_id: str | None = Field(default=None, validation_alias="SLACK_CLIENT_ID")
     slack_client_secret: str | None = Field(default=None, validation_alias="SLACK_CLIENT_SECRET")

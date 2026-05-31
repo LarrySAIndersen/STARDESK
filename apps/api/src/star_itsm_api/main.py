@@ -1,14 +1,12 @@
-import asyncio
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.startup_checks import validate_production_settings
-from star_itsm_api.db import engine
-from star_itsm_api.db_alembic import run_alembic_upgrade_head
-from star_itsm_api.db_schema_sync import ensure_ticket_schema_current
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
     admin,
@@ -33,14 +31,16 @@ from star_itsm_api.routers import (
     webhooks,
     workboard,
 )
+
 logger = logging.getLogger(__name__)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     validate_production_settings()
     if not settings.database_url:
         logger.warning(
-            "DATABASE_URL is not set — API starts without DB; "
-            "data endpoints return 503."
+            "DATABASE_URL is not set — API starts without DB; data endpoints return 503."
         )
     else:
         logger.info(
@@ -51,6 +51,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # await asyncio.to_thread(run_alembic_upgrade_head)
         # await ensure_ticket_schema_current(engine, settings.database_url)
     yield
+
+
 app = FastAPI(
     title="STARdesk API",
     version="0.2.0",

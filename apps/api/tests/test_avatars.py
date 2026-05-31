@@ -1,5 +1,4 @@
 import uuid
-from pathlib import Path
 
 import pytest
 from fastapi import HTTPException
@@ -25,9 +24,7 @@ def test_safe_avatar_path_rejects_unknown_extension() -> None:
     assert exc.value.status_code == 400
 
 
-def test_resolve_avatar_file_only_returns_paths_inside_avatars_dir(
-    tmp_path, monkeypatch
-) -> None:
+def test_resolve_avatar_file_only_returns_paths_inside_avatars_dir(tmp_path, monkeypatch) -> None:
     upload_root = tmp_path / "uploads"
     avatars_root = upload_root / "avatars"
     avatars_root.mkdir(parents=True)

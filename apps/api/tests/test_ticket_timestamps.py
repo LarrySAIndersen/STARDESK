@@ -25,7 +25,9 @@ def test_status_milestones_set_once() -> None:
 
 def test_first_response_only_external_staff() -> None:
     ticket = SimpleNamespace(first_response_at=None, updated_at=None)
-    maybe_set_first_response(ticket, is_staff=True, is_internal=True, now=datetime(2026, 3, 1, 9, 0, tzinfo=UTC))
+    maybe_set_first_response(
+        ticket, is_staff=True, is_internal=True, now=datetime(2026, 3, 1, 9, 0, tzinfo=UTC)
+    )
     assert ticket.first_response_at is None
     maybe_set_first_response(
         ticket,

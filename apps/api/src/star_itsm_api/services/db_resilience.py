@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
-
-T = TypeVar("T")
 
 
 async def rollback_session(db: AsyncSession) -> None:
@@ -21,7 +18,7 @@ async def rollback_session(db: AsyncSession) -> None:
         logger.exception("Could not rollback database session after optional query failure")
 
 
-async def optional_db_read(
+async def optional_db_read[T](
     db: AsyncSession,
     operation: Callable[[], Awaitable[T]],
     *,

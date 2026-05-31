@@ -10,7 +10,9 @@ from star_itsm_api.models.base import Base
 
 class OrganizationIntegration(Base):
     __tablename__ = "organization_integrations"
-    __table_args__ = (UniqueConstraint("organization_id", "provider", name="uq_org_integrations_org_provider"),)
+    __table_args__ = (
+        UniqueConstraint("organization_id", "provider", name="uq_org_integrations_org_provider"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any
 
 import httpx
 import pytest
@@ -12,9 +11,7 @@ pytestmark = pytest.mark.destructive
 
 def _base_url() -> str:
     return str(
-        os.getenv("DESTRUCTIVE_API_BASE_URL")
-        or os.getenv("BASE_URL")
-        or "http://127.0.0.1:8000"
+        os.getenv("DESTRUCTIVE_API_BASE_URL") or os.getenv("BASE_URL") or "http://127.0.0.1:8000"
     ).rstrip("/")
 
 
@@ -117,7 +114,9 @@ def _create_ticket(base_url: str, token: str, title_suffix: str) -> str:
         json={
             "ticket_type": "incident",
             "title": f"aggressive-destructive-{title_suffix}",
-            "description": "Aggressive destructive test ticket for targeted mutation race scenarios.",
+            "description": (
+                "Aggressive destructive test ticket for targeted mutation race scenarios."
+            ),
             "priority": "medium",
             "gdpr_consent": False,
         },
@@ -179,12 +178,16 @@ def test_assign_while_closing_parallel_no_5xx(
     destructive_base_url: str,
     auth_context: dict[str, str],
 ) -> None:
-    ticket_id = _create_ticket(destructive_base_url, auth_context["staff_token"], "assign-close-race")
+    ticket_id = _create_ticket(
+        destructive_base_url, auth_context["staff_token"], "assign-close-race"
+    )
     headers = _auth_headers(auth_context["staff_token"])
 
     async def _run_parallel() -> tuple[httpx.Response, httpx.Response]:
         async with httpx.AsyncClient(base_url=destructive_base_url, timeout=10.0) as client:
-            close_req = client.patch(f"/api/v1/tickets/{ticket_id}", headers=headers, json={"status": "closed"})
+            close_req = client.patch(
+                f"/api/v1/tickets/{ticket_id}", headers=headers, json={"status": "closed"}
+            )
             assign_req = client.patch(
                 f"/api/v1/tickets/{ticket_id}/assignment",
                 headers=headers,
@@ -217,7 +220,7 @@ def test_list_scope_path_traversal_param_rejected(
     "query",
     [
         "' OR 1=1 --",
-        "\"; DROP TABLE tickets; --",
+        '"; DROP TABLE tickets; --',
         "union select * from users",
     ],
 )

@@ -66,7 +66,8 @@ def require_attachment_storage_configured() -> None:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Vedhæftelser kan ikke gemmes på serveren (mangler BLOB_READ_WRITE_TOKEN på API-projektet). "
+                "Vedhæftelser kan ikke gemmes på serveren "
+                "(mangler BLOB_READ_WRITE_TOKEN på API-projektet). "
                 "Opret et Vercel Blob-store og link det til api-projektet, derefter redeploy."
             ),
         )
@@ -115,7 +116,10 @@ def _resolve_blob_store_id(token: str) -> str:
         return parsed
     raise HTTPException(
         status_code=503,
-        detail="BLOB_STORE_ID is not configured and could not be derived from BLOB_READ_WRITE_TOKEN",
+        detail=(
+            "BLOB_STORE_ID is not configured and could not be derived "
+            "from BLOB_READ_WRITE_TOKEN"
+        ),
     )
 
 
@@ -171,7 +175,9 @@ async def read_blob_bytes(storage_key: str) -> bytes:
     raise HTTPException(status_code=404, detail=FILE_NOT_FOUND_DETAIL_DA)
 
 
-def persist_to_local_disk(*, ticket_id: str, attachment_id: str, filename: str, content: bytes) -> Path:
+def persist_to_local_disk(
+    *, ticket_id: str, attachment_id: str, filename: str, content: bytes
+) -> Path:
     root = Path(settings.upload_dir)
     root.mkdir(parents=True, exist_ok=True)
     storage_path = root / ticket_id / f"{attachment_id}_{filename}"

@@ -24,6 +24,8 @@ class SlaSettings(Base):
         nullable=False,
         default=list,
     )
-    sla_starts_on_team_assignment: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sla_starts_on_team_assignment: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     due_soon_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     updated_at: Mapped[object] = mapped_column(DateTime(timezone=True), nullable=False)

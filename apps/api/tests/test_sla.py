@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from star_itsm_api.services.sla import compute_sla_due_dates_sync
 from star_itsm_api.services.sla_calendar import add_business_days, add_calendar_hours
 from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
 from star_itsm_api.services.sla_status import sla_breached, sla_remaining_seconds
-from types import SimpleNamespace
 
 
 def test_p1_critical_four_calendar_hours() -> None:

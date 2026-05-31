@@ -6,10 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_STATUS_DRAFT,
-    KNOWLEDGE_STATUS_PUBLISHED,
+    KNOWLEDGE_STATUS_LABELS_DA,
     KNOWLEDGE_VISIBILITY_EXTERNAL,
     KNOWLEDGE_VISIBILITY_INTERNAL,
-    KNOWLEDGE_STATUS_LABELS_DA,
     KNOWLEDGE_VISIBILITY_LABELS_DA,
 )
 from star_itsm_api.services.knowledge_content import (
@@ -67,7 +66,10 @@ class KnowledgeArticleCreate(BaseModel):
         }
         has_description = self.description is not None and len(self.description.strip()) >= 10
         if not has_description and not sections_have_min_content(sections):
-            raise ValueError("Angiv mindst 10 tegn i indholdet (resumé, symptomer, løsning eller relaterede emner).")
+            raise ValueError(
+                "Angiv mindst 10 tegn i indholdet "
+                "(resumé, symptomer, løsning eller relaterede emner)."
+            )
         return self
 
 

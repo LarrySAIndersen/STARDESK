@@ -3,10 +3,10 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import (
     ROLE_AGENT,
     ROLE_SUBMITTER,
@@ -14,12 +14,13 @@ from star_itsm_api.core.security import (
     is_staff,
     require_staff,
 )
-from star_itsm_api.services.permissions import can_manage_users, is_admin, is_staff_role
 from star_itsm_api.deps import require_db
+from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
+from star_itsm_api.models.ticket_stakeholder import TicketStakeholder
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.attachment import AttachmentRead
 from star_itsm_api.schemas.comment import (
@@ -28,12 +29,13 @@ from star_itsm_api.schemas.comment import (
     CommentReactionUpdate,
     CommentRead,
 )
-from star_itsm_api.services.comment_reactions import (
-    apply_reaction_summaries,
-    load_reaction_summaries,
-    set_comment_reaction,
-)
 from star_itsm_api.schemas.slack import SlackPushRequest, SlackPushResponse
+from star_itsm_api.schemas.stakeholder import (
+    TicketStakeholderCreate,
+    TicketStakeholderRead,
+    TicketStakeholdersGroupedRead,
+    TicketStakeholderUpdate,
+)
 from star_itsm_api.schemas.ticket import (
     CLOSED_STATUSES,
     TicketAssignmentUpdate,
@@ -43,14 +45,72 @@ from star_itsm_api.schemas.ticket import (
     TicketMetadataUpdate,
     TicketParentUpdate,
     TicketPriorityUpdate,
-    TicketTypeUpdate,
     TicketRead,
     TicketRelatedMajorCreate,
     TicketStatusUpdate,
+    TicketTypeUpdate,
 )
-from star_itsm_api.services.slack_mock import get_mock_channel
-from star_itsm_api.core.config import settings
+from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
+from star_itsm_api.schemas.ticket_intelligence import (
+    TicketIntelligenceRead,
+    TicketIntelligenceUpdate,
+    TicketLlmContextRead,
+    TicketLlmEvalPackRead,
+)
+from star_itsm_api.services.attachments import (
+    build_attachment_download_response,
+    delete_ticket_attachment,
+    list_ticket_attachments_for_detail,
+    save_ticket_upload,
+)
+from star_itsm_api.services.comment_reactions import (
+    apply_reaction_summaries,
+    load_reaction_summaries,
+    set_comment_reaction,
+)
+from star_itsm_api.services.dashboard_scope import (
+    apply_dashboard_scope_stmt,
+    parse_dashboard_scope,
+)
+from star_itsm_api.services.db_resilience import rollback_session
+from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
+from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
+from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
+from star_itsm_api.services.org_access import (
+    apply_agent_team_list_filter,
+    apply_ticket_list_filter,
+    can_assign_to_any_team,
+    get_user_organization_id,
+    user_can_access_ticket,
+)
+from star_itsm_api.services.permissions import can_manage_users, is_admin, is_staff_role
+from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
+from star_itsm_api.services.routing import apply_routing
+from star_itsm_api.services.sla import apply_sla_to_ticket
+from star_itsm_api.services.sla_pause import (
+    maybe_start_sla_on_assignment,
+    sync_sla_pause_on_status_change,
+)
+from star_itsm_api.services.sla_settings_store import get_sla_runtime_settings
 from star_itsm_api.services.slack import SlackApiError, get_slack_integration, post_ticket_message
+from star_itsm_api.services.slack_mock import get_mock_channel
+from star_itsm_api.services.sub_causes import (
+    replace_ticket_sub_causes,
+    validate_sub_cause_ids,
+)
+from star_itsm_api.services.teams import user_in_team
+from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket_timestamps_read
+from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
+from star_itsm_api.services.ticket_classification import (
+    validate_ticket_classification,
+    validate_ticket_source_value,
+)
+from star_itsm_api.services.ticket_dashboard_filters import (
+    apply_bucket_filter,
+    filter_tickets_by_sla,
+    filter_tickets_closed_since,
+    filter_tickets_opened_since,
+)
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -60,67 +120,13 @@ from star_itsm_api.services.ticket_hierarchy import (
     remove_related_major_link,
     set_parent_ticket_id,
 )
-from star_itsm_api.services.sub_causes import (
-    replace_ticket_sub_causes,
-    validate_sub_cause_ids,
+from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
+from star_itsm_api.services.ticket_intelligence import (
+    EVALUATION_RUBRIC_DA,
+    build_llm_context_batch,
+    build_ticket_llm_context,
+    intelligence_from_ticket,
 )
-from star_itsm_api.services.ticket_read import resolve_reporter_display_name, ticket_to_detail_read, ticket_to_read, tickets_to_read_list
-from star_itsm_api.services.dashboard_scope import (
-    apply_dashboard_scope_stmt,
-    parse_dashboard_scope,
-)
-from star_itsm_api.services.db_resilience import rollback_session
-from star_itsm_api.services.org_access import (
-    apply_agent_team_list_filter,
-    apply_ticket_list_filter,
-    can_assign_to_any_team,
-    get_user_organization_id,
-    user_can_access_ticket,
-)
-from star_itsm_api.services.ticket_dashboard_filters import (
-    apply_bucket_filter,
-    filter_tickets_by_sla,
-    filter_tickets_closed_since,
-    filter_tickets_opened_since,
-)
-from star_itsm_api.services.routing import apply_routing
-from star_itsm_api.services.sla import apply_sla_to_ticket
-from star_itsm_api.services.sla_pause import (
-    maybe_start_sla_on_assignment,
-    sync_sla_pause_on_status_change,
-)
-from star_itsm_api.services.sla_settings_store import get_sla_runtime_settings
-from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
-from star_itsm_api.services.teams import user_in_team
-from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
-from star_itsm_api.models.attachment import Attachment
-from star_itsm_api.services.attachments import (
-    build_attachment_download_response,
-    delete_ticket_attachment,
-    list_ticket_attachments_for_detail,
-    save_ticket_upload,
-)
-from star_itsm_api.services.ticket_numbers import generate_ticket_number
-from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
-from star_itsm_api.services.ticket_search import apply_ticket_search_filter
-from star_itsm_api.services.ticket_classification import (
-    validate_ticket_classification,
-    validate_ticket_source_value,
-)
-from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
-from star_itsm_api.services.ticket_sort import (
-    DEFAULT_TICKET_SORT,
-    apply_ticket_sort,
-    parse_ticket_sort,
-)
-from star_itsm_api.services.ticket_security import (
-    require_staff_for_security_metadata_update,
-    resolve_create_security_flag,
-)
-from star_itsm_api.services.ticket_activity import build_ticket_activity, ticket_timestamps_read
-from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
-from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
-from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
 from star_itsm_api.services.ticket_notifications import (
     build_assignment_notification,
     build_comment_notification,
@@ -128,19 +134,26 @@ from star_itsm_api.services.ticket_notifications import (
     build_status_notification,
     notify_reporter_of_ticket_update,
 )
-from star_itsm_api.services.ticket_timestamps import (
-    apply_status_milestone_timestamps,
-    maybe_set_assigned_at,
-    maybe_set_first_response,
-    touch_ticket_updated,
+from star_itsm_api.services.ticket_numbers import generate_ticket_number
+from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
+from star_itsm_api.services.ticket_read import (
+    resolve_reporter_display_name,
+    ticket_to_detail_read,
+    ticket_to_read,
+    tickets_to_read_list,
 )
-from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
-from star_itsm_api.schemas.stakeholder import (
-    TicketStakeholderCreate,
-    TicketStakeholderRead,
-    TicketStakeholdersGroupedRead,
-    TicketStakeholderUpdate,
+from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
+from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_security import (
+    require_staff_for_security_metadata_update,
+    resolve_create_security_flag,
 )
+from star_itsm_api.services.ticket_sort import (
+    DEFAULT_TICKET_SORT,
+    apply_ticket_sort,
+    parse_ticket_sort,
+)
+from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
 from star_itsm_api.services.ticket_stakeholders import (
     apply_stakeholder_ticket_filter,
     get_ticket_stakeholders_grouped,
@@ -152,21 +165,12 @@ from star_itsm_api.services.ticket_stakeholders import (
     upsert_stakeholder,
     validate_stakeholder_user_ids,
 )
-from star_itsm_api.models.ticket_stakeholder import TicketStakeholder
-from star_itsm_api.schemas.ticket_intelligence import (
-    TicketIntelligenceRead,
-    TicketIntelligenceUpdate,
-    TicketLlmContextRead,
-    TicketLlmEvalPackRead,
+from star_itsm_api.services.ticket_timestamps import (
+    apply_status_milestone_timestamps,
+    maybe_set_assigned_at,
+    maybe_set_first_response,
+    touch_ticket_updated,
 )
-from star_itsm_api.services.ticket_intelligence import (
-    EVALUATION_RUBRIC_DA,
-    build_ticket_llm_context,
-    build_llm_context_batch,
-    intelligence_from_ticket,
-)
-from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
-from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
 
 logger = logging.getLogger(__name__)
 
@@ -342,9 +346,7 @@ async def list_tickets(
             or closed_since_days is not None
         )
         if effective_scope is not None and is_staff_role(current_user):
-            stmt = await apply_dashboard_scope_stmt(
-                db, stmt, current_user, effective_scope
-            )
+            stmt = await apply_dashboard_scope_stmt(db, stmt, current_user, effective_scope)
         elif effective_scope is not None:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         if bucket is not None:
@@ -363,9 +365,7 @@ async def list_tickets(
                 Ticket.parent_ticket_id.is_(None),
             )
         elif is_store is False:
-            stmt = stmt.where(
-                (Ticket.is_major.is_(False)) | (Ticket.parent_ticket_id.is_not(None))
-            )
+            stmt = stmt.where((Ticket.is_major.is_(False)) | (Ticket.parent_ticket_id.is_not(None)))
         if board:
             if not is_staff_role(current_user):
                 raise HTTPException(status_code=403, detail="Insufficient permissions")
@@ -896,9 +896,7 @@ async def update_ticket_metadata(
             updates["category_id"] if "category_id" in updates else ticket.category_id
         )
         next_subcategory_id = (
-            updates["subcategory_id"]
-            if "subcategory_id" in updates
-            else ticket.subcategory_id
+            updates["subcategory_id"] if "subcategory_id" in updates else ticket.subcategory_id
         )
         await validate_ticket_classification(
             db,
@@ -1082,9 +1080,7 @@ async def push_ticket_to_slack(
 
     org_id = get_user_organization_id(current_user)
     integration = (
-        await get_slack_integration(db, organization_id=org_id)
-        if org_id is not None
-        else None
+        await get_slack_integration(db, organization_id=org_id) if org_id is not None else None
     )
 
     channel_name = payload.channel_id
@@ -1092,7 +1088,9 @@ async def push_ticket_to_slack(
     message_ts: str | None = None
 
     if integration is not None and integration.slack_bot_token:
-        frontend_origin = settings.cors_origins[0] if settings.cors_origins else settings.frontend_url
+        frontend_origin = (
+            settings.cors_origins[0] if settings.cors_origins else settings.frontend_url
+        )
         ticket_url = f"{frontend_origin.rstrip('/')}/tickets/{ticket.id}"
         message_text = (
             f":ticket: *{ticket.ticket_number}* - {ticket.title}\n"
@@ -1180,9 +1178,7 @@ async def update_ticket_parent(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.post(
-    "/{ticket_id}/related-majors",
-    status_code=201)
+@router.post("/{ticket_id}/related-majors", status_code=201)
 async def link_related_major_ticket(
     ticket_id: uuid.UUID,
     payload: TicketRelatedMajorCreate,
@@ -1194,7 +1190,9 @@ async def link_related_major_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     await _ensure_ticket_access(db, ticket, current_user)
     if not ticket.is_major or ticket.parent_ticket_id is not None:
-        raise HTTPException(status_code=400, detail="Only store sager can link to other store sager")
+        raise HTTPException(
+            status_code=400, detail="Only store sager can link to other store sager"
+        )
     try:
         await add_related_major_link(
             db,
@@ -1365,9 +1363,7 @@ async def list_ticket_stakeholders(
     return await get_ticket_stakeholders_grouped(db, ticket_id)
 
 
-@router.post(
-    "/{ticket_id}/stakeholders",
-    status_code=201)
+@router.post("/{ticket_id}/stakeholders", status_code=201)
 async def add_ticket_stakeholder(
     ticket_id: uuid.UUID,
     payload: TicketStakeholderCreate,
@@ -1396,8 +1392,7 @@ async def add_ticket_stakeholder(
     return await stakeholder_to_read(db, row)
 
 
-@router.patch(
-    "/{ticket_id}/stakeholders/{stakeholder_id}")
+@router.patch("/{ticket_id}/stakeholders/{stakeholder_id}")
 async def update_ticket_stakeholder(
     ticket_id: uuid.UUID,
     stakeholder_id: uuid.UUID,
@@ -1485,7 +1480,9 @@ async def update_ticket_intelligence(
     await _ensure_ticket_access(db, ticket, current_user)
     updates = payload.model_dump(exclude_unset=True)
     if "semantic_topics" in updates and updates["semantic_topics"] is not None:
-        ticket.semantic_topics = [t.strip().lower() for t in updates["semantic_topics"] if t.strip()]
+        ticket.semantic_topics = [
+            t.strip().lower() for t in updates["semantic_topics"] if t.strip()
+        ]
     if "ease_score" in updates:
         ticket.ease_score = updates["ease_score"]
     if "complexity_score" in updates:
@@ -1624,8 +1621,7 @@ async def reply_ticket_email(
     return await get_ticket(ticket_id, db, current_user)
 
 
-@router.put(
-    "/{ticket_id}/comments/{comment_id}/reactions")
+@router.put("/{ticket_id}/comments/{comment_id}/reactions")
 async def upsert_comment_reaction(
     ticket_id: uuid.UUID,
     comment_id: uuid.UUID,

@@ -12,7 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.core.config import settings
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
-from star_itsm_api.services.user_roles import ensure_user_roles_loaded, user_has_any_role, user_role_set
+from star_itsm_api.services.user_roles import (
+    ensure_user_roles_loaded,
+    user_has_any_role,
+    user_role_set,
+)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 12
@@ -26,9 +30,7 @@ ROLE_TOP_ADMIN = "top_admin"
 ROLE_SUPPORTER = "supporter"
 ROLE_STARDESK_REVIEWER = "stardesk_reviewer"
 
-USER_ROLE_PATTERN = (
-    r"^(end_user|agent|admin|top_admin|supporter|stardesk_reviewer)$"
-)
+USER_ROLE_PATTERN = r"^(end_user|agent|admin|top_admin|supporter|stardesk_reviewer)$"
 
 
 def hash_password(password: str) -> str:

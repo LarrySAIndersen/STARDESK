@@ -9,7 +9,6 @@ from star_itsm_api.core.security import (
     ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
-    ROLE_TOP_ADMIN,
     USER_ROLE_PATTERN,
 )
 from star_itsm_api.schemas.auth import ROLE_LABELS

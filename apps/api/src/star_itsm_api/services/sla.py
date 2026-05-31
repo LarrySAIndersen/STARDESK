@@ -1,6 +1,6 @@
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -124,7 +124,10 @@ async def apply_sla_to_ticket(
     """Set SLA fields on a ticket model (create or priority change)."""
     if not force:
         runtime = await get_sla_runtime_settings(db)
-        if runtime.sla_starts_on_team_assignment and getattr(ticket, "assigned_team_id", None) is None:
+        if (
+            runtime.sla_starts_on_team_assignment
+            and getattr(ticket, "assigned_team_id", None) is None
+        ):
             return
         if runtime.trigger_team_ids and not sla_applies_to_team(ticket, runtime):  # type: ignore[arg-type]
             return

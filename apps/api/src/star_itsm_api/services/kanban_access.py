@@ -7,7 +7,6 @@ import uuid
 from star_itsm_api.models.kanban import (
     KANBAN_ROLE_EDITOR,
     KANBAN_ROLE_OWNER,
-    KANBAN_ROLE_VIEWER,
     KanbanBoard,
 )
 from star_itsm_api.models.user import User

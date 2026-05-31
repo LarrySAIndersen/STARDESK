@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,7 +35,7 @@ _PRIORITY_LABELS_DA = {
 }
 
 
-class TicketUpdateKind(str, Enum):
+class TicketUpdateKind(StrEnum):
     STATUS = "status"
     PRIORITY = "priority"
     ASSIGNMENT = "assignment"

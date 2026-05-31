@@ -10,7 +10,12 @@ from star_itsm_api.core.prototype_credentials import (
     LARRY_PROTOTYPE_PASSWORD,
     LARRY_PROTOTYPE_PEPPER,
 )
-from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUPPORTER, hash_prototype_password, verify_password
+from star_itsm_api.core.security import (
+    ROLE_ADMIN,
+    ROLE_SUPPORTER,
+    hash_prototype_password,
+    verify_password,
+)
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
@@ -95,9 +100,7 @@ async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
             team_ids.append(team_id)
 
     if team_ids:
-        existing = await db.execute(
-            select(TeamMember.team_id).where(TeamMember.user_id == user.id)
-        )
+        existing = await db.execute(select(TeamMember.team_id).where(TeamMember.user_id == user.id))
         existing_ids = set(existing.scalars().all())
         if set(team_ids) != existing_ids:
             await sync_user_teams(db, user.id, team_ids)

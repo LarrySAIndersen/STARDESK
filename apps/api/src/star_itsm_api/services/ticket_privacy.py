@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime
 
 from star_itsm_api.core.security import is_staff

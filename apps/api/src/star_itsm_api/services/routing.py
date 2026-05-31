@@ -36,12 +36,16 @@ async def apply_routing(
     priority: str,
 ) -> RoutingResult:
     rules = (
-        await db.execute(
-            select(RoutingRule)
-            .where(RoutingRule.is_active.is_(True))
-            .order_by(RoutingRule.priority_order.asc())
+        (
+            await db.execute(
+                select(RoutingRule)
+                .where(RoutingRule.is_active.is_(True))
+                .order_by(RoutingRule.priority_order.asc())
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     for rule in rules:
         if rule.ticket_type and rule.ticket_type != ticket_type:

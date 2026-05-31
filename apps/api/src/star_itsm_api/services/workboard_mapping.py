@@ -33,7 +33,9 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def split_canvas_payload(raw: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[Any]]:
+def split_canvas_payload(
+    raw: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[Any]]:
     """Return column fields, extra JSON, field_history, activity_log."""
     field_history = raw.get("fieldHistory") or raw.get("field_history") or {}
     activity_log = raw.get("activityLog") or raw.get("activity_log") or []
@@ -55,9 +57,7 @@ def split_canvas_payload(raw: dict[str, Any]) -> tuple[dict[str, Any], dict[str,
         "parent_canvas_id": raw.get("parentId") or raw.get("parent_id"),
     }
     extra = {
-        key: value
-        for key, value in raw.items()
-        if key not in _COLUMN_KEYS and value is not None
+        key: value for key, value in raw.items() if key not in _COLUMN_KEYS and value is not None
     }
     return columns, extra, field_history, activity_log
 

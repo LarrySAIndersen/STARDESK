@@ -37,7 +37,9 @@ _RULES: tuple[tuple[re.Pattern[str], dict], ...] = (
             "priority": "medium",
             "ticket_type": "incident",
             "intake": {"device_type": "printer"},
-            "reply": "Printerproblemer noteres — jeg foreslår enhedstype printer og relevante tags.",
+            "reply": (
+                "Printerproblemer noteres — jeg foreslår enhedstype printer og relevante tags."
+            ),
         },
     ),
     (
@@ -79,7 +81,10 @@ _RULES: tuple[tuple[re.Pattern[str], dict], ...] = (
             "priority": "critical",
             "ticket_type": "incident",
             "intake": {"urgency": "møde_snart"},
-            "reply": "Jeg markerer sagen som hastende med høj prioritet og urgency-spørgsmål udfyldt.",
+            "reply": (
+                "Jeg markerer sagen som hastende med høj prioritet "
+                "og urgency-spørgsmål udfyldt."
+            ),
         },
     ),
     (

@@ -35,7 +35,9 @@ async def _resolve_fill_targets(
     subcategory_name: str,
 ) -> tuple[Category, Subcategory]:
     category = (
-        await db.execute(select(Category).where(Category.name == category_name, Category.is_active.is_(True)))
+        await db.execute(
+            select(Category).where(Category.name == category_name, Category.is_active.is_(True))
+        )
     ).scalar_one_or_none()
     if category is None:
         raise HTTPException(
@@ -73,13 +75,17 @@ async def fill_tickets_missing_category(
         subcategory_name=subcategory_name,
     )
     tickets = (
-        await db.execute(
-            select(Ticket).where(
-                Ticket.deleted_at.is_(None),
-                Ticket.category_id.is_(None),
+        (
+            await db.execute(
+                select(Ticket).where(
+                    Ticket.deleted_at.is_(None),
+                    Ticket.category_id.is_(None),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     count = len(tickets)
     if dry_run:
         return CategoryFillResult(
