@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.user import User
 from star_itsm_api.services.attachments import upload_root
+from star_itsm_api.services.safe_paths import resolve_path_under_root, write_bytes_under_root
 
 ALLOWED_AVATAR_TYPES = frozenset(
     {
@@ -48,27 +49,36 @@ def extension_for_avatar_content_type(content_type: str) -> str:
     return _EXT_BY_TYPE[content_type]
 
 
-def _safe_avatar_path(user_id: uuid.UUID, ext: str) -> Path:
-    """Resolve avatar path and ensure it stays inside the avatars upload directory."""
+def _validated_avatar_basename(user_id: uuid.UUID, ext: str) -> str:
+    """Return a basename safe for storage (32 hex chars + allowlisted extension)."""
     if ext not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Ugyldig filtype")
 
-    object_name = f"{user_id.hex}{ext}"
-    if not _AVATAR_OBJECT_RE.fullmatch(object_name):
+    matched = _AVATAR_OBJECT_RE.fullmatch(f"{user_id.hex}{ext}")
+    if matched is None:
         raise HTTPException(status_code=400, detail="Ugyldig filsti")
+    return matched.group(0)
 
-    storage_root = avatars_dir().resolve()
-    target = storage_root.joinpath(object_name).resolve()
-    if target.parent != storage_root:
-        raise HTTPException(status_code=400, detail="Ugyldig filsti") from None
-    return target
+
+def _safe_avatar_path(user_id: uuid.UUID, ext: str) -> Path:
+    """Resolve avatar path and ensure it stays inside the avatars upload directory."""
+    basename = _validated_avatar_basename(user_id, ext)
+    return resolve_path_under_root(
+        root=avatars_dir(),
+        basename=basename,
+        pattern=_AVATAR_OBJECT_RE,
+    )
 
 
 def write_avatar_bytes(user_id: uuid.UUID, image_bytes: bytes, *, ext: str) -> Path:
     """Persist avatar bytes under the avatars upload root."""
-    target = _safe_avatar_path(user_id, ext)
-    target.write_bytes(image_bytes)
-    return target
+    basename = _validated_avatar_basename(user_id, ext)
+    return write_bytes_under_root(
+        root=avatars_dir(),
+        basename=basename,
+        pattern=_AVATAR_OBJECT_RE,
+        data=image_bytes,
+    )
 
 
 def resolve_avatar_file(user_id: uuid.UUID) -> Path | None:

@@ -65,11 +65,10 @@ class KnowledgeArticleCreate(BaseModel):
             "solution": self.solution,
             "related_topics": self.related_topics,
         }
-        if self.description is not None and len(self.description.strip()) >= 10:
-            return self
-        if sections_have_min_content(sections):
-            return self
-        raise ValueError("Angiv mindst 10 tegn i indholdet (resumé, symptomer, løsning eller relaterede emner).")
+        has_description = self.description is not None and len(self.description.strip()) >= 10
+        if not has_description and not sections_have_min_content(sections):
+            raise ValueError("Angiv mindst 10 tegn i indholdet (resumé, symptomer, løsning eller relaterede emner).")
+        return self
 
 
 class KnowledgeArticleUpdate(BaseModel):
