@@ -27,7 +27,16 @@ dev-web:
 	cd apps/web && npm run dev -- --hostname 0.0.0.0 --port 3000
 
 dev-setup:
+	bash scripts/setup-dev-environment.sh
+
+dev-setup-neon:
+	bash scripts/setup-dev-environment.sh --neon-only
+
+dev-setup-local:
 	bash scripts/setup-dev-environment.sh --local-postgres
+
+sync-neon-env:
+	bash scripts/sync-neon-env.sh
 
 dev-up:
 	bash scripts/dev-up.sh

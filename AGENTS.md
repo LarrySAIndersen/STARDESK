@@ -1,69 +1,88 @@
 # AGENTS.md
 
-Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, and `docs/environments.md`.
+Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
 
 ## Cursor Cloud specific instructions
 
-### Goal: production parity, clearly not production
+### Database: Neon first (not local Postgres)
 
-| Signal | Local development | Production |
-|--------|-------------------|------------|
-| `STARDESK_ENV` / `NEXT_PUBLIC_STARDESK_ENV` | `development` | `production` |
+| Target | Neon branch | `STARDESK_ENV` | Use when |
+|--------|-------------|----------------|----------|
+| **Local dev (default)** | **`test`** | `test` or `development` | Cloud Agent VM, daily work |
+| Production | `main` | `production` | Vercel prod only — **never** in local `.env` |
+| UAT | `prod-clone` | `prod-clone` | Rare; isolated copy |
+
+**Required VM/repo secret:** `DATABASE_URL` = `postgresql+asyncpg://…` from Neon **`test`** branch (see [docs/environments.md](docs/environments.md)).
+
+```bash
+# 1) VM has DATABASE_URL → sync into gitignored .env
+bash scripts/sync-neon-env.sh
+
+# 2) Full setup (deps + Neon bootstrap + Alembic)
+bash scripts/setup-dev-environment.sh
+
+# 3) Dev servers
+bash scripts/dev-up.sh
+```
+
+**Fallback** (no Neon secret): `bash scripts/setup-dev-environment.sh --local-postgres`
+
+### Production parity vs clearly not production
+
+| Signal | Dev / test (Neon `test`) | Production |
+|--------|--------------------------|------------|
+| `STARDESK_ENV` | `test` or `development` | `production` |
 | `APP_ENV` | `development` | `production` |
-| UI | Amber banner **Lokal udvikling** | No banner |
-| `GET /health` | `deployment: local`, `stardesk_env: development` | `deployment: production`, `stardesk_env: production` |
-| URLs | `localhost:3000` / `8000` | Vercel prod URLs |
+| UI banner | **Testmiljø** or **Lokal udvikling** | None |
+| `GET /health` | `stardesk_env` ≠ `production` | `stardesk_env=production` |
+| URLs | `localhost:3000` / `8000` | Vercel prod |
 | Demo login | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN=true` | `false` |
 | Integrations | `SLACK_MOCK=1`, `GMAIL_MOCK=1` | Real OAuth |
 
 Templates: `apps/api/.env.development.example`, `apps/web/.env.development.example`  
+Neon test: `apps/api/.env.test.example`, `apps/web/.env.test.example`  
 Manifest: `deploy/vercel/env-manifest.json`
-
-### One-shot setup (recommended)
-
-```bash
-bash scripts/setup-dev-environment.sh --local-postgres   # VM without Neon
-bash scripts/setup-dev-environment.sh                  # uses DATABASE_URL in apps/api/.env
-bash scripts/dev-up.sh                                 # tmux: API :8000 + Web :3000
-```
 
 ### VM update script (deps only)
 
-`npm ci` in `apps/web`, then `uv sync --group dev` in `apps/api`.
-
-### Database
-
-```bash
-bash scripts/bootstrap-dev-database.sh [--local-postgres]
+```text
+cd apps/web && npm ci
+cd apps/api && uv sync --group dev
 ```
 
-Skips SQL if DB already seeded; always syncs Alembic via `alembic_after_sql_setup.py`. Demo password: **`Stardesk2026!`**.
+Does **not** run DB bootstrap (use `setup-dev-environment.sh` once per Neon branch reset).
+
+### Database bootstrap
+
+```bash
+bash scripts/bootstrap-dev-database.sh          # uses apps/api/.env (Neon or local)
+bash scripts/bootstrap-dev-database.sh --local-postgres   # fallback only
+```
+
+Idempotent: skips SQL if seeded; runs `alembic_after_sql_setup.py`. Demo password: **`Stardesk2026!`**.
 
 ### Deliverable gate (required before every handoff/PR)
 
-All deliverables must pass the **hello-world gate** (login + tickets + non-prod identity):
-
 ```bash
-bash scripts/run-deliverable-gate.sh          # API (required)
-bash scripts/run-deliverable-gate.sh --full   # + Playwright /tickets (UI changes)
+bash scripts/run-deliverable-gate.sh
+bash scripts/run-deliverable-gate.sh --full   # UI changes
 ```
 
-See **`docs/deliverable-gate.md`** and skill **`.cursor/skills/stardesk-deliverable-gate/SKILL.md`**.
+See `docs/deliverable-gate.md` and `.cursor/skills/stardesk-deliverable-gate/SKILL.md`.
 
-### Verify production distinguishability
+### Verify
 
 ```bash
-curl -s http://localhost:8000/health | jq .
-
+curl -s http://localhost:8000/health   # stardesk_env=test|development, not production
 cd apps/api && uv run pytest -q
 cd apps/web && npm run lint && npm run build
+bash scripts/run-deliverable-gate.sh
 ```
-
-Open http://localhost:3000 — confirm **Lokal udvikling** banner and page title suffix `[dev]`.
 
 ### Gotchas
 
-- Never point local `.env` at Neon **`main`** (production branch).
-- Use Neon **`test`** branch + `.env.test.example` for prod-like cloud data without prod risk.
-- `APP_ENV=production` locally triggers strict secret checks — keep `development` locally.
-- Alembic not on Vercel cold start; use `scripts/migrate-db.sh` or bootstrap.
+- **Never** put Neon **`main`** `DATABASE_URL` in `apps/api/.env` for agent work.
+- `sync-neon-env.sh` sets `STARDESK_ENV=test` when URL is Neon.
+- Alembic does not run on Vercel API cold start — CI/`migrate-db.sh`/bootstrap.
+- Restart `npm run dev` after `.env.local` changes.
+- Neon MCP may need IDE auth; `DATABASE_URL` secret is enough for bootstrap.

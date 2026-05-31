@@ -39,9 +39,9 @@ npm run gate:deliverable:full
 
 ## Prerequisites
 
-1. Database bootstrapped: `bash scripts/bootstrap-dev-database.sh` or `setup-dev-environment.sh`
-2. Dev servers running: `bash scripts/dev-up.sh`
-3. `apps/api/.env` + `apps/web/.env.local` with `STARDESK_ENV=development` (not Neon **main**)
+1. **Neon `test` branch:** `DATABASE_URL` in VM secrets → `bash scripts/sync-neon-env.sh` → `bash scripts/setup-dev-environment.sh`
+2. Dev servers: `bash scripts/dev-up.sh`
+3. `STARDESK_ENV` is `test` or `development` — **not** `production` (never Neon **main** for local gate)
 
 ## What to attach in PR / handoff
 

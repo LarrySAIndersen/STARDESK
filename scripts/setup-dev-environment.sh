@@ -3,7 +3,8 @@
 # Result is clearly non-production (STARDESK_ENV=development, UI banner, /health fields).
 #
 # Usage (repo root):
-#   bash scripts/setup-dev-environment.sh
+#   bash scripts/setup-dev-environment.sh              # Neon if DATABASE_URL set, else local Postgres
+#   bash scripts/setup-dev-environment.sh --neon-only    # require DATABASE_URL (Neon test branch)
 #   bash scripts/setup-dev-environment.sh --local-postgres
 #   bash scripts/setup-dev-environment.sh --skip-db
 set -euo pipefail
@@ -12,12 +13,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 LOCAL_POSTGRES=0
+NEON_ONLY=0
 SKIP_DB=0
 BOOTSTRAP_ARGS=()
 
 for arg in "$@"; do
   case "$arg" in
     --local-postgres) LOCAL_POSTGRES=1 ;;
+    --neon-only) NEON_ONLY=1 ;;
     --skip-db) SKIP_DB=1 ;;
     -h|--help)
       grep '^#' "$0" | head -12
@@ -36,21 +39,35 @@ echo "==> Installing dependencies"
 cd "$ROOT/apps/web" && npm ci
 cd "$ROOT/apps/api" && uv sync --group dev
 
-echo "==> Writing development env files (production variable parity, local values)"
-if [[ ! -f "$ROOT/apps/api/.env" ]]; then
-  cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
-  echo "    apps/api/.env"
-fi
-if [[ ! -f "$ROOT/apps/web/.env.local" ]]; then
-  cp "$ROOT/apps/web/.env.development.example" "$ROOT/apps/web/.env.local"
-  echo "    apps/web/.env.local"
+echo "==> Environment files"
+if [[ -n "${DATABASE_URL:-${STARDESK_NEON_DATABASE_URL:-}}" ]]; then
+  echo "    Syncing Neon DATABASE_URL into apps/api/.env"
+  bash "$ROOT/scripts/sync-neon-env.sh"
+elif [[ "$NEON_ONLY" -eq 1 ]]; then
+  echo "ERROR: --neon-only requires DATABASE_URL or STARDESK_NEON_DATABASE_URL" >&2
+  exit 1
+else
+  if [[ ! -f "$ROOT/apps/api/.env" ]]; then
+    cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
+    echo "    Created apps/api/.env (local template)"
+  fi
+  if [[ ! -f "$ROOT/apps/web/.env.local" ]]; then
+    cp "$ROOT/apps/web/.env.development.example" "$ROOT/apps/web/.env.local"
+    echo "    Created apps/web/.env.local"
+  fi
 fi
 
 if [[ "$SKIP_DB" -eq 0 ]]; then
-  BOOTSTRAP_ARGS=()
-  [[ "$LOCAL_POSTGRES" -eq 1 ]] && BOOTSTRAP_ARGS+=(--local-postgres)
-  echo "==> Database bootstrap"
-  bash "$ROOT/scripts/bootstrap-dev-database.sh" --no-write-env "${BOOTSTRAP_ARGS[@]}"
+  BOOTSTRAP_ARGS=(--no-write-env)
+  if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
+    BOOTSTRAP_ARGS+=(--local-postgres)
+  elif [[ -z "${DATABASE_URL:-${STARDESK_NEON_DATABASE_URL:-}}" ]]; then
+    BOOTSTRAP_ARGS+=(--local-postgres)
+    echo "==> No Neon URL in env — bootstrapping local PostgreSQL"
+  else
+    echo "==> Database bootstrap (Neon)"
+  fi
+  bash "$ROOT/scripts/bootstrap-dev-database.sh" "${BOOTSTRAP_ARGS[@]}"
 fi
 
 echo "==> API unit tests"
