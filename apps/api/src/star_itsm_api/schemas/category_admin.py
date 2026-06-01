@@ -18,7 +18,7 @@ class CategoryAdminRead(BaseModel):
     name_da: str
     sort_order: int
     is_active: bool
-    subcategories: list[SubcategoryAdminRead] = []
+    subcategories: list[SubcategoryAdminRead] = Field(default_factory=list)
 
 
 class CategoryCreate(BaseModel):

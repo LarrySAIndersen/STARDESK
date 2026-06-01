@@ -16,6 +16,14 @@ import {
   type KanbanBoardTemplate,
 } from "@/types/kanban";
 
+function updateCustomColumn(columns: string[], index: number, value: string): string[] {
+  return columns.map((col, i) => (i === index ? value : col));
+}
+
+function removeCustomColumn(columns: string[], index: number): string[] {
+  return columns.filter((_, i) => i !== index);
+}
+
 export function KanbanCreateBoardDialog({
   open,
   onClose,
@@ -188,7 +196,7 @@ export function KanbanCreateBoardDialog({
                       value={col}
                       onChange={(e) =>
                         setCustomColumns((cols) =>
-                          cols.map((value, i) => (i === index ? e.target.value : value)),
+                          updateCustomColumn(cols, index, e.target.value),
                         )
                       }
                       placeholder={`Kolonne ${index + 1}`}
@@ -202,7 +210,7 @@ export function KanbanCreateBoardDialog({
                       aria-label={`Fjern kolonne ${index + 1}`}
                       disabled={customColumns.length <= 1}
                       onClick={() =>
-                        setCustomColumns((cols) => cols.filter((_, i) => i !== index))
+                        setCustomColumns((cols) => removeCustomColumn(cols, index))
                       }
                     >
                       <Trash2 className="size-3.5" />
