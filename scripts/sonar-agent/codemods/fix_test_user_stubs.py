@@ -49,17 +49,42 @@ TICKET_FIELDS = frozenset(
 USER_PAT = re.compile(
     r"SimpleNamespace\(\s*(?:id=([^,\)]+),\s*)?role=\"([^\"]+)\"\s*\)"
 )
-TICKET_PAT = re.compile(
-    r"SimpleNamespace\(\s*((?:\w+\s*=\s*[^,\)]+(?:,\s*)?)+)\s*\)",
-    re.MULTILINE,
-)
 
 
 def _parse_kwargs(raw: str) -> dict[str, str]:
     pairs: dict[str, str] = {}
-    for part in re.findall(r"(\w+)\s*=\s*([^,\)]+?)(?:,\s*|$)", raw):
-        pairs[part[0].strip()] = part[1].strip()
+    for segment in raw.split(","):
+        segment = segment.strip()
+        if "=" not in segment:
+            continue
+        key, _, value = segment.partition("=")
+        pairs[key.strip()] = value.strip()
     return pairs
+
+
+def _iter_ticket_stub_matches(text: str) -> list[tuple[int, int, str]]:
+    """Find SimpleNamespace(...) blocks without nested-quantifier regex (Sonar S5852)."""
+    matches: list[tuple[int, int, str]] = []
+    needle = "SimpleNamespace("
+    index = 0
+    while True:
+        start = text.find(needle, index)
+        if start == -1:
+            break
+        inner_start = start + len(needle)
+        depth = 1
+        pos = inner_start
+        while pos < len(text) and depth > 0:
+            char = text[pos]
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                depth -= 1
+            pos += 1
+        if depth == 0:
+            matches.append((start, pos, text[inner_start : pos - 1]))
+        index = start + len(needle)
+    return matches
 
 
 def _classify_stub(raw: str) -> str | None:
@@ -111,15 +136,12 @@ def process_file(path: Path) -> bool:
 
     text = USER_PAT.sub(user_repl, text)
 
-    def ticket_repl(match: re.Match[str]) -> str:
-        raw = match.group(1)
+    for start, end, raw in reversed(_iter_ticket_stub_matches(text)):
         kind = _classify_stub(raw)
         if kind != "ticket":
-            return match.group(0)
+            continue
         kwargs = _parse_kwargs(raw)
-        return _format_call("make_test_ticket", kwargs)
-
-    text = TICKET_PAT.sub(ticket_repl, text)
+        text = text[:start] + _format_call("make_test_ticket", kwargs) + text[end:]
 
     needs_user = "make_test_user" in text
     needs_ticket = "make_test_ticket" in text
