@@ -68,4 +68,19 @@ npm run sonar:codemod:readonly-props   # S6759: Readonly<> on type XProps aliase
 
 Repo root `sonar-project.properties` excludes seed SQL, docs, and helpdesk prototype HTML from analysis.
 
+## Coverage import (t-27)
+
+Generate API coverage before a SonarScanner run so SonarCloud picks up metrics:
+
+```bash
+cd apps/api
+uv sync --group dev
+uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
+cd ../..
+# SONAR_TOKEN from SonarCloud — never commit
+sonar-scanner -Dsonar.host.url=https://sonarcloud.io -Dsonar.token="$SONAR_TOKEN"
+```
+
+See [docs/test-coverage.md](../../docs/test-coverage.md) for CI artifacts and web phase 2.
+
 Rollback: revert branch or run `git checkout main -- <paths>` before re-applying codemods.

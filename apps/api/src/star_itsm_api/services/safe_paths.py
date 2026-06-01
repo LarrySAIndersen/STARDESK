@@ -16,6 +16,7 @@ def resolve_path_under_root(*, root: Path, basename: str, pattern: re.Pattern[st
         raise HTTPException(status_code=400, detail="Ugyldig filsti")
 
     storage_root = root.resolve()
+    # NOSONAR pythonsecurity:S2083 — regex basename; is_relative_to guard below.
     target = storage_root.joinpath(safe).resolve()
     if not target.is_relative_to(storage_root):
         raise HTTPException(status_code=400, detail="Ugyldig filsti")
@@ -31,5 +32,5 @@ def write_bytes_under_root(
 ) -> Path:
     """Write bytes to root/basename after regex + prefix validation."""
     target = resolve_path_under_root(root=root, basename=basename, pattern=pattern)
-    target.write_bytes(data)
+    target.write_bytes(data)  # NOSONAR pythonsecurity:S2083 — target validated under root above.
     return target
