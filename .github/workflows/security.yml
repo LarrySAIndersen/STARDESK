@@ -24,6 +24,8 @@ jobs:
       - name: Ruff lint
         run: pip install ruff && ruff check src tests
       - name: Pytest with coverage
+        env:
+          PROTOTYPE_BOOTSTRAP_PASSWORD: Stardesk2026!
         run: |
           pytest -q \
             --cov=star_itsm_api \

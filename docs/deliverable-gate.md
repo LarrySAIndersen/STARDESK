@@ -14,33 +14,45 @@ Every **deliverable** (PR, Cloud Agent task, Work Board handoff) must pass the *
 
 ## Commands (run before you say “done”)
 
-From repo root, with **API on :8000** and **Web on :3000** (see `bash scripts/dev-up.sh`):
+From repo root, with **API on :8000** and **Web on :3000**:
+
+**Windows (PowerShell 7+):**
+
+```powershell
+pwsh -File scripts/repair-api-venv.ps1          # once if uv fails on .venv/lib64
+pwsh -File scripts/dev-up.ps1 -ForcePorts       # stop WSL/port conflicts, start API + web
+pwsh -File scripts/run-deliverable-gate.ps1     # API gate
+pwsh -File scripts/run-deliverable-gate.ps1 -Full
+```
+
+**Unix / Git Bash / Cloud Agent:**
 
 ```bash
-# Minimum (API only, ~2s) — required for every deliverable
+bash scripts/dev-up.sh
 bash scripts/run-deliverable-gate.sh
-
-# Full proof (API + browser + screenshots) — required for UI/auth/routing changes
-bash scripts/run-deliverable-gate.sh --full
-
-# Against deployed test (not local)
-STARDESK_WEB_URL=https://YOUR-WEB-TEST.vercel.app \
-STARDESK_API_URL=https://YOUR-API-TEST.vercel.app \
-TEST_USER_PASSWORD='…' \
 bash scripts/run-deliverable-gate.sh --full
 ```
 
-From `scripts/` (after `npm install`):
+**Cross-platform (from `scripts/` after `npm install`):**
 
 ```bash
 npm run gate:deliverable
 npm run gate:deliverable:full
 ```
 
+Against deployed test (not local):
+
+```bash
+STARDESK_WEB_URL=https://YOUR-WEB-TEST.vercel.app \
+STARDESK_API_URL=https://YOUR-API-TEST.vercel.app \
+TEST_USER_PASSWORD='…' \
+bash scripts/run-deliverable-gate.sh --full
+```
+
 ## Prerequisites
 
-1. **Neon `test` branch:** `DATABASE_URL` in VM secrets → `bash scripts/sync-neon-env.sh` → `bash scripts/setup-dev-environment.sh`
-2. Dev servers: `bash scripts/dev-up.sh`
+1. **Neon `test` branch:** `DATABASE_URL` in VM secrets → `bash scripts/sync-neon-env.sh` → `bash scripts/setup-dev-environment.sh` (Windows: `pwsh -File scripts/setup-dev-environment.ps1`)
+2. Dev servers: `bash scripts/dev-up.sh` (Windows: `pwsh -File scripts/dev-up.ps1`)
 3. `STARDESK_ENV` is `test` or `development` — **not** `production` (never Neon **main** for local gate)
 
 ## What to attach in PR / handoff
@@ -69,8 +81,19 @@ Workflow: `.github/workflows/deliverable-gate.yml`
 
 Agents and humans must still run `bash scripts/run-deliverable-gate.sh` locally before handoff; CI is an extra check, not a substitute.
 
+## Staging (Vercel Preview after merge)
+
+After a PR merges to **`staging`**, run hello-world against the **staging Preview API** (not production):
+
+```powershell
+pwsh -File scripts/verify-staging-hello-world.ps1
+```
+
+Requires **`DATABASE_URL`** (Neon **`test`**) on Vercel **api** → **Preview** — see **[staging-vercel-preview-env.md](./staging-vercel-preview-env.md)** for setup and current verification status.
+
 ## Related docs
 
 - [AGENTS.md](../AGENTS.md) — Cloud VM setup
 - [docs/environments.md](./environments.md) — development vs production vs test
+- [docs/staging-vercel-preview-env.md](./staging-vercel-preview-env.md) — Vercel Preview env for `staging` + cloud hello-world
 - [docs/review-playwright-agent.md](./review-playwright-agent.md) — per-task Work Board verification

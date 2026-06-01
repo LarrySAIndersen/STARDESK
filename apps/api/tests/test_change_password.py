@@ -9,11 +9,13 @@ from httpx import ASGITransport, AsyncClient
 from star_itsm_api.core.security import hash_password, verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
+from tests.change_password_payload import change_password_body
 from tests.prototype_test_credentials import (
     KNOWN_PASSWORD,
     LARRY_PASSWORD,
     NEW_INVALID_PASSWORD,
     NEW_VALID_PASSWORD,
+    WRONG_CURRENT_PASSWORD,
 )
 
 NEW_PASSWORD = NEW_VALID_PASSWORD
@@ -66,11 +68,7 @@ async def test_change_password_success(
     ):
         response = await api_client.post(
             "/api/v1/auth/change-password",
-            json={
-                "email": TEST_EMAIL,
-                "current_password": KNOWN_PASSWORD,
-                "new_password": NEW_PASSWORD,
-            },
+            json=change_password_body(TEST_EMAIL, KNOWN_PASSWORD, NEW_PASSWORD),
         )
 
     assert response.status_code == 204
@@ -101,11 +99,7 @@ async def test_change_password_with_prototype_bootstrap(
     ):
         response = await api_client.post(
             "/api/v1/auth/change-password",
-            json={
-                "email": TEST_EMAIL,
-                "current_password": KNOWN_PASSWORD,
-                "new_password": NEW_PASSWORD,
-            },
+            json=change_password_body(TEST_EMAIL, KNOWN_PASSWORD, NEW_PASSWORD),
         )
 
     assert response.status_code == 204
@@ -133,11 +127,7 @@ async def test_change_password_wrong_current(
     ):
         response = await api_client.post(
             "/api/v1/auth/change-password",
-            json={
-                "email": TEST_EMAIL,
-                "current_password": "ForkertKode2026!",
-                "new_password": NEW_PASSWORD,
-            },
+            json=change_password_body(TEST_EMAIL, WRONG_CURRENT_PASSWORD, NEW_PASSWORD),
         )
 
     assert response.status_code == 401
@@ -167,11 +157,7 @@ async def test_change_password_rejects_invalid_new_password(
     ):
         response = await api_client.post(
             "/api/v1/auth/change-password",
-            json={
-                "email": TEST_EMAIL,
-                "current_password": KNOWN_PASSWORD,
-                "new_password": INVALID_NEW_PASSWORD,
-            },
+            json=change_password_body(TEST_EMAIL, KNOWN_PASSWORD, INVALID_NEW_PASSWORD),
         )
 
     assert response.status_code == 422
