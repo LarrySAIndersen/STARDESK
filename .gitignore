@@ -38,6 +38,8 @@ env/
 .schemathesis/
 htmlcov/
 .coverage
+coverage.xml
+apps/api/coverage.xml
 .tox/
 
 # Cursor work board (junction to ~/.cursor/projects/.../canvases)

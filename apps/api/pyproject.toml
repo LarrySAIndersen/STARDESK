@@ -22,16 +22,20 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "coverage>=7.6.0",
     "httpx>=0.28.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
 ]
 
 [dependency-groups]
 dev = [
+    "coverage>=7.6.0",
     "httpx>=0.28.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
 ]
 
 [build-system]
@@ -60,6 +64,24 @@ addopts = "-m 'not destructive'"
 markers = [
     "destructive: abuse/failure-mode tests; opt-in via -m destructive and ALLOW_DESTRUCTIVE=1",
 ]
+
+[tool.coverage.run]
+source = ["star_itsm_api"]
+branch = true
+relative_files = true
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
 
 [tool.ruff]
 line-length = 100
