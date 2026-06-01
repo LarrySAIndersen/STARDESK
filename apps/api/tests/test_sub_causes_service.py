@@ -43,7 +43,9 @@ async def test_validate_sub_cause_ids_category_mismatch() -> None:
     row = MagicMock(id=sub_cause_id, category_id=other_category)
 
     mock_db = AsyncMock()
-    mock_db.execute = AsyncMock(return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [row])))
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [row]))
+    )
 
     with pytest.raises(HTTPException) as exc:
         await sub_causes.validate_sub_cause_ids(

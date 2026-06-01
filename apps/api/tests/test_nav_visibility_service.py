@@ -2,8 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from star_itsm_api.services import nav_visibility
-from star_itsm_api.services import nav_visibility_paths
+from star_itsm_api.services import nav_visibility, nav_visibility_paths
 
 
 @pytest.mark.asyncio
