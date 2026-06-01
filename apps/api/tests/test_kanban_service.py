@@ -2,7 +2,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
 
 from star_itsm_api.models.kanban import KanbanColumn
 from star_itsm_api.services import kanban_service
