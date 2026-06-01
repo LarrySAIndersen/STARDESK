@@ -138,5 +138,5 @@ if (-not $SkipRedeploy) {
 }
 
 Write-Host ""
-Write-Host "Done. Run: pwsh -File scripts/verify-staging-hello-world.ps1"
+Write-Host "Done. Run: pwsh -File scripts/run-deliverable-gate.ps1 -Staging"
 Write-Host "=============================================="

@@ -10,6 +10,8 @@ Every **deliverable** (PR, Cloud Agent task, Work Board handoff) must pass the *
 | Login works | `POST /api/v1/auth/login` (Anna `sf01@example.dk`) | Demo picker or email/password login |
 | Tickets exist | `GET /api/v1/tickets` with JWT → ≥1 item | `/tickets` shows demo rows (e.g. `DEMO-`, `SF Operations`) |
 
+**Hello-world control (local + cloud):** run local gate first, then **staging Vercel Preview** with `--staging` / `-Staging` after merge to `staging` or before prod release.
+
 **Default demo user:** `sf01@example.dk` / `Stardesk2026!` (see `apps/web/src/lib/demo-users.ts`).
 
 ## Commands (run before you say “done”)
@@ -21,8 +23,10 @@ From repo root, with **API on :8000** and **Web on :3000**:
 ```powershell
 pwsh -File scripts/repair-api-venv.ps1          # once if uv fails on .venv/lib64
 pwsh -File scripts/dev-up.ps1 -ForcePorts       # stop WSL/port conflicts, start API + web
-pwsh -File scripts/run-deliverable-gate.ps1     # API gate
-pwsh -File scripts/run-deliverable-gate.ps1 -Full
+pwsh -File scripts/run-deliverable-gate.ps1              # local API gate
+pwsh -File scripts/run-deliverable-gate.ps1 -Full        # local API + UI
+pwsh -File scripts/run-deliverable-gate.ps1 -Staging     # local API + staging Preview API
+pwsh -File scripts/run-deliverable-gate.ps1 -Full -Staging # full hello-world control (local + cloud)
 ```
 
 **Unix / Git Bash / Cloud Agent:**
@@ -31,6 +35,8 @@ pwsh -File scripts/run-deliverable-gate.ps1 -Full
 bash scripts/dev-up.sh
 bash scripts/run-deliverable-gate.sh
 bash scripts/run-deliverable-gate.sh --full
+bash scripts/run-deliverable-gate.sh --staging
+bash scripts/run-deliverable-gate.sh --staging --full
 ```
 
 **Cross-platform (from `scripts/` after `npm install`):**
@@ -38,6 +44,8 @@ bash scripts/run-deliverable-gate.sh --full
 ```bash
 npm run gate:deliverable
 npm run gate:deliverable:full
+npm run gate:deliverable:staging
+npm run gate:deliverable:staging:full
 ```
 
 Against deployed test (not local):
@@ -83,13 +91,26 @@ Agents and humans must still run `bash scripts/run-deliverable-gate.sh` locally 
 
 ## Staging (Vercel Preview after merge)
 
-After a PR merges to **`staging`**, run hello-world against the **staging Preview API** (not production):
+After a PR merges to **`staging`**, include **staging** in the hello-world control (same login/tickets checks — not production):
 
 ```powershell
-pwsh -File scripts/verify-staging-hello-world.ps1
+pwsh -File scripts/run-deliverable-gate.ps1 -Staging
+pwsh -File scripts/run-deliverable-gate.ps1 -Full -Staging   # + Playwright on staging web
 ```
 
-Requires **`DATABASE_URL`** (Neon **`test`**) on Vercel **api** → **Preview** — see **[staging-vercel-preview-env.md](./staging-vercel-preview-env.md)** for setup and current verification status.
+```bash
+bash scripts/run-deliverable-gate.sh --staging
+bash scripts/run-deliverable-gate.sh --staging --full
+```
+
+Alias (staging API only): `pwsh -File scripts/verify-staging-hello-world.ps1`
+
+Default Preview URLs (`STARDESK_STAGING_API_URL` / `STARDESK_STAGING_WEB_URL` to override):
+
+- API: `https://api-git-staging-kjaerby-1628s-projects.vercel.app`
+- Web: `https://web-git-staging-kjaerby-1628s-projects.vercel.app`
+
+Requires **`DATABASE_URL`** (Neon **`test`**) on Vercel **api** → **Preview** — see **[staging-vercel-preview-env.md](./staging-vercel-preview-env.md)**. Protected deployments: `vercel link` or `VERCEL_PROTECTION_BYPASS` (Windows gate uses `vercel curl` fallback when possible).
 
 ## Related docs
 
