@@ -1,7 +1,5 @@
-import os
 import uuid
 from collections.abc import AsyncIterator
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -10,34 +8,6 @@ from httpx import ASGITransport, AsyncClient
 import star_itsm_api.db as db_module
 from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.main import app
-
-_PYTEST_BOOTSTRAP = "Stardesk2026!"  # NOSONAR python:S2068 — CI/default for unit tests only
-
-
-def _load_prototype_bootstrap_password_from_dotenv() -> None:
-    if os.environ.get("PROTOTYPE_BOOTSTRAP_PASSWORD"):
-        return
-    env_file = Path(__file__).resolve().parents[1] / ".env"
-    if not env_file.is_file():
-        return
-    for raw in env_file.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        if key.strip() != "PROTOTYPE_BOOTSTRAP_PASSWORD":
-            continue
-        cleaned = value.strip().strip('"').strip("'")
-        if cleaned:
-            os.environ["PROTOTYPE_BOOTSTRAP_PASSWORD"] = cleaned
-        return
-
-
-@pytest.fixture(autouse=True, scope="session")
-def _prototype_bootstrap_env() -> None:
-    _load_prototype_bootstrap_password_from_dotenv()
-    os.environ.setdefault("PROTOTYPE_BOOTSTRAP_PASSWORD", _PYTEST_BOOTSTRAP)
-
 
 FAKE_ADMIN = SimpleNamespace(
     id=uuid.UUID("00000000-0000-0000-0000-000000000030"),
