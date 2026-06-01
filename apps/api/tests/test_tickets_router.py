@@ -513,6 +513,8 @@ async def test_llm_context_success(
     override_db: AsyncMock,
     api_client: AsyncClient,
 ) -> None:
+    from star_itsm_api.services.ticket_intelligence import EVALUATION_RUBRIC_DA
+
     ticket_id = uuid.uuid4()
     ticket = _ticket_row(ticket_id)
     override_db.get = AsyncMock(return_value=ticket)
