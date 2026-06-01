@@ -18,7 +18,10 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 cd apps/api
 uv sync --group dev
 uv run pytest
+uv run pytest --cov=star_itsm_api --cov-report=term-missing --cov-report=xml:coverage.xml
 uv run uvicorn star_itsm_api.main:app --reload --port 8000
 ```
+
+Coverage XML is written to `apps/api/coverage.xml` (gitignored). See [docs/test-coverage.md](../../docs/test-coverage.md) for CI and SonarCloud import.
 
 Copy `.env.example` to `.env` and set `DATABASE_URL` when Neon is ready.
