@@ -41,6 +41,19 @@ function Write-WatchdogLog {
     else { Write-Host $line }
 }
 
+function Sync-SchedulerToCanvas {
+    $syncScript = Join-Path $RepoRoot "scripts/sonar-agent/sync-scheduler-to-canvas.mjs"
+    if (-not (Test-Path $syncScript)) { return }
+    Push-Location (Join-Path $RepoRoot "scripts")
+    try {
+        & node "./sonar-agent/sync-scheduler-to-canvas.mjs" 2>&1 | Out-Null
+    } catch {
+        Write-WatchdogLog "canvas scheduler sync failed: $($_.Exception.Message)" "WARN"
+    } finally {
+        Pop-Location
+    }
+}
+
 function Write-WatchdogStatus {
     param([hashtable]$RunResult)
     $entry = @{
@@ -64,7 +77,8 @@ function Write-WatchdogStatus {
         updated_at = (Get-Date).ToUniversalTime().ToString("o")
         history    = $history
     } | ConvertTo-Json -Depth 8
-    Set-Content -Path $WatchdogJsonFile -Value $payload -Encoding utf8
+    Set-Content -Path $WatchdogJsonFile -Value $payload -Encoding utf8NoBOM
+    Sync-SchedulerToCanvas
 }
 
 function Invoke-RepoGit {
@@ -188,7 +202,7 @@ function Invoke-WatchdogTick {
             $payload = @{
                 at = (Get-Date).ToUniversalTime().ToString("o"); pid = $PID; status = "watchdog_trigger"
             } | ConvertTo-Json -Compress
-            Set-Content -Path $LastTickFile -Value $payload -Encoding utf8
+            Set-Content -Path $LastTickFile -Value $payload -Encoding utf8NoBOM
             return $out.Trim()
         }
     }

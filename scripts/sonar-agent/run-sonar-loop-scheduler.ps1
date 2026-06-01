@@ -50,7 +50,21 @@ function Write-LastTick {
         pid    = $PID
         status = $Status
     } | ConvertTo-Json -Compress
-    Set-Content -Path $LastTickFile -Value $payload -Encoding utf8
+    Set-Content -Path $LastTickFile -Value $payload -Encoding utf8NoBOM
+    Sync-SchedulerToCanvas
+}
+
+function Sync-SchedulerToCanvas {
+    $syncScript = Join-Path $RepoRoot "scripts/sonar-agent/sync-scheduler-to-canvas.mjs"
+    if (-not (Test-Path $syncScript)) { return }
+    Push-Location (Join-Path $RepoRoot "scripts")
+    try {
+        & node "./sonar-agent/sync-scheduler-to-canvas.mjs" 2>&1 | Out-Null
+    } catch {
+        Write-SchedulerLog "canvas sync failed: $($_.Exception.Message)"
+    } finally {
+        Pop-Location
+    }
 }
 
 if ($Stop) {
@@ -76,6 +90,7 @@ if (Test-Path $PidFile) {
 
 Write-SchedulerLog "scheduler started pid=$PID"
 Set-Content -Path $PidFile -Value $PID -Encoding ascii
+Sync-SchedulerToCanvas
 
 try {
     while ($true) {
