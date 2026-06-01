@@ -4,7 +4,7 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
+from star_itsm_api.core.demo import get_prototype_bootstrap_password
 from star_itsm_api.core.password_policy import (
     effective_must_change_password,
     validate_password_for_user,
@@ -43,7 +43,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def _current_password_valid(user: User, current_password: str) -> bool:
     if verify_password(current_password, user.password_hash):
         return True
-    return secrets.compare_digest(current_password, PROTOTYPE_BOOTSTRAP_PASSWORD)
+    return secrets.compare_digest(current_password, get_prototype_bootstrap_password())
 
 
 def _login_password_valid(user: User, password: str) -> bool:

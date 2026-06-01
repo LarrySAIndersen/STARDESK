@@ -12,21 +12,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncSchedulerToCanvas } from "./sync-scheduler-to-canvas.mjs";
+import { resolveCanvasDataPath } from "./resolve-canvas-data-path.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const REPORT_JSON = path.join(REPO_ROOT, "reports", "sonar-agent-latest.json");
 const CANVAS_STATE_KEY = "stardesk-sonar-agent-v1";
-
-const home = process.env.USERPROFILE || process.env.HOME || "";
-const defaultCanvasDataPath = path.join(
-  home,
-  ".cursor",
-  "projects",
-  "c-Users-kjaer-STARDESK-Cursor",
-  "canvases",
-  "stardesk-sonar-agent.canvas.data.json",
-);
 
 function fail(msg) {
   console.error(msg);
@@ -77,7 +68,7 @@ function summarizeQueue(queue) {
 }
 
 function main() {
-  const canvasDataPath = process.env.SONAR_CANVAS_DATA_PATH || defaultCanvasDataPath;
+  const canvasDataPath = resolveCanvasDataPath();
   const report = readJson(REPORT_JSON);
   if (!report) fail(`Sonar report not found: ${REPORT_JSON}. Run npm run sonar:agent first.`);
 

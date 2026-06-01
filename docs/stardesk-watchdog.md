@@ -78,6 +78,7 @@ pwsh scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 
 ## Related
 
+- **Scheduler watchdog agent:** `.cursor/skills/stardesk-sonar-scheduler-watchdog/SKILL.md` — `npm run sonar:loop:start`
 - Sonar tick: `scripts/sonar-agent/run-sonar-loop-tick.ps1`
 - Sonar scheduler (30 min): `scripts/sonar-agent/run-sonar-loop-scheduler.ps1`
 - Prompt: `.cursor/prompts/sonar-remediation-loop.md`
