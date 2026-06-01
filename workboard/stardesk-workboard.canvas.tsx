@@ -18,6 +18,15 @@ import {
   useHostTheme,
 } from "cursor/canvas";
 
+function onKeyboardActivate(action: () => void) {
+  return (event: { key: string; preventDefault: () => void }) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  };
+}
+
 type ReviewVerificationScope = "stardesk" | "cursor" | "none";
 
 type Priority = "P0" | "P1" | "P2" | "P3";
@@ -3889,8 +3898,9 @@ function ReviewPlaywrightEvidencePanel({
         </Stack>
       ) : null}
       {lightboxUrl ? (
-        <div
-          role="presentation"
+        <button
+          type="button"
+          aria-label="Luk billede"
           onClick={() => setLightboxUrl(null)}
           style={{
             position: "fixed",
@@ -3902,15 +3912,16 @@ function ReviewPlaywrightEvidencePanel({
             justifyContent: "center",
             padding: 24,
             cursor: "zoom-out",
+            border: "none",
           }}
         >
           <img
             src={lightboxUrl}
             alt="Playwright screenshot"
             style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
           />
-        </div>
+        </button>
       ) : null}
     </Stack>
   );
@@ -7622,7 +7633,37 @@ function BoardScrollTrackBar({
       <div
         id={BOARD_SCROLL_TRACK_ID}
         title="Træk for at scrolle boardet"
+        role="slider"
+        tabIndex={canScroll ? 0 : -1}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={
+          canScroll && maxScroll > 0 ? Math.round((scrollLeft / maxScroll) * 100) : 0
+        }
+        aria-label="Board scroll-position"
         onClick={onTrackClick}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            scrollByStep(-1);
+            return;
+          }
+          if (event.key === "ArrowRight") {
+            event.preventDefault();
+            scrollByStep(1);
+            return;
+          }
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            if (!(event.currentTarget instanceof HTMLElement)) return;
+            const rect = event.currentTarget.getBoundingClientRect();
+            onTrackClick({
+              clientX: rect.left + rect.width / 2,
+              target: event.target,
+              currentTarget: event.currentTarget,
+            });
+          }
+        }}
         style={{
           flex: 1,
           minWidth: 0,
@@ -8133,6 +8174,7 @@ function ColumnHeaderTitle({
         tabIndex={0}
         title={`${tooltip} · Klik for at udvide${renameHint}`}
         onClick={onExpand}
+        onKeyDown={onKeyboardActivate(onExpand)}
         onDoubleClick={(event) => startEdit(event)}
         style={{
           cursor: "pointer",
@@ -9997,11 +10039,17 @@ export default function StardeskWorkboardCanvas() {
       </Stack>
 
       {openSortColumn || (childrenPanelParentId && !detailOpenId) ? (
-        <div
+        <button
+          type="button"
+          aria-label="Luk panel"
           style={{
             position: "absolute",
             inset: 0,
             zIndex: 180,
+            border: "none",
+            padding: 0,
+            background: "transparent",
+            cursor: "default",
           }}
           onClick={dismissEphemeralPanels}
         />
@@ -10236,6 +10284,7 @@ export default function StardeskWorkboardCanvas() {
                                   tabIndex={0}
                                   title={`${task.title} (dobbeltklik for at åbne)`}
                                   onClick={() => handleCardActivate(task.id)}
+                                  onKeyDown={onKeyboardActivate(() => handleCardActivate(task.id))}
                                   onDoubleClick={(event) => {
                                     event.preventDefault();
                                     event.stopPropagation();
@@ -10637,7 +10686,6 @@ export default function StardeskWorkboardCanvas() {
             aria-modal="true"
             aria-labelledby="workboard-detail-title"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
           >
           <Card
             style={{
@@ -11210,7 +11258,6 @@ export default function StardeskWorkboardCanvas() {
             role="dialog"
             aria-modal="true"
             onMouseDown={(event) => event.stopPropagation()}
-            onClick={(event) => event.stopPropagation()}
           >
           <Card
             style={{
