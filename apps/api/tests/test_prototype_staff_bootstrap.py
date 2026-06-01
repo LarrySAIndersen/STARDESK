@@ -3,11 +3,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from tests.support.users import make_test_user
-from tests.prototype_test_credentials import PLACEHOLDER_HASH
-
 from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUBMITTER, ROLE_SUPPORTER
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
+from tests.prototype_test_credentials import PLACEHOLDER_HASH
+from tests.support.users import make_test_user
 
 
 @pytest.mark.asyncio

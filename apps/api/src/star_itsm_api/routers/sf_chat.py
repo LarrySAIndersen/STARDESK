@@ -1,11 +1,9 @@
-from star_itsm_api.core.http_details import (
-    CHAT_NOT_FOUND
-)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import CHAT_NOT_FOUND
 from star_itsm_api.core.security import get_current_user, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.sf_chat_session import SESSION_CLOSED, SESSION_REJECTED_QUEUE

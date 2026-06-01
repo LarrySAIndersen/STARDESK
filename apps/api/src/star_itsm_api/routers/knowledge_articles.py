@@ -1,13 +1,10 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS,
-    TICKET_NOT_FOUND
-)
 import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, TICKET_NOT_FOUND
 from star_itsm_api.core.security import get_current_user, is_staff, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.ticket import Ticket

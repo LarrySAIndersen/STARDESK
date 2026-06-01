@@ -1,7 +1,3 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS,
-    TICKET_NOT_FOUND
-)
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -11,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, TICKET_NOT_FOUND
 from star_itsm_api.core.security import (
     ROLE_AGENT,
     ROLE_SUBMITTER,

@@ -1,6 +1,3 @@
-from tests.support.users import make_test_user
-from tests.support.tickets import make_test_ticket
-
 import pytest
 from fastapi import HTTPException
 
@@ -8,6 +5,7 @@ from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
     resolve_create_security_flag,
 )
+from tests.support.users import make_test_user
 
 
 def test_resolve_create_security_flag_false_for_all_roles() -> None:

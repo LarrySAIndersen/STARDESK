@@ -1,6 +1,5 @@
-from tests.support.tickets import make_test_ticket
-
 from star_itsm_api.services.sf_chat_bot import _format_ticket, mock_bot_reply
+from tests.support.tickets import make_test_ticket
 
 
 def test_format_ticket_includes_status_and_priority() -> None:

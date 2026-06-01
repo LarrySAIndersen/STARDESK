@@ -1,5 +1,3 @@
-from tests.support.users import make_test_user
-
 from unittest.mock import MagicMock
 
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
@@ -15,6 +13,7 @@ from star_itsm_api.services.knowledge_content import (
     get_knowledge_sections,
     set_knowledge_sections,
 )
+from tests.support.users import make_test_user
 
 
 def _article(*, status: str, visibility: str) -> MagicMock:

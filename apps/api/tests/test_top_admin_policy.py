@@ -1,5 +1,3 @@
-from tests.support.users import make_test_user
-
 import pytest
 
 from star_itsm_api.core.security import ROLE_ADMIN, ROLE_TOP_ADMIN
@@ -8,6 +6,7 @@ from star_itsm_api.core.top_admin_policy import (
     can_hold_top_admin_role,
     role_after_top_admin_policy,
 )
+from tests.support.users import make_test_user
 
 
 def test_only_larrysanders_may_hold_top_admin() -> None:
