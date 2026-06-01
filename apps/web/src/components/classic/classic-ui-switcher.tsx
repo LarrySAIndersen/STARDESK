@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -56,7 +58,7 @@ export function ClassicUiSwitcher({
       disabled={busy}
       title={ariaLabel}
       aria-label={ariaLabel}
-      onClick={() => void switchMode()}
+      onClick={() => fireAndForget(switchMode())}
     >
       {busy ? "Skifter…" : label}
     </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { Bot, Send, X } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
@@ -74,7 +76,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
   useEffect(() => {
     if (!open || ready) return;
-    void loadContext();
+    fireAndForget(loadContext());
   }, [open, ready, loadContext]);
 
   useEffect(() => {
@@ -158,7 +160,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
         className={cn("case-assistant-fab", open && "case-assistant-fab--open")}
         onClick={() => {
           if (open) setOpen(false);
-          else void handleOpen();
+          else fireAndForget(handleOpen());
         }}
         aria-expanded={open}
         aria-label="Sag-assistent"

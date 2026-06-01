@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, MoreHorizontal, Plus } from "lucide-react";
@@ -453,10 +455,10 @@ export function KanbanBoardView({
                     <Input
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={() => void handleRenameColumn(column.id)}
+                      onBlur={() => fireAndForget(handleRenameColumn(column.id))}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          void handleRenameColumn(column.id);
+                          fireAndForget(handleRenameColumn(column.id));
                         }
                         if (e.key === "Escape") {
                           setRenamingColumnId(null);
@@ -516,7 +518,7 @@ export function KanbanBoardView({
                             <button
                               type="button"
                               className="text-destructive hover:bg-muted block w-full px-3 py-1.5 text-left"
-                              onClick={() => void handleDeleteColumn(column.id)}
+                              onClick={() => fireAndForget(handleDeleteColumn(column.id))}
                             >
                               Slet kolonne
                             </button>
@@ -551,8 +553,8 @@ export function KanbanBoardView({
                       canDeleteTicket={detail.can_delete_tickets}
                       onDragStart={() => setDraggingTicketId(ticket.id)}
                       onDragEnd={() => setDraggingTicketId(null)}
-                      onRemoveFromBoard={() => void handleRemoveFromBoard(ticket.id)}
-                      onDeleteTicket={() => void handleDeleteTicket(ticket.id)}
+                      onRemoveFromBoard={() => fireAndForget(handleRemoveFromBoard(ticket.id))}
+                      onDeleteTicket={() => fireAndForget(handleDeleteTicket(ticket.id))}
                       onOpen={() => {
                         setSelectedTicketId(ticket.id);
                         if (categories.length === 0) {
@@ -626,7 +628,7 @@ export function KanbanBoardView({
         boardId={detail.board.id}
         columnId={targetColumnId}
         onClose={() => setAddOpen(false)}
-        onAdded={() => void refreshBoard()}
+        onAdded={() => fireAndForget(refreshBoard())}
       />
 
       <KanbanCloseBoardDialog
@@ -642,7 +644,7 @@ export function KanbanBoardView({
         boardId={detail.board.id}
         columnId={targetColumnId}
         onClose={() => setQuickCreateOpen(false)}
-        onCreated={() => void refreshBoard()}
+        onCreated={() => fireAndForget(refreshBoard())}
       />
 
       <KanbanImportBacklogDialog

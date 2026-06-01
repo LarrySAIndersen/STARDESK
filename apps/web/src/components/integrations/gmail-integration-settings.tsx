@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -80,7 +82,7 @@ export function GmailIntegrationSettings() {
   }, [loadScope]);
 
   useEffect(() => {
-    void loadStatus();
+    fireAndForget(loadStatus());
   }, [loadStatus]);
 
   useEffect(() => {
@@ -231,16 +233,16 @@ export function GmailIntegrationSettings() {
             </label>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" className="wire-btn wire-btn-primary" onClick={() => void saveSettings()} disabled={busy}>
+              <Button type="button" className="wire-btn wire-btn-primary" onClick={() => fireAndForget(saveSettings())} disabled={busy}>
                 {busy ? "Gemmer..." : "Gem indstillinger"}
               </Button>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => void testConnection()} disabled={busy}>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => fireAndForget(testConnection())} disabled={busy}>
                 Test forbindelse
               </Button>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => void runSync()} disabled={busy}>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => fireAndForget(runSync())} disabled={busy}>
                 Kør sync nu
               </Button>
-              <Button type="button" variant="outline" className="rounded-sm" onClick={() => void disconnect()} disabled={busy}>
+              <Button type="button" variant="outline" className="rounded-sm" onClick={() => fireAndForget(disconnect())} disabled={busy}>
                 Frakobl Gmail
               </Button>
             </div>

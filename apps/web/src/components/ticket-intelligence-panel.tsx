@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +111,7 @@ export function TicketIntelligencePanel({
             ))}
           </ul>
         ) : null}
-        <Button type="button" variant="outline" size="sm" onClick={() => void copyLlmContext()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => fireAndForget(copyLlmContext())}>
           Kopiér fuld LLM-kontekst (JSON)
         </Button>
         {copyStatus ? (

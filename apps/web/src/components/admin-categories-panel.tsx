@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -75,7 +77,7 @@ export function AdminCategoriesPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    fireAndForget(load());
   }, [load]);
 
   async function saveCategory(cat: CategoryRow) {
@@ -237,13 +239,13 @@ export function AdminCategoriesPanel() {
       {message ? <p className="text-sm text-green-800">{message}</p> : null}
 
       <section className="wire-card flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void syncDefaults()}>
+        <Button type="button" onClick={() => fireAndForget(syncDefaults())}>
           Synkroniser standardkategorier
         </Button>
-        <Button type="button" variant="outline" onClick={() => void fillTickets(true)}>
+        <Button type="button" variant="outline" onClick={() => fireAndForget(fillTickets(true))}>
           Tæl sager uden kategori
         </Button>
-        <Button type="button" variant="outline" onClick={() => void fillTickets(false)}>
+        <Button type="button" variant="outline" onClick={() => fireAndForget(fillTickets(false))}>
           Udfyld manglende på alle sager
         </Button>
         <Button type="button" variant="outline" onClick={() => setShowNewCat((v) => !v)}>
@@ -286,7 +288,7 @@ export function AdminCategoriesPanel() {
               />
             </div>
           </div>
-          <Button type="button" onClick={() => void createCategory()}>
+          <Button type="button" onClick={() => fireAndForget(createCategory())}>
             Opret
           </Button>
         </section>
@@ -342,7 +344,7 @@ export function AdminCategoriesPanel() {
                   />
                 </div>
                 <div className="flex items-end">
-                  <Button type="button" size="sm" onClick={() => void saveCategory(cat)}>
+                  <Button type="button" size="sm" onClick={() => fireAndForget(saveCategory(cat))}>
                     Gem kategori
                   </Button>
                 </div>
@@ -358,7 +360,7 @@ export function AdminCategoriesPanel() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => void createSubcategory(cat.id)}
+                      onClick={() => fireAndForget(createSubcategory(cat.id))}
                     >
                       + Underkategori
                     </Button>
@@ -415,7 +417,7 @@ export function AdminCategoriesPanel() {
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => void saveSubcategory(sub)}
+                              onClick={() => fireAndForget(saveSubcategory(sub))}
                             >
                               Gem
                             </Button>

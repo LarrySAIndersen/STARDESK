@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -46,7 +48,7 @@ export function TicketExcelExportButton({
         variant="outline"
         size={size}
         className="border-star-blue text-star-blue rounded-sm"
-        onClick={() => void handleExport()}
+        onClick={() => fireAndForget(handleExport())}
         disabled={loading}
       >
         {loading ? "Eksporterer…" : "Eksporter til Excel"}

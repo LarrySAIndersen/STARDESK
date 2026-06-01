@@ -23,6 +23,7 @@
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
     "sonar:codemod:fastapi": "python ./sonar-agent/codemods/fastapi_router_style.py",
     "sonar:codemod:readonly-props": "node ./sonar-agent/codemods/react_readonly_props.mjs",
+    "sonar:codemod:void-operator": "node ./sonar-agent/codemods/replace_void_operator.mjs",
     "quality:loop": "node ./n8n-workflows/run-quality-loop.mjs",
     "review:playwright": "node ./run-review-playwright.mjs",
     "review:playwright:import": "node ./import-playwright-evidence-to-workboard.mjs",

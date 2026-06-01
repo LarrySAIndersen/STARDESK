@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { usePathname, useRouter } from "next/navigation";
 import { GripVertical, LayoutGrid } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from "react";
@@ -332,7 +334,7 @@ export function AgentSidebar({
         onNavigate={onNavigate}
         manageVisibility={topAdmin}
         hiddenNavIds={hiddenNavIds}
-        onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+        onToggleHidden={(navId, hide) => fireAndForget(toggleHidden(navId, hide))}
         editMode={editMode}
         dragOver={dragOverId === entry.id}
         onDragStart={() => setDraggingId(entry.id)}
@@ -373,7 +375,7 @@ export function AgentSidebar({
             onNavigate={onNavigate}
             hiddenNavIds={hiddenNavIds}
             isTopAdmin={topAdmin}
-            onToggleHidden={(navId, hide) => void toggleHidden(navId, hide)}
+            onToggleHidden={(navId, hide) => fireAndForget(toggleHidden(navId, hide))}
             showSectionHeader={false}
             orderedIds={integrationIds}
           />
