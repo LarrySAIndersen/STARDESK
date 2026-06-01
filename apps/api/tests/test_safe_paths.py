@@ -28,7 +28,11 @@ def test_resolve_path_under_root_rejects_traversal_basename(tmp_path: Path) -> N
     root = tmp_path / "storage"
     root.mkdir()
     with pytest.raises(HTTPException) as exc:
-        resolve_path_under_root(root=root, basename="foo/bar.txt", pattern=re.compile(r"^foo/bar\.txt$"))
+        resolve_path_under_root(
+            root=root,
+            basename="foo/bar.txt",
+            pattern=re.compile(r"^foo/bar\.txt$"),
+        )
     assert exc.value.status_code == 400
 
 

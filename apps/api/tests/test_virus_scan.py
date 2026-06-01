@@ -96,7 +96,9 @@ async def test_run_virus_scan_blocks_elf_magic(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_scan_pending_attachments_local_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_scan_pending_attachments_local_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     local = tmp_path / "upload.png"
     local.write_bytes(b"\x89PNG\r\n\x1a\n")
     attachment = _attachment(storage_key=str(local))
