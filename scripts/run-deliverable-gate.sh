@@ -7,12 +7,15 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 FULL=0
-SKIP_API=0
+STAGING=0
+SKIP_STAGING=0
 SKIP_TESTS=0
 
 for arg in "$@"; do
   case "$arg" in
     --full) FULL=1 ;;
+    --staging) STAGING=1 ;;
+    --skip-staging) SKIP_STAGING=1 ;;
     --api-only) FULL=0 ;;
     --skip-tests) SKIP_TESTS=1 ;;
     -h|--help)
@@ -73,8 +76,30 @@ if [[ "$FULL" -eq 1 ]]; then
   node "$ROOT/scripts/hello-world-gate.mjs"
 fi
 
+RUN_STAGING=0
+if [[ "$STAGING" -eq 1 && "$SKIP_STAGING" -eq 0 ]]; then
+  RUN_STAGING=1
+fi
+
+if [[ "$RUN_STAGING" -eq 1 ]]; then
+  echo ""
+  bash "$ROOT/scripts/hello-world-gate-staging.sh"
+  if [[ "$FULL" -eq 1 ]]; then
+    echo ""
+    export STARDESK_WEB_URL="${STARDESK_STAGING_WEB_URL:-https://web-git-staging-kjaerby-1628s-projects.vercel.app}"
+    export STARDESK_API_URL="${STARDESK_STAGING_API_URL:-https://api-git-staging-kjaerby-1628s-projects.vercel.app}"
+    echo "==> Hello-world gate (UI) — staging Preview — $STARDESK_WEB_URL"
+    node "$ROOT/scripts/hello-world-gate.mjs"
+  fi
+fi
+
 echo ""
 echo "=============================================="
-echo " DELIVERABLE GATE PASSED"
+if [[ "$RUN_STAGING" -eq 1 ]]; then
+  echo " DELIVERABLE GATE PASSED (local + staging hello-world)"
+else
+  echo " DELIVERABLE GATE PASSED (local hello-world)"
+  echo " Tip: after merge to staging, run with --staging for cloud Preview check."
+fi
 echo " Attach this output (+ screenshots if --full) to your PR/handoff."
 echo "=============================================="

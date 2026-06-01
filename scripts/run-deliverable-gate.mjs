@@ -11,6 +11,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const full = args.includes("--full");
+const staging = args.includes("--staging");
+const skipStaging = args.includes("--skip-staging");
 const skipTests = args.includes("--skip-tests");
 
 if (process.platform === "win32") {
@@ -22,6 +24,8 @@ if (process.platform === "win32") {
     path.join(__dirname, "run-deliverable-gate.ps1"),
   ];
   if (full) psArgs.push("-Full");
+  if (staging) psArgs.push("-Staging");
+  if (skipStaging) psArgs.push("-SkipStaging");
   if (skipTests) psArgs.push("-SkipTests");
 
   const result = spawnSync("pwsh", psArgs, { stdio: "inherit", shell: false });
