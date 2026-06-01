@@ -236,6 +236,18 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
           reviewMode && canPlaceNotes && "review-notes-layer--active",
         )}
         onClick={handleOverlayClick}
+        onKeyDown={(event) => {
+          if (!canPlaceNotes || !reviewMode || draft) return;
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          setDraft({
+            x: rect.width / 2,
+            y: rect.height / 2,
+            comment: "",
+          });
+        }}
+        tabIndex={reviewMode && canPlaceNotes ? 0 : -1}
         aria-hidden={!reviewMode}
       >
         {notes.map((note) => (

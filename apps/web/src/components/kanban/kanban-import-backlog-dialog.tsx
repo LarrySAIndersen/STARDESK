@@ -72,16 +72,20 @@ export function KanbanImportBacklogDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 border-0 bg-black/50 p-0"
+        aria-label="Luk dialog"
+        onClick={onClose}
+      />
       <div
         ref={trapRef}
         role="dialog"
         aria-labelledby={titleId}
-        className="ledger-card w-full max-w-2xl p-5"
-        onClick={(event) => event.stopPropagation()}
+        aria-modal="true"
+        className="ledger-card relative w-full max-w-2xl p-5"
+        onMouseDown={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.key === "Escape" && onClose()}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
