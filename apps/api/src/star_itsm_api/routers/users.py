@@ -1,15 +1,15 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS,
-    INVALID_GROUP,
-    MIN_ONE_GROUP_REQUIRED,
-    USER_NOT_FOUND
-)
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import (
+    INSUFFICIENT_PERMISSIONS,
+    INVALID_GROUP,
+    MIN_ONE_GROUP_REQUIRED,
+    USER_NOT_FOUND,
+)
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_TOP_ADMIN,
@@ -76,6 +76,32 @@ def _assert_can_assign_role(actor: User, new_role: str, *, target_email: str) ->
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Kun topadministrator kan tildele rollen Topadministrator",
         ) from exc
+
+
+def _normalize_roles_for_create(email: str, roles: list[str]) -> list[str]:
+    normalized = [role_after_top_admin_policy(email, role) for role in roles]
+    if ROLE_TOP_ADMIN in normalized and not can_hold_top_admin_role(email):
+        normalized = [role for role in normalized if role != ROLE_TOP_ADMIN]
+        if ROLE_ADMIN not in normalized:
+            normalized.append(ROLE_ADMIN)
+    return normalized
+
+
+def _raise_http_for_create_user_error(exc: ValueError) -> None:
+    code = str(exc)
+    if code == "email_taken":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="E-mail skal være unik",
+        ) from exc
+    if code == "clone_source_not_found":
+        raise HTTPException(status_code=404, detail="Kildebruger blev ikke fundet") from exc
+    if code == "invalid_team":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=INVALID_GROUP,
+        ) from exc
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=code) from exc
 
 
 @router.get("/meta")
@@ -156,13 +182,7 @@ async def create_user(
     email = payload.email.lower().strip()
     for assigned_role in roles:
         _assert_can_assign_role(current_user, assigned_role, target_email=email)
-    normalized_roles = [
-        role_after_top_admin_policy(email, assigned_role) for assigned_role in roles
-    ]
-    if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(email):
-        normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
-        if ROLE_ADMIN not in normalized_roles:
-            normalized_roles.append(ROLE_ADMIN)
+    normalized_roles = _normalize_roles_for_create(email, roles)
 
     try:
         created, temporary_password = await create_user_admin(
@@ -177,26 +197,7 @@ async def create_user(
             initial_password=payload.initial_password,
         )
     except ValueError as exc:
-        code = str(exc)
-        if code == "email_taken":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="E-mail skal være unik",
-            ) from exc
-        if code == "clone_source_not_found":
-            raise HTTPException(
-                status_code=404,
-                detail="Kildebruger blev ikke fundet",
-            ) from exc
-        if code == "invalid_team":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=INVALID_GROUP,
-            ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=code,
-        ) from exc
+        _raise_http_for_create_user_error(exc)
 
     return UserAdminCreated(user=created, temporary_password=temporary_password)
 

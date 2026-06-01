@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SubcategoryRead(BaseModel):
@@ -17,4 +17,4 @@ class CategoryRead(BaseModel):
     id: UUID
     name: str
     name_da: str
-    subcategories: list[SubcategoryRead] = []
+    subcategories: list[SubcategoryRead] = Field(default_factory=list)

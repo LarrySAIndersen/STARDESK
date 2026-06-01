@@ -116,6 +116,36 @@ function compareAdminUsers(
   }
 }
 
+function userMatchesAdminListFilters(
+  user: UserAdminListItem,
+  filters: AdminUsersListFilters,
+  noTeamId: string,
+): boolean {
+  if (filters.role) {
+    const userRoles = user.roles?.length ? user.roles : user.role ? [user.role] : [];
+    if (!userRoles.includes(filters.role)) {
+      return false;
+    }
+  }
+  if (filters.status === "active" && !user.is_active) {
+    return false;
+  }
+  if (filters.status === "inactive" && user.is_active) {
+    return false;
+  }
+  if (filters.teamId === noTeamId && user.team_ids.length > 0) {
+    return false;
+  }
+  if (
+    filters.teamId &&
+    filters.teamId !== noTeamId &&
+    !user.team_ids.includes(filters.teamId)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function applyAdminUsersListFilters(
   users: UserAdminListItem[],
   teams: Team[],
@@ -129,29 +159,7 @@ export function applyAdminUsersListFilters(
     if (!userMatchesUsersTab(user, tab, internalIds, externalIds)) {
       return false;
     }
-    if (filters.role) {
-      const userRoles = user.roles?.length ? user.roles : user.role ? [user.role] : [];
-      if (!userRoles.includes(filters.role)) {
-        return false;
-      }
-    }
-    if (filters.status === "active" && !user.is_active) {
-      return false;
-    }
-    if (filters.status === "inactive" && user.is_active) {
-      return false;
-    }
-    if (filters.teamId === NO_TEAM && user.team_ids.length > 0) {
-      return false;
-    }
-    if (
-      filters.teamId &&
-      filters.teamId !== NO_TEAM &&
-      !user.team_ids.includes(filters.teamId)
-    ) {
-      return false;
-    }
-    return true;
+    return userMatchesAdminListFilters(user, filters, NO_TEAM);
   });
 
   return [...filtered].sort((a, b) => compareAdminUsers(a, b, filters.sort));

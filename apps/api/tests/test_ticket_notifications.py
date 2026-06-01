@@ -4,9 +4,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tests.support.users import make_test_user
-from tests.support.tickets import make_test_ticket
-
 from star_itsm_api.services.ticket_notifications import (
     TicketUpdateKind,
     TicketUpdateNotification,
@@ -15,6 +12,8 @@ from star_itsm_api.services.ticket_notifications import (
     build_status_notification,
     notify_reporter_of_ticket_update,
 )
+from tests.support.tickets import make_test_ticket
+from tests.support.users import make_test_user
 
 
 def test_build_status_notification_danish() -> None:

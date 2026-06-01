@@ -1,8 +1,6 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS
-)
 from fastapi import HTTPException, status
 
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS
 from star_itsm_api.core.security import is_staff
 from star_itsm_api.models.user import User
 

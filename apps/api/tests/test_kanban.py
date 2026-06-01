@@ -2,8 +2,6 @@ import uuid
 
 from httpx import AsyncClient
 
-from tests.support.users import make_test_user
-
 from star_itsm_api.models.kanban import KanbanBoard, KanbanColumn
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services.kanban_access import (
@@ -19,6 +17,7 @@ from star_itsm_api.services.kanban_defaults import (
     column_for_ticket_status,
     default_column_specs,
 )
+from tests.support.users import make_test_user
 
 
 def _board(*, creator_id: uuid.UUID | None = None) -> KanbanBoard:

@@ -1,11 +1,10 @@
 from datetime import UTC, datetime
 
-from tests.support.tickets import make_test_ticket
-
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,
     maybe_set_first_response,
 )
+from tests.support.tickets import make_test_ticket
 
 
 def test_status_milestones_set_once() -> None:

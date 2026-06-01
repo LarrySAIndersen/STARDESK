@@ -1,11 +1,9 @@
-from star_itsm_api.core.http_details import (
-    TASK_NOT_FOUND
-)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import TASK_NOT_FOUND
 from star_itsm_api.core.security import require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User

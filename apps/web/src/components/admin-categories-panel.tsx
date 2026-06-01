@@ -33,6 +33,22 @@ type SyncResult = Readonly<{
   categories_total: number;
 }>;
 
+function replaceSubcategoryInCategories(
+  categories: CategoryRow[],
+  updated: SubcategoryRow,
+): CategoryRow[] {
+  return categories.map((category) =>
+    category.id === updated.category_id
+      ? {
+          ...category,
+          subcategories: category.subcategories.map((sub) =>
+            sub.id === updated.id ? updated : sub,
+          ),
+        }
+      : category,
+  );
+}
+
 type FillResult = Readonly<{
   ticket_count: number;
   updated_count: number;
@@ -114,18 +130,7 @@ export function AdminCategoriesPanel() {
           is_active: sub.is_active,
         },
       );
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === updated.category_id
-            ? {
-                ...c,
-                subcategories: c.subcategories.map((s) =>
-                  s.id === updated.id ? updated : s,
-                ),
-              }
-            : c,
-        ),
-      );
+      setCategories((prev) => replaceSubcategoryInCategories(prev, updated));
       setMessage(`Gemte underkategori «${updated.name_da}»`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme underkategori");
