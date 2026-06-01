@@ -10,6 +10,7 @@ from star_itsm_api.models.base import Base
 KANBAN_ROLE_OWNER = "owner"
 KANBAN_ROLE_EDITOR = "editor"
 KANBAN_ROLE_VIEWER = "viewer"
+KANBAN_BOARDS_ID = "kanban_boards.id"
 
 
 class KanbanBoard(Base):
@@ -46,7 +47,7 @@ class KanbanBoardMember(Base):
 
     board_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("kanban_boards.id", ondelete="CASCADE"),
+        ForeignKey(KANBAN_BOARDS_ID, ondelete="CASCADE"),
         primary_key=True,
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -68,7 +69,7 @@ class KanbanColumn(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     board_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("kanban_boards.id", ondelete="CASCADE"),
+        ForeignKey(KANBAN_BOARDS_ID, ondelete="CASCADE"),
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -94,7 +95,7 @@ class KanbanBoardTicket(Base):
 
     board_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("kanban_boards.id", ondelete="CASCADE"),
+        ForeignKey(KANBAN_BOARDS_ID, ondelete="CASCADE"),
         primary_key=True,
     )
     ticket_id: Mapped[uuid.UUID] = mapped_column(

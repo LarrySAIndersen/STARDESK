@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
-from types import SimpleNamespace
+
+from tests.support.tickets import make_test_ticket
 
 from star_itsm_api.services.sla import compute_sla_due_dates_sync
 from star_itsm_api.services.sla_calendar import add_business_days, add_calendar_hours
@@ -51,24 +52,24 @@ def test_sla_remaining_and_breach() -> None:
 
 
 def test_sla_fields_for_ticket_open_and_closed() -> None:
-    open_ticket = SimpleNamespace(
+    open_ticket = make_test_ticket(
         resolution_due_at=datetime(2030, 5, 17, 14, 0, tzinfo=UTC),
         response_due_at=datetime(2030, 5, 17, 12, 0, tzinfo=UTC),
         status="in_progress",
         priority="medium",
         created_at=datetime(2030, 5, 17, 10, 0, tzinfo=UTC),
     )
-    fields = sla_fields_for_ticket(open_ticket)  # type: ignore[arg-type]
+    fields = sla_fields_for_ticket(open_ticket)
     assert fields["sla_remaining_seconds"] is not None
     assert fields["sla_breached"] is False
 
-    closed_ticket = SimpleNamespace(
+    closed_ticket = make_test_ticket(
         resolution_due_at=datetime(2026, 5, 16, 12, 0, tzinfo=UTC),
         response_due_at=None,
         status="closed",
         priority="medium",
         created_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
     )
-    closed_fields = sla_fields_for_ticket(closed_ticket)  # type: ignore[arg-type]
+    closed_fields = sla_fields_for_ticket(closed_ticket)
     assert closed_fields["sla_remaining_seconds"] is None
     assert closed_fields["sla_breached"] is False

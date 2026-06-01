@@ -1,3 +1,7 @@
+from star_itsm_api.core.http_details import (
+    GROUP_NOT_FOUND,
+    INSUFFICIENT_PERMISSIONS
+)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -40,12 +44,12 @@ async def get_team(
 ) -> TeamRead:
     team = await db.get(Team, team_id)
     if team is None or not team.is_active:
-        raise HTTPException(status_code=404, detail="Group not found")
+        raise HTTPException(status_code=404, detail=GROUP_NOT_FOUND)
 
     if not can_assign_to_any_team(current_user):
         team_ids = await get_user_team_ids(db, current_user.id)
         if team_id not in team_ids:
-            raise HTTPException(status_code=404, detail="Group not found")
+            raise HTTPException(status_code=404, detail=GROUP_NOT_FOUND)
 
     return await build_team_read(db, team)
 
@@ -58,11 +62,11 @@ async def update_team_members(
     current_user: User = Depends(require_admin_session()),
 ) -> TeamRead:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     team = await db.get(Team, team_id)
     if team is None or not team.is_active:
-        raise HTTPException(status_code=404, detail="Group not found")
+        raise HTTPException(status_code=404, detail=GROUP_NOT_FOUND)
 
     if payload.user_ids is not None:
         try:

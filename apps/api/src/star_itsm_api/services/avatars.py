@@ -5,25 +5,31 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INVALID_FILE_PATH
 from star_itsm_api.models.user import User
 from star_itsm_api.services.attachments import upload_root
 from star_itsm_api.services.safe_paths import resolve_path_under_root, write_bytes_under_root
 
+MIME_JPEG = "image/jpeg"
+MIME_PNG = "image/png"
+MIME_GIF = "image/gif"
+MIME_WEBP = "image/webp"
+
 ALLOWED_AVATAR_TYPES = frozenset(
     {
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
+        MIME_JPEG,
+        MIME_PNG,
+        MIME_GIF,
+        MIME_WEBP,
     }
 )
 MAX_AVATAR_BYTES = 2 * 1024 * 1024
 
 _EXT_BY_TYPE = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
+    MIME_JPEG: ".jpg",
+    MIME_PNG: ".png",
+    MIME_GIF: ".gif",
+    MIME_WEBP: ".webp",
 }
 _ALLOWED_EXTENSIONS = frozenset(_EXT_BY_TYPE.values())
 _AVATAR_OBJECT_RE = re.compile(r"^[a-f0-9]{32}\.(jpg|png|gif|webp)$")
@@ -56,7 +62,7 @@ def _validated_avatar_basename(user_id: uuid.UUID, ext: str) -> str:
 
     matched = _AVATAR_OBJECT_RE.fullmatch(f"{user_id.hex}{ext}")
     if matched is None:
-        raise HTTPException(status_code=400, detail="Ugyldig filsti")
+        raise HTTPException(status_code=400, detail=INVALID_FILE_PATH)
     return matched.group(0)
 
 

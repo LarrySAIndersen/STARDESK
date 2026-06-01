@@ -1,24 +1,23 @@
 import uuid
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tests.support.users import make_test_user
+from tests.prototype_test_credentials import PLACEHOLDER_HASH
+
 from star_itsm_api.core.security import ROLE_ADMIN, ROLE_SUBMITTER, ROLE_SUPPORTER
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
-from tests.prototype_test_credentials import PLACEHOLDER_HASH
 
 
 @pytest.mark.asyncio
 async def test_ensure_prototype_staff_account_upgrades_larrysanders2() -> None:
-    user = SimpleNamespace(
-        id=uuid.uuid4(),
+    user = make_test_user(
+        user_id=uuid.uuid4(),
         email="larrysanders2@example.dk",
         display_name="Larrysanders2",
         role=ROLE_SUBMITTER,
         ui_mode=None,
-        is_active=True,
-        deleted_at=None,
         password_hash=PLACEHOLDER_HASH,
         must_change_password=True,
     )
@@ -49,14 +48,12 @@ async def test_ensure_prototype_staff_account_upgrades_larrysanders2() -> None:
 
 @pytest.mark.asyncio
 async def test_ensure_prototype_staff_account_clears_larrysanders_must_change() -> None:
-    user = SimpleNamespace(
-        id=uuid.uuid4(),
+    user = make_test_user(
+        user_id=uuid.uuid4(),
         email="larrysanders@example.dk",
         display_name="Larry",
         role=ROLE_SUBMITTER,
         ui_mode=None,
-        is_active=True,
-        deleted_at=None,
         password_hash=PLACEHOLDER_HASH,
         must_change_password=True,
     )
