@@ -5,6 +5,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+import star_itsm_api.db as db_module
+from star_itsm_api.core.security import get_current_user, get_current_user_session
+from star_itsm_api.main import app
+
+_PYTEST_BOOTSTRAP = "Stardesk2026!"  # NOSONAR python:S2068 — CI/default for unit tests only
 
 
 def _load_prototype_bootstrap_password_from_dotenv() -> None:
@@ -26,12 +33,11 @@ def _load_prototype_bootstrap_password_from_dotenv() -> None:
         return
 
 
-_load_prototype_bootstrap_password_from_dotenv()
-from httpx import ASGITransport, AsyncClient
+@pytest.fixture(autouse=True, scope="session")
+def _prototype_bootstrap_env() -> None:
+    _load_prototype_bootstrap_password_from_dotenv()
+    os.environ.setdefault("PROTOTYPE_BOOTSTRAP_PASSWORD", _PYTEST_BOOTSTRAP)
 
-import star_itsm_api.db as db_module
-from star_itsm_api.core.security import get_current_user, get_current_user_session
-from star_itsm_api.main import app
 
 FAKE_ADMIN = SimpleNamespace(
     id=uuid.UUID("00000000-0000-0000-0000-000000000030"),
