@@ -16,7 +16,7 @@ def resolve_path_under_root(*, root: Path, basename: str, pattern: re.Pattern[st
         raise HTTPException(status_code=400, detail="Ugyldig filsti")
 
     storage_root = root.resolve()
-    # NOSONAR pythonsecurity:S2083 — safe from regex fullmatch + Path.name check; is_relative_to below.
+    # NOSONAR pythonsecurity:S2083 — regex basename; is_relative_to guard below.
     target = storage_root.joinpath(safe).resolve()
     if not target.is_relative_to(storage_root):
         raise HTTPException(status_code=400, detail="Ugyldig filsti")
