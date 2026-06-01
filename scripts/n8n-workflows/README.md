@@ -35,7 +35,7 @@ npm run quality:loop
 4. **Execute Command** på Windows — brug `run-quality-loop.ps1` eller:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File "%STARDESK_REPO%\scripts\n8n-workflows\run-quality-loop.ps1"
+pwsh -NoProfile -ExecutionPolicy Bypass -File "%STARDESK_REPO%\scripts\n8n-workflows\run-quality-loop.ps1"
 ```
 
 Linux/macOS:

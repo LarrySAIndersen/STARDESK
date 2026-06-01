@@ -30,12 +30,12 @@
     "gate:hello-world:ui": "node ./hello-world-gate.mjs",
     "gate:deliverable": "bash ./run-deliverable-gate.sh",
     "gate:deliverable:full": "bash ./run-deliverable-gate.sh --full",
-    "watchdog": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once",
-    "watchdog:dry-run": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once -DryRun",
-    "watchdog:start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",
-    "watchdog:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Stop",
-    "sonar:loop-scheduler": "powershell -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1",
-    "sonar:loop-scheduler:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop"
+    "watchdog": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once",
+    "watchdog:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once -DryRun",
+    "watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",
+    "watchdog:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Stop",
+    "sonar:loop-scheduler": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1",
+    "sonar:loop-scheduler:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop"
   },
   "devDependencies": {
     "playwright": "^1.55.1"

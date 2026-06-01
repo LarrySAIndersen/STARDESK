@@ -32,9 +32,9 @@ Background VM watchdog for the **Sonar remediation loop** and release path. Runs
 ## How to run
 
 ```powershell
-powershell -File scripts/stardesk-watchdog.ps1 -Once -DryRun   # test
-powershell -File scripts/stardesk-watchdog.ps1                 # start (15 min)
-powershell -File scripts/stardesk-watchdog.ps1 -Stop           # stop
+pwsh -File scripts/stardesk-watchdog.ps1 -Once -DryRun   # test
+pwsh -File scripts/stardesk-watchdog.ps1                 # start (15 min)
+pwsh -File scripts/stardesk-watchdog.ps1 -Stop           # stop
 cd scripts && npm run watchdog:start
 ```
 
@@ -80,7 +80,7 @@ When watchdog detects stall: restart scheduler → trigger tick → if still stu
 Stop Sonar scheduler separately:
 
 ```powershell
-powershell -File scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
+pwsh -File scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 ```
 
 ## Output

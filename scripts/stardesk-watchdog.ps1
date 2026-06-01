@@ -2,11 +2,11 @@
 # Log: reports/watchdog-latest.log + reports/watchdog-latest.json
 # PID: reports/watchdog.pid
 #
-# Usage:
-#   powershell -File scripts/stardesk-watchdog.ps1              # run loop (15 min default)
-#   powershell -File scripts/stardesk-watchdog.ps1 -Once        # single check
-#   powershell -File scripts/stardesk-watchdog.ps1 -DryRun        # log actions only
-#   powershell -File scripts/stardesk-watchdog.ps1 -Stop          # stop background watchdog
+# Usage (requires PowerShell 7+ / pwsh):
+#   pwsh -File scripts/stardesk-watchdog.ps1              # run loop (15 min default)
+#   pwsh -File scripts/stardesk-watchdog.ps1 -Once        # single check
+#   pwsh -File scripts/stardesk-watchdog.ps1 -DryRun      # log actions only
+#   pwsh -File scripts/stardesk-watchdog.ps1 -Stop        # stop background watchdog
 
 param(
     [int]$IntervalMinutes = 15,
