@@ -1,0 +1,32 @@
+name: Sonar hotspots report
+
+on:
+  workflow_dispatch:
+
+jobs:
+  hotspots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: scripts/package-lock.json
+      - name: Fetch Security Hotspots (new code, TO_REVIEW)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR }}
+          SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_PROJECT_KEY: LarrySAIndersen_STARDESK
+          SONAR_NEW_CODE_ONLY: "1"
+          SONAR_HOTSPOT_STATUS: TO_REVIEW
+        run: |
+          cd scripts
+          npm ci --ignore-scripts
+          npm run sonar:hotspots
+      - name: Upload hotspot report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonar-hotspots-latest
+          path: reports/sonar-hotspots-latest.json
+          if-no-files-found: error

@@ -20,9 +20,31 @@ export function attachmentDisplayName(
   ticketNumber: string,
   attachment: Attachment,
 ): string {
-  const safeNumber = ticketNumber.replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "") || "sag";
+  const safeNumber = sanitizeTicketNumber(ticketNumber);
   const stamp = formatAttachmentStamp(attachment.created_at);
   return `${safeNumber}-${stamp}${extensionFromAttachment(attachment)}`;
+}
+
+function sanitizeTicketNumber(ticketNumber: string): string {
+  let result = "";
+  for (const ch of ticketNumber) {
+    const isWord =
+      (ch >= "a" && ch <= "z") ||
+      (ch >= "A" && ch <= "Z") ||
+      (ch >= "0" && ch <= "9") ||
+      ch === "_" ||
+      ch === "-";
+    result += isWord ? ch : "-";
+  }
+  return trimEdgeChar(result, "-") || "sag";
+}
+
+function trimEdgeChar(value: string, ch: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === ch) start += 1;
+  while (end > start && value[end - 1] === ch) end -= 1;
+  return value.slice(start, end);
 }
 
 function formatAttachmentStamp(iso: string): string {

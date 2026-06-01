@@ -6,13 +6,16 @@ $SonarEnv = Join-Path $Root "scripts\sonar-agent\.env"
 $Example = Join-Path $Root "scripts\sonar-agent\.env.example"
 
 function Get-SonarTokenFromEnv {
-    foreach ($scope in @([EnvironmentVariableTarget]::Process,
-                          [EnvironmentVariableTarget]::User,
-                          [EnvironmentVariableTarget]::Machine)) {
-        $v = [Environment]::GetEnvironmentVariable("SONAR_TOKEN", $scope)
-        if ($v) { return $v }
+    foreach ($name in @("SONAR_TOKEN", "SONAR")) {
+        foreach ($scope in @([EnvironmentVariableTarget]::Process,
+                              [EnvironmentVariableTarget]::User,
+                              [EnvironmentVariableTarget]::Machine)) {
+            $v = [Environment]::GetEnvironmentVariable($name, $scope)
+            if ($v) { return $v }
+        }
+        $processValue = (Get-Item -Path "Env:$name" -ErrorAction SilentlyContinue).Value
+        if ($processValue) { return $processValue }
     }
-    if ($env:SONAR_TOKEN) { return $env:SONAR_TOKEN }
     return $null
 }
 
