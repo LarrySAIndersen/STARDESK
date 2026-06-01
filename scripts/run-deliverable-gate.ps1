@@ -65,7 +65,7 @@ catch {
 }
 
 try {
-    $health = Invoke-RestMethod -Uri "$ApiUrl/health" -Method Get -TimeoutSec 10 -ErrorAction Stop
+    $health = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/health" -Method GET
 }
 catch {
     Write-GateFail "GET /health failed (is API running on $ApiUrl?). Start: pwsh -File scripts/dev-up.ps1"
@@ -86,8 +86,7 @@ $loginBody = @{
 } | ConvertTo-Json -Compress
 
 try {
-    $login = Invoke-RestMethod -Uri "$ApiUrl/api/v1/auth/login" -Method Post `
-        -ContentType "application/json" -Body $loginBody -TimeoutSec 30 -ErrorAction Stop
+    $login = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/api/v1/auth/login" -Method POST -BodyJson $loginBody
 }
 catch {
     Write-GateFail "POST /api/v1/auth/login failed for $email"
@@ -100,7 +99,8 @@ if (-not $token) {
 Write-GateOk "Login as $email"
 
 $headers = @{ Authorization = "Bearer $token" }
-$tickets = Invoke-RestMethod -Uri "$ApiUrl/api/v1/tickets?page=1&page_size=5" -Headers $headers -Method Get -TimeoutSec 30 -ErrorAction Stop
+$tickets = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/api/v1/tickets?page=1&page_size=5" `
+    -Headers $headers -Method GET
 
 $count = 0
 if ($tickets -is [System.Array]) {
@@ -133,6 +133,14 @@ if ($Full) {
         }
         finally {
             Pop-Location
+        }
+    }
+
+    if ((Test-StardeskVercelProtectedUrl -Url $ApiUrl) -and -not $env:VERCEL_PROTECTION_BYPASS) {
+        $webTarget = if ($env:STARDESK_WEB_URL) { $env:STARDESK_WEB_URL.TrimEnd("/") } else { "http://localhost:3000" }
+        if (Test-StardeskVercelProtectedUrl -Url $webTarget) {
+            $env:VERCEL_PROTECTION_BYPASS = Get-StardeskVercelProtectionBypass -DeploymentUrl $webTarget `
+                -VercelProjectDir (Join-Path $RepoRoot "apps\web")
         }
     }
 
