@@ -1,15 +1,15 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS,
-    INVALID_GROUP,
-    MIN_ONE_GROUP_REQUIRED,
-    USER_NOT_FOUND
-)
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import (
+    INSUFFICIENT_PERMISSIONS,
+    INVALID_GROUP,
+    MIN_ONE_GROUP_REQUIRED,
+    USER_NOT_FOUND,
+)
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_TOP_ADMIN,

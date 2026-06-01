@@ -1,15 +1,15 @@
-from star_itsm_api.core.http_details import (
-    BOARD_NOT_FOUND,
-    COLUMN_NOT_FOUND,
-    INSUFFICIENT_PERMISSIONS,
-    NOT_FOUND,
-    TICKET_NOT_FOUND
-)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import (
+    BOARD_NOT_FOUND,
+    COLUMN_NOT_FOUND,
+    INSUFFICIENT_PERMISSIONS,
+    NOT_FOUND,
+    TICKET_NOT_FOUND,
+)
 from star_itsm_api.core.security import require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User

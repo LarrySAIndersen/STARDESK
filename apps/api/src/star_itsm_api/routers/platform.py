@@ -1,9 +1,7 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS
-)
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS
 from star_itsm_api.core.security import get_current_user
 from star_itsm_api.core.top_admin_policy import can_manage_sidebar_nav_visibility
 from star_itsm_api.deps import require_db

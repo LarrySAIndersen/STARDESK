@@ -1,7 +1,3 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS,
-    USER_NOT_FOUND
-)
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -14,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, USER_NOT_FOUND
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.services.user_roles import (

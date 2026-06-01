@@ -1,12 +1,10 @@
-from star_itsm_api.core.http_details import (
-    INSUFFICIENT_PERMISSIONS
-)
 from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS
 from star_itsm_api.core.security import require_admin, require_admin_session
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User

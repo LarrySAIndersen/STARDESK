@@ -1,13 +1,10 @@
-from star_itsm_api.core.http_details import (
-    GROUP_NOT_FOUND,
-    INSUFFICIENT_PERMISSIONS
-)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import GROUP_NOT_FOUND, INSUFFICIENT_PERMISSIONS
 from star_itsm_api.core.security import require_admin_session, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
