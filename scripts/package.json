@@ -31,6 +31,8 @@
     "gate:hello-world:ui": "node ./hello-world-gate.mjs",
     "gate:deliverable": "node ./run-deliverable-gate.mjs",
     "gate:deliverable:full": "node ./run-deliverable-gate.mjs --full",
+    "gate:deliverable:staging": "node ./run-deliverable-gate.mjs --staging",
+    "gate:deliverable:staging:full": "node ./run-deliverable-gate.mjs --staging --full",
     "watchdog": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once",
     "watchdog:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once -DryRun",
     "watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",
@@ -41,7 +43,10 @@
     "sonar:scheduler-watchdog": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Once",
     "sonar:scheduler-watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Background",
     "sonar:scheduler-watchdog:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Stop",
-    "sonar:loop:start": "npm run sonar:loop-scheduler:start && npm run sonar:scheduler-watchdog:start"
+    "sonar:loop:start": "npm run sonar:loop-scheduler:start && npm run sonar:scheduler-watchdog:start",
+    "coverage:agent": "node ./coverage-agent/run-coverage-agent.mjs",
+    "coverage:sync-canvas": "node ./coverage-agent/sync-coverage-to-canvas.mjs",
+    "coverage:pipeline": "node ./coverage-agent/run-coverage-pipeline.mjs"
   },
   "devDependencies": {
     "playwright": "^1.55.1"

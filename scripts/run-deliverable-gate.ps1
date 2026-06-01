@@ -6,15 +6,20 @@
 .EXAMPLE
   pwsh -File scripts/run-deliverable-gate.ps1
   pwsh -File scripts/run-deliverable-gate.ps1 -Full
+  pwsh -File scripts/run-deliverable-gate.ps1 -Staging
+  pwsh -File scripts/run-deliverable-gate.ps1 -Full -Staging
   pwsh -File scripts/run-deliverable-gate.ps1 -SkipTests
 #>
 param(
     [switch]$Full,
-    [switch]$SkipTests
+    [switch]$Staging,
+    [switch]$SkipTests,
+    [switch]$SkipStaging
 )
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "lib/windows-dev.ps1")
+. (Join-Path $PSScriptRoot "lib/staging-hello-world-gate.ps1")
 
 $RepoRoot = Get-StardeskRepoRoot -StartDir $PSScriptRoot
 $ApiDir = Join-Path $RepoRoot "apps\api"
@@ -30,6 +35,51 @@ function Write-GateFail {
 function Write-GateOk {
     param([string]$Message)
     Write-Host "GATE OK: $Message" -ForegroundColor Green
+}
+
+function Ensure-StardeskPlaywright {
+    $playwrightDir = Join-Path $RepoRoot "scripts\node_modules\playwright"
+    if (Test-Path -LiteralPath $playwrightDir) { return }
+    Write-Host "==> Installing Playwright (scripts/)"
+    Push-Location (Join-Path $RepoRoot "scripts")
+    try {
+        & npm install --no-audit --no-fund
+        if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+        & npx playwright install chromium
+        if ($LASTEXITCODE -ne 0) { throw "playwright install failed" }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
+function Invoke-StardeskHelloWorldUiGate {
+    param(
+        [string]$WebUrl,
+        [string]$GateLabel
+    )
+    if ((Test-StardeskVercelProtectedUrl -Url $WebUrl) -and -not $env:VERCEL_PROTECTION_BYPASS) {
+        try {
+            $env:VERCEL_PROTECTION_BYPASS = Get-StardeskVercelProtectionBypass -DeploymentUrl $WebUrl `
+                -VercelProjectDir (Join-Path $RepoRoot "apps\web")
+        }
+        catch {
+            Write-Host "Note: $($_.Exception.Message) — UI gate may need VERCEL_PROTECTION_BYPASS." -ForegroundColor Yellow
+        }
+    }
+    $env:STARDESK_WEB_URL = $WebUrl.TrimEnd("/")
+    Write-Host ""
+    Write-Host "==> Hello-world gate (UI) — $GateLabel — $($env:STARDESK_WEB_URL)"
+    Push-Location $RepoRoot
+    try {
+        & node (Join-Path $RepoRoot "scripts\hello-world-gate.mjs")
+        if ($LASTEXITCODE -ne 0) {
+            throw "hello-world-gate.mjs failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 Write-Host "=============================================="
@@ -117,47 +167,44 @@ if ($count -lt 1) {
     Write-GateFail "Expected at least 1 ticket (got $count). Run bootstrap-dev-database.sh?"
 }
 Write-GateOk "Tickets listed (count=$count)"
-Write-Host "GATE PASSED (API hello-world)"
+Write-Host "GATE PASSED (local API hello-world)"
+
+$runStaging = $Staging -and -not $SkipStaging
 
 if ($Full) {
+    Ensure-StardeskPlaywright
+    $localWeb = if ($env:STARDESK_WEB_URL) { $env:STARDESK_WEB_URL } else { "http://localhost:3000" }
+    Invoke-StardeskHelloWorldUiGate -WebUrl $localWeb -GateLabel "local"
+}
+
+if ($runStaging) {
     Write-Host ""
-    $playwrightDir = Join-Path $RepoRoot "scripts\node_modules\playwright"
-    if (-not (Test-Path -LiteralPath $playwrightDir)) {
-        Write-Host "==> Installing Playwright (scripts/)"
-        Push-Location (Join-Path $RepoRoot "scripts")
-        try {
-            & npm install --no-audit --no-fund
-            if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
-            & npx playwright install chromium
-            if ($LASTEXITCODE -ne 0) { throw "playwright install failed" }
-        }
-        finally {
-            Pop-Location
-        }
-    }
-
-    if ((Test-StardeskVercelProtectedUrl -Url $ApiUrl) -and -not $env:VERCEL_PROTECTION_BYPASS) {
-        $webTarget = if ($env:STARDESK_WEB_URL) { $env:STARDESK_WEB_URL.TrimEnd("/") } else { "http://localhost:3000" }
-        if (Test-StardeskVercelProtectedUrl -Url $webTarget) {
-            $env:VERCEL_PROTECTION_BYPASS = Get-StardeskVercelProtectionBypass -DeploymentUrl $webTarget `
-                -VercelProjectDir (Join-Path $RepoRoot "apps\web")
-        }
-    }
-
-    Push-Location $RepoRoot
     try {
-        & node (Join-Path $RepoRoot "scripts\hello-world-gate.mjs")
-        if ($LASTEXITCODE -ne 0) {
-            throw "hello-world-gate.mjs failed with exit code $LASTEXITCODE"
-        }
+        Invoke-StardeskStagingHelloWorldGate -Password $env:TEST_USER_PASSWORD -RepoRoot $RepoRoot
     }
-    finally {
-        Pop-Location
+    catch {
+        Write-GateFail $_.Exception.Message
+    }
+
+    if ($Full) {
+        Ensure-StardeskPlaywright
+        $stagingWeb = $env:STARDESK_STAGING_WEB_URL
+        if (-not $stagingWeb) { $stagingWeb = $script:StardeskDefaultStagingWebUrl }
+        $stagingApi = $env:STARDESK_STAGING_API_URL
+        if (-not $stagingApi) { $stagingApi = $script:StardeskDefaultStagingApiUrl }
+        $env:STARDESK_API_URL = $stagingApi.TrimEnd("/")
+        Invoke-StardeskHelloWorldUiGate -WebUrl $stagingWeb -GateLabel "staging Preview"
     }
 }
 
 Write-Host ""
 Write-Host "=============================================="
-Write-Host " DELIVERABLE GATE PASSED"
+if ($runStaging) {
+    Write-Host " DELIVERABLE GATE PASSED (local + staging hello-world)"
+}
+else {
+    Write-Host " DELIVERABLE GATE PASSED (local hello-world)"
+    Write-Host " Tip: after merge to staging, run with -Staging for cloud Preview check."
+}
 Write-Host " Attach this output (+ screenshots if -Full) to your PR/handoff."
 Write-Host "=============================================="
