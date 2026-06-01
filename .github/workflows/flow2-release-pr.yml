@@ -1,0 +1,150 @@
+# Flow 2 — ensure an open staging → main release PR exists when staging advances.
+# Does NOT merge to main; Jan merges manually after preprod/CI is green.
+name: Flow 2 release PR
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ensure-release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure staging → main release PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            await exec.exec('git', ['fetch', 'origin', 'main', 'staging']);
+
+            const { stdout: aheadRaw } = await exec.getExecOutput('git', [
+              'rev-list', '--count', 'origin/main..origin/staging',
+            ]);
+            const commitsAhead = parseInt(aheadRaw.trim(), 10) || 0;
+
+            const { stdout: behindRaw } = await exec.getExecOutput('git', [
+              'rev-list', '--count', 'origin/staging..origin/main',
+            ]);
+            const commitsBehind = parseInt(behindRaw.trim(), 10) || 0;
+
+            core.info(`staging vs main: ahead=${commitsAhead}, behind=${commitsBehind}`);
+
+            if (commitsAhead === 0) {
+              core.info('staging is not ahead of main — nothing to release.');
+              return;
+            }
+
+            if (commitsBehind > 0) {
+              core.warning(
+                `staging is ${commitsBehind} commit(s) behind main — sync staging before prod release (PR-only).`,
+              );
+            }
+
+            const { stdout: logRaw } = await exec.getExecOutput('git', [
+              'log', '--oneline', 'origin/main..origin/staging',
+            ]);
+            const commitLines = logRaw.trim() || '(no commits listed)';
+
+            const { data: openPrs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'open',
+              base: 'main',
+              per_page: 100,
+            });
+
+            const flow2Pr = openPrs.find((pr) => {
+              const head = pr.head.ref;
+              return head === 'staging' || head.startsWith('cursor/flow2-release-');
+            });
+
+            const bodyFooter = [
+              '',
+              '---',
+              '',
+              '**Note:** Auto-merge gælder kun PRs **ind i staging**. Denne PR merges **ikke** automatisk til `main`.',
+              '',
+              'Ved merge-konflikter på direkte `staging` → `main`: opret en `cursor/flow2-release-*` gren fra `main`, merge `staging` med `-X ours`, og åbn PR mod `main` (se PR #34).',
+            ].join('\n');
+
+            if (flow2Pr) {
+              const comment = [
+                '## Staging opdateret (Flow 2)',
+                '',
+                `\`staging\` er **${commitsAhead}** commit(s) foran \`main\` efter seneste push til staging.`,
+                '',
+                '### Commits der venter på prod',
+                '```',
+                commitLines,
+                '```',
+                '',
+                flow2Pr.head.ref.startsWith('cursor/flow2-release-')
+                  ? `Release-gren \`${flow2Pr.head.ref}\` kan være bagud ift. \`staging\` — opdater grenen hvis denne PR skal afspejle nyeste staging.`
+                  : 'Eksisterende release-PR dækker Flow 2 — merge manuelt når CI og preprod er OK.',
+              ].join('\n');
+
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: flow2Pr.number,
+                body: comment,
+              });
+
+              core.info(`Commented on existing Flow-2 PR #${flow2Pr.number} (${flow2Pr.head.ref}).`);
+              return;
+            }
+
+            if (commitsBehind > 0) {
+              core.warning('Skipping auto-create: staging is behind main — resolve sync first.');
+              return;
+            }
+
+            const prBody = [
+              '## Release staging → main (Flow 2)',
+              '',
+              'Auto-oprettet af GitHub Actions når `staging` er foran `main`.',
+              '',
+              '### Commits der venter på prod',
+              '```',
+              commitLines,
+              '```',
+              '',
+              '### Test plan',
+              '- [ ] CI grøn på denne PR',
+              '- [ ] Vercel preprod/staging preview testet',
+              '- [ ] Jan merger manuelt til production',
+              bodyFooter,
+            ].join('\n');
+
+            try {
+              const { data: created } = await github.rest.pulls.create({
+                owner,
+                repo,
+                title: 'Release: staging → main',
+                head: 'staging',
+                base: 'main',
+                body: prBody,
+                draft: false,
+              });
+              core.info(`Created Flow-2 PR #${created.number}: ${created.html_url}`);
+            } catch (err) {
+              const msg = err?.message || String(err);
+              core.warning(`Could not create direct staging → main PR: ${msg}`);
+              core.summary.addHeading('Flow 2 — manual release branch may be required');
+              core.summary.addRaw(
+                'Direct `staging` → `main` PR failed (often merge conflicts). ' +
+                  'Create `cursor/flow2-release-YYYYMMDD` from `main`, merge `staging` with `-X ours`, ' +
+                  'push, and open PR to `main`. Watchdog VM can also assist when `gh` is available.',
+              );
+            }
