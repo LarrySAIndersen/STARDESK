@@ -29,7 +29,11 @@ From `scripts/`:
 ```bash
 npm run sonar:agent
 npm run sonar:agent:api
+npm run sonar:hotspots
+npm run sonar:hotspots:review -- --branch main
 ```
+
+`sonar:hotspots:review` posts `REVIEWED` (SAFE/FIXED) to SonarCloud via API — add `--dry-run` first. Avoid `http://` in review comments (CloudFront WAF).
 
 Where:
 
