@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -82,8 +84,8 @@ export function ApiHealthIndicator({ className }: { className?: string }) {
       }
     }
 
-    void check();
-    const intervalId = window.setInterval(() => void check(), 60_000);
+    fireAndForget(check());
+    const intervalId = window.setInterval(() => fireAndForget(check()), 60_000);
     return () => {
       cancelled = true;
       window.clearInterval(intervalId);

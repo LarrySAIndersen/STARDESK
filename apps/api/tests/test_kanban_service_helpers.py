@@ -26,21 +26,19 @@ def test_board_summary_maps_team_and_role() -> None:
     assert summary.my_role == "editor"
 
 
-@pytest.mark.asyncio
-async def test_ticket_in_board_scope_team_match() -> None:
+def test_ticket_in_board_scope_team_match() -> None:
     team_id = uuid.uuid4()
     board = SimpleNamespace(team_id=team_id)
     ticket = SimpleNamespace(assigned_team_id=team_id)
 
-    assert await kanban_service._ticket_in_board_scope(board, ticket) is True
+    assert kanban_service._ticket_in_board_scope(board, ticket) is True
 
 
-@pytest.mark.asyncio
-async def test_ticket_in_board_scope_open_board() -> None:
+def test_ticket_in_board_scope_open_board() -> None:
     board = SimpleNamespace(team_id=None)
     ticket = SimpleNamespace(assigned_team_id=uuid.uuid4())
 
-    assert await kanban_service._ticket_in_board_scope(board, ticket) is True
+    assert kanban_service._ticket_in_board_scope(board, ticket) is True
 
 
 @pytest.mark.asyncio

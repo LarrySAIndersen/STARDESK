@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
@@ -161,7 +163,7 @@ export function TicketPriorityForm({
                   type="button"
                   className="wire-btn wire-btn-primary"
                   disabled={isSubmitting}
-                  onClick={() => void confirmChange()}
+                  onClick={() => fireAndForget(confirmChange())}
                 >
                   {isSubmitting ? "Gemmer…" : "Gem prioritet"}
                 </Button>

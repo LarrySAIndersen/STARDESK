@@ -1414,7 +1414,7 @@ async def update_ticket_stakeholder(
         raise HTTPException(status_code=404, detail="Stakeholder not found")
     now = datetime.now(UTC)
     if row.role != payload.role and row.user_id is not None:
-        await soft_delete_stakeholder(db, row, now=now)
+        soft_delete_stakeholder(db, row, now=now)
         row = await upsert_stakeholder(
             db,
             ticket_id=ticket_id,
@@ -1448,7 +1448,7 @@ async def remove_ticket_stakeholder(
     ):
         raise HTTPException(status_code=404, detail="Stakeholder not found")
     now = datetime.now(UTC)
-    await soft_delete_stakeholder(db, row, now=now)
+    soft_delete_stakeholder(db, row, now=now)
     touch_ticket_updated(ticket, now)
     await db.commit()
 

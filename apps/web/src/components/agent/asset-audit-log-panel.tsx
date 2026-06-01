@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 import { History, Loader2, Search } from "lucide-react";
 
@@ -49,14 +51,14 @@ export function AssetAuditLogPanel() {
   }, []);
 
   useEffect(() => {
-    void loadInitial(query);
+    fireAndForget(loadInitial(query));
     // query omitted: search reloads via handleSearch; here we only react to catalog refresh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadInitial, auditLogVersion]);
 
   const handleSearch = (event: React.FormEvent) => {
     event.preventDefault();
-    void loadInitial(query);
+    fireAndForget(loadInitial(query));
   };
 
   const loadMore = async () => {
@@ -144,7 +146,7 @@ export function AssetAuditLogPanel() {
             type="button"
             className="text-star-blue hover:text-star-navy mt-2 w-full py-1 text-center text-[10px] font-semibold"
             disabled={loadingMore}
-            onClick={() => void loadMore()}
+            onClick={() => fireAndForget(loadMore())}
           >
             {loadingMore ? "Henter…" : "Hent flere"}
           </button>

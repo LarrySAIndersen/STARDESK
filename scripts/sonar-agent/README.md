@@ -68,6 +68,7 @@ From `scripts/`:
 ```bash
 npm run sonar:codemod:fastapi          # S8409: drop redundant response_model in routers
 npm run sonar:codemod:readonly-props   # S6759: Readonly<> on type XProps aliases (web)
+npm run sonar:codemod:void-operator    # S3735: void promise → fireAndForget() (web)
 ```
 
 Repo root `sonar-project.properties` excludes seed SQL, docs, and helpdesk prototype HTML from analysis.

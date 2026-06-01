@@ -16,7 +16,7 @@ USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000041")
 
 
 
-async def _fake_agent_user() -> SimpleNamespace:
+def _fake_agent_user() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",
@@ -130,7 +130,7 @@ async def test_patch_team_members_allowed_with_admin_must_change_password(
         members=[],
     )
 
-    async def _admin_session() -> SimpleNamespace:
+    def _admin_session() -> SimpleNamespace:
         return admin
 
     app.dependency_overrides[get_current_user_session] = _admin_session

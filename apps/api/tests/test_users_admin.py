@@ -34,7 +34,7 @@ TARGET_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000041")
 
 
 
-async def _fake_agent_user() -> SimpleNamespace:
+def _fake_agent_user() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",
@@ -182,14 +182,14 @@ async def test_update_user_is_active_false_with_admin_must_change_password(
         must_change_password=False,
     )
 
-    async def _get(_model, pk):  # noqa: ANN001
+    def _get(_model, pk):  # noqa: ANN001
         if pk == TARGET_USER_ID:
             return target
         return None
 
     override_db.get = AsyncMock(side_effect=_get)
 
-    async def _admin_session() -> SimpleNamespace:
+    def _admin_session() -> SimpleNamespace:
         return admin
 
     app.dependency_overrides[get_current_user_session] = _admin_session

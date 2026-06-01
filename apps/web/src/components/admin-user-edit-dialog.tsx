@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { adminUserPasswordSchema, adminUserRoleValues } from "@/lib/admin-user-form";
 import { apiGet, apiPatch, apiPostNoContent } from "@/lib/api";
 import type {
   UserAdminMeta,
@@ -24,36 +25,18 @@ import type {
 import type { Team } from "@/types/team";
 import type { UserRole } from "@/types/user";
 
-const userRoleValues = [
-  "end_user",
-  "agent",
-  "admin",
-  "top_admin",
-  "supporter",
-  "stardesk_reviewer",
-] as const;
-
 const profileSchema = z.object({
   display_name: z.string().min(1, "Navn er påkrævet"),
   email: z.string().email("Ugyldig e-mail"),
-  roles: z.array(z.enum(userRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
+  roles: z.array(z.enum(adminUserRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
   is_active: z.boolean(),
+  password_policy_exempt: z.boolean(),
   organization_id: z.string(),
   team_ids: z.array(z.string()),
 });
 
-const passwordSchema = z
-  .object({
-    new_password: z.string().min(8, "Mindst 8 tegn"),
-    confirm_password: z.string().min(8, "Mindst 8 tegn"),
-  })
-  .refine((data) => data.new_password === data.confirm_password, {
-    message: "Adgangskoderne matcher ikke",
-    path: ["confirm_password"],
-  });
-
 type ProfileFormValues = z.infer<typeof profileSchema>;
-type PasswordFormValues = z.infer<typeof passwordSchema>;
+type PasswordFormValues = z.infer<typeof adminUserPasswordSchema>;
 
 export function AdminUserEditDialog({
   userId,
@@ -108,7 +91,7 @@ export function AdminUserEditDialog({
     reset: resetPasswordForm,
     formState: { errors: passwordErrors },
   } = useForm<PasswordFormValues>({
-    resolver: zodResolver(passwordSchema),
+    resolver: zodResolver(adminUserPasswordSchema),
   });
 
   useEffect(() => {
@@ -127,6 +110,7 @@ export function AdminUserEditDialog({
             ? detail.roles
             : [detail.role]) as ProfileFormValues["roles"],
           is_active: detail.is_active,
+          password_policy_exempt: detail.password_policy_exempt,
           organization_id: detail.organization_id ?? "",
           team_ids: detail.teams.map((t) => t.id),
         });
@@ -150,6 +134,7 @@ export function AdminUserEditDialog({
         email: values.email.trim().toLowerCase(),
         roles: values.roles,
         is_active: values.is_active,
+        password_policy_exempt: values.password_policy_exempt,
         organization_id: values.organization_id ? values.organization_id : null,
         team_ids: values.team_ids,
       };
@@ -262,6 +247,18 @@ export function AdminUserEditDialog({
                 />
                 <Label htmlFor="admin-user-active" className="font-normal">
                   Aktiv konto
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="admin-user-password-exempt"
+                  type="checkbox"
+                  className="size-4 rounded border"
+                  {...register("password_policy_exempt")}
+                />
+                <Label htmlFor="admin-user-password-exempt" className="font-normal">
+                  Undtaget fra adgangskodepolitik
                 </Label>
               </div>
 

@@ -156,7 +156,7 @@ async def broadcast_comment_to_children(
     return posted
 
 
-async def tickets_to_summaries(tickets: list[Ticket]) -> list[TicketSummaryRead]:
+def tickets_to_summaries(tickets: list[Ticket]) -> list[TicketSummaryRead]:
     return [
         TicketSummaryRead(
             id=ticket.id,

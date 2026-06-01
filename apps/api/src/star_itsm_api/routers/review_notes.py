@@ -20,7 +20,7 @@ def _can_view_notes(user: User) -> bool:
     return is_staff_role(user) or is_stardesk_reviewer(user)
 
 
-async def require_note_viewer(user: User = Depends(get_current_user)) -> User:
+def require_note_viewer(user: User = Depends(get_current_user)) -> User:
     if not _can_view_notes(user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -29,7 +29,7 @@ async def require_note_viewer(user: User = Depends(get_current_user)) -> User:
     return user
 
 
-async def require_reviewer(user: User = Depends(get_current_user)) -> User:
+def require_reviewer(user: User = Depends(get_current_user)) -> User:
     if not is_stardesk_reviewer(user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -146,7 +146,7 @@ async def promote_from_ticket(
     if not await user_can_access_ticket(db, current_user, ticket):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     try:
-        await promote_ticket_to_knowledge(
+        promote_ticket_to_knowledge(
             db,
             ticket,
             knowledge_status=payload.knowledge_status,

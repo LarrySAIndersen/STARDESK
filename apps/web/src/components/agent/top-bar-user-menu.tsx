@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
@@ -104,7 +106,7 @@ export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
           <UserActionLinks
             profileHref={profileHref}
             onChangeAvatar={() => setAvatarOpen(true)}
-            onLogout={() => void logout()}
+            onLogout={() => fireAndForget(logout())}
           />
         </nav>
 
@@ -130,7 +132,7 @@ export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
                   setMenuOpen(false);
                   setAvatarOpen(true);
                 }}
-                onLogout={() => void logout()}
+                onLogout={() => fireAndForget(logout())}
                 className="wire-topbar-user-dropdown-action"
               />
             </div>

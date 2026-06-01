@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -52,14 +54,14 @@ export function TicketStakeholdersPanel({
   function handleAffectedChange(ids: string[]) {
     setAffectedIds(ids);
     if (editable) {
-      void saveStakeholders(ids, interestedIds);
+      fireAndForget(saveStakeholders(ids, interestedIds));
     }
   }
 
   function handleInterestedChange(ids: string[]) {
     setInterestedIds(ids);
     if (editable) {
-      void saveStakeholders(affectedIds, ids);
+      fireAndForget(saveStakeholders(affectedIds, ids));
     }
   }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ItilTicketTable } from "@/components/itil-ticket-table";
@@ -117,7 +119,7 @@ export function ReportsDashboard() {
   }, [periodDays]);
 
   useEffect(() => {
-    void loadReport();
+    fireAndForget(loadReport());
   }, [loadReport]);
 
   const statusBuckets = useMemo(
@@ -182,7 +184,7 @@ export function ReportsDashboard() {
           <Button
             type="button"
             className="bg-star-blue hover:bg-star-navy rounded-sm"
-            onClick={() => void loadReport()}
+            onClick={() => fireAndForget(loadReport())}
             disabled={loading}
           >
             {loading ? "Henter…" : "Opdater rapport"}

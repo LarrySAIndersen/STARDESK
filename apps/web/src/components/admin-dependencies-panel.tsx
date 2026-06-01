@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
@@ -96,7 +98,7 @@ export function AdminDependenciesPanel() {
   }, []);
 
   useEffect(() => {
-    void load(false);
+    fireAndForget(load(false));
   }, [load]);
 
   const sortedVulns = useMemo(() => {
@@ -142,7 +144,7 @@ export function AdminDependenciesPanel() {
           type="button"
           className="wire-btn wire-btn-sm"
           disabled={refreshing}
-          onClick={() => void load(true)}
+          onClick={() => fireAndForget(load(true))}
         >
           {refreshing ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />

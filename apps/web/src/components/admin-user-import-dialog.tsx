@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { Upload } from "lucide-react";
 import { useId, useRef, useState } from "react";
 
@@ -129,7 +131,7 @@ export function AdminUserImportDialog({
                 type="file"
                 accept=".csv,text/csv"
                 className="sr-only"
-                onChange={(event) => void onFileChange(event)}
+                onChange={(event) => fireAndForget(onFileChange(event))}
               />
               <Button
                 type="button"
@@ -220,7 +222,7 @@ export function AdminUserImportDialog({
               type="button"
               className="bg-star-blue hover:bg-star-navy"
               disabled={importing || parsedRows.length === 0}
-              onClick={() => void onImport()}
+              onClick={() => fireAndForget(onImport())}
             >
               {importing ? "Importerer…" : "Importer"}
             </Button>

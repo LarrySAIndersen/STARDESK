@@ -85,7 +85,7 @@ def _split_names(raw: str | None) -> list[str]:
     return [part.strip() for part in text.split(",") if part.strip()]
 
 
-async def _team_ids_by_names(
+def _team_ids_by_names(
     db: AsyncSession,
     names: list[str],
     *,
@@ -183,7 +183,7 @@ async def import_users_admin(
 
         is_active = parse_import_is_active(row.is_active)
         team_names = _split_names(row.teams)
-        team_ids, unknown_teams = await _team_ids_by_names(
+        team_ids, unknown_teams = _team_ids_by_names(
             db, team_names, teams_by_name=teams_by_name
         )
         if unknown_teams:

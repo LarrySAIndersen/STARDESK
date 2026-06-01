@@ -50,11 +50,11 @@ FAKE_ADMIN = SimpleNamespace(
 )
 
 
-async def _fake_admin_user() -> SimpleNamespace:
+def _fake_admin_user() -> SimpleNamespace:
     return FAKE_ADMIN
 
 
-async def _fake_admin_session() -> SimpleNamespace:
+def _fake_admin_session() -> SimpleNamespace:
     return FAKE_ADMIN
 
 
@@ -93,7 +93,7 @@ def mock_db() -> AsyncMock:
 
 @pytest.fixture
 def override_db(mock_db: AsyncMock) -> AsyncIterator[AsyncMock]:
-    async def _require_db() -> AsyncMock:
+    def _require_db() -> AsyncMock:
         return mock_db
 
     app.dependency_overrides[require_db] = _require_db

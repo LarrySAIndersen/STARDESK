@@ -132,7 +132,7 @@ async def get_current_user_session(
     return user
 
 
-async def get_current_user(
+def get_current_user(
     request: Request,
     user: User = Depends(get_current_user_session),
 ) -> User:
@@ -146,7 +146,7 @@ async def get_current_user(
 def require_roles(*roles: str):
     allowed = frozenset(roles)
 
-    async def _checker(user: User = Depends(get_current_user)) -> User:
+    def _checker(user: User = Depends(get_current_user)) -> User:
         if not (user_role_set(user) & allowed):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -187,7 +187,7 @@ def require_admin_session():
     completing their own first-time password change.
     """
 
-    async def _checker(user: User = Depends(get_current_user_session)) -> User:
+    def _checker(user: User = Depends(get_current_user_session)) -> User:
         if not user_has_any_role(user, ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

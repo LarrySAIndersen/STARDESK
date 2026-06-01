@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { MessageCircle, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -129,7 +131,7 @@ export function SfChatWidget() {
   }, [applyPoll, loadStatus]);
 
   useEffect(() => {
-    void loadStatus();
+    fireAndForget(loadStatus());
   }, [loadStatus]);
 
   useEffect(() => {
@@ -137,12 +139,12 @@ export function SfChatWidget() {
       const sid = sessionRef.current;
       const st = sessionStatusRef.current;
       if (!sid || (st !== "waiting" && st !== "active")) return;
-      void fetch(proxyAbandonUrl(sid), {
+      fireAndForget(fetch(proxyAbandonUrl(sid), {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: "{}",
         keepalive: true,
-      }).catch(() => undefined);
+      }).catch(() => undefined));
     };
     window.addEventListener("pagehide", onPageHide);
     return () => window.removeEventListener("pagehide", onPageHide);
@@ -151,16 +153,16 @@ export function SfChatWidget() {
   useEffect(() => {
     if (!open) return;
     if (!session && status?.open) {
-      void ensureSession();
+      fireAndForget(ensureSession());
     }
-    const id = window.setInterval(() => void poll(), POLL_MS);
+    const id = window.setInterval(() => fireAndForget(poll()), POLL_MS);
     return () => window.clearInterval(id);
   }, [open, session, status?.open, ensureSession, poll]);
 
   const handleOpen = () => {
     setOpen(true);
     if (!session) {
-      void ensureSession();
+      fireAndForget(ensureSession());
     }
   };
 
@@ -168,7 +170,7 @@ export function SfChatWidget() {
     const sid = sessionRef.current;
     const st = sessionStatusRef.current;
     if (sid && (st === "waiting" || st === "active")) {
-      void apiPost(`/api/v1/sf-chat/sessions/${sid}/abandon`, {}).catch(() => undefined);
+      fireAndForget(apiPost(`/api/v1/sf-chat/sessions/${sid}/abandon`, {}).catch(() => undefined));
     }
     setOpen(false);
   };
@@ -179,7 +181,7 @@ export function SfChatWidget() {
     setDraft("");
     setError(null);
     setTransferDismissed(false);
-    void ensureSession();
+    fireAndForget(ensureSession());
   };
 
   const goCreateTicketFromChat = () => {
@@ -199,7 +201,7 @@ export function SfChatWidget() {
     setDraft(value);
     const sid = sessionRef.current;
     if (sid && value.trim()) {
-      void apiPostNoContent(`/api/v1/sf-chat/sessions/${sid}/typing`, {}).catch(() => undefined);
+      fireAndForget(apiPostNoContent(`/api/v1/sf-chat/sessions/${sid}/typing`, {}).catch(() => undefined));
     }
   };
 
@@ -215,7 +217,7 @@ export function SfChatWidget() {
         { body: text },
       );
       setMessages((prev) => [...prev, msg]);
-      void poll();
+      fireAndForget(poll());
     } catch (e) {
       if (e instanceof ApiError) {
         setError(e.message);
@@ -404,7 +406,7 @@ export function SfChatWidget() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  void sendMessage();
+                  fireAndForget(sendMessage());
                 }
               }}
             />
@@ -413,7 +415,7 @@ export function SfChatWidget() {
               size="icon"
               className="sf-chat-send shrink-0"
               disabled={!canSend || !draft.trim()}
-              onClick={() => void sendMessage()}
+              onClick={() => fireAndForget(sendMessage())}
               aria-label="Send besked"
             >
               <Send className="size-4" />
