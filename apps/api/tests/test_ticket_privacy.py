@@ -1,10 +1,9 @@
 import uuid
 from datetime import UTC, datetime
 
-from tests.support.users import make_test_user
-from tests.support.tickets import make_test_ticket
-
 from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
+from tests.support.tickets import make_test_ticket
+from tests.support.users import make_test_user
 
 
 def _ticket(**kwargs):

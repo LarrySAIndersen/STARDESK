@@ -1,8 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from tests.support.tickets import make_test_ticket
-
 from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
 from star_itsm_api.services.sla_pause import sync_sla_pause_on_status_change
 from star_itsm_api.services.sla_settings_store import (
@@ -11,6 +9,7 @@ from star_itsm_api.services.sla_settings_store import (
     sla_applies_to_team,
     sla_clock_should_run,
 )
+from tests.support.tickets import make_test_ticket
 
 
 def test_sla_applies_to_team_empty_means_all() -> None:
@@ -54,7 +53,16 @@ def test_pause_on_hold_extends_due_dates() -> None:
     settings = DEFAULT_RUNTIME
     now = datetime(2026, 5, 20, 10, 0, tzinfo=UTC)
     due = now + timedelta(hours=4)
-    ticket = make_test_ticket(status="in_progress", resolution_due_at=due, response_due_at=due, sla_paused_at=None, sla_pause_total_seconds=0, assigned_team_id=team_id, priority="high", created_at=now)
+    ticket = make_test_ticket(
+        status="in_progress",
+        resolution_due_at=due,
+        response_due_at=due,
+        sla_paused_at=None,
+        sla_pause_total_seconds=0,
+        assigned_team_id=team_id,
+        priority="high",
+        created_at=now,
+    )
 
     sync_sla_pause_on_status_change(
         ticket,  # type: ignore[arg-type]
