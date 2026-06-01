@@ -36,8 +36,12 @@
     "watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",
     "watchdog:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Stop",
     "sonar:loop-scheduler": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1",
-    "sonar:loop-scheduler:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop"
-
+    "sonar:loop-scheduler:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Background",
+    "sonar:loop-scheduler:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop",
+    "sonar:scheduler-watchdog": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Once",
+    "sonar:scheduler-watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Background",
+    "sonar:scheduler-watchdog:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-scheduler-watchdog.ps1 -Stop",
+    "sonar:loop:start": "npm run sonar:loop-scheduler:start && npm run sonar:scheduler-watchdog:start"
   },
   "devDependencies": {
     "playwright": "^1.55.1"

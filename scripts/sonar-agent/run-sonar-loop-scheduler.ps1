@@ -5,7 +5,8 @@
 
 param(
     [int]$TickIntervalMinutes = 30,
-    [switch]$Stop
+    [switch]$Stop,
+    [switch]$Background
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,6 +44,12 @@ function Stop-Scheduler {
     Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
 }
 
+function Write-Utf8File {
+    param([string]$Path, [string]$Content)
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8)
+}
+
 function Write-LastTick {
     param([string]$Status)
     $payload = @{
@@ -50,7 +57,7 @@ function Write-LastTick {
         pid    = $PID
         status = $Status
     } | ConvertTo-Json -Compress
-    Set-Content -Path $LastTickFile -Value $payload -Encoding utf8NoBOM
+    Write-Utf8File -Path $LastTickFile -Content $payload
     Sync-SchedulerToCanvas
 }
 
@@ -72,6 +79,50 @@ if ($Stop) {
     exit 0
 }
 
+function Get-ShellExe {
+    if (Get-Command pwsh -ErrorAction SilentlyContinue) { return (Get-Command pwsh).Source }
+    throw "PowerShell 7 (pwsh) is required for Sonar scheduler. Install from https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows"
+}
+
+function Test-SchedulerAlive {
+    if (-not (Test-Path $PidFile)) { return $false }
+    $pidVal = (Get-Content $PidFile -Raw).Trim()
+    if ($pidVal -notmatch '^\d+$') { return $false }
+    return $null -ne (Get-Process -Id ([int]$pidVal) -ErrorAction SilentlyContinue)
+}
+
+if ($Background) {
+    if (-not (Test-Path $ReportsDir)) {
+        New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null
+    }
+    if (Test-SchedulerAlive) {
+        $existing = (Get-Content $PidFile -Raw).Trim()
+        Write-Host "Sonar loop scheduler already running (pid=$existing)."
+        exit 0
+    }
+    if (Test-Path $PidFile) { Remove-Item $PidFile -Force -ErrorAction SilentlyContinue }
+    $shell = Get-ShellExe
+    $argLine = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" -TickIntervalMinutes $TickIntervalMinutes"
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $shell
+    $startInfo.Arguments = $argLine
+    $startInfo.WorkingDirectory = $RepoRoot
+    $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+    $startInfo.UseShellExecute = $false
+    [void][System.Diagnostics.Process]::Start($startInfo)
+    $deadline = (Get-Date).AddSeconds(30)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 1
+        if (Test-SchedulerAlive) {
+            $pidVal = (Get-Content $PidFile -Raw).Trim()
+            Write-Host "Sonar loop scheduler started in background (pid=$pidVal)."
+            exit 0
+        }
+    }
+    Write-Error "Scheduler did not write PID file within 30s."
+    exit 1
+}
+
 if (-not (Test-Path $ReportsDir)) {
     New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null
 }
@@ -90,7 +141,11 @@ if (Test-Path $PidFile) {
 
 Write-SchedulerLog "scheduler started pid=$PID"
 Set-Content -Path $PidFile -Value $PID -Encoding ascii
-Sync-SchedulerToCanvas
+try {
+    Sync-SchedulerToCanvas
+} catch {
+    Write-SchedulerLog "canvas sync failed: $($_.Exception.Message)"
+}
 
 try {
     while ($true) {

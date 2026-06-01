@@ -81,8 +81,19 @@ Workflow: `.github/workflows/deliverable-gate.yml`
 
 Agents and humans must still run `bash scripts/run-deliverable-gate.sh` locally before handoff; CI is an extra check, not a substitute.
 
+## Staging (Vercel Preview after merge)
+
+After a PR merges to **`staging`**, run hello-world against the **staging Preview API** (not production):
+
+```powershell
+pwsh -File scripts/verify-staging-hello-world.ps1
+```
+
+Requires **`DATABASE_URL`** (Neon **`test`**) on Vercel **api** → **Preview** — see **[staging-vercel-preview-env.md](./staging-vercel-preview-env.md)** for setup and current verification status.
+
 ## Related docs
 
 - [AGENTS.md](../AGENTS.md) — Cloud VM setup
 - [docs/environments.md](./environments.md) — development vs production vs test
+- [docs/staging-vercel-preview-env.md](./staging-vercel-preview-env.md) — Vercel Preview env for `staging` + cloud hello-world
 - [docs/review-playwright-agent.md](./review-playwright-agent.md) — per-task Work Board verification
