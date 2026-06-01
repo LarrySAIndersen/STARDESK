@@ -23,8 +23,20 @@ jobs:
           pip install bandit pip-audit
       - name: Ruff lint
         run: pip install ruff && ruff check src tests
-      - name: Pytest
-        run: pytest -q
+      - name: Pytest with coverage
+        run: |
+          pytest -q \
+            --cov=star_itsm_api \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+      - name: Verify coverage artifact
+        run: test -f coverage.xml
+      - name: Upload API coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-xml
+          path: apps/api/coverage.xml
+          if-no-files-found: error
       - name: Bandit (SAST)
         run: bandit -r src -ll -q
       - name: pip-audit (dependencies)
