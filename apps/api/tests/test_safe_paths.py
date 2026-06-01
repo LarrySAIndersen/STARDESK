@@ -16,8 +16,8 @@ def test_resolve_path_under_root_happy_path(tmp_path: Path) -> None:
     assert target == (root / "abcd1234.txt").resolve()
 
 
-def test_resolve_path_under_root_rejects_invalid_pattern() -> None:
-    root = Path("/tmp/storage")
+def test_resolve_path_under_root_rejects_invalid_pattern(tmp_path: Path) -> None:
+    root = tmp_path / "storage"
     with pytest.raises(HTTPException) as exc:
         resolve_path_under_root(root=root, basename="../escape.txt", pattern=_OBJECT_RE)
     assert exc.value.status_code == 400
