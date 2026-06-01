@@ -14,10 +14,11 @@ from tests.prototype_test_credentials import (
     LARRY_PASSWORD,
     NEW_INVALID_PASSWORD,
     NEW_VALID_PASSWORD,
+    WRONG_CURRENT_PASSWORD,
 )
 
-NEW_PASSWORD = NEW_VALID_PASSWORD
-INVALID_NEW_PASSWORD = NEW_INVALID_PASSWORD
+NEW_PASSWORD = NEW_VALID_PASSWORD  # NOSONAR python:S2068 — synthetic test credential
+INVALID_NEW_PASSWORD = NEW_INVALID_PASSWORD  # NOSONAR python:S2068 — synthetic test credential
 TEST_EMAIL = "sf01@example.dk"
 
 
@@ -135,7 +136,7 @@ async def test_change_password_wrong_current(
             "/api/v1/auth/change-password",
             json={
                 "email": TEST_EMAIL,
-                "current_password": "ForkertKode2026!",
+                "current_password": WRONG_CURRENT_PASSWORD,
                 "new_password": NEW_PASSWORD,
             },
         )

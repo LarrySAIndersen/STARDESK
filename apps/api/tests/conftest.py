@@ -1,3 +1,4 @@
+import os
 import uuid
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
@@ -8,6 +9,14 @@ from httpx import ASGITransport, AsyncClient
 import star_itsm_api.db as db_module
 from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.main import app
+
+_PYTEST_BOOTSTRAP = "Stardesk2026!"  # NOSONAR python:S2068 — CI/default for unit tests only
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _prototype_bootstrap_env() -> None:
+    os.environ.setdefault("PROTOTYPE_BOOTSTRAP_PASSWORD", _PYTEST_BOOTSTRAP)
+
 
 FAKE_ADMIN = SimpleNamespace(
     id=uuid.UUID("00000000-0000-0000-0000-000000000030"),
