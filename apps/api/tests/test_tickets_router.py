@@ -1,7 +1,5 @@
 """API router tests for /api/v1/tickets — list filters, mutations, and integrations."""
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -22,7 +20,6 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketLlmOperationalRead,
     TicketSemanticBundleRead,
 )
-from star_itsm_api.services.ticket_intelligence import EVALUATION_RUBRIC_DA
 
 _FAKE_ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000030")
 
