@@ -18,9 +18,7 @@ Background VM watchdog for the **Sonar remediation loop** and release path. Runs
 | User: **watchdog**, **noget staller**, **loop hænger**, **Sonar kører ikke**, **CI grøn men ikke merged**, **staging foran main**, **scan for gammel** | Run `-Once -DryRun`, report, then `-Once` or start loop |
 | Scheduler stopped or last tick > 60 min | Watchdog restarts scheduler or triggers tick |
 | `origin/staging` behind `origin/main` | **Escalate** — log only; no direct push to `staging` (PR-only) |
-| `origin/staging` ahead of `main`, no Flow-2 PR | **Create** `staging`→`main` release PR |
-| Open Flow-2 PR is draft | `gh pr ready` |
-| Open PR staging→main, CI green | Watchdog merges to `main` |
+| Open PR staging→main, CI green | Watchdog merges (Sonar loop exception) |
 | Scan > 2 h old, `.env` present | Watchdog runs `npm run sonar:pipeline` |
 
 ## What it monitors
@@ -34,9 +32,9 @@ Background VM watchdog for the **Sonar remediation loop** and release path. Runs
 ## How to run
 
 ```powershell
-pwsh -File scripts/stardesk-watchdog.ps1 -Once -DryRun   # test
-pwsh -File scripts/stardesk-watchdog.ps1                 # start (15 min)
-pwsh -File scripts/stardesk-watchdog.ps1 -Stop           # stop
+powershell -File scripts/stardesk-watchdog.ps1 -Once -DryRun   # test
+powershell -File scripts/stardesk-watchdog.ps1                 # start (15 min)
+powershell -File scripts/stardesk-watchdog.ps1 -Stop           # stop
 cd scripts && npm run watchdog:start
 ```
 
@@ -49,9 +47,7 @@ Full reference: `docs/stardesk-watchdog.md`
 | Scheduler down | Restart `run-sonar-loop-scheduler.ps1` |
 | Tick stale (>2× interval) | Run `run-sonar-loop-tick.ps1` |
 | Staging behind main | Log + escalate (Jan / manual PR) |
-| Staging ahead, no Flow-2 PR | `gh pr create` staging→main |
 | Sonar loop PR CI green | `gh pr merge` to staging |
-| Flow-2 draft | `gh pr ready` |
 | Flow-2 PR CI green | `gh pr merge` staging→main |
 | Scan stale (>2 h) | `npm run sonar:pipeline` |
 
@@ -84,7 +80,7 @@ When watchdog detects stall: restart scheduler → trigger tick → if still stu
 Stop Sonar scheduler separately:
 
 ```powershell
-pwsh -File scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
+powershell -File scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 ```
 
 ## Output
