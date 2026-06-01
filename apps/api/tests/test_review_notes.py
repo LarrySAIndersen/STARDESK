@@ -1,13 +1,11 @@
 """API tests for Stardesk Reviewer page review notes."""
 
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from star_itsm_api.core.security import (
     ROLE_AGENT,
@@ -15,34 +13,8 @@ from star_itsm_api.core.security import (
     get_current_user,
     get_current_user_session,
 )
-from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.services import review_notes as review_notes_service
-
-
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    session = AsyncMock()
-    session.commit = AsyncMock()
-    session.refresh = AsyncMock()
-    return session
-
-
-@pytest.fixture
-def override_db(mock_db: AsyncMock):
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    yield mock_db
-    app.dependency_overrides.pop(require_db, None)
-
-
-@pytest.fixture
-async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
 
 
 def _reviewer_user() -> SimpleNamespace:

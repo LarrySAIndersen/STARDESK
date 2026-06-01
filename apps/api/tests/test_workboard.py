@@ -1,12 +1,9 @@
 import uuid
-from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from star_itsm_api.deps import require_db
-from star_itsm_api.main import app
 from star_itsm_api.models.workboard import WorkboardTask
 from star_itsm_api.services import workboard_service
 from star_itsm_api.services.workboard_mapping import row_to_canvas_dict
@@ -34,27 +31,6 @@ def _sample_row(*, canvas_id: str = "t-64", number: int = 64) -> WorkboardTask:
         updated_at=now,
         deleted_at=None,
     )
-
-
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    session = AsyncMock()
-    session.commit = AsyncMock()
-    session.refresh = AsyncMock()
-    session.flush = AsyncMock()
-    return session
-
-
-@pytest.fixture
-async def api_client(mock_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
-    app.dependency_overrides.pop(require_db, None)
 
 
 @pytest.mark.asyncio
