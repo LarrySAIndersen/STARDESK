@@ -33,7 +33,7 @@ k6 version
 Preflight (exits 1 if k6 is missing):
 
 ```powershell
-powershell -File scripts/load-test/check-k6.ps1
+pwsh -File scripts/load-test/check-k6.ps1
 ```
 
 Default install location: `C:\Program Files\k6\k6.exe`.

@@ -59,7 +59,7 @@
     },
     {
       "parameters": {
-        "command": "=powershell -NoProfile -ExecutionPolicy Bypass -File \"{{ $json.stardesk_repo }}/scripts/n8n-workflows/run-quality-loop.ps1\""
+        "command": "=pwsh -NoProfile -ExecutionPolicy Bypass -File \"{{ $json.stardesk_repo }}/scripts/n8n-workflows/run-quality-loop.ps1\""
       },
       "id": "a1b2c3d4-0003-4000-8000-000000000003",
       "name": "Run quality loop",

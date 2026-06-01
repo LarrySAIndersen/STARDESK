@@ -16,6 +16,8 @@ Repairs are idempotent. No force-push. Secrets are never written to logs.
 
 ## Run
 
+**Prerequisite:** [PowerShell 7+](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows) (`pwsh`). Windows PowerShell 5.1 is not supported for watchdog/scheduler npm scripts.
+
 From repo root (Windows / Cloud Agent VM):
 
 ```powershell
