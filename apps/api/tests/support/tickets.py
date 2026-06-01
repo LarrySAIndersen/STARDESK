@@ -19,6 +19,7 @@ def make_test_ticket(**overrides: Any) -> Ticket:
     ticket.status = overrides.pop("status", "new")
     ticket.priority = overrides.pop("priority", "medium")
     ticket.reporter_user_id = overrides.pop("reporter_user_id", uuid.uuid4())
+    ticket.organization_id = overrides.pop("organization_id", None)
     ticket.source = overrides.pop("source", "portal")
     ticket.sla_pause_total_seconds = overrides.pop("sla_pause_total_seconds", 0)
     ticket.is_major = overrides.pop("is_major", False)

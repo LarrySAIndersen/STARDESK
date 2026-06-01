@@ -1,3 +1,6 @@
+from star_itsm_api.core.http_details import (
+    TASK_NOT_FOUND
+)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -45,7 +48,7 @@ async def get_task_by_number(
     try:
         return await workboard_service.get_task_by_number(db, number)
     except LookupError:
-        raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
+        raise HTTPException(status_code=404, detail=TASK_NOT_FOUND) from None
 
 
 @router.get("/tasks/{task_ref}")
@@ -60,11 +63,11 @@ async def get_task(
         try:
             return await workboard_service.get_task_by_canvas_id(db, task_ref)
         except LookupError:
-            raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
+            raise HTTPException(status_code=404, detail=TASK_NOT_FOUND) from None
     try:
         return await workboard_service.get_task_by_uuid(db, parsed)
     except LookupError:
-        raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
+        raise HTTPException(status_code=404, detail=TASK_NOT_FOUND) from None
 
 
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)
@@ -93,7 +96,7 @@ async def update_task(
         try:
             return await workboard_service.update_task(db, canvas_id=task_ref, payload=payload)
         except LookupError:
-            raise HTTPException(status_code=404, detail="Opgave ikke fundet") from None
+            raise HTTPException(status_code=404, detail=TASK_NOT_FOUND) from None
 
 
 @router.put("/tasks/{canvas_id}")

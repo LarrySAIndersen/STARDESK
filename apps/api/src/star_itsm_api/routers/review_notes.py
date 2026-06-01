@@ -1,3 +1,6 @@
+from star_itsm_api.core.http_details import (
+    INSUFFICIENT_PERMISSIONS
+)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,7 +27,7 @@ def require_note_viewer(user: User = Depends(get_current_user)) -> User:
     if not _can_view_notes(user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions",
+            detail=INSUFFICIENT_PERMISSIONS,
         )
     return user
 
@@ -33,7 +36,7 @@ def require_reviewer(user: User = Depends(get_current_user)) -> User:
     if not is_stardesk_reviewer(user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions",
+            detail=INSUFFICIENT_PERMISSIONS,
         )
     return user
 

@@ -14,6 +14,10 @@ def make_test_user(
     email: str = "test@example.dk",
     display_name: str = "Test User",
     organization_id: uuid.UUID | None = None,
+    ui_mode: str | None = None,
+    password_hash: str | None = None,
+    must_change_password: bool = False,
+    password_policy_exempt: bool = False,
 ) -> User:
     user = User()
     user.id = user_id or uuid.uuid4()
@@ -21,9 +25,10 @@ def make_test_user(
     user.display_name = display_name
     user.role = role
     user.is_active = True
-    user.password_hash = None
-    user.must_change_password = False
-    user.password_policy_exempt = False
+    user.password_hash = password_hash
+    user.must_change_password = must_change_password
+    user.password_policy_exempt = password_policy_exempt
     user.organization_id = organization_id
     user.deleted_at = None
+    user.ui_mode = ui_mode
     return user
