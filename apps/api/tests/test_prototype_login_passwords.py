@@ -1,9 +1,7 @@
 import uuid
-from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD

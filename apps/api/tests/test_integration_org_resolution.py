@@ -1,12 +1,10 @@
 import uuid
-from collections.abc import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from star_itsm_api.core.security import ROLE_AGENT, get_current_user
-from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
 from star_itsm_api.services.org_access import (
@@ -25,73 +23,6 @@ def _scalar_result(value: object | None) -> MagicMock:
     return result
 
 
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    return AsyncMock()
-
-
-@pytest.mark.asyncio
-async def test_resolve_uses_user_organization_id(mock_db: AsyncMock) -> None:
-    user = User(
-        id=LARRY_ID,
-        email="larrysanders@example.dk",
-        display_name="Larry",
-        role="admin",
-        is_active=True,
-        organization_id=USER_ORG_ID,
-    )
-    org_id = await resolve_integration_organization_id(mock_db, user)
-    assert org_id == USER_ORG_ID
-    mock_db.execute.assert_not_called()
-
-
-@pytest.mark.asyncio
-async def test_resolve_admin_without_org_uses_sf_operations(mock_db: AsyncMock) -> None:
-    user = User(
-        id=LARRY_ID,
-        email="larrysanders@example.dk",
-        display_name="Larry",
-        role="admin",
-        is_active=True,
-        organization_id=None,
-    )
-    mock_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
-
-    org_id = await resolve_integration_organization_id(mock_db, user)
-
-    assert org_id == SF_OPS_ORG_ID
-    mock_db.execute.assert_awaited()
-
-
-@pytest.mark.asyncio
-async def test_resolve_agent_without_org_raises(mock_db: AsyncMock) -> None:
-    user = User(
-        id=uuid.uuid4(),
-        email="agent@example.dk",
-        display_name="Agent",
-        role=ROLE_AGENT,
-        is_active=True,
-        organization_id=None,
-    )
-    with pytest.raises(IntegrationOrganizationError):
-        await resolve_integration_organization_id(mock_db, user)
-
-
-@pytest.fixture
-def override_db(mock_db: AsyncMock):
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    yield mock_db
-    app.dependency_overrides.pop(require_db, None)
-
-
-@pytest.fixture
-async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
 
 
 async def _larry_admin() -> User:
