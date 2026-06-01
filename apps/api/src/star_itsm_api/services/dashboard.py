@@ -56,7 +56,7 @@ async def build_dashboard(
 
     effective_scope = scope or default_dashboard_scope(user)
 
-    stmt = await _ticket_scope_stmt(user)
+    stmt = _ticket_scope_stmt(user)
     result = await db.execute(stmt)
     tickets = list(result.scalars().all())
     if effective_scope != DashboardScope.all:
@@ -82,7 +82,10 @@ async def build_dashboard(
 
     status_counts: dict[str, int] = defaultdict(int)
     priority_counts: dict[str, int] = defaultdict(int)
-    bucket_counts_map: dict[str, int] = {key: 0 for key, *_ in BUCKET_DEFINITIONS}
+    bucket_counts_map: dict[str, int] = dict.fromkeys(
+        (key for key, *_ in BUCKET_DEFINITIONS),
+        0,
+    )
     created_by_day: dict[str, int] = defaultdict(int)
     closed_by_day: dict[str, int] = defaultdict(int)
 

@@ -59,11 +59,15 @@ async def test_list_workboard_tasks_happy_path(
     mock_result.scalars.return_value.all.return_value = [row]
     mock_db.execute = AsyncMock(return_value=mock_result)
 
-    async def _list_tasks(_db: AsyncMock, *, status: str | None = None) -> list:
+    def _list_tasks(_db: AsyncMock, *, status: str | None = None) -> list:
         assert status is None
         return [workboard_service._read_from_row(row)]
 
-    monkeypatch.setattr(workboard_service, "list_tasks", _list_tasks)
+    monkeypatch.setattr(
+        workboard_service,
+        "list_tasks",
+        AsyncMock(side_effect=_list_tasks),
+    )
 
     response = await api_client.get("/api/v1/workboard/tasks")
     assert response.status_code == 200
@@ -79,7 +83,7 @@ async def test_bulk_import_happy_path(
     mock_db: AsyncMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _bulk_import(
+    def _bulk_import(
         _db: AsyncMock,
         tasks: list,
         *,
@@ -92,7 +96,11 @@ async def test_bulk_import_happy_path(
 
         return WorkboardBulkImportResult(created=1, updated=0)
 
-    monkeypatch.setattr(workboard_service, "bulk_import", _bulk_import)
+    monkeypatch.setattr(
+        workboard_service,
+        "bulk_import",
+        AsyncMock(side_effect=_bulk_import),
+    )
 
     response = await api_client.post(
         "/api/v1/workboard/tasks/bulk-import",

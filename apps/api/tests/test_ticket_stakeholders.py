@@ -54,7 +54,7 @@ async def test_resolve_mentioned_user_ids_by_email() -> None:
 
 
 
-async def _fake_agent() -> SimpleNamespace:
+def _fake_agent() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",
@@ -67,7 +67,7 @@ async def _fake_agent() -> SimpleNamespace:
     )
 
 
-async def _fake_top_admin() -> SimpleNamespace:
+def _fake_top_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="admin@example.dk",
@@ -119,7 +119,7 @@ async def test_list_tickets_involving_user_forbidden_for_agent(
     assert response.status_code == 403
 
 
-async def _fake_submitter() -> SimpleNamespace:
+def _fake_submitter() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="user@example.dk",

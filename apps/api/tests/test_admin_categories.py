@@ -10,7 +10,7 @@ from star_itsm_api.services.category_admin import CategorySyncCounts
 from star_itsm_api.services.category_bulk_assign import CategoryFillResult
 
 
-async def _fake_admin() -> SimpleNamespace:
+def _fake_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
         email="admin@example.dk",

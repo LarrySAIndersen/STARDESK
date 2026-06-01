@@ -17,7 +17,7 @@ OTHER_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000088")
 
 
 
-async def _fake_top_admin() -> SimpleNamespace:
+def _fake_top_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="admin@example.dk",
@@ -30,7 +30,7 @@ async def _fake_top_admin() -> SimpleNamespace:
     )
 
 
-async def _fake_agent() -> SimpleNamespace:
+def _fake_agent() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",
@@ -104,7 +104,7 @@ async def test_create_ticket_sets_reporter_to_current_user(
     actor_id = uuid.uuid4()
     added: list[object] = []
 
-    async def _fake_actor() -> SimpleNamespace:
+    def _fake_actor() -> SimpleNamespace:
         return SimpleNamespace(
             id=actor_id,
             email="user@example.dk",

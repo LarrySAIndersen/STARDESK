@@ -1,7 +1,7 @@
 # Datastruktur (domænemodel)
 
 Sandheden i kode: SQLAlchemy-modeller i `apps/api/src/star_itsm_api/models/`.
-Basis-schema: `init.sql`. Cloud-udvidelser: `docs/*-migration.sql`.
+Basis-schema: `init.sql`. Cloud-udvidelser: `apps/api/src/star_itsm_api/sql/migrations/*.sql`.
 
 ## Entitetsdiagram (oversigt)
 

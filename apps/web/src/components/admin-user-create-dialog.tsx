@@ -1,15 +1,21 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useId, useMemo, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
+import {
+  AdminUserDialogPanel,
+  AdminUserModalBackdrop,
+  adminUserSelectClassName,
+} from "@/components/admin-user-dialog-panel";
 import { AdminRoleCheckboxList } from "@/components/admin-role-checkbox-list";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { adminUserRoleValues } from "@/lib/admin-user-form";
 import { apiGet, apiPost } from "@/lib/api";
 import type {
   UserAdminCreated,
@@ -21,23 +27,11 @@ import type {
 import type { Team } from "@/types/team";
 import type { UserRole } from "@/types/user";
 
-const selectClassName =
-  "border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]";
-
-const userRoleValues = [
-  "end_user",
-  "agent",
-  "admin",
-  "top_admin",
-  "supporter",
-  "stardesk_reviewer",
-] as const;
-
 const createSchema = z
   .object({
     email: z.string().email("Ugyldig e-mail"),
     display_name: z.string().min(1, "Navn er påkrævet"),
-    roles: z.array(z.enum(userRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
+    roles: z.array(z.enum(adminUserRoleValues)).min(1, "Vælg mindst én rettighedsgruppe"),
     is_active: z.boolean(),
     organization_id: z.string(),
     team_ids: z.array(z.string()),
@@ -80,38 +74,6 @@ function suggestCloneEmail(sourceEmail: string): string {
   const local = sourceEmail.slice(0, at);
   const domain = sourceEmail.slice(at + 1);
   return `kopia-af-${local}@${domain}`;
-}
-
-function UserCreateDialogPanel({
-  ref,
-  titleId,
-  onClose,
-  children,
-}: {
-  ref: RefObject<HTMLDivElement | null>;
-  titleId: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      ref={ref}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="bg-background max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border p-6 shadow-lg"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <h2 id={titleId} className="text-star-navy text-lg font-semibold">
-          Opret bruger
-        </h2>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="Luk">
-          ✕
-        </Button>
-      </div>
-      <div className="mt-4">{children}</div>
-    </div>
-  );
 }
 
 export function AdminUserCreateDialog({
@@ -248,15 +210,8 @@ export function AdminUserCreateDialog({
   });
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <UserCreateDialogPanel ref={panelRef} titleId={titleId} onClose={onClose}>
+    <AdminUserModalBackdrop onClose={onClose}>
+      <AdminUserDialogPanel ref={panelRef} titleId={titleId} title="Opret bruger" onClose={onClose}>
         <form className="space-y-4" onSubmit={onSubmit} noValidate>
           <section className="space-y-2">
             <h3 className="text-star-navy text-sm font-semibold">Klon fra eksisterende bruger</h3>
@@ -271,7 +226,7 @@ export function AdminUserCreateDialog({
             />
             <select
               id="clone-from-user"
-              className={selectClassName}
+              className={adminUserSelectClassName}
               disabled={cloneLoading}
               {...register("clone_from_user_id")}
             >
@@ -316,7 +271,7 @@ export function AdminUserCreateDialog({
 
           <div className="space-y-2">
             <Label htmlFor="create-user-org">Organisation</Label>
-            <select id="create-user-org" className={selectClassName} {...register("organization_id")}>
+            <select id="create-user-org" className={adminUserSelectClassName} {...register("organization_id")}>
               <option value="">Ingen</option>
               {meta.organizations.map((org) => (
                 <option key={org.id} value={org.id}>
@@ -410,7 +365,7 @@ export function AdminUserCreateDialog({
             ) : null}
           </div>
         </form>
-      </UserCreateDialogPanel>
-    </div>
+      </AdminUserDialogPanel>
+    </AdminUserModalBackdrop>
   );
 }

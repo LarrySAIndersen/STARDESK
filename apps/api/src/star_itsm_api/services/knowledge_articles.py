@@ -141,7 +141,7 @@ async def create_knowledge_article(
     return ticket
 
 
-async def promote_ticket_to_knowledge(
+def promote_ticket_to_knowledge(
     db: AsyncSession,
     ticket: Ticket,
     *,

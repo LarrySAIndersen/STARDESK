@@ -621,7 +621,7 @@ def _to_comma_joined(value: str | None) -> str | None:
     return ", ".join(parts) if parts else None
 
 
-async def _store_ticket_email(
+def _store_ticket_email(
     db: AsyncSession,
     *,
     organization_id: uuid.UUID,
@@ -697,7 +697,7 @@ async def sync_gmail_inbox(
                     stats.created_tickets += 1
                 else:
                     stats.appended_to_threads += 1
-                await _store_ticket_email(
+                _store_ticket_email(
                     db,
                     organization_id=organization_id,
                     ticket_id=ticket_id,
@@ -764,7 +764,7 @@ async def sync_gmail_inbox(
             stats.created_tickets += 1
         else:
             stats.appended_to_threads += 1
-        await _store_ticket_email(
+        _store_ticket_email(
             db,
             organization_id=organization_id,
             ticket_id=ticket_id,
@@ -852,7 +852,7 @@ async def send_ticket_email_reply(
             in_reply_to=latest_email.internet_message_id if latest_email else None,
             references=latest_email.internet_message_id if latest_email else None,
         )
-        row = await _store_ticket_email(
+        row = _store_ticket_email(
             db,
             organization_id=org_id,
             ticket_id=ticket.id,
@@ -920,7 +920,7 @@ async def send_ticket_email_reply(
         in_reply_to=latest_email.internet_message_id,
         references=latest_email.internet_message_id,
     )
-    row = await _store_ticket_email(
+    row = _store_ticket_email(
         db,
         organization_id=org_id,
         ticket_id=ticket.id,
