@@ -7,7 +7,6 @@ from httpx import AsyncClient
 
 from star_itsm_api.core.password_policy import effective_must_change_password
 from star_itsm_api.core.security import ensure_password_changed, hash_password
-from star_itsm_api.main import app
 from star_itsm_api.models.user import User
 from tests.prototype_test_credentials import KNOWN_PASSWORD, NEW_INVALID_PASSWORD
 

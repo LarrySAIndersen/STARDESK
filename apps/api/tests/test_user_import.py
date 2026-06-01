@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-from star_itsm_api.main import app
 from star_itsm_api.schemas.user_admin import UserImportResult
 from star_itsm_api.services.user_import import (
     normalize_import_role,

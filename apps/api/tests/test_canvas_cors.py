@@ -1,6 +1,7 @@
 """CORS preflight for Work Board canvas sync (bulk-import)."""
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.main import app
 

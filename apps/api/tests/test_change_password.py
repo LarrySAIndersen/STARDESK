@@ -6,7 +6,6 @@ import pytest
 from httpx import AsyncClient
 
 from star_itsm_api.core.security import hash_password, verify_password
-from star_itsm_api.main import app
 from tests.change_password_payload import change_password_body
 from tests.prototype_test_credentials import (
     KNOWN_PASSWORD,

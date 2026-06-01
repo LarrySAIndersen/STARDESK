@@ -4,13 +4,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 
-from star_itsm_api.core.security import ROLE_AGENT, get_current_user
+from star_itsm_api.core.security import get_current_user
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
-from star_itsm_api.services.org_access import (
-    IntegrationOrganizationError,
-    resolve_integration_organization_id,
-)
 
 SF_OPS_ORG_ID = uuid.UUID("e1000001-0000-4000-8000-000000000003")
 USER_ORG_ID = uuid.UUID("e1000001-0000-4000-8000-000000000001")

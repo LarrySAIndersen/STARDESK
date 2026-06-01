@@ -9,7 +9,6 @@ from fastapi import HTTPException, UploadFile
 from httpx import AsyncClient
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.main import app
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services import attachments, file_storage

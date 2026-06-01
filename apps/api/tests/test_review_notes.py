@@ -3,7 +3,6 @@
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
@@ -16,8 +15,6 @@ from star_itsm_api.core.security import (
 )
 from star_itsm_api.main import app
 from star_itsm_api.services import review_notes as review_notes_service
-
-
 
 
 def _reviewer_user() -> SimpleNamespace:
