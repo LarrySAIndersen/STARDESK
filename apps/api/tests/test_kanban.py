@@ -1,7 +1,8 @@
 import uuid
-from types import SimpleNamespace
 
 from httpx import AsyncClient
+
+from tests.support.users import make_test_user
 
 from star_itsm_api.models.kanban import KanbanBoard, KanbanColumn
 from star_itsm_api.models.ticket import Ticket
@@ -103,7 +104,7 @@ def test_column_for_ticket_status() -> None:
 
 
 def test_access_admin_sees_all_boards() -> None:
-    admin = SimpleNamespace(role="admin")
+    admin = make_test_user(role="admin")
     assert sees_all_boards(admin) is True
 
 
@@ -111,33 +112,33 @@ def test_access_member_not_creator() -> None:
     user_id = uuid.uuid4()
     other_creator = uuid.uuid4()
     board = _board(creator_id=other_creator)
-    user = SimpleNamespace(id=user_id, role="agent")
+    user = make_test_user(user_id=user_id, role="agent")
     assert user_can_view_board(board, user, {user_id}) is True
     assert user_can_view_board(board, user, set()) is False
 
 
 def test_move_cards_editor_only() -> None:
-    agent = SimpleNamespace(role="agent")
+    agent = make_test_user(role="agent")
     assert user_can_move_cards("editor", agent) is True
     assert user_can_move_cards("viewer", agent) is False
 
 
 def test_remove_cards_editor_only() -> None:
-    agent = SimpleNamespace(role="agent")
+    agent = make_test_user(role="agent")
     assert user_can_remove_cards("editor", agent) is True
     assert user_can_remove_cards("viewer", agent) is False
 
 
 def test_delete_board_owner_only() -> None:
-    agent = SimpleNamespace(role="agent")
+    agent = make_test_user(role="agent")
     board = _board()
     assert user_can_delete_board("owner", agent, board) is True
     assert user_can_delete_board("editor", agent, board) is False
 
 
 def test_delete_tickets_admin_only() -> None:
-    admin = SimpleNamespace(role="admin")
-    agent = SimpleNamespace(role="agent")
+    admin = make_test_user(role="admin")
+    agent = make_test_user(role="agent")
     assert user_can_delete_tickets(admin) is True
     assert user_can_delete_tickets(agent) is False
 

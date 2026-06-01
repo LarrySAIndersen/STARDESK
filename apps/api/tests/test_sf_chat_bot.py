@@ -1,10 +1,10 @@
-from types import SimpleNamespace
+from tests.support.tickets import make_test_ticket
 
 from star_itsm_api.services.sf_chat_bot import _format_ticket, mock_bot_reply
 
 
 def test_format_ticket_includes_status_and_priority() -> None:
-    ticket = SimpleNamespace(
+    ticket = make_test_ticket(
         ticket_number="INC-2026-00010",
         title="VPN fejl",
         status="in_progress",
@@ -30,12 +30,7 @@ def test_mock_bot_reply_empty_prompt() -> None:
 
 
 def test_mock_bot_reply_mine_sager_lists_tickets() -> None:
-    ticket = SimpleNamespace(
-        ticket_number="INC-1",
-        title="Test",
-        status="new",
-        is_major=False,
-    )
+    ticket = make_test_ticket(ticket_number="INC-1", title="Test", status="new", is_major=False)
     reply = mock_bot_reply("vis mine sager", [ticket], display_name="Anna")
     assert "INC-1" in reply
 

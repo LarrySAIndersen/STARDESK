@@ -1,4 +1,4 @@
-from types import SimpleNamespace
+from tests.support.users import make_test_user
 
 import pytest
 
@@ -20,6 +20,6 @@ def test_role_after_policy_demotes_non_owner() -> None:
 
 
 def test_assert_may_assign_reserved() -> None:
-    actor = SimpleNamespace(role=ROLE_TOP_ADMIN, email="larrysanders@example.dk")
+    actor = make_test_user(role=ROLE_TOP_ADMIN, email="larrysanders@example.dk")
     with pytest.raises(ValueError, match="top_admin_reserved"):
         assert_may_assign_role(actor=actor, target_email="sf01@example.dk", new_role=ROLE_TOP_ADMIN)

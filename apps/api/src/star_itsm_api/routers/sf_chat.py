@@ -1,3 +1,6 @@
+from star_itsm_api.core.http_details import (
+    CHAT_NOT_FOUND
+)
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -76,7 +79,7 @@ async def poll_session(
     status = await chat_svc.get_chat_status(db)
     session = await chat_svc.session_for_user(db, session_id, current_user)
     if session is None:
-        raise HTTPException(status_code=404, detail="Chat ikke fundet")
+        raise HTTPException(status_code=404, detail=CHAT_NOT_FOUND)
 
     agent_name = None
     if session.assigned_agent_id:
@@ -105,7 +108,7 @@ async def post_message(
 ) -> SfChatMessageRead:
     session = await chat_svc.session_for_user(db, session_id, current_user)
     if session is None:
-        raise HTTPException(status_code=404, detail="Chat ikke fundet")
+        raise HTTPException(status_code=404, detail=CHAT_NOT_FOUND)
     try:
         msg = await chat_svc.add_message(db, session_id, current_user, payload.body)
     except ValueError as exc:
@@ -154,7 +157,7 @@ async def abandon_session(
 ) -> SfChatSessionRead:
     session = await chat_svc.abandon_customer_session(db, session_id, current_user.id)
     if session is None:
-        raise HTTPException(status_code=404, detail="Chat ikke fundet")
+        raise HTTPException(status_code=404, detail=CHAT_NOT_FOUND)
     queue_message = (
         chat_svc.MSG_QUEUE_REJECTED if session.status == SESSION_REJECTED_QUEUE else None
     )
@@ -170,7 +173,7 @@ async def create_ticket_from_sf_chat(
 ) -> TicketRead:
     session = await chat_svc.session_for_user(db, session_id, current_user)
     if session is None:
-        raise HTTPException(status_code=404, detail="Chat ikke fundet")
+        raise HTTPException(status_code=404, detail=CHAT_NOT_FOUND)
     try:
         ticket = await chat_svc.create_ticket_from_sf_chat_session(
             db,
@@ -277,7 +280,7 @@ async def start_bot_assistant(
                 status_code=403, detail="Kun SF-agenter kan starte chat-service bot"
             ) from exc
         if code == "session_not_found":
-            raise HTTPException(status_code=404, detail="Chat ikke fundet") from exc
+            raise HTTPException(status_code=404, detail=CHAT_NOT_FOUND) from exc
         if code == "not_waiting":
             raise HTTPException(
                 status_code=409,

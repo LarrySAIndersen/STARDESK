@@ -1,3 +1,9 @@
+from star_itsm_api.core.http_details import (
+    INSUFFICIENT_PERMISSIONS,
+    INVALID_GROUP,
+    MIN_ONE_GROUP_REQUIRED,
+    USER_NOT_FOUND
+)
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -78,7 +84,7 @@ async def users_meta(
     current_user: User = Depends(require_admin()),
 ) -> UserAdminMeta:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     organizations = await list_organizations(db)
     return build_admin_meta(organizations)
 
@@ -92,7 +98,7 @@ async def list_users(
     current_user: User = Depends(require_admin()),
 ) -> UserAdminListResponse:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
 
 
@@ -103,7 +109,7 @@ async def import_users(
     current_user: User = Depends(require_admin_session()),
 ) -> UserImportResult:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     if payload.default_role == ROLE_TOP_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -123,7 +129,7 @@ async def create_user(
     current_user: User = Depends(require_admin_session()),
 ) -> UserAdminCreated:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     role = payload.role
     roles = list(payload.roles) if payload.roles else None
@@ -143,7 +149,7 @@ async def create_user(
         if role is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             )
         roles = [role]
 
@@ -185,7 +191,7 @@ async def create_user(
         if code == "invalid_team":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ugyldig gruppe",
+                detail=INVALID_GROUP,
             ) from exc
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -231,10 +237,10 @@ async def get_user_tickets(
 ) -> UserTicketsGroupedRead:
     is_self = current_user.id == user_id
     if not can_manage_users(current_user) and not is_self:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     user = await get_user_admin(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return await list_user_tickets_grouped(db, user_id=user_id, limit=limit)
 
 
@@ -246,10 +252,10 @@ async def get_user(
 ) -> UserAdminRead:
     is_self = current_user.id == user_id
     if not can_manage_users(current_user) and not is_self:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     user = await get_user_admin(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return user
 
 
@@ -261,11 +267,11 @@ async def update_user(
     current_user: User = Depends(require_admin_session()),
 ) -> UserAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -281,7 +287,7 @@ async def update_user(
         if not next_roles:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             )
 
         for assigned_role in next_roles:
@@ -300,7 +306,7 @@ async def update_user(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             ) from None
 
     if "display_name" in updates:
@@ -334,13 +340,13 @@ async def update_user(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ugyldig gruppe",
+                detail=INVALID_GROUP,
             ) from None
 
     await db.commit()
     updated = await get_user_admin(db, user_id)
     if updated is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return updated
 
 
@@ -352,11 +358,11 @@ async def reset_user_password(
     current_user: User = Depends(require_admin_session()),
 ) -> None:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
 
     try:
         await set_user_password(db, user, payload.new_password)
