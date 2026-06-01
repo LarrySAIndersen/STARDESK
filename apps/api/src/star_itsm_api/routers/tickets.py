@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, TICKET_NOT_FOUND
 from star_itsm_api.core.security import (
     ROLE_AGENT,
     ROLE_SUBMITTER,
@@ -183,7 +184,7 @@ async def _ensure_ticket_access(
     user: User,
 ) -> None:
     if not await user_can_access_ticket(db, user, ticket):
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
 
 
 async def _assignment_names(
@@ -315,12 +316,12 @@ async def list_tickets(
 ) -> list[TicketRead]:
     try:
         if assignee_id is not None and not can_manage_users(current_user):
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
         if stakeholder is not None and stakeholder != "me":
             raise HTTPException(status_code=400, detail="Invalid stakeholder filter")
         if involving_user_id is not None and not can_manage_users(current_user):
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
         parsed_scope = parse_dashboard_scope(scope)
         if scope is not None and parsed_scope is None:
@@ -348,10 +349,10 @@ async def list_tickets(
         if effective_scope is not None and is_staff_role(current_user):
             stmt = await apply_dashboard_scope_stmt(db, stmt, current_user, effective_scope)
         elif effective_scope is not None:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
         if bucket is not None:
             if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
             stmt = apply_bucket_filter(stmt, bucket)
         if parent_id is not None:
             stmt = stmt.where(Ticket.parent_ticket_id == parent_id)
@@ -368,17 +369,17 @@ async def list_tickets(
             stmt = stmt.where((Ticket.is_major.is_(False)) | (Ticket.parent_ticket_id.is_not(None)))
         if board:
             if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
             open_only = True
             limit = min(limit, 500)
         elif major_open:
             if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
             stmt = stmt.where(Ticket.is_major.is_(True))
             # Match dashboard major_open_count (OPEN_STATUSES, not merely non-closed).
             stmt = stmt.where(Ticket.status.in_(tuple(OPEN_STATUSES)))
         elif store_sager and current_user.role != ROLE_SUBMITTER:
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
         elif current_user.role == ROLE_AGENT and not dashboard_filters:
             stmt = await apply_agent_team_list_filter(db, stmt, current_user)
         if security_only:
@@ -574,7 +575,7 @@ async def _get_ticket_detail(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     comments_result = await db.execute(
@@ -702,10 +703,10 @@ async def upload_ticket_attachment(
 ):
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     if not is_staff(current_user) and current_user.id != ticket.reporter_user_id:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     now = datetime.now(UTC)
     read = await save_ticket_upload(
         db,
@@ -741,10 +742,10 @@ async def download_ticket_attachment(
     current_user: User = Depends(get_current_user),
 ):
     if not is_staff(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     attachment = await db.get(Attachment, attachment_id)
@@ -766,10 +767,10 @@ async def remove_ticket_attachment(
 ) -> None:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     if not is_staff(current_user) and current_user.id != ticket.reporter_user_id:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     now = datetime.now(UTC)
     removed = await delete_ticket_attachment(
         db,
@@ -803,7 +804,7 @@ async def update_ticket_status(
 ) -> TicketRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     previous_status = ticket.status
@@ -859,7 +860,7 @@ async def update_ticket_metadata(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     updates = payload.model_dump(exclude_unset=True)
@@ -891,7 +892,7 @@ async def update_ticket_metadata(
         ticket.emoji = updates["emoji"]
     if "category_id" in updates or "subcategory_id" in updates:
         if not is_staff(current_user):
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
         next_category_id = (
             updates["category_id"] if "category_id" in updates else ticket.category_id
         )
@@ -907,14 +908,14 @@ async def update_ticket_metadata(
         ticket.subcategory_id = next_subcategory_id
     if "source" in updates and updates["source"] is not None:
         if not is_staff(current_user):
-            raise HTTPException(status_code=403, detail="Insufficient permissions")
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
         validate_ticket_source_value(updates["source"])
         ticket.source = updates["source"]
     stakeholder_now = datetime.now(UTC)
     try:
         if "affected_user_ids" in updates and updates["affected_user_ids"] is not None:
             if not is_staff(current_user):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
             await validate_stakeholder_user_ids(db, updates["affected_user_ids"])
             await sync_role_stakeholders(
                 db,
@@ -925,7 +926,7 @@ async def update_ticket_metadata(
             )
         if "interested_user_ids" in updates and updates["interested_user_ids"] is not None:
             if not is_staff(current_user):
-                raise HTTPException(status_code=403, detail="Insufficient permissions")
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
             await validate_stakeholder_user_ids(db, updates["interested_user_ids"])
             await sync_role_stakeholders(
                 db,
@@ -963,7 +964,7 @@ async def update_ticket_priority(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     previous_priority = ticket.priority
@@ -1027,7 +1028,7 @@ async def update_ticket_type(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     previous_type = ticket.ticket_type
@@ -1075,7 +1076,7 @@ async def push_ticket_to_slack(
 ) -> SlackPushResponse:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     org_id = get_user_organization_id(current_user)
@@ -1152,7 +1153,7 @@ async def update_ticket_parent(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     try:
         await set_parent_ticket_id(db, ticket, payload.parent_ticket_id)
@@ -1187,7 +1188,7 @@ async def link_related_major_ticket(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     if not ticket.is_major or ticket.parent_ticket_id is not None:
         raise HTTPException(
@@ -1226,7 +1227,7 @@ async def unlink_related_major_ticket(
 ) -> None:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     removed = await remove_related_major_link(
         db,
@@ -1259,7 +1260,7 @@ async def assign_ticket(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     updates = payload.model_dump(exclude_unset=True)
@@ -1358,7 +1359,7 @@ async def list_ticket_stakeholders(
 ) -> TicketStakeholdersGroupedRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     return await get_ticket_stakeholders_grouped(db, ticket_id)
 
@@ -1372,7 +1373,7 @@ async def add_ticket_stakeholder(
 ) -> TicketStakeholderRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     try:
         await validate_stakeholder_user_ids(db, [payload.user_id])
@@ -1402,7 +1403,7 @@ async def update_ticket_stakeholder(
 ) -> TicketStakeholderRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     row = await db.get(TicketStakeholder, stakeholder_id)
     if (
@@ -1437,7 +1438,7 @@ async def remove_ticket_stakeholder(
 ) -> None:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     row = await db.get(TicketStakeholder, stakeholder_id)
     if (
@@ -1461,7 +1462,7 @@ async def get_ticket_llm_context(
 ) -> TicketLlmContextRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     return await build_ticket_llm_context(db, ticket)
 
@@ -1476,7 +1477,7 @@ async def update_ticket_intelligence(
     """Persist LLM or manual triage metadata (e.g. after external evaluation)."""
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     updates = payload.model_dump(exclude_unset=True)
     if "semantic_topics" in updates and updates["semantic_topics"] is not None:
@@ -1512,7 +1513,7 @@ async def create_comment(
 ) -> CommentRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     if is_staff(current_user):
@@ -1606,7 +1607,7 @@ async def reply_ticket_email(
 ) -> TicketDetailRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
     try:
         await send_ticket_email_reply(
@@ -1631,14 +1632,14 @@ async def upsert_comment_reaction(
 ) -> CommentReactionSummary:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
     comment = await db.get(TicketComment, comment_id)
     if comment is None or comment.deleted_at is not None or comment.ticket_id != ticket_id:
         raise HTTPException(status_code=404, detail="Comment not found")
     if current_user.role == ROLE_SUBMITTER and comment.is_internal:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     summary = await set_comment_reaction(
         db,

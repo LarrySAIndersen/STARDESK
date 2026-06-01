@@ -6,6 +6,7 @@ from typing import Literal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INVALID_GROUP
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
@@ -229,7 +230,7 @@ async def import_users_admin(
                 )
             except ValueError:
                 errors.append(
-                    UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                    UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                 )
                 continue
             updated += 1
@@ -271,7 +272,7 @@ async def import_users_admin(
                         )
                     except ValueError:
                         errors.append(
-                            UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                            UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                         )
                         continue
                     updated += 1
@@ -279,7 +280,7 @@ async def import_users_admin(
                     skipped += 1
             elif code == "invalid_team":
                 errors.append(
-                    UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                    UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                 )
             else:
                 errors.append(

@@ -18,22 +18,25 @@ _PRIORITY_LABELS_DA = {
 
 _PRIORITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 
+SERVICE_DESK = "Service Desk"
+SF_SERVICE_DESK = "SF Service Desk"
+
 _TEAM_NAME_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"\bvpn\b|netværk|network|wifi", ("SF Infrastruktur", "Infrastruktur", "Netværk")),
     (
         r"\badgang|password|adgangskode|kodeord|iam|rettighed",
-        ("IAM", "Adgang", "Service Desk", "SF Service Desk"),
+        ("IAM", "Adgang", SERVICE_DESK, SF_SERVICE_DESK),
     ),
-    (r"\bprinter|print", ("Service Desk", "SF Service Desk")),
-    (r"\bmail|outlook|exchange|office|microsoft", ("Applikation", "SF Service Desk")),
-    (r"\bsikkerhed|security|gdpr", ("Sikkerhed", "SF Service Desk", "Service Desk")),
+    (r"\bprinter|print", (SERVICE_DESK, SF_SERVICE_DESK)),
+    (r"\bmail|outlook|exchange|office|microsoft", ("Applikation", SF_SERVICE_DESK)),
+    (r"\bsikkerhed|security|gdpr", ("Sikkerhed", SF_SERVICE_DESK, SERVICE_DESK)),
 )
 
 _CATEGORY_TEAM_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("network", ("SF Infrastruktur", "Infrastruktur")),
-    ("access", ("SF Service Desk", "Service Desk")),
-    ("hardware", ("SF Service Desk", "Service Desk")),
-    ("software", ("Applikation", "SF Service Desk")),
+    ("access", (SF_SERVICE_DESK, SERVICE_DESK)),
+    ("hardware", (SF_SERVICE_DESK, SERVICE_DESK)),
+    ("software", ("Applikation", SF_SERVICE_DESK)),
 )
 
 

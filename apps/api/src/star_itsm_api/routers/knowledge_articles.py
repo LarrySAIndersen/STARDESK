@@ -4,6 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, TICKET_NOT_FOUND
 from star_itsm_api.core.security import get_current_user, is_staff, require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.ticket import Ticket
@@ -45,7 +46,7 @@ async def list_articles(
     current_user: User = Depends(get_current_user),
 ) -> list[KnowledgeArticleRead]:
     if not portal and not is_staff(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     try:
         tickets = await list_knowledge_articles(
             db,
@@ -72,7 +73,7 @@ async def get_article(
     if ticket is None:
         raise HTTPException(status_code=404, detail="Knowledge article not found")
     if not can_read_knowledge_article(current_user, ticket):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     return knowledge_article_to_read(ticket)
 
 
@@ -140,11 +141,11 @@ async def promote_from_ticket(
 ) -> KnowledgeArticleRead:
     ticket = await db.get(Ticket, ticket_id)
     if ticket is None or ticket.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     if ticket.is_knowledge_article:
         raise HTTPException(status_code=400, detail="Ticket is already a knowledge article")
     if not await user_can_access_ticket(db, current_user, ticket):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     try:
         promote_ticket_to_knowledge(
             db,
