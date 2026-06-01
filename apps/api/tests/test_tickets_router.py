@@ -11,7 +11,7 @@ from httpx import AsyncClient
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER, get_current_user
 from star_itsm_api.main import app
-from star_itsm_api.schemas.comment import CommentRead, CommentReactionSummary
+from star_itsm_api.schemas.comment import CommentReactionSummary, CommentRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead
 from star_itsm_api.schemas.ticket_activity import TicketTimestampsRead
 from star_itsm_api.schemas.ticket_intelligence import (
