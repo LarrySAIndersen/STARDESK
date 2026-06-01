@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "stardesk-scripts",
   "private": true,
   "type": "module",
@@ -15,6 +15,7 @@
     "security:audit": "node ./security-audit/run-audit.mjs",
     "sonar:agent": "node ./sonar-agent/run-sonar-agent.mjs",
     "sonar:sync-canvas": "node ./sonar-agent/sync-sonar-to-canvas.mjs",
+    "sonar:sync-scheduler": "node ./sonar-agent/sync-scheduler-to-canvas.mjs",
     "sonar:pipeline": "node ./sonar-agent/run-sonar-pipeline.mjs",
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
     "sonar:codemod:fastapi": "python ./sonar-agent/codemods/fastapi_router_style.py",
@@ -28,7 +29,13 @@
     "gate:hello-world": "bash ./hello-world-gate-api.sh",
     "gate:hello-world:ui": "node ./hello-world-gate.mjs",
     "gate:deliverable": "bash ./run-deliverable-gate.sh",
-    "gate:deliverable:full": "bash ./run-deliverable-gate.sh --full"
+    "gate:deliverable:full": "bash ./run-deliverable-gate.sh --full",
+    "watchdog": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once",
+    "watchdog:dry-run": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once -DryRun",
+    "watchdog:start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",
+    "watchdog:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Stop",
+    "sonar:loop-scheduler": "powershell -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1",
+    "sonar:loop-scheduler:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop"
   },
   "devDependencies": {
     "playwright": "^1.55.1"

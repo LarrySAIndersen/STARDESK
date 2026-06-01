@@ -11,6 +11,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { syncSchedulerToCanvas } from "./sync-scheduler-to-canvas.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -139,6 +140,11 @@ function main() {
   console.log(`Synced ${queue.length} security issues → ${canvasDataPath}`);
   console.log(
     `Open: ${summary.open} · Fixed: ${summary.fixed} · Blocker: ${summary.blocker} · Critical: ${summary.critical}`,
+  );
+
+  const { schedulerStatus } = syncSchedulerToCanvas({ canvasDataPath });
+  console.log(
+    `Scheduler: ${schedulerStatus.schedulerRunning ? "Kører" : "Stoppet"} · Sidste tick: ${schedulerStatus.lastTickAt ?? "—"}`,
   );
 }
 
