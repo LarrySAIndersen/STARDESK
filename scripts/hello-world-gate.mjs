@@ -39,6 +39,15 @@ const page = await context.newPage();
 try {
   console.log(`==> Hello-world gate (UI) — ${webUrl}`);
 
+  const vercelBypass = process.env.VERCEL_PROTECTION_BYPASS?.trim();
+  if (vercelBypass && /\.vercel\.app$/i.test(new URL(webUrl).hostname)) {
+    const bypassUrl = new URL(webUrl);
+    bypassUrl.searchParams.set("x-vercel-set-bypass-cookie", "true");
+    bypassUrl.searchParams.set("x-vercel-protection-bypass", vercelBypass);
+    await page.goto(bypassUrl.toString(), { waitUntil: "domcontentloaded", timeout: 60_000 });
+    pass("Vercel deployment protection bypass cookie set");
+  }
+
   await page.goto(`${webUrl}/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(outDir, "01-login.png") });

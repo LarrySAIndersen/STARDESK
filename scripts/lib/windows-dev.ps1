@@ -152,6 +152,133 @@ function Get-StardeskPrototypeDemoPassword {
     throw "Set PROTOTYPE_BOOTSTRAP_PASSWORD in apps/api/.env (see .env.development.example) or export TEST_USER_PASSWORD."
 }
 
+function Test-StardeskVercelProtectedUrl {
+    param([Parameter(Mandatory = $true)][string]$Url)
+    return ($Url -match '\.vercel\.app$')
+}
+
+function Get-StardeskVercelProtectionBypass {
+    param(
+        [Parameter(Mandatory = $true)][string]$DeploymentUrl,
+        [string]$VercelProjectDir
+    )
+
+    if ($env:VERCEL_PROTECTION_BYPASS) {
+        return $env:VERCEL_PROTECTION_BYPASS
+    }
+
+    $apiDir = if ($VercelProjectDir) { $VercelProjectDir } else {
+        Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
+    }
+    if (-not (Test-Path -LiteralPath (Join-Path $apiDir ".vercel\project.json"))) {
+        throw "Link apps/api to Vercel (vercel link) or set VERCEL_PROTECTION_BYPASS for protected Preview gates."
+    }
+
+    Push-Location $apiDir
+    try {
+        $raw = & vercel curl --yes --deployment $DeploymentUrl -- "/health" 2>&1
+    }
+    finally {
+        Pop-Location
+    }
+
+    $line = $raw | Where-Object { $_ -match 'protection bypass token' } | Select-Object -First 1
+    if ($line -match 'bypass token(?: from project settings)?:\s*(\S+)') {
+        return $Matches[1]
+    }
+
+    throw "Could not read Vercel protection bypass token from vercel curl. Set VERCEL_PROTECTION_BYPASS manually."
+}
+
+function Invoke-StardeskVercelCurl {
+    param(
+        [Parameter(Mandatory = $true)][string]$DeploymentUrl,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [ValidateSet("GET", "POST", "PATCH", "PUT", "DELETE")]
+        [string]$Method = "GET",
+        [string]$BodyJson,
+        [hashtable]$Headers = @{},
+        [string]$VercelProjectDir
+    )
+
+    $apiDir = if ($VercelProjectDir) { $VercelProjectDir } else {
+        Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
+    }
+
+    Push-Location $apiDir
+    try {
+        if ($BodyJson) {
+            $tmp = Join-Path $env:TEMP ("stardesk-curl-{0}.json" -f [guid]::NewGuid().ToString("N"))
+            Set-Content -LiteralPath $tmp -Value $BodyJson -Encoding utf8
+            try {
+                $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" -X $Method `
+                    -H "Content-Type: application/json" --data-binary "@$tmp" 2>&1
+            }
+            finally {
+                Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+            }
+        }
+        elseif ($Headers.Authorization) {
+            $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" `
+                -H "Authorization: $($Headers.Authorization)" 2>&1
+        }
+        else {
+            $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" 2>&1
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    $lines = @($raw | ForEach-Object { "$_" })
+    $jsonLine = $lines | Where-Object { $_ -match '^\{' } | Select-Object -Last 1
+    if (-not $jsonLine) {
+        $jsonLine = $lines | Where-Object { $_ -match '"stardesk_env"|"access_token"|"detail"' } | Select-Object -Last 1
+    }
+    if (-not $jsonLine) {
+        throw "vercel curl returned no JSON for $Method $Path"
+    }
+    return ($jsonLine | ConvertFrom-Json)
+}
+
+function Invoke-StardeskApiRequest {
+    param(
+        [Parameter(Mandatory = $true)][string]$ApiUrl,
+        [Parameter(Mandatory = $true)][string]$Path,
+        [ValidateSet("GET", "POST", "PATCH", "PUT", "DELETE")]
+        [string]$Method = "GET",
+        [string]$BodyJson,
+        [hashtable]$Headers = @{},
+        [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
+    )
+
+    $uri = "$($ApiUrl.TrimEnd('/'))$Path"
+    $params = @{
+        Uri         = $uri
+        Method      = $Method
+        TimeoutSec  = 60
+        ErrorAction = "Stop"
+    }
+    if ($WebSession) { $params.WebSession = $WebSession }
+    if ($Headers.Count -gt 0) { $params.Headers = $Headers }
+    if ($BodyJson) {
+        $params.ContentType = "application/json"
+        $params.Body = $BodyJson
+    }
+
+    try {
+        return Invoke-RestMethod @params
+    }
+    catch {
+        $status = $_.Exception.Response.StatusCode.value__
+        if ($status -eq 401 -and (Test-StardeskVercelProtectedUrl -Url $ApiUrl)) {
+            return Invoke-StardeskVercelCurl -DeploymentUrl $ApiUrl -Path $Path -Method $Method `
+                -BodyJson $BodyJson -Headers $Headers
+        }
+        throw
+    }
+}
+
 function Invoke-StardeskBashScript {
     param(
         [Parameter(Mandatory = $true)]

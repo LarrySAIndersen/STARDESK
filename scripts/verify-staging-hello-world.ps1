@@ -15,12 +15,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "lib/windows-dev.ps1")
+
 $ApiUrl = $ApiUrl.TrimEnd("/")
 $Doc = "docs/staging-vercel-preview-env.md"
 $Session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
 
 if ($VercelShareUrl) {
-    Invoke-WebRequest -Uri $VercelShareUrl -WebSession $Session -UseBasicParsing | Out-Null
+    try {
+        Invoke-WebRequest -Uri $VercelShareUrl -WebSession $Session -UseBasicParsing | Out-Null
+    }
+    catch {
+        Write-Host "Note: Vercel share URL returned $($_.Exception.Message); using vercel curl fallback if needed." -ForegroundColor Yellow
+    }
 }
 
 function Write-Fail([string]$Message) {
@@ -40,13 +47,10 @@ Write-Host "=============================================="
 Write-Host ""
 Write-Host "==> Health"
 try {
-    $health = Invoke-RestMethod -Uri "$ApiUrl/health" -Method Get -WebSession $Session
+    $health = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/health" -Method GET -WebSession $Session
 }
 catch {
-    if ($_.Exception.Response.StatusCode.value__ -eq 401) {
-        Write-Fail "GET /health returned 401 — enable Vercel Deployment Protection bypass (share link) or pass -VercelShareUrl. See $Doc"
-    }
-    Write-Fail "GET /health failed. Is staging deployed? See $Doc"
+    Write-Fail "GET /health failed. Is staging deployed with DATABASE_URL? See $Doc"
 }
 
 $stardeskEnv = [string]$health.stardesk_env
@@ -60,8 +64,8 @@ Write-Host ""
 Write-Host "==> Login probe ($Email)"
 $loginBody = @{ email = $Email; password = $Password } | ConvertTo-Json -Compress
 try {
-    $login = Invoke-RestMethod -Uri "$ApiUrl/api/v1/auth/login" -Method Post `
-        -ContentType "application/json" -Body $loginBody -WebSession $Session -ErrorAction Stop
+    $login = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/api/v1/auth/login" -Method POST `
+        -BodyJson $loginBody -WebSession $Session
 }
 catch {
     $detail = $_.ErrorDetails.Message
@@ -69,12 +73,6 @@ catch {
         Write-Host ""
         Write-Host "Staging API has no DATABASE_URL in Vercel Preview env." -ForegroundColor Yellow
         Write-Host "Fix: $Doc" -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "Quick checklist:"
-        Write-Host "  1. Vercel api -> Preview -> DATABASE_URL = Neon test (postgresql+asyncpg://...)"
-        Write-Host "  2. PROTOTYPE_BOOTSTRAP_PASSWORD, STARDESK_ENV=test, FRONTEND_URL=web-git-staging-..."
-        Write-Host "  3. Redeploy staging branch"
-        Write-Host "  4. bootstrap Neon test if empty: bash scripts/bootstrap-dev-database.sh"
         Write-Fail "DATABASE_URL missing on Vercel Preview (see $Doc)"
     }
     Write-Fail "POST /api/v1/auth/login failed: $detail"
@@ -89,7 +87,8 @@ Write-Ok "Login as $Email"
 Write-Host ""
 Write-Host "==> Tickets"
 $headers = @{ Authorization = "Bearer $token" }
-$tickets = Invoke-RestMethod -Uri "$ApiUrl/api/v1/tickets?page=1&page_size=5" -Headers $headers -Method Get -WebSession $Session
+$tickets = Invoke-StardeskApiRequest -ApiUrl $ApiUrl -Path "/api/v1/tickets?page=1&page_size=5" `
+    -Method GET -Headers $headers -WebSession $Session
 $count = 0
 if ($tickets -is [System.Array]) { $count = $tickets.Count }
 elseif ($tickets.items) { $count = @($tickets.items).Count }
