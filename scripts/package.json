@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "stardesk-scripts",
   "private": true,
   "type": "module",
@@ -37,6 +37,7 @@
     "watchdog:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Stop",
     "sonar:loop-scheduler": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1",
     "sonar:loop-scheduler:stop": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./sonar-agent/run-sonar-loop-scheduler.ps1 -Stop"
+
   },
   "devDependencies": {
     "playwright": "^1.55.1"
