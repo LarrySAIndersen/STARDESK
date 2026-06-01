@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -57,7 +59,7 @@ export function KanbanAddTicketDialog({
       return;
     }
     const timer = window.setTimeout(() => {
-      void search(query);
+      fireAndForget(search(query));
     }, 300);
     return () => window.clearTimeout(timer);
   }, [open, query, search]);
@@ -127,7 +129,7 @@ export function KanbanAddTicketDialog({
                   type="button"
                   className="hover:bg-muted flex w-full items-start gap-2 rounded-md px-2 py-2 text-left text-sm"
                   disabled={addingId === hit.id}
-                  onClick={() => void handleAdd(hit.id)}
+                  onClick={() => fireAndForget(handleAdd(hit.id))}
                 >
                   <span className="text-muted-foreground shrink-0 font-mono text-xs">
                     {hit.ticket_number}

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -109,7 +111,7 @@ export function HelpdeskLoginPage() {
     function restartProgress() {
       if (!progressBar) return;
       progressBar.classList.remove("run");
-      void progressBar.offsetWidth;
+      progressBar.getBoundingClientRect();
       progressBar.classList.add("run");
     }
 
@@ -233,7 +235,7 @@ export function HelpdeskLoginPage() {
           setLoginError("Indtast bruger og adgangskode");
           return;
         }
-        void performLogin(email, password);
+        fireAndForget(performLogin(email, password));
       }
 
       credentialSubmit?.addEventListener("click", onSubmit);

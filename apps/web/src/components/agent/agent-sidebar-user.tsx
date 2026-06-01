@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -114,7 +116,7 @@ export function ProfileModal({
               selectedPreset={selectedPreset}
               activeUpload={Boolean(user.avatar_url)}
               saving={saving}
-              onSelect={(id) => void savePreset(id)}
+              onSelect={(id) => fireAndForget(savePreset(id))}
             />
           </section>
         ) : (
@@ -137,7 +139,7 @@ export function ProfileModal({
                   type="file"
                   accept={ACCEPTED_TYPES.join(",")}
                   className="sr-only"
-                  onChange={(e) => void onFileChange(e)}
+                  onChange={(e) => fireAndForget(onFileChange(e))}
                 />
                 <Button
                   type="button"
@@ -307,15 +309,17 @@ function LogoutButton({ onDone }: { onDone: () => void }) {
       variant="outline"
       size="sm"
       onClick={() => {
-        void (async () => {
-          const ok = await confirmSfChatLogout();
-          if (!ok) return;
-          await fetch("/api/auth/logout", { method: "POST" });
-          clearSession();
-          onDone();
-          router.push("/login");
-          router.refresh();
-        })();
+        fireAndForget(
+          (async () => {
+            const ok = await confirmSfChatLogout();
+            if (!ok) return;
+            await fetch("/api/auth/logout", { method: "POST" });
+            clearSession();
+            onDone();
+            router.push("/login");
+            router.refresh();
+          })(),
+        );
       }}
     >
       Log ud

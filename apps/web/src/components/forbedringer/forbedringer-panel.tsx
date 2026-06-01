@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -50,7 +52,7 @@ export function ForbedringerPanel() {
   }, [statusFilter]);
 
   useEffect(() => {
-    void loadNotes();
+    fireAndForget(loadNotes());
   }, [loadNotes]);
 
   const filteredNotes = useMemo(() => {
@@ -77,7 +79,7 @@ export function ForbedringerPanel() {
             Gule sedler fra Stardesk Reviewer med side, person, kommentar og placering.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => void loadNotes()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => fireAndForget(loadNotes())}>
           Opdater
         </Button>
       </div>
@@ -161,7 +163,7 @@ export function ForbedringerPanel() {
               </div>
             </dl>
             {note.status === "open" ? (
-              <Button type="button" size="sm" variant="outline" onClick={() => void resolveNote(note.id)}>
+              <Button type="button" size="sm" variant="outline" onClick={() => fireAndForget(resolveNote(note.id))}>
                 Markér som løst
               </Button>
             ) : null}

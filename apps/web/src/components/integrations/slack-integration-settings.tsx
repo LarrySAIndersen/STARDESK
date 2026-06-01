@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -102,7 +104,7 @@ export function SlackIntegrationSettings() {
   }, [selectedChannelId]);
 
   useEffect(() => {
-    void loadStatus();
+    fireAndForget(loadStatus());
   }, [loadStatus]);
 
   useEffect(() => {
@@ -120,7 +122,7 @@ export function SlackIntegrationSettings() {
       setChannels([]);
       return;
     }
-    void loadChannels();
+    fireAndForget(loadChannels());
   }, [status?.connected, loadChannels]);
 
   async function saveSettings() {
@@ -231,7 +233,7 @@ export function SlackIntegrationSettings() {
                   type="button"
                   variant="outline"
                   className="rounded-sm"
-                  onClick={() => void loadChannels()}
+                  onClick={() => fireAndForget(loadChannels())}
                   disabled={busy}
                 >
                   Hent kanaler
@@ -276,7 +278,7 @@ export function SlackIntegrationSettings() {
               <Button
                 type="button"
                 className="wire-btn wire-btn-primary"
-                onClick={() => void saveSettings()}
+                onClick={() => fireAndForget(saveSettings())}
                 disabled={busy}
               >
                 {busy ? "Gemmer..." : "Gem indstillinger"}
@@ -285,7 +287,7 @@ export function SlackIntegrationSettings() {
                 type="button"
                 variant="outline"
                 className="rounded-sm"
-                onClick={() => void disconnect()}
+                onClick={() => fireAndForget(disconnect())}
                 disabled={busy}
               >
                 Frakobl Slack

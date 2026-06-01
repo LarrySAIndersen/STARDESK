@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import {
   createContext,
   useCallback,
@@ -197,9 +199,9 @@ export function AssetCatalogProvider({
     if (!syncToDb || !hydrated) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
-      void saveCmdbCatalog(
+      fireAndForget(saveCmdbCatalog(
         toPersisted(rawSystems, extraEdges, removedEdgeIds, deletedAssetIds, metadata),
-      ).catch(() => undefined);
+      ).catch(() => undefined));
     }, 600);
   }, [syncToDb, hydrated, rawSystems, extraEdges, removedEdgeIds, deletedAssetIds, metadata]);
 
@@ -228,7 +230,7 @@ export function AssetCatalogProvider({
       }
       if (!cancelled) setHydrated(true);
     }
-    void hydrate();
+    fireAndForget(hydrate());
     return () => {
       cancelled = true;
     };
@@ -310,10 +312,10 @@ export function AssetCatalogProvider({
           ...prev,
           { id: `e-custom-${subId}`, source: parentId, target: subId },
         ]);
-        void recordAudit("create", "subsystem", subId, name, {
+        fireAndForget(recordAudit("create", "subsystem", subId, name, {
           code,
           parent_system_id: parentId,
-        });
+        }));
         return subId;
       }
 
@@ -328,7 +330,7 @@ export function AssetCatalogProvider({
       };
 
       setRawSystems((prev) => [...prev, system]);
-      void recordAudit("create", "system", sysId, name, { code });
+      fireAndForget(recordAudit("create", "system", sysId, name, { code }));
       return sysId;
     },
     [rawSystems, recordAudit],
@@ -413,10 +415,10 @@ export function AssetCatalogProvider({
       }
 
       if (found) {
-        void recordAudit("update", assetEntityType(assetId), assetId, label, {
+        fireAndForget(recordAudit("update", assetEntityType(assetId), assetId, label, {
           before,
           after,
-        });
+        }));
       }
       return found;
     },
@@ -459,9 +461,9 @@ export function AssetCatalogProvider({
         return next;
       });
 
-      void recordAudit("delete", assetEntityType(assetId), assetId, entityLabel, {
+      fireAndForget(recordAudit("delete", assetEntityType(assetId), assetId, entityLabel, {
         standard: isStandard,
-      });
+      }));
       return true;
     },
     [recordAudit],
@@ -483,10 +485,10 @@ export function AssetCatalogProvider({
         next.delete(edgeId);
         return next;
       });
-      void recordAudit("connection_add", "edge", edgeId, `${sourceId} → ${targetId}`, {
+      fireAndForget(recordAudit("connection_add", "edge", edgeId, `${sourceId} → ${targetId}`, {
         source: sourceId,
         target: targetId,
-      });
+      }));
       return edgeId;
     },
     [allEdges, recordAudit],
@@ -499,7 +501,7 @@ export function AssetCatalogProvider({
       } else {
         setExtraEdges((prev) => prev.filter((e) => e.id !== edgeId));
       }
-      void recordAudit("connection_remove", "edge", edgeId, edgeId);
+      fireAndForget(recordAudit("connection_remove", "edge", edgeId, edgeId));
     },
     [recordAudit],
   );

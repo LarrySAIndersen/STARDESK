@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { FileUp, LayoutDashboard, Shield, Ticket, UserCog } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -46,7 +48,7 @@ export function AdminDashboardPanel({ currentUserRole }: { currentUserRole: User
   }, []);
 
   useEffect(() => {
-    void loadMeta();
+    fireAndForget(loadMeta());
   }, [loadMeta]);
 
   return (

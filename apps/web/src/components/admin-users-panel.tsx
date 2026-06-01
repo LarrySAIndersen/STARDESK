@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AdminUserAddToTeamDialog } from "@/components/admin-user-add-to-team-dialog";
@@ -84,7 +86,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
   }, [search]);
 
   useEffect(() => {
-    void loadList();
+    fireAndForget(loadList());
   }, [loadList]);
 
   useEffect(() => {
@@ -136,10 +138,10 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
     if (membershipBusy) {
       return;
     }
-    void updateMembership(
+    fireAndForget(updateMembership(
       user,
       user.team_ids.filter((id) => id !== teamId),
-    );
+    ));
   };
 
   return (
@@ -224,7 +226,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           teams={teams}
           currentUserRole={currentUserRole}
           onClose={() => setEditingUserId(null)}
-          onSaved={() => void loadList()}
+          onSaved={() => fireAndForget(loadList())}
         />
       ) : null}
 
@@ -233,7 +235,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           user={addingToTeamUser}
           teams={teams}
           onClose={() => setAddingToTeamUser(null)}
-          onSaved={() => void loadList()}
+          onSaved={() => fireAndForget(loadList())}
         />
       ) : null}
 
@@ -244,7 +246,7 @@ export function AdminUsersPanel({ currentUserRole }: { currentUserRole: UserRole
           users={users}
           currentUserRole={currentUserRole}
           onClose={() => setCreatingUser(false)}
-          onCreated={() => void loadList()}
+          onCreated={() => fireAndForget(loadList())}
         />
       ) : null}
 

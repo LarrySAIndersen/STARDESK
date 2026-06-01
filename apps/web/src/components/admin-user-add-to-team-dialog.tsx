@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useId, useState } from "react";
 
 import {
@@ -90,7 +92,7 @@ export function AdminUserAddToTeamDialog({
                 type="button"
                 className="bg-star-blue hover:bg-star-navy"
                 disabled={saving}
-                onClick={() => void onSave()}
+                onClick={() => fireAndForget(onSave())}
               >
                 {saving ? "Gemmer…" : "Tilføj"}
               </Button>

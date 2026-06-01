@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -124,7 +126,7 @@ export function TicketEmailThread({
           type="button"
           className="wire-btn wire-btn-primary"
           disabled={busy || !canSend || !canReply}
-          onClick={() => void sendReply()}
+          onClick={() => fireAndForget(sendReply())}
         >
           {busy ? "Sender..." : "Send e-mail svar"}
         </Button>

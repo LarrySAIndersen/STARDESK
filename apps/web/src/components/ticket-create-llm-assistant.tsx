@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -281,7 +283,7 @@ export function TicketCreateLlmAssistant({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              void sendMessage();
+              fireAndForget(sendMessage());
             }
           }}
           rows={3}
@@ -295,7 +297,7 @@ export function TicketCreateLlmAssistant({
             type="button"
             className="wire-btn wire-btn-primary h-8 px-3 text-xs"
             disabled={disabled || !input.trim()}
-            onClick={() => void sendMessage()}
+            onClick={() => fireAndForget(sendMessage())}
           >
             Send
           </Button>
@@ -398,7 +400,7 @@ export function TicketCreateLlmAssistant({
               variant="outline"
               className="wire-btn h-8 px-3 text-xs"
               disabled={disabled}
-              onClick={() => void regenerateDraft(messages)}
+              onClick={() => fireAndForget(regenerateDraft(messages))}
             >
               Generer igen
             </Button>

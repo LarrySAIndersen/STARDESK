@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { AgentOperationsDashboard } from "@/components/agent-operations-dashboard";
@@ -98,7 +100,7 @@ export function AgentOperationsHome({
                 aria-selected={scope === tab}
                 disabled={loading}
                 onClick={() => {
-                  if (tab !== scope) void loadScope(tab);
+                  if (tab !== scope) fireAndForget(loadScope(tab));
                 }}
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
@@ -114,7 +116,7 @@ export function AgentOperationsHome({
           <ClearFiltersButton
             visible={scope !== initialScope}
             onClick={() => {
-              if (scope !== initialScope) void loadScope(initialScope);
+              if (scope !== initialScope) fireAndForget(loadScope(initialScope));
             }}
           />
         </div>

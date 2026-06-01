@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { LogOut, Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -45,7 +47,7 @@ export function ProjectKanbanBoard() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    fireAndForget(refresh());
   }, [refresh]);
 
   async function handleLogout() {
@@ -138,7 +140,7 @@ export function ProjectKanbanBoard() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => void refresh()}
+            onClick={() => fireAndForget(refresh())}
             className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--accent-soft)]"
           >
             <RefreshCw className="size-3.5" />
@@ -146,7 +148,7 @@ export function ProjectKanbanBoard() {
           </button>
           <button
             type="button"
-            onClick={() => void handleLogout()}
+            onClick={() => fireAndForget(handleLogout())}
             className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm hover:bg-[var(--accent-soft)]"
           >
             <LogOut className="size-3.5" />
@@ -175,7 +177,7 @@ export function ProjectKanbanBoard() {
               onDragLeave={() => {
                 if (dragOverColumnId === column.id) setDragOverColumnId(null);
               }}
-              onDrop={(e) => void handleDrop(column.id, e)}
+              onDrop={(e) => fireAndForget(handleDrop(column.id, e))}
             >
               <header className="border-b border-[var(--border)] px-3 py-2.5">
                 <h2 className="text-sm font-semibold">{column.name}</h2>
@@ -199,7 +201,7 @@ export function ProjectKanbanBoard() {
                     dragging={draggingId === card.id}
                     onDragStart={() => setDraggingId(card.id)}
                     onDragEnd={() => setDraggingId(null)}
-                    onDelete={() => void handleDeleteCard(card.id)}
+                    onDelete={() => fireAndForget(handleDeleteCard(card.id))}
                   />
                 ))}
                 {newCardColumnId === column.id ? (
@@ -211,7 +213,7 @@ export function ProjectKanbanBoard() {
                       className="w-full rounded border border-[var(--border)] px-2 py-1 text-sm"
                       autoFocus
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") void handleAddCard(column.id);
+                        if (e.key === "Enter") fireAndForget(handleAddCard(column.id));
                         if (e.key === "Escape") {
                           setNewCardColumnId(null);
                           setNewCardTitle("");
@@ -222,7 +224,7 @@ export function ProjectKanbanBoard() {
                       <button
                         type="button"
                         className="flex-1 rounded bg-[var(--accent)] px-2 py-1 text-xs text-white"
-                        onClick={() => void handleAddCard(column.id)}
+                        onClick={() => fireAndForget(handleAddCard(column.id))}
                       >
                         Tilføj
                       </button>
@@ -253,7 +255,7 @@ export function ProjectKanbanBoard() {
         })}
         <button
           type="button"
-          onClick={() => void handleAddColumn()}
+          onClick={() => fireAndForget(handleAddColumn())}
           className="flex h-10 w-44 shrink-0 items-center justify-center gap-1 self-start rounded-xl border border-dashed border-[var(--border)] text-sm text-[var(--muted)] hover:border-[var(--accent)]/40 hover:text-[var(--text)]"
         >
           <Plus className="size-4" />
@@ -301,11 +303,11 @@ function CardItem({
         if (didDrag) return;
         const next = window.prompt("Rediger titel:", card.title);
         if (next?.trim() && next.trim() !== card.title) {
-          void fetch("/api/cards", {
+          fireAndForget(fetch("/api/cards", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id: card.id, title: next.trim() }),
-          }).then(() => window.location.reload());
+          }).then(() => window.location.reload()));
         }
       }}
     >

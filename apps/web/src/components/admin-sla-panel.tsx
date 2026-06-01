@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -75,7 +77,7 @@ export function AdminSlaPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    fireAndForget(load());
   }, [load]);
 
   async function savePolicy(policy: SlaPolicy) {
@@ -270,7 +272,7 @@ export function AdminSlaPanel() {
               type="button"
               className="bg-star-navy"
               disabled={savingSettings}
-              onClick={() => void saveSettings()}
+              onClick={() => fireAndForget(saveSettings())}
             >
               {savingSettings ? "Gemmer…" : "Gem driftsregler"}
             </Button>
@@ -400,7 +402,7 @@ export function AdminSlaPanel() {
                 <Button
                   type="button"
                   className="bg-star-navy w-full"
-                  onClick={() => void savePolicy(policy)}
+                  onClick={() => fireAndForget(savePolicy(policy))}
                 >
                   Gem politik
                 </Button>
