@@ -3,7 +3,10 @@ from star_itsm_api.services import user_import
 
 
 def test_normalize_import_role_aliases_danish() -> None:
-    assert user_import.normalize_import_role("sagsbehandler", default_role=ROLE_SUBMITTER) == ROLE_AGENT
+    assert (
+        user_import.normalize_import_role("sagsbehandler", default_role=ROLE_SUBMITTER)
+        == ROLE_AGENT
+    )
     assert user_import.normalize_import_role("", default_role=ROLE_SUBMITTER) == ROLE_SUBMITTER
 
 

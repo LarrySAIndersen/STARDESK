@@ -23,7 +23,8 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketSemanticBundleRead,
 )
 from star_itsm_api.services.ticket_intelligence import EVALUATION_RUBRIC_DA
-from tests.conftest import FAKE_ADMIN
+
+_FAKE_ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000030")
 
 
 def _ticket_read(ticket_id: uuid.UUID | None = None) -> TicketRead:
@@ -36,7 +37,7 @@ def _ticket_read(ticket_id: uuid.UUID | None = None) -> TicketRead:
         status="new",
         priority="medium",
         ticket_type="incident",
-        reporter_user_id=FAKE_ADMIN.id,
+        reporter_user_id=_FAKE_ADMIN_ID,
         created_at=now,
         source="portal",
     )
@@ -68,7 +69,7 @@ def _ticket_row(ticket_id: uuid.UUID | None = None, **kwargs: object) -> SimpleN
         "status": "new",
         "priority": "medium",
         "ticket_type": "incident",
-        "reporter_user_id": FAKE_ADMIN.id,
+        "reporter_user_id": _FAKE_ADMIN_ID,
         "organization_id": None,
         "assigned_team_id": None,
         "assigned_user_id": None,
@@ -395,7 +396,11 @@ async def test_create_comment_success(
 ) -> None:
     ticket_id = uuid.uuid4()
     ticket = _ticket_row(ticket_id)
-    override_db.get = AsyncMock(side_effect=[ticket, FAKE_ADMIN])
+    admin = SimpleNamespace(
+        id=_FAKE_ADMIN_ID,
+        display_name="Admin Bruger",
+    )
+    override_db.get = AsyncMock(side_effect=[ticket, admin])
     override_db.refresh = AsyncMock()
 
     comment_read = CommentRead(
