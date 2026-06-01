@@ -54,14 +54,17 @@ try {
 
   const annaRow = page.getByRole("row", { name: new RegExp(email.replace(".", "\\."), "i") });
   const emailField = page.locator("#email");
+  let didLogin = false;
 
   if (await annaRow.isVisible({ timeout: 8_000 }).catch(() => false)) {
     await annaRow.getByRole("button", { name: "Log ind" }).click();
+    didLogin = true;
     pass("Demo picker quick login");
   } else if (await emailField.isVisible({ timeout: 8_000 }).catch(() => false)) {
     await emailField.fill(email);
     await page.locator("#password").fill(password);
     await page.getByRole("button", { name: "Log ind" }).first().click();
+    didLogin = true;
     pass("Email/password login");
   } else if (await page.getByText(/alle sager/i).isVisible({ timeout: 3_000 }).catch(() => false)) {
     pass("Already authenticated — skipping login");
@@ -71,10 +74,25 @@ try {
     await emailField.fill(email);
     await page.locator("#password").fill(password);
     await page.getByRole("button", { name: "Log ind" }).first().click();
+    didLogin = true;
     pass("Email/password login via /login");
   }
 
-  await page.waitForLoadState("networkidle", { timeout: 60_000 }).catch(() => {});
+  if (didLogin) {
+    await page
+      .waitForResponse(
+        (response) =>
+          response.url().includes("/api/auth/login") &&
+          response.request().method() === "POST" &&
+          response.status() === 200,
+        { timeout: 60_000 },
+      )
+      .catch(() => {});
+    await page.waitForLoadState("domcontentloaded", { timeout: 60_000 }).catch(() => {});
+    await page.waitForTimeout(500);
+  } else {
+    await page.waitForLoadState("networkidle", { timeout: 60_000 }).catch(() => {});
+  }
 
   const banner = page.getByRole("status");
   const bannerText = (await banner.textContent().catch(() => "")) ?? "";
