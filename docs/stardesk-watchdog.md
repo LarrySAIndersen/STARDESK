@@ -9,7 +9,8 @@ Minimal VM watchdog that keeps the Sonar remediation loop and release path healt
 | Sonar loop scheduler | Process dead / no PID file | Restart `scripts/sonar-agent/run-sonar-loop-scheduler.ps1` |
 | Sonar tick freshness | Last tick > 2× interval (60 min) | Run `run-sonar-loop-tick.ps1` |
 | Staging sync | `origin/staging` behind `origin/main` | Log + escalate (no direct push) |
-| Flow-2 prod PR | Open PR `staging`→`main`, CI green | `gh pr merge` (Sonar loop exception) |
+| Staging ahead | `origin/staging` ahead of `origin/main`, no open Flow-2 PR | `gh pr create` staging→main |
+| Flow-2 prod PR | Open PR `staging`→`main` (draft → ready), CI green | `gh pr ready` then `gh pr merge` (release path) |
 | Sonar scan age | Last scan > 2 h, `.env` present | `npm run sonar:pipeline` in `scripts/` |
 
 Repairs are idempotent. No force-push. Secrets are never written to logs.
@@ -63,7 +64,8 @@ pwsh scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 **Auto-fixes (Sonar loop / release path only):**
 
 - Restart stalled scheduler or trigger a tick
-- Merge green Sonar loop PR to `staging` and Flow-2 `staging`→`main` (Sonar loop exception)
+- Create missing Flow-2 PR when `staging` is ahead of `main`
+- Merge green Sonar loop PR to `staging` and Flow-2 `staging`→`main` when CI is green
 - Re-run Sonar pipeline when scan is stale
 
 **Escalates (log only — no auto-fix):**

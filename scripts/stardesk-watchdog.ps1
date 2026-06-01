@@ -141,6 +141,23 @@ function Get-SonarScanAgeHours {
     }
 }
 
+function Get-Flow2PrBody {
+    param([int]$CommitsAhead)
+    $logResult = Invoke-RepoGit -Args @("log", "--oneline", "origin/main..origin/staging")
+    $commitLines = if ($logResult.ok -and $logResult.output) { $logResult.output } else { "(could not list commits)" }
+    return @"
+## Summary
+Auto-created by STARDESK watchdog: ``staging`` is $CommitsAhead commit(s) ahead of ``main`` (production not updated).
+
+## Commits pending prod
+$commitLines
+
+## Test plan
+- [ ] CI green on this PR
+- [ ] Vercel Production (api + web) after merge
+"@
+}
+
 function Test-PrChecksGreen {
     param([int]$PrNumber)
     $checks = & gh pr checks $PrNumber --json name,state,bucket 2>&1 | Out-String
@@ -207,17 +224,30 @@ function Invoke-WatchdogTick {
         }
     }
 
-    # (b) origin/staging behind origin/main?
+    # (b) origin/staging drift vs origin/main
+    $stagingBehindMain = 0
+    $stagingAheadOfMain = 0
     $fetch = Invoke-RepoGit -Args @("fetch", "origin", "main", "staging")
     $results["git_fetch"] = @{ status = if ($fetch.ok) { "ok" } else { "failed" }; detail = $fetch.output }
     if ($fetch.ok) {
         $behindCount = Invoke-RepoGit -Args @("rev-list", "--count", "origin/staging..origin/main")
-        $behind = 0
-        if ($behindCount.ok -and $behindCount.output -match '^\d+$') { $behind = [int]$behindCount.output }
-        $results["staging_sync"] = @{ status = if ($behind -gt 0) { "behind_main" } else { "ok" }; commits_behind = $behind }
-        if ($behind -gt 0) {
-            Write-WatchdogLog "ESCALATE: origin/staging is $behind commit(s) behind origin/main — manual PR sync required (PR-only)" "WARN"
-            $results["staging_sync"].escalate = "staging behind main by $behind commits — Jan or PR sync"
+        if ($behindCount.ok -and $behindCount.output -match '^\d+$') { $stagingBehindMain = [int]$behindCount.output }
+        $aheadCount = Invoke-RepoGit -Args @("rev-list", "--count", "origin/main..origin/staging")
+        if ($aheadCount.ok -and $aheadCount.output -match '^\d+$') { $stagingAheadOfMain = [int]$aheadCount.output }
+        $results["staging_sync"] = @{
+            status         = if ($stagingBehindMain -gt 0) { "behind_main" } else { "ok" }
+            commits_behind = $stagingBehindMain
+        }
+        $results["staging_ahead"] = @{
+            status        = if ($stagingAheadOfMain -gt 0) { "ahead_of_main" } else { "ok" }
+            commits_ahead = $stagingAheadOfMain
+        }
+        if ($stagingBehindMain -gt 0) {
+            Write-WatchdogLog "ESCALATE: origin/staging is $stagingBehindMain commit(s) behind origin/main — manual PR sync required (PR-only)" "WARN"
+            $results["staging_sync"].escalate = "staging behind main by $stagingBehindMain commits — Jan or PR sync"
+        }
+        if ($stagingAheadOfMain -gt 0) {
+            Write-WatchdogLog "staging is $stagingAheadOfMain commit(s) ahead of main — Flow-2 release PR required" "WARN"
         }
     }
 
@@ -264,11 +294,35 @@ function Invoke-WatchdogTick {
                 $prs = @($prList | ConvertFrom-Json)
                 $flow2 = @($prs | Where-Object { $_.headRefName -eq "staging" -or $_.headRefName -like "cursor/sonar*" })
                 if ($flow2.Count -eq 0) {
-                    $results["flow2_pr"] = @{ status = "ok"; detail = "no open staging->main PR" }
+                    if ($stagingAheadOfMain -gt 0 -and $stagingBehindMain -eq 0) {
+                        $results["flow2_pr"] = @{
+                            status        = "missing"
+                            detail        = "staging $stagingAheadOfMain commit(s) ahead of main with no open staging->main PR"
+                            commits_ahead = $stagingAheadOfMain
+                        }
+                        $aheadForBody = $stagingAheadOfMain
+                        $results["flow2_pr"].repair = Invoke-RepairAction -Name "create_flow2_pr" -Action {
+                            $body = Get-Flow2PrBody -CommitsAhead $aheadForBody
+                            $createOut = & gh pr create --base main --head staging --title "Release: staging → main (watchdog)" --body $body 2>&1 | Out-String
+                            if ($LASTEXITCODE -ne 0) { throw $createOut.Trim() }
+                            return $createOut.Trim()
+                        }
+                    } else {
+                        $results["flow2_pr"] = @{
+                            status        = "ok"
+                            detail        = "no open staging->main PR"
+                            commits_ahead = $stagingAheadOfMain
+                        }
+                    }
                 } else {
                     foreach ($pr in $flow2) {
                         if ($pr.isDraft) {
                             $results["flow2_pr"] = @{ status = "draft"; number = $pr.number; title = $pr.title }
+                            $results["flow2_pr"].repair = Invoke-RepairAction -Name "ready_flow2_pr" -Action {
+                                $readyOut = & gh pr ready $pr.number 2>&1 | Out-String
+                                if ($LASTEXITCODE -ne 0) { throw $readyOut.Trim() }
+                                return "marked PR #$($pr.number) ready for review"
+                            }
                             continue
                         }
                         $green = Test-PrChecksGreen -PrNumber $pr.number
