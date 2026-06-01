@@ -3,6 +3,7 @@ import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -34,6 +35,7 @@ _ensure_prototype_bootstrap_password()
 
 import star_itsm_api.db as db_module  # noqa: E402
 from star_itsm_api.core.security import get_current_user, get_current_user_session  # noqa: E402
+from star_itsm_api.deps import require_db  # noqa: E402
 from star_itsm_api.main import app  # noqa: E402
 
 FAKE_ADMIN = SimpleNamespace(
@@ -78,3 +80,29 @@ async def client() -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest.fixture
+def mock_db() -> AsyncMock:
+    session = AsyncMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    session.flush = AsyncMock()
+    return session
+
+
+@pytest.fixture
+def override_db(mock_db: AsyncMock) -> AsyncIterator[AsyncMock]:
+    async def _require_db() -> AsyncMock:
+        return mock_db
+
+    app.dependency_overrides[require_db] = _require_db
+    yield mock_db
+    app.dependency_overrides.pop(require_db, None)
+
+
+@pytest.fixture
+async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as http_client:
+        yield http_client

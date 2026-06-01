@@ -1,14 +1,12 @@
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_TOP_ADMIN, get_current_user
-from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.schemas.ticket import TicketRead
 from star_itsm_api.schemas.user_admin import UserTicketsGroupedRead
@@ -17,29 +15,6 @@ TARGET_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 OTHER_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000088")
 
 
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    session = AsyncMock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    return session
-
-
-@pytest.fixture
-def override_db(mock_db: AsyncMock):
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    yield mock_db
-    app.dependency_overrides.pop(require_db, None)
-
-
-@pytest.fixture
-async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
 
 
 async def _fake_top_admin() -> SimpleNamespace:
