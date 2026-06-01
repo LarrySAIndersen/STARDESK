@@ -72,7 +72,7 @@ Fuld tekst:
 
 ## Database
 
-Migration: `docs/ticket-intelligence-migration.sql`  
+Migration: `apps/api/src/star_itsm_api/sql/migrations/08_ticket-intelligence-migration.sql`  
 Seed-eksempler: `docs/seed-ticket-intelligence.sql`
 
 Kør via `scripts/run_neon_setup.py` (tilføjet til migrations/seeds).

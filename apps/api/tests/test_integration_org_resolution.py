@@ -21,7 +21,7 @@ def _scalar_result(value: object | None) -> MagicMock:
 
 
 
-async def _larry_admin() -> User:
+def _larry_admin() -> User:
     return User(
         id=LARRY_ID,
         email="larrysanders@example.dk",

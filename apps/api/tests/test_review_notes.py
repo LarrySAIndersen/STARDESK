@@ -3,6 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
@@ -52,7 +53,7 @@ async def test_create_review_note_happy_path(
 ) -> None:
     reviewer = _reviewer_user()
 
-    async def _as_reviewer():
+    def _as_reviewer():
         return reviewer
 
     app.dependency_overrides[get_current_user] = _as_reviewer
@@ -60,7 +61,7 @@ async def test_create_review_note_happy_path(
 
     now = datetime.now(UTC)
 
-    async def _fake_create(db, *, payload, author):  # noqa: ANN001
+    def _fake_create(db, *, payload, author):  # noqa: ANN001
         assert payload.page_path == "/tickets"
         assert author.role == ROLE_STARDESK_REVIEWER
         from star_itsm_api.schemas.review_note import ReviewNoteRead
@@ -81,7 +82,11 @@ async def test_create_review_note_happy_path(
             updated_at=now,
         )
 
-    monkeypatch.setattr(review_notes_service, "create_review_note", _fake_create)
+    monkeypatch.setattr(
+        review_notes_service,
+        "create_review_note",
+        AsyncMock(side_effect=_fake_create),
+    )
 
     response = await api_client.post(
         "/api/v1/review-notes",
@@ -104,7 +109,7 @@ async def test_create_review_note_happy_path(
 async def test_create_review_note_forbidden_for_agent(api_client: AsyncClient) -> None:
     agent = _agent_user()
 
-    async def _as_agent():
+    def _as_agent():
         return agent
 
     app.dependency_overrides[get_current_user] = _as_agent
@@ -130,13 +135,13 @@ async def test_list_review_notes_for_staff(
 ) -> None:
     agent = _agent_user()
 
-    async def _as_agent():
+    def _as_agent():
         return agent
 
     app.dependency_overrides[get_current_user] = _as_agent
     app.dependency_overrides[get_current_user_session] = _as_agent
 
-    async def _fake_list(db, *, page_path=None, status=None):  # noqa: ANN001
+    def _fake_list(db, *, page_path=None, status=None):  # noqa: ANN001
         from star_itsm_api.schemas.review_note import ReviewNoteRead
 
         now = datetime.now(UTC)
@@ -158,7 +163,11 @@ async def test_list_review_notes_for_staff(
             )
         ]
 
-    monkeypatch.setattr(review_notes_service, "list_review_notes", _fake_list)
+    monkeypatch.setattr(
+        review_notes_service,
+        "list_review_notes",
+        AsyncMock(side_effect=_fake_list),
+    )
 
     response = await api_client.get("/api/v1/review-notes")
     assert response.status_code == 200

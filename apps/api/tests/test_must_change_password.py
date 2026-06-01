@@ -41,10 +41,10 @@ async def authed_client(
 ) -> AsyncIterator[AsyncClient]:
     monkeypatch.setattr(settings, "jwt_secret", "test-jwt-secret-for-must-change-32")
 
-    async def _fake_session() -> User:
+    def _fake_session() -> User:
         return pending_user
 
-    async def _fake_db() -> AsyncMock:
+    def _fake_db() -> AsyncMock:
         db = AsyncMock()
         db.get = AsyncMock(return_value=pending_user)
         empty_rows = MagicMock()

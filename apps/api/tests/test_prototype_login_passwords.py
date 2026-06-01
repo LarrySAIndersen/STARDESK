@@ -54,25 +54,26 @@ async def repair_login_client(
         "test-jwt-secret-for-login-tests-only-32",
     )
 
-    async def _fake_get_user_by_email(_db: object, email: str) -> User | None:
+    def _fake_get_user_by_email(_db: object, email: str) -> User | None:
         return users.get(email)
 
-    async def _fake_db() -> AsyncMock:
+    def _fake_db() -> AsyncMock:
         return AsyncMock()
 
-    async def _noop_login_side_effects(_db: object, _user: User) -> None:
-        return None
-
-    monkeypatch.setattr(auth_router, "get_user_by_email", _fake_get_user_by_email)
+    monkeypatch.setattr(
+        auth_router,
+        "get_user_by_email",
+        AsyncMock(side_effect=_fake_get_user_by_email),
+    )
     monkeypatch.setattr(
         auth_router,
         "enforce_sole_top_admin_on_login",
-        _noop_login_side_effects,
+        AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
         auth_router,
         "ensure_prototype_staff_account",
-        _noop_login_side_effects,
+        AsyncMock(return_value=None),
     )
     app.dependency_overrides[require_db] = _fake_db
     transport = ASGITransport(app=app)

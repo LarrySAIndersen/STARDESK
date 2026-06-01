@@ -156,7 +156,7 @@ async def _require_edit_access(
     return my_role
 
 
-async def _ticket_in_board_scope(board: KanbanBoard, ticket: Ticket) -> bool:
+def _ticket_in_board_scope(board: KanbanBoard, ticket: Ticket) -> bool:
     if board.team_id is None:
         return True
     return ticket.assigned_team_id == board.team_id
@@ -558,7 +558,7 @@ async def add_card(
         visible = (await db.execute(stmt)).scalar_one_or_none()
         if visible is None:
             raise PermissionError("ticket_forbidden")
-        if not await _ticket_in_board_scope(board, ticket):
+        if not _ticket_in_board_scope(board, ticket):
             raise PermissionError("ticket_out_of_scope")
         existing = (
             await db.execute(
