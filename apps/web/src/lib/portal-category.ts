@@ -4,13 +4,21 @@ import type { Ticket } from "@/types/ticket";
 
 /** URL slug from Danish category name. */
 export function categorySlugFromName(nameDa: string): string {
-  return nameDa
+  const normalized = nameDa
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/&/g, "og")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[^a-z0-9]+/g, "-");
+  return trimEdgeChar(normalized, "-");
+}
+
+function trimEdgeChar(value: string, ch: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === ch) start += 1;
+  while (end > start && value[end - 1] === ch) end -= 1;
+  return value.slice(start, end);
 }
 
 export function findCategoryBySlug(

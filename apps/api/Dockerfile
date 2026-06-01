@@ -11,6 +11,12 @@ COPY apps/api/src ./src
 
 RUN pip install --no-cache-dir .
 
+RUN groupadd --system --gid 1001 stardesk \
+  && useradd --system --uid 1001 --gid stardesk --home-dir /app stardesk \
+  && chown -R stardesk:stardesk /app
+
+USER stardesk
+
 ENV PORT=8000
 EXPOSE 8000
 
