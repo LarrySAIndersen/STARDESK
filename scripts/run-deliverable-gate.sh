@@ -32,10 +32,16 @@ resolve_prototype_demo_password() {
   if [[ -n "${TEST_USER_PASSWORD:-}" ]]; then
     return 0
   fi
-  export TEST_USER_PASSWORD="$(
-    cd "$ROOT/apps/api" && uv run python -c \
-      "from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD; print(PROTOTYPE_BOOTSTRAP_PASSWORD, end='')"
-  )"
+  cd "$ROOT/apps/api"
+  set -a
+  # shellcheck disable=SC1091
+  [[ -f .env ]] && source .env
+  set +a
+  if [[ -z "${PROTOTYPE_BOOTSTRAP_PASSWORD:-}" ]]; then
+    echo "PROTOTYPE_BOOTSTRAP_PASSWORD missing in apps/api/.env (see .env.development.example)" >&2
+    exit 1
+  fi
+  export TEST_USER_PASSWORD="${PROTOTYPE_BOOTSTRAP_PASSWORD}"
 }
 
 echo "=============================================="

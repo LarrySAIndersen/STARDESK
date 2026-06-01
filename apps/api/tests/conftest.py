@@ -1,8 +1,32 @@
+import os
 import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+
+def _load_prototype_bootstrap_password_from_dotenv() -> None:
+    if os.environ.get("PROTOTYPE_BOOTSTRAP_PASSWORD"):
+        return
+    env_file = Path(__file__).resolve().parents[1] / ".env"
+    if not env_file.is_file():
+        return
+    for raw in env_file.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        if key.strip() != "PROTOTYPE_BOOTSTRAP_PASSWORD":
+            continue
+        cleaned = value.strip().strip('"').strip("'")
+        if cleaned:
+            os.environ["PROTOTYPE_BOOTSTRAP_PASSWORD"] = cleaned
+        return
+
+
+_load_prototype_bootstrap_password_from_dotenv()
 from httpx import ASGITransport, AsyncClient
 
 import star_itsm_api.db as db_module

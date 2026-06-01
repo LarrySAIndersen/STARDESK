@@ -14,21 +14,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveCanvasDataPath } from "./resolve-canvas-data-path.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const REPORTS_DIR = path.join(REPO_ROOT, "reports");
 const CANVAS_STATE_KEY = "stardesk-sonar-agent-v1";
 const DEFAULT_TICK_INTERVAL_MINUTES = 30;
-
-const home = process.env.USERPROFILE || process.env.HOME || "";
-const defaultCanvasDataPath = path.join(
-  home,
-  ".cursor",
-  "projects",
-  "c-Users-kjaer-STARDESK-Cursor",
-  "canvases",
-  "stardesk-sonar-agent.canvas.data.json",
-);
 
 function readJson(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -82,14 +74,18 @@ export function buildSchedulerStatus(options = {}) {
 
   const lastTickFile = path.join(REPORTS_DIR, "sonar-loop-last-tick.json");
   const pidFile = path.join(REPORTS_DIR, "sonar-loop-scheduler.pid");
+  const watchdogPidFile = path.join(REPORTS_DIR, "sonar-scheduler-watchdog.pid");
   const watchdogFile = path.join(REPORTS_DIR, "watchdog-latest.json");
   const sonarReportFile = path.join(REPORTS_DIR, "sonar-agent-latest.json");
 
   const lastTick = readJson(lastTickFile);
   const lastTickAt = lastTick?.at ?? null;
   const schedulerPid = readPid(pidFile) ?? (typeof lastTick?.pid === "number" ? lastTick.pid : null);
+  const schedulerWatchdogPid = readPid(watchdogPidFile);
 
   const pidAlive = schedulerPid != null && isProcessAlive(schedulerPid);
+  const schedulerWatchdogAlive =
+    schedulerWatchdogPid != null && isProcessAlive(schedulerWatchdogPid);
   const tickAge = ageMinutes(lastTickAt);
   const tickFresh =
     tickAge != null && tickAge <= tickIntervalMinutes * 2 + 5;
@@ -110,6 +106,8 @@ export function buildSchedulerStatus(options = {}) {
   return {
     schedulerRunning,
     schedulerPid: schedulerPid ?? null,
+    schedulerWatchdogRunning: schedulerWatchdogAlive,
+    schedulerWatchdogPid: schedulerWatchdogPid ?? null,
     lastTickAt,
     nextTickAt: lastTickAt ? addMinutes(lastTickAt, tickIntervalMinutes) : null,
     tickIntervalMinutes,
@@ -121,7 +119,7 @@ export function buildSchedulerStatus(options = {}) {
 }
 
 export function syncSchedulerToCanvas(options = {}) {
-  const canvasDataPath = options.canvasDataPath || process.env.SONAR_CANVAS_DATA_PATH || defaultCanvasDataPath;
+  const canvasDataPath = options.canvasDataPath || resolveCanvasDataPath();
   const schedulerStatus = buildSchedulerStatus(options);
 
   const canvasData = readJson(canvasDataPath) ?? {};
