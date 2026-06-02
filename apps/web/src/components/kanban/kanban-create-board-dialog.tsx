@@ -3,6 +3,10 @@
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,17 +99,12 @@ export function KanbanCreateBoardDialog({
   const selectedTemplate = KANBAN_BOARD_TEMPLATES.find((t) => t.id === template);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={handleClose}
-    >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-labelledby={titleId}
+    <AccessibleModalBackdrop onClose={handleClose}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={handleClose}
         className="ledger-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.key === "Escape" && handleClose()}
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -241,7 +240,7 @@ export function KanbanCreateBoardDialog({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }

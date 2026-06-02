@@ -98,11 +98,11 @@ def resolve_avatar_file(user_id: uuid.UUID) -> Path | None:
 def resolve_avatar_media_type(path: Path) -> str:
     suffix = path.suffix.lower()
     return {
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".png": "image/png",
-        ".gif": "image/gif",
-        ".webp": "image/webp",
+        ".jpg": MIME_JPEG,
+        ".jpeg": MIME_JPEG,
+        ".png": MIME_PNG,
+        ".gif": MIME_GIF,
+        ".webp": MIME_WEBP,
     }.get(suffix, "application/octet-stream")
 
 

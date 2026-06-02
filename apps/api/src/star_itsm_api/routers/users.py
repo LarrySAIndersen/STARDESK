@@ -144,7 +144,7 @@ async def import_users(
     return await import_users_admin(
         db,
         payload=payload,
-        actor_role=current_user.role,
+        _actor_role=current_user.role,
     )
 
 
