@@ -54,6 +54,7 @@ def text_contains_cpr(text: str) -> bool:
 
 def assert_no_cpr_outside_field(*, subject_cpr: str | None, title: str, description: str) -> None:
     """CPR must only be entered in the dedicated field."""
+    _ = subject_cpr
     for label, content in (("titel", title), ("beskrivelse", description)):
         if text_contains_cpr(content):
             raise ValueError(

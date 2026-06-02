@@ -11,8 +11,6 @@ from star_itsm_api.main import app
 ASSIGNEE_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 
 
-
-
 def _fake_top_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),

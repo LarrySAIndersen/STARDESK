@@ -142,7 +142,6 @@ async def create_knowledge_article(
 
 
 def promote_ticket_to_knowledge(
-    db: AsyncSession,
     ticket: Ticket,
     *,
     knowledge_status: str,

@@ -54,9 +54,8 @@ async def apply_routing(
             continue
         if rule.subcategory_id and rule.subcategory_id != subcategory_id:
             continue
-        if rule.min_priority:
-            if PRIORITY_ORDER[priority] < PRIORITY_ORDER[rule.min_priority]:
-                continue
+        if rule.min_priority and PRIORITY_ORDER[priority] < PRIORITY_ORDER[rule.min_priority]:
+            continue
         return RoutingResult(
             assigned_team_id=rule.assign_team_id,
             assigned_user_id=rule.assign_user_id,

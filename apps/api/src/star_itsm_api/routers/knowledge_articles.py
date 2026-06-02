@@ -108,7 +108,7 @@ async def update_article(
     article_id: uuid.UUID,
     payload: KnowledgeArticleUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_staff()),
+    _current_user: User = Depends(require_staff()),
 ) -> KnowledgeArticleRead:
     ticket = await get_knowledge_article(db, article_id)
     if ticket is None:
@@ -148,7 +148,6 @@ async def promote_from_ticket(
         raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     try:
         promote_ticket_to_knowledge(
-            db,
             ticket,
             knowledge_status=payload.knowledge_status,
             knowledge_visibility=payload.knowledge_visibility,

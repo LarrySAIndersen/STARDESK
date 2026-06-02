@@ -34,9 +34,10 @@ def filter_tickets_by_sla(
         if sla == "overdue":
             if sla_breached(resolution_due, now=reference, status=ticket.status):
                 filtered.append(ticket)
-        elif sla == "due_soon":
-            if sla_due_soon(resolution_due, now=reference, status=ticket.status):
-                filtered.append(ticket)
+        elif sla == "due_soon" and sla_due_soon(
+            resolution_due, now=reference, status=ticket.status
+        ):
+            filtered.append(ticket)
     return filtered
 
 
