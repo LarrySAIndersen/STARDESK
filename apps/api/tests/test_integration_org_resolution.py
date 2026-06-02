@@ -19,6 +19,12 @@ def _scalar_result(value: object | None) -> MagicMock:
     return result
 
 
+def _rows_result(rows: list[tuple[object, ...]]) -> MagicMock:
+    result = MagicMock()
+    result.all.return_value = rows
+    return result
+
+
 def _larry_admin() -> User:
     return User(
         id=LARRY_ID,
@@ -36,7 +42,9 @@ async def test_slack_status_admin_without_user_org(
     api_client: AsyncClient,
 ) -> None:
     app.dependency_overrides[get_current_user] = _larry_admin
-    override_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
+    override_db.execute = AsyncMock(
+        return_value=_rows_result([(SF_OPS_ORG_ID, "SF Operations")]),
+    )
     try:
         with patch(
             "star_itsm_api.routers.slack.get_slack_integration",
@@ -56,7 +64,9 @@ async def test_gmail_status_admin_without_user_org(
     api_client: AsyncClient,
 ) -> None:
     app.dependency_overrides[get_current_user] = _larry_admin
-    override_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
+    override_db.execute = AsyncMock(
+        return_value=_rows_result([(SF_OPS_ORG_ID, "SF Operations")]),
+    )
     try:
         with patch(
             "star_itsm_api.routers.gmail.get_email_integration",
@@ -79,7 +89,7 @@ async def test_integration_scope_admin_without_user_org(
 
     override_db.execute = AsyncMock(
         side_effect=[
-            _scalar_result(SF_OPS_ORG_ID),
+            _rows_result([(SF_OPS_ORG_ID, "SF Operations")]),
             _scalar_result("SF Operations"),
         ],
     )
@@ -99,7 +109,9 @@ async def test_slack_oauth_start_missing_oauth_config_returns_503(
     api_client: AsyncClient,
 ) -> None:
     app.dependency_overrides[get_current_user] = _larry_admin
-    override_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
+    override_db.execute = AsyncMock(
+        return_value=_rows_result([(SF_OPS_ORG_ID, "SF Operations")]),
+    )
     try:
         response = await api_client.get("/api/v1/integrations/slack/oauth/start")
         assert response.status_code == 503
@@ -115,7 +127,9 @@ async def test_slack_oauth_start_admin_without_user_org(
     api_client: AsyncClient,
 ) -> None:
     app.dependency_overrides[get_current_user] = _larry_admin
-    override_db.execute = AsyncMock(return_value=_scalar_result(SF_OPS_ORG_ID))
+    override_db.execute = AsyncMock(
+        return_value=_rows_result([(SF_OPS_ORG_ID, "SF Operations")]),
+    )
     try:
         with (
             patch(

@@ -73,7 +73,7 @@ from star_itsm_api.services.dashboard_scope import (
     apply_dashboard_scope_stmt,
     parse_dashboard_scope,
 )
-from star_itsm_api.services.db_resilience import rollback_session
+from star_itsm_api.services.db_resilience import optional_db_read
 from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
 from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
@@ -138,6 +138,7 @@ from star_itsm_api.services.ticket_notifications import (
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
 from star_itsm_api.services.ticket_privacy import ticket_sensitive_fields
 from star_itsm_api.services.ticket_read import (
+    load_user_display_names,
     resolve_reporter_display_name,
     ticket_to_detail_read,
     ticket_to_read,
@@ -207,10 +208,12 @@ async def _comment_to_read(
     comment: TicketComment,
     *,
     hide_internal: bool,
+    author_names: dict[uuid.UUID, str] | None = None,
 ) -> CommentRead | None:
     if hide_internal and comment.is_internal:
         return None
-    author = await db.get(User, comment.author_user_id)
+    if author_names is None:
+        author_names = await load_user_display_names(db, {comment.author_user_id})
     visibility = "internal" if comment.is_internal else "external"
     return CommentRead(
         id=comment.id,
@@ -218,9 +221,39 @@ async def _comment_to_read(
         is_internal=comment.is_internal,
         visibility=visibility,
         visibility_label_da="Intern" if comment.is_internal else "Ekstern (kundeportal)",
-        author_display_name=author.display_name if author else "Ukendt",
+        author_display_name=author_names.get(comment.author_user_id, "Ukendt"),
         created_at=comment.created_at,
     )
+
+
+async def _comments_to_read(
+    db: AsyncSession,
+    comments: list[TicketComment],
+    *,
+    hide_internal: bool,
+) -> list[CommentRead]:
+    visible = [c for c in comments if not (hide_internal and c.is_internal)]
+    if not visible:
+        return []
+    author_names = await load_user_display_names(
+        db,
+        {comment.author_user_id for comment in visible},
+    )
+    reads: list[CommentRead] = []
+    for comment in visible:
+        visibility = "internal" if comment.is_internal else "external"
+        reads.append(
+            CommentRead(
+                id=comment.id,
+                body=comment.body,
+                is_internal=comment.is_internal,
+                visibility=visibility,
+                visibility_label_da="Intern" if comment.is_internal else "Ekstern (kundeportal)",
+                author_display_name=author_names.get(comment.author_user_id, "Ukendt"),
+                created_at=comment.created_at,
+            )
+        )
+    return reads
 
 
 @router.get("")
@@ -578,6 +611,10 @@ async def _get_ticket_detail(
         raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
     await _ensure_ticket_access(db, ticket, current_user)
 
+    # Snapshot scalars before optional reads — rollback/savepoint must not lazy-load ORM state.
+    reporter_user_id = ticket.reporter_user_id
+    organization_id = ticket.organization_id
+
     comments_result = await db.execute(
         select(TicketComment)
         .where(
@@ -587,72 +624,68 @@ async def _get_ticket_detail(
         .order_by(TicketComment.created_at.asc())
     )
     hide_internal = current_user.role == ROLE_SUBMITTER
-    comments: list[CommentRead] = []
-    for comment in comments_result.scalars().all():
-        read = await _comment_to_read(db, comment, hide_internal=hide_internal)
-        if read is not None:
-            comments.append(read)
+    comments = await _comments_to_read(
+        db,
+        list(comments_result.scalars().all()),
+        hide_internal=hide_internal,
+    )
     comment_ids = [c.id for c in comments]
-    try:
-        reaction_map = await load_reaction_summaries(
+    reaction_map = await optional_db_read(
+        db,
+        lambda: load_reaction_summaries(
             db,
             comment_ids,
             current_user_id=current_user.id,
-        )
-    except Exception:
-        logger.warning("Could not load comment reactions for ticket %s", ticket_id, exc_info=True)
-        await rollback_session(db)
-        reaction_map = {}
+        ),
+        default={},
+        log_message=f"Could not load comment reactions for ticket {ticket_id}",
+    )
     comments = apply_reaction_summaries(comments, reaction_map)
 
-    try:
-        team_name, user_name = await _assignment_names(db, ticket)
-    except Exception:
-        logger.warning("Could not load assignment names for ticket %s", ticket_id, exc_info=True)
-        await rollback_session(db)
-        team_name, user_name = None, None
+    team_name, user_name = await optional_db_read(
+        db,
+        lambda: _assignment_names(db, ticket),
+        default=(None, None),
+        log_message=f"Could not load assignment names for ticket {ticket_id}",
+    )
 
     attachments = await list_ticket_attachments_for_detail(
         db,
         ticket_id,
         current_user,
-        reporter_user_id=ticket.reporter_user_id,
+        reporter_user_id=reporter_user_id,
     )
-    try:
-        ticket_emails_rows = await list_ticket_emails(db, ticket_id=ticket_id)
-        ticket_emails = [
-            {
-                "id": row.id,
-                "direction": row.direction,
-                "subject": row.subject,
-                "from_email": row.from_email,
-                "to_email": row.to_email,
-                "body_text": row.body_text,
-                "received_at": row.received_at,
-            }
-            for row in ticket_emails_rows
-        ]
-    except Exception:
-        logger.warning("Could not load ticket emails for ticket %s", ticket_id, exc_info=True)
-        await rollback_session(db)
-        ticket_emails = []
+    ticket_emails_rows = await optional_db_read(
+        db,
+        lambda: list_ticket_emails(db, ticket_id=ticket_id),
+        default=[],
+        log_message=f"Could not load ticket emails for ticket {ticket_id}",
+    )
+    ticket_emails = [
+        {
+            "id": row.id,
+            "direction": row.direction,
+            "subject": row.subject,
+            "from_email": row.from_email,
+            "to_email": row.to_email,
+            "body_text": row.body_text,
+            "received_at": row.received_at,
+        }
+        for row in ticket_emails_rows
+    ]
 
     integration_email = None
-    if ticket.organization_id:
-        try:
-            integration = await get_gmail_integration(db, organization_id=ticket.organization_id)
-            integration_email = integration.connected_email if integration else None
-        except Exception:
-            logger.warning(
-                "Could not load Gmail integration for ticket %s",
-                ticket_id,
-                exc_info=True,
-            )
-            await rollback_session(db)
-            integration_email = None
+    if organization_id:
+        integration = await optional_db_read(
+            db,
+            lambda: get_gmail_integration(db, organization_id=organization_id),
+            default=None,
+            log_message=f"Could not load Gmail integration for ticket {ticket_id}",
+        )
+        integration_email = integration.connected_email if integration else None
     activity = await build_ticket_activity(db, ticket, current_user)
     stakeholders = await get_ticket_stakeholders_grouped(db, ticket_id)
-    reporter_display_name = await resolve_reporter_display_name(db, ticket.reporter_user_id)
+    reporter_display_name = await resolve_reporter_display_name(db, reporter_user_id)
     intelligence = None
     if is_staff(current_user):
         try:
@@ -687,7 +720,7 @@ async def _get_ticket_detail(
             "timestamps": ticket_timestamps_read(ticket),
             "activity": activity,
             "stakeholders": stakeholders,
-            "reporter_user_id": ticket.reporter_user_id,
+            "reporter_user_id": reporter_user_id,
             "reporter_display_name": reporter_display_name,
             **ticket_sensitive_fields(ticket, current_user),
         },

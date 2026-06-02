@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from star_itsm_api.core.config import settings
+from star_itsm_api.db import normalize_database_url
 from star_itsm_api.models import Base
 
 config = context.config
@@ -15,7 +16,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 if settings.database_url:
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(settings.database_url))
 
 target_metadata = Base.metadata
 
