@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
@@ -17,6 +18,7 @@ export function WireframeTicketTable({
   draggable = false,
   onRowClick,
   onDragStart,
+  onDragEnd,
   className,
   columnFilters,
 }: {
@@ -24,11 +26,14 @@ export function WireframeTicketTable({
   draggable?: boolean;
   onRowClick?: (ticket: Ticket) => void;
   onDragStart?: (ticket: Ticket, event: React.DragEvent) => void;
+  onDragEnd?: (ticket: Ticket) => void;
   className?: string;
   /** Replaces static column headers (e.g. filter/sort row). */
   columnFilters?: ReactNode;
 }) {
   const router = useRouter();
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const didDragRef = useRef(false);
 
   if (tickets.length === 0) {
     return <p className="text-[var(--gray-mid)] text-sm">Ingen sager at vise.</p>;
@@ -55,13 +60,26 @@ export function WireframeTicketTable({
           className={cn(
             "wire-table-row wire-table-grid-tickets",
             draggable && "cursor-grab active:cursor-grabbing",
+            draggingId === ticket.id && "wire-table-row--dragging",
           )}
           draggable={draggable}
           onDragStart={(e) => {
+            didDragRef.current = true;
+            setDraggingId(ticket.id);
             setTicketDragData(e, ticket.id);
             onDragStart?.(ticket, e);
           }}
+          onDragEnd={() => {
+            setDraggingId(null);
+            onDragEnd?.(ticket);
+            window.setTimeout(() => {
+              didDragRef.current = false;
+            }, 0);
+          }}
           onClick={() => {
+            if (didDragRef.current) {
+              return;
+            }
             if (onRowClick) {
               onRowClick(ticket);
             } else {
@@ -69,8 +87,12 @@ export function WireframeTicketTable({
             }
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              router.push(`/tickets/${ticket.id}`);
+            if (e.key === "Enter" && !didDragRef.current) {
+              if (onRowClick) {
+                onRowClick(ticket);
+              } else {
+                router.push(`/tickets/${ticket.id}`);
+              }
             }
           }}
         >

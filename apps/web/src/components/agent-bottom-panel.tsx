@@ -7,6 +7,7 @@ import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { DRAG_TYPE } from "@/components/wireframe/wireframe-ticket-table";
 import { WireTags } from "@/components/wireframe/wire-tags";
 import { apiPatch } from "@/lib/api";
+import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
 import { routingConfidenceForAssign } from "@/lib/ticket-routing";
 import {
   confidenceColor,
@@ -16,7 +17,7 @@ import {
 import { RoutingReadinessBanner } from "@/components/routing-readiness-banner";
 import { cn } from "@/lib/utils";
 import type { Team, TeamMember } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 type TabId = "teams" | "content" | "slack";
 
@@ -82,11 +83,16 @@ export function AgentBottomPanel({
   teams,
   slackTabRequest = 0,
   selectedTicket = null,
+  draggingTicket = null,
+  onTicketAssigned,
 }: {
   tickets: Ticket[];
   teams: Team[];
   slackTabRequest?: number;
   selectedTicket?: Ticket | null;
+  /** Active drag from Seneste sager — drives AI ghost overlay and drop targets. */
+  draggingTicket?: Ticket | null;
+  onTicketAssigned?: (detail: TicketDetail) => void;
 }) {
   const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -106,7 +112,7 @@ export function AgentBottomPanel({
   const [assignOpen, setAssignOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const dragTicketRef = useRef<Ticket | null>(null);
+  const [assignedByTech, setAssignedByTech] = useState<Map<string, Ticket[]>>(new Map());
 
   const technicians = useMemo(() => buildTechnicians(teams), [teams]);
   const ticketMap = useMemo(
@@ -126,6 +132,15 @@ export function AgentBottomPanel({
     setSelected(selectedTicket);
   }, [selectedTicket]);
 
+  useEffect(() => {
+    if (!draggingTicket) {
+      return;
+    }
+    setTab("teams");
+    setPanelOpen(true);
+    setHeight((h) => (h < 120 ? 220 : h));
+  }, [draggingTicket]);
+
   const togglePanel = () => {
     if (panelOpen) {
       setHeight(37);
@@ -138,19 +153,18 @@ export function AgentBottomPanel({
 
   useEffect(() => {
     function onDragOver(e: DragEvent) {
-      if (!dragTicketRef.current) return;
+      if (!draggingTicket) return;
       e.preventDefault();
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const card = el?.closest("[data-tech-key]") as HTMLElement | null;
       const key = card?.dataset.techKey ?? null;
       const target = key ? technicians.find((t) => t.key === key) ?? null : null;
-      const conf =
-        dragTicketRef.current && target
-          ? routingConfidenceForAssign(dragTicketRef.current, target.key, teams)
-          : 0;
+      const conf = target
+        ? routingConfidenceForAssign(draggingTicket, target.key, teams)
+        : 0;
       setHoverKey(key);
       setGhost({
-        ticket: dragTicketRef.current,
+        ticket: draggingTicket,
         x: e.clientX + 16,
         y: e.clientY - 30,
         target,
@@ -158,7 +172,6 @@ export function AgentBottomPanel({
       });
     }
     function onDragEnd() {
-      dragTicketRef.current = null;
       setGhost(null);
       setHoverKey(null);
     }
@@ -170,14 +183,14 @@ export function AgentBottomPanel({
       window.removeEventListener("dragend", onDragEnd);
       window.removeEventListener("drop", onDragEnd);
     };
-  }, [technicians, teams]);
+  }, [draggingTicket, technicians, teams]);
 
   const handleTechDrop = useCallback(
     (target: TechTarget) => (e: React.DragEvent) => {
       e.preventDefault();
       const id = readTicketId(e.dataTransfer);
-      const ticket = ticketMap.get(id) ?? dragTicketRef.current;
-      dragTicketRef.current = null;
+      const ticket =
+        (id ? ticketMap.get(id) : null) ?? draggingTicket ?? null;
       setGhost(null);
       setHoverKey(null);
       if (!ticket) return;
@@ -185,7 +198,7 @@ export function AgentBottomPanel({
       setPending({ ticket, target, confidence });
       setAssignOpen(true);
     },
-    [ticketMap, teams],
+    [ticketMap, teams, draggingTicket],
   );
 
   async function confirmAssignment(data: {
@@ -197,12 +210,28 @@ export function AgentBottomPanel({
     setSaving(true);
     setError(null);
     try {
-      await apiPatch(`/api/v1/tickets/${pending.ticket.id}/assignment`, {
-        assigned_team_id: data.teamId,
-        assigned_user_id: pending.target.key,
-        assignment_reason: data.reason,
-        fault_displayed: data.faultDisplayed,
+      const detail = await apiPatch<TicketDetail>(
+        `/api/v1/tickets/${pending.ticket.id}/assignment`,
+        {
+          assigned_team_id: data.teamId,
+          assigned_user_id: pending.target.key,
+          assignment_reason: data.reason,
+          fault_displayed: data.faultDisplayed,
+        },
+      );
+      const merged = mergeTicketAssignmentFromDetail(pending.ticket, detail);
+      setAssignedByTech((prev) => {
+        const next = new Map(prev);
+        const list = next.get(pending.target.key) ?? [];
+        next.set(
+          pending.target.key,
+          [merged, ...list.filter((t) => t.id !== merged.id)].slice(0, 5),
+        );
+        return next;
       });
+      setSelected(merged);
+      setTab("content");
+      onTicketAssigned?.(detail);
       setAssignOpen(false);
       setPending(null);
       router.refresh();
@@ -311,6 +340,7 @@ export function AgentBottomPanel({
                     const conf =
                       ghost?.target?.key === tech.key ? ghost.confidence : 0;
                     const dropOk = conf >= 50;
+                    const assignedTickets = assignedByTech.get(tech.key) ?? [];
                     return (
                       <div
                         key={tech.key}
@@ -318,13 +348,14 @@ export function AgentBottomPanel({
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={handleTechDrop(tech)}
                         className={cn(
-                          "relative mb-1 flex items-center gap-2 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2 transition-all",
+                          "relative mb-1 flex flex-col gap-1 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2 transition-all",
                           isHover &&
                             (dropOk
                               ? "border-[#1A7A44] bg-[#E6F5EC] ring-2 ring-[#1A7A44]/20"
                               : "border-star-red bg-star-red-light ring-2 ring-star-red/20"),
                         )}
                       >
+                        <div className="flex items-center gap-2">
                         {isHover ? (
                           <span
                             className={cn(
@@ -360,6 +391,23 @@ export function AgentBottomPanel({
                             {tech.loadPct}%
                           </p>
                         </div>
+                        </div>
+                        {assignedTickets.length > 0 ? (
+                          <ul className="border-t border-[var(--gray-border)] pt-1.5">
+                            {assignedTickets.map((ticket) => (
+                              <li
+                                key={ticket.id}
+                                className="truncate text-[10px] font-medium text-star-navy"
+                                title={`${ticket.ticket_number} ${ticket.title}`}
+                              >
+                                <span className="font-mono">{ticket.ticket_number}</span>
+                                <span className="text-muted-foreground ml-1 font-normal">
+                                  {ticket.title}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
                     );
                   })}
