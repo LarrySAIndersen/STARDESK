@@ -45,10 +45,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/star_itsm_api"]
-
-[tool.hatch.build.targets.wheel.force-include]
-# Single tree — do not also force-include sql/migrations (duplicate wheel paths).
-"src/star_itsm_api/sql" = "star_itsm_api/sql"
+# SQL migrations live under the package tree; do not force-include (duplicate wheel paths).
 
 [tool.vercel]
 entrypoint = "star_itsm_api.main:app"
