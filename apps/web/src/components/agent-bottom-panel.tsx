@@ -1,13 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
-import { DRAG_TYPE } from "@/components/wireframe/wireframe-ticket-table";
 import { WireTags } from "@/components/wireframe/wire-tags";
 import { apiPatch } from "@/lib/api";
 import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
+import { readDraggedTicketId } from "@/lib/ticket-drag";
+import { isOpenTicket } from "@/lib/service-desk-queue";
 import { routingConfidenceForAssign } from "@/lib/ticket-routing";
 import {
   confidenceColor,
@@ -74,8 +74,27 @@ function buildTechnicians(teams: Team[]): TechTarget[] {
   return out;
 }
 
-function readTicketId(dt: DataTransfer): string {
-  return dt.getData(DRAG_TYPE) || dt.getData("text/plain");
+const TECH_TICKET_PREVIEW = 5;
+
+function buildTicketsByUser(tickets: Ticket[]): Map<string, Ticket[]> {
+  const map = new Map<string, Ticket[]>();
+  for (const ticket of tickets) {
+    if (!ticket.assigned_user_id || !isOpenTicket(ticket)) {
+      continue;
+    }
+    const list = map.get(ticket.assigned_user_id) ?? [];
+    list.push(ticket);
+    map.set(ticket.assigned_user_id, list);
+  }
+  for (const [userId, list] of map) {
+    list.sort(
+      (a, b) =>
+        new Date(b.updated_at ?? b.created_at).getTime() -
+        new Date(a.updated_at ?? a.created_at).getTime(),
+    );
+    map.set(userId, list.slice(0, TECH_TICKET_PREVIEW));
+  }
+  return map;
 }
 
 export function AgentBottomPanel({
@@ -94,8 +113,8 @@ export function AgentBottomPanel({
   draggingTicket?: Ticket | null;
   onTicketAssigned?: (detail: TicketDetail) => void;
 }) {
-  const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
+  const activeDragRef = useRef<Ticket | null>(null);
   const [height, setHeight] = useState(220);
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<TabId>("teams");
@@ -112,9 +131,9 @@ export function AgentBottomPanel({
   const [assignOpen, setAssignOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [assignedByTech, setAssignedByTech] = useState<Map<string, Ticket[]>>(new Map());
 
   const technicians = useMemo(() => buildTechnicians(teams), [teams]);
+  const ticketsByUser = useMemo(() => buildTicketsByUser(tickets), [tickets]);
   const ticketMap = useMemo(
     () => new Map(tickets.map((t) => [t.id, t])),
     [tickets],
@@ -152,45 +171,78 @@ export function AgentBottomPanel({
   };
 
   useEffect(() => {
+    activeDragRef.current = draggingTicket;
+  }, [draggingTicket]);
+
+  useEffect(() => {
+    function onDragStart(event: DragEvent) {
+      if (!event.dataTransfer) {
+        return;
+      }
+      const id = readDraggedTicketId(event.dataTransfer);
+      if (!id) {
+        return;
+      }
+      const ticket = ticketMap.get(id);
+      if (ticket) {
+        activeDragRef.current = ticket;
+      }
+    }
+    function clearDrag() {
+      activeDragRef.current = null;
+      setGhost(null);
+      setHoverKey(null);
+    }
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("dragend", clearDrag);
+    document.addEventListener("drop", clearDrag);
+    return () => {
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("dragend", clearDrag);
+      document.removeEventListener("drop", clearDrag);
+    };
+  }, [ticketMap]);
+
+  useEffect(() => {
     function onDragOver(e: DragEvent) {
-      if (!draggingTicket) return;
+      const ticket = activeDragRef.current ?? draggingTicket;
+      if (!ticket) return;
       e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const card = el?.closest("[data-tech-key]") as HTMLElement | null;
       const key = card?.dataset.techKey ?? null;
       const target = key ? technicians.find((t) => t.key === key) ?? null : null;
       const conf = target
-        ? routingConfidenceForAssign(draggingTicket, target.key, teams)
+        ? routingConfidenceForAssign(ticket, target.key, teams)
         : 0;
       setHoverKey(key);
       setGhost({
-        ticket: draggingTicket,
+        ticket,
         x: e.clientX + 16,
         y: e.clientY - 30,
         target,
         confidence: conf,
       });
     }
-    function onDragEnd() {
-      setGhost(null);
-      setHoverKey(null);
-    }
     window.addEventListener("dragover", onDragOver);
-    window.addEventListener("dragend", onDragEnd);
-    window.addEventListener("drop", onDragEnd);
     return () => {
       window.removeEventListener("dragover", onDragOver);
-      window.removeEventListener("dragend", onDragEnd);
-      window.removeEventListener("drop", onDragEnd);
     };
   }, [draggingTicket, technicians, teams]);
 
   const handleTechDrop = useCallback(
     (target: TechTarget) => (e: React.DragEvent) => {
       e.preventDefault();
-      const id = readTicketId(e.dataTransfer);
+      e.stopPropagation();
+      const id = readDraggedTicketId(e.dataTransfer);
       const ticket =
-        (id ? ticketMap.get(id) : null) ?? draggingTicket ?? null;
+        (id ? ticketMap.get(id) : null) ??
+        activeDragRef.current ??
+        draggingTicket ??
+        null;
       setGhost(null);
       setHoverKey(null);
       if (!ticket) return;
@@ -220,21 +272,13 @@ export function AgentBottomPanel({
         },
       );
       const merged = mergeTicketAssignmentFromDetail(pending.ticket, detail);
-      setAssignedByTech((prev) => {
-        const next = new Map(prev);
-        const list = next.get(pending.target.key) ?? [];
-        next.set(
-          pending.target.key,
-          [merged, ...list.filter((t) => t.id !== merged.id)].slice(0, 5),
-        );
-        return next;
-      });
       setSelected(merged);
-      setTab("content");
+      setTab("teams");
+      setPanelOpen(true);
       onTicketAssigned?.(detail);
       setAssignOpen(false);
       setPending(null);
-      router.refresh();
+      activeDragRef.current = null;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
     } finally {
@@ -340,7 +384,7 @@ export function AgentBottomPanel({
                     const conf =
                       ghost?.target?.key === tech.key ? ghost.confidence : 0;
                     const dropOk = conf >= 50;
-                    const assignedTickets = assignedByTech.get(tech.key) ?? [];
+                    const assignedTickets = ticketsByUser.get(tech.key) ?? [];
                     return (
                       <div
                         key={tech.key}
