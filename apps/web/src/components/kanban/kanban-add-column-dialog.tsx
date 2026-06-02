@@ -47,16 +47,20 @@ export function KanbanAddColumnDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 border-0 bg-black/50 p-0"
+        aria-label="Luk dialog"
+        onClick={onClose}
+      />
       <div
         ref={trapRef}
         role="dialog"
         aria-labelledby={titleId}
-        className="ledger-card w-full max-w-md space-y-4 p-5"
-        onClick={(e) => e.stopPropagation()}
+        aria-modal="true"
+        className="ledger-card relative w-full max-w-md space-y-4 p-5"
+        onMouseDown={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
       >
         <form onSubmit={handleSubmit}>

@@ -64,12 +64,7 @@ export function KanbanCloseBoardDialog({
 
   return (
     <MotionlessDialogBackdrop onClose={handleDismiss}>
-      <MotionlessDialogPanel
-        trapRef={trapRef}
-        titleId={titleId}
-        onClose={handleDismiss}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <MotionlessDialogPanel trapRef={trapRef} titleId={titleId} onClose={handleDismiss}>
         <form onSubmit={handleSubmit}>
           <div className="flex items-start gap-3">
             <span className="bg-destructive/10 text-destructive flex size-10 shrink-0 items-center justify-center rounded-lg">
@@ -139,10 +134,13 @@ function MotionlessDialogBackdrop({
   onClose: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 border-0 bg-black/50 p-0"
+        aria-label="Luk dialog"
+        onClick={onClose}
+      />
       {children}
     </div>
   );
@@ -153,13 +151,11 @@ function MotionlessDialogPanel({
   trapRef,
   titleId,
   onClose,
-  onClick,
 }: {
   children: React.ReactNode;
   trapRef: React.RefObject<HTMLDivElement | null>;
   titleId: string;
   onClose: () => void;
-  onClick: (e: React.MouseEvent) => void;
 }) {
   return (
     <div
@@ -167,8 +163,8 @@ function MotionlessDialogPanel({
       role="dialog"
       aria-labelledby={titleId}
       aria-modal="true"
-      className="ledger-card w-full max-w-md p-5"
-      onClick={onClick}
+      className="ledger-card relative w-full max-w-md p-5"
+      onMouseDown={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
     >
       {children}

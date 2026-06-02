@@ -58,14 +58,21 @@ export function ClassicNotificationModal({
   }
 
   return (
-    <div className="classic-modal-backdrop" onClick={handleCancel}>
+    <div className="classic-modal-backdrop">
+      <button
+        type="button"
+        className="classic-modal-backdrop__dismiss"
+        aria-label="Luk dialog"
+        onClick={handleCancel}
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className="classic-modal"
-        onClick={(event) => event.stopPropagation()}
+        onMouseDown={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.key === "Escape" && handleCancel()}
       >
         <header className="classic-modal__header">
           <h2 id={titleId} className="classic-modal__title">
