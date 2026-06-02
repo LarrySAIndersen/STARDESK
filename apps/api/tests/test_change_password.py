@@ -20,8 +20,6 @@ INVALID_NEW_PASSWORD = NEW_INVALID_PASSWORD
 TEST_EMAIL = "sf01@example.dk"
 
 
-
-
 @pytest.mark.asyncio
 async def test_change_password_success(
     override_db: AsyncMock,

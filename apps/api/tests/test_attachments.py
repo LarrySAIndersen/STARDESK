@@ -35,8 +35,6 @@ def clean_attachment(tmp_path: Path) -> Attachment:
     )
 
 
-
-
 def test_is_blob_storage_key(tmp_path: Path) -> None:
     assert file_storage.is_blob_storage_key("blob:https://x.blob.vercel-storage.com/a.png")
     assert not file_storage.is_blob_storage_key(str(tmp_path / "a.png"))

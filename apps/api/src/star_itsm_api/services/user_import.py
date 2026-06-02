@@ -87,7 +87,7 @@ def _split_names(raw: str | None) -> list[str]:
 
 
 def _team_ids_by_names(
-    db: AsyncSession,
+    _db: AsyncSession,
     names: list[str],
     *,
     teams_by_name: dict[str, uuid.UUID],
@@ -136,7 +136,7 @@ async def import_users_admin(
     db: AsyncSession,
     *,
     payload: UserImportRequest,
-    actor_role: str,
+    _actor_role: str,
 ) -> UserImportResult:
     team_rows = await db.execute(select(Team.id, Team.name).where(Team.is_active.is_(True)))
     teams_by_name = {name.lower(): team_id for team_id, name in team_rows.all()}
@@ -184,9 +184,7 @@ async def import_users_admin(
 
         is_active = parse_import_is_active(row.is_active)
         team_names = _split_names(row.teams)
-        team_ids, unknown_teams = _team_ids_by_names(
-            db, team_names, teams_by_name=teams_by_name
-        )
+        team_ids, unknown_teams = _team_ids_by_names(db, team_names, teams_by_name=teams_by_name)
         if unknown_teams:
             errors.append(
                 UserImportRowError(

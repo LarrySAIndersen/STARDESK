@@ -19,9 +19,7 @@ async def read_sidebar_nav_visibility(
     current_user: User = Depends(get_current_user),
 ) -> SidebarNavVisibilityRead:
     if not is_staff_role(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     hidden = await get_hidden_nav_ids(db)
     return SidebarNavVisibilityRead(hidden_nav_ids=hidden)
 

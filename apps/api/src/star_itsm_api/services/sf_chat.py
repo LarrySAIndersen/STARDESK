@@ -703,10 +703,9 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
             last_msg
             and not last_msg.is_system
             and last_msg.sender_user_id == session.customer_user_id
-        ):
-            if last_msg.created_at >= recent_cutoff:
-                unread = 1
-                notification_count += 1
+        ) and last_msg.created_at >= recent_cutoff:
+            unread = 1
+            notification_count += 1
 
         agent_name = None
         if session.assigned_agent_id:

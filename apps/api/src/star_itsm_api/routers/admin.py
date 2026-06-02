@@ -87,9 +87,7 @@ async def get_sla_policies(
     current_user: User = Depends(require_admin()),
 ) -> list[SlaPolicyRead]:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await list_sla_policies(db)
 
 
@@ -98,9 +96,7 @@ async def get_sla_standard_rules(
     current_user: User = Depends(require_admin()),
 ) -> list[SlaStandardRuleRead]:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return list_standard_sla_rules()
 
 
@@ -110,9 +106,7 @@ async def get_sla_settings(
     current_user: User = Depends(require_admin()),
 ) -> SlaSettingsRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await get_sla_settings_admin(db)
 
 
@@ -123,9 +117,7 @@ async def patch_sla_settings(
     current_user: User = Depends(require_admin()),
 ) -> SlaSettingsRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await update_sla_settings_admin(db, payload)
 
 
@@ -137,9 +129,7 @@ async def patch_sla_policy(
     current_user: User = Depends(require_admin()),
 ) -> SlaPolicyRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await update_sla_policy(db, policy_id, payload)
 
 
@@ -149,9 +139,7 @@ async def get_admin_categories(
     current_user: User = Depends(require_admin()),
 ) -> list[CategoryAdminRead]:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await list_categories_admin(db)
 
 
@@ -162,9 +150,7 @@ async def post_admin_category(
     current_user: User = Depends(require_admin()),
 ) -> CategoryAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await create_category(db, payload)
 
 
@@ -176,9 +162,7 @@ async def patch_admin_category(
     current_user: User = Depends(require_admin()),
 ) -> CategoryAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await update_category(db, category_id, payload)
 
 
@@ -189,9 +173,7 @@ async def post_admin_subcategory(
     current_user: User = Depends(require_admin()),
 ) -> SubcategoryAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await create_subcategory(db, payload)
 
 
@@ -203,9 +185,7 @@ async def patch_admin_subcategory(
     current_user: User = Depends(require_admin()),
 ) -> SubcategoryAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     return await update_subcategory(db, subcategory_id, payload)
 
 
@@ -215,9 +195,7 @@ async def post_sync_default_categories(
     current_user: User = Depends(require_admin()),
 ) -> CategorySyncResult:
     if not can_manage_users(current_user):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS
-        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
     result = await sync_default_categories(db)
     return CategorySyncResult(
         categories_created=result.categories_created,

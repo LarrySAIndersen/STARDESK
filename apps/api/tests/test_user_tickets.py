@@ -15,8 +15,6 @@ TARGET_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000099")
 OTHER_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000088")
 
 
-
-
 def _fake_top_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),

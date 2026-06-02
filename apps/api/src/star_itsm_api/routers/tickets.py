@@ -893,12 +893,8 @@ async def update_ticket_metadata(
     if "category_id" in updates or "subcategory_id" in updates:
         if not is_staff(current_user):
             raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-        next_category_id = (
-            updates["category_id"] if "category_id" in updates else ticket.category_id
-        )
-        next_subcategory_id = (
-            updates["subcategory_id"] if "subcategory_id" in updates else ticket.subcategory_id
-        )
+        next_category_id = updates.get("category_id", ticket.category_id)
+        next_subcategory_id = updates.get("subcategory_id", ticket.subcategory_id)
         await validate_ticket_classification(
             db,
             category_id=next_category_id,
@@ -1275,9 +1271,12 @@ async def assign_ticket(
         team = await db.get(Team, team_id)
         if team is None or not team.is_active:
             raise HTTPException(status_code=400, detail="Invalid group")
-        if current_user.role == ROLE_AGENT and not can_assign_to_any_team(current_user):
-            if not await user_in_team(db, current_user.id, team_id):
-                raise HTTPException(status_code=403, detail="Not a member of this group")
+        if (
+            current_user.role == ROLE_AGENT
+            and not can_assign_to_any_team(current_user)
+            and not await user_in_team(db, current_user.id, team_id)
+        ):
+            raise HTTPException(status_code=403, detail="Not a member of this group")
 
     if user_id is not None:
         assignee = await db.get(User, user_id)

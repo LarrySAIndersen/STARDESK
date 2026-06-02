@@ -31,9 +31,7 @@ class CategoryCreate(BaseModel):
 
 
 class CategoryUpdate(BaseModel):
-    name: str | None = Field(
-        default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN
-    )
+    name: str | None = Field(default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str | None = Field(default=None, min_length=1, max_length=128)
     sort_order: int | None = None
     is_active: bool | None = None
@@ -48,9 +46,7 @@ class SubcategoryCreate(BaseModel):
 
 
 class SubcategoryUpdate(BaseModel):
-    name: str | None = Field(
-        default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN
-    )
+    name: str | None = Field(default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str | None = Field(default=None, min_length=1, max_length=128)
     sort_order: int | None = None
     is_active: bool | None = None

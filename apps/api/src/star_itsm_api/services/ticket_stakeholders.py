@@ -324,7 +324,7 @@ async def stakeholder_to_read(
 
 
 def soft_delete_stakeholder(
-    db: AsyncSession,
+    _db: AsyncSession,
     row: TicketStakeholder,
     *,
     now: datetime | None = None,

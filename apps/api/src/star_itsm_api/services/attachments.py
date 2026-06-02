@@ -95,7 +95,6 @@ async def list_ticket_attachments_for_detail(
             db,
             ticket_id=ticket_id,
             user=user,
-            reporter_user_id=reporter_user_id,
         )
     except Exception:
         logger.warning(
@@ -112,7 +111,6 @@ async def _list_ticket_attachments_for_detail(
     *,
     ticket_id: uuid.UUID,
     user: User,
-    reporter_user_id: uuid.UUID,
 ) -> list[AttachmentRead]:
     result = await db.execute(
         select(Attachment)

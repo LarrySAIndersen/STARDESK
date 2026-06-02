@@ -14,8 +14,6 @@ NEW_PASSWORD = NEW_INVALID_PASSWORD
 TEST_EMAIL = "exempt@example.dk"
 
 
-
-
 def test_effective_must_change_password_respects_exempt() -> None:
     user = SimpleNamespace(
         must_change_password=True,

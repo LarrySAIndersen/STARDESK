@@ -36,6 +36,7 @@ dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
 ]
 
 [build-system]
@@ -88,4 +89,20 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    # kodepraksis #39 phase 1 (partial): safe autofix-friendly rules
+    "SIM",
+    "RET",
+    "ARG",
+    "PTH",
+]
+# Phase 2 (kodepraksis tick #39b): add C90, S, D with per-file-ignores on tickets.py — 782 violations if enabled at once
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ARG001", "ARG002", "ARG005"]

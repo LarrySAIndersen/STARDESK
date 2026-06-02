@@ -19,8 +19,6 @@ def _scalar_result(value: object | None) -> MagicMock:
     return result
 
 
-
-
 def _larry_admin() -> User:
     return User(
         id=LARRY_ID,

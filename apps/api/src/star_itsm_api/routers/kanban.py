@@ -101,11 +101,11 @@ async def add_card(
     try:
         return await kanban_service.add_card(db, current_user, board_id, payload)
     except LookupError as exc:
-        detail=NOT_FOUND
+        detail = NOT_FOUND
         if str(exc) == "column_not_found":
-            detail=COLUMN_NOT_FOUND
+            detail = COLUMN_NOT_FOUND
         elif str(exc) == "ticket_not_found":
-            detail=TICKET_NOT_FOUND
+            detail = TICKET_NOT_FOUND
         raise HTTPException(status_code=404, detail=detail) from None
     except PermissionError as exc:
         if str(exc) == "ticket_out_of_scope":
@@ -139,7 +139,7 @@ async def remove_card(
             delete_ticket=delete_ticket,
         )
     except LookupError as exc:
-        detail=NOT_FOUND
+        detail = NOT_FOUND
         if str(exc) == "card_not_found":
             detail = "Card not found on board"
         raise HTTPException(status_code=404, detail=detail) from None
@@ -165,11 +165,11 @@ async def move_card(
             payload.position,
         )
     except LookupError as exc:
-        detail=NOT_FOUND
+        detail = NOT_FOUND
         if str(exc) == "column_not_found":
-            detail=COLUMN_NOT_FOUND
+            detail = COLUMN_NOT_FOUND
         elif str(exc) == "ticket_not_found":
-            detail=TICKET_NOT_FOUND
+            detail = TICKET_NOT_FOUND
         elif str(exc) == "card_not_found":
             detail = "Card not found on board"
         raise HTTPException(status_code=404, detail=detail) from None
@@ -203,9 +203,9 @@ async def update_column(
     try:
         return await kanban_service.update_column(db, current_user, board_id, column_id, payload)
     except LookupError as exc:
-        detail=NOT_FOUND
+        detail = NOT_FOUND
         if str(exc) == "column_not_found":
-            detail=COLUMN_NOT_FOUND
+            detail = COLUMN_NOT_FOUND
         raise HTTPException(status_code=404, detail=detail) from None
     except PermissionError:
         raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS) from None
@@ -221,9 +221,9 @@ async def delete_column(
     try:
         await kanban_service.delete_column(db, current_user, board_id, column_id)
     except LookupError as exc:
-        detail=NOT_FOUND
+        detail = NOT_FOUND
         if str(exc) == "column_not_found":
-            detail=COLUMN_NOT_FOUND
+            detail = COLUMN_NOT_FOUND
         raise HTTPException(status_code=404, detail=detail) from None
     except PermissionError:
         raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS) from None

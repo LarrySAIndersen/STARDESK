@@ -137,15 +137,19 @@ async def test_build_dashboard_counts_open_and_closed() -> None:
 
     admin = SimpleNamespace(id=uuid.uuid4(), role="admin", organization_id=None)
 
-    with patch(
-        "star_itsm_api.services.dashboard._ticket_scope_stmt",
-        AsyncMock(return_value=MagicMock()),
-    ), patch(
-        "star_itsm_api.services.dashboard.get_user_team_ids",
-        AsyncMock(return_value=[]),
-    ), patch(
-        "star_itsm_api.services.dashboard.tickets_to_read_list",
-        AsyncMock(return_value=[]),
+    with (
+        patch(
+            "star_itsm_api.services.dashboard._ticket_scope_stmt",
+            AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "star_itsm_api.services.dashboard.get_user_team_ids",
+            AsyncMock(return_value=[]),
+        ),
+        patch(
+            "star_itsm_api.services.dashboard.tickets_to_read_list",
+            AsyncMock(return_value=[]),
+        ),
     ):
         dashboard = await dashboard_service.build_dashboard(
             mock_db,

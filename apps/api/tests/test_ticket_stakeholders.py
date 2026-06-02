@@ -52,8 +52,6 @@ async def test_resolve_mentioned_user_ids_by_email() -> None:
     assert ids == [user_id]
 
 
-
-
 def _fake_agent() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
