@@ -103,6 +103,30 @@ class Metrics {
 const TICKET_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Safe filename segment for report paths (load-test summary.scenario is config-controlled). */
+const SCENARIO_FILE_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
+
+function ticketIdForApiPath(raw) {
+  const id = String(raw ?? "").trim();
+  if (!TICKET_ID_RE.test(id)) {
+    throw new Error("Invalid ticket id from API");
+  }
+  return id;
+}
+
+function safeScenarioFileSegment(scenario) {
+  const normalized = String(scenario ?? "run")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32);
+  const segment = normalized || "run";
+  if (!SCENARIO_FILE_RE.test(segment)) {
+    return "run";
+  }
+  return segment;
+}
+
 async function measuredFetch(metrics, endpoint, url, options = {}, parseJson = false) {
   const started = performance.now();
   try {
@@ -186,10 +210,11 @@ async function runUserJourney(config, metrics, vuId, iteration) {
   }
 
   if (firstTicketId && TICKET_ID_RE.test(firstTicketId)) {
+    const ticketId = ticketIdForApiPath(firstTicketId);
     await measuredFetch(
       metrics,
       "ticket-detail",
-      `${config.baseUrl}${config.ticketsPath}/${firstTicketId}`,
+      `${config.baseUrl}${config.ticketsPath}/${ticketId}`,
       {
         method: "GET",
         headers: authHeaders,
@@ -322,9 +347,10 @@ function writeReport(summary) {
   mkdirSync(repoReportsDir, { recursive: true });
   const latestPath = resolve(repoReportsDir, "performance-load-test-latest.json");
   writeFileSync(latestPath, JSON.stringify(summary, null, 2), "utf8");
-  const stamp = (summary.finishedAt ?? new Date().toISOString()).replace(/[:.]/g, "-");
+  const stamp = (summary.finishedAt ?? new Date().toISOString()).replaceAll(":", "-").replaceAll(".", "-");
+  const scenarioSegment = safeScenarioFileSegment(summary.scenario);
   writeFileSync(
-    resolve(repoReportsDir, `load-test-${summary.scenario}-${stamp}.json`),
+    resolve(repoReportsDir, `load-test-${scenarioSegment}-${stamp}.json`),
     JSON.stringify(summary, null, 2),
     "utf8",
   );
