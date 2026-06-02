@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import path from "node:path";
+const { dirname, resolve } = path;
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.mjs";
@@ -349,8 +350,12 @@ function writeReport(summary) {
   writeFileSync(latestPath, JSON.stringify(summary, null, 2), "utf8");
   const stamp = (summary.finishedAt ?? new Date().toISOString()).replaceAll(":", "-").replaceAll(".", "-");
   const scenarioSegment = safeScenarioFileSegment(summary.scenario);
+  const reportBasename = `load-test-${scenarioSegment}-${stamp}.json`;
+  if (reportBasename.includes("..") || reportBasename.includes("/") || reportBasename.includes("\\")) {
+    throw new Error("Invalid load-test report filename");
+  }
   writeFileSync(
-    resolve(repoReportsDir, `load-test-${scenarioSegment}-${stamp}.json`),
+    path.join(repoReportsDir, reportBasename),
     JSON.stringify(summary, null, 2),
     "utf8",
   );
