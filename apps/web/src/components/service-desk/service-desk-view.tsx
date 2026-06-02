@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
+import { DispatchGroupsStrip } from "@/components/dispatch/dispatch-groups-strip";
 import { DispatchTeamsRail } from "@/components/dispatch/dispatch-teams-rail";
 import {
   collectServiceDeskFilterOptions,
@@ -98,6 +99,7 @@ export function ServiceDeskView({
   );
   const [offset, setOffset] = useState(0);
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -189,9 +191,20 @@ export function ServiceDeskView({
   const resolveTicketForDrop = useCallback(
     (ticketId: string) =>
       pageTickets.find((t) => t.id === ticketId) ??
-      tableTickets.find((t) => t.id === ticketId),
-    [pageTickets, tableTickets],
+      tableTickets.find((t) => t.id === ticketId) ??
+      localTickets.find((t) => t.id === ticketId),
+    [pageTickets, tableTickets, localTickets],
   );
+
+  const handleDragOverTeam = useCallback((teamId: string, event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverTeamId(teamId);
+  }, []);
+
+  const handleDragLeaveTeam = useCallback(() => {
+    setDragOverTeamId(null);
+  }, []);
 
   const handleDropTeam = useCallback(
     (team: Team) => (event: React.DragEvent) => {
@@ -252,8 +265,8 @@ export function ServiceDeskView({
       <header className="shrink-0">
         <h1 className="text-star-navy text-2xl font-bold tracking-tight">Service Desk</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Kø, fordeling og overblik over åbne sager — træk en sag til en intern gruppe til
-          højre (som på dashboard).
+          Kø, fordeling og overblik over åbne sager — træk en sag til en gruppe nedenfor eller
+          til panelet til højre.
         </p>
       </header>
 
@@ -331,8 +344,8 @@ export function ServiceDeskView({
 
           <p className="text-muted-foreground shrink-0 text-xs">
             {queue === "teams"
-              ? "Sager tildelt en gruppe vises kun under den pågældende gruppe til højre."
-              : "Venstre liste: sager uden gruppe eller på SF Service Desk. Træk til en anden gruppe — sagen forsvinder her og vises under gruppen til højre."}
+              ? "Sager tildelt en gruppe vises under gruppen nedenfor og til højre."
+              : "Venstre liste: sager uden gruppe eller på SF Service Desk. Træk til en gruppe nedenfor eller til højre — sagen forsvinder her og vises under gruppen."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -398,18 +411,40 @@ export function ServiceDeskView({
               </Button>
             </div>
           </div>
+
+          <div className="border-star-red mt-2 shrink-0 border-t-[3px] pt-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-star-navy text-sm font-bold">Grupper</h2>
+                <p className="text-muted-foreground text-[11px]">
+                  Træk sag til bereder-streg — eller brug gruppepanelet til højre
+                </p>
+              </div>
+              <span className="rounded-full bg-star-navy px-2 py-0.5 text-[10px] font-bold text-white">
+                {railTeams.length}
+              </span>
+            </div>
+            <DispatchGroupsStrip
+              teams={railTeams}
+              ticketsByTeam={ticketsByTeam}
+              allTickets={localTickets.filter(isOpenTicket)}
+              dragOverTeamId={dragOverTeamId}
+              onDragOverTeam={handleDragOverTeam}
+              onDragLeaveTeam={handleDragLeaveTeam}
+              onDropTeam={handleDropTeam}
+              selectedTeamId={selectedTeamId}
+              onSelectTeam={setSelectedTeamId}
+              ticketHref={(ticketId) => `/tickets/${ticketId}`}
+            />
+          </div>
         </section>
 
         <DispatchTeamsRail
           teams={railTeams}
           ticketsByTeam={ticketsByTeam}
           dragOverTeamId={dragOverTeamId}
-          onDragOverTeam={(teamId, event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-            setDragOverTeamId(teamId);
-          }}
-          onDragLeaveTeam={() => setDragOverTeamId(null)}
+          onDragOverTeam={handleDragOverTeam}
+          onDragLeaveTeam={handleDragLeaveTeam}
           onDropTeam={handleDropTeam}
           title="Interne grupper"
           description="Slip en sag her — begrund tildeling i dialogen"
