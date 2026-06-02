@@ -43,14 +43,15 @@ async def resolve_integration_organization_id(
             "Bruger er ikke knyttet til en organisation. Kontakt en administrator."
         )
 
-    for name in INTEGRATION_DEFAULT_ORG_NAMES:
-        row = await db.execute(
-            select(Organization.id).where(
-                Organization.name == name,
-                Organization.is_active.is_(True),
-            )
+    default_orgs = await db.execute(
+        select(Organization.id, Organization.name).where(
+            Organization.name.in_(INTEGRATION_DEFAULT_ORG_NAMES),
+            Organization.is_active.is_(True),
         )
-        found = row.scalar_one_or_none()
+    )
+    by_name = {name: org_id for org_id, name in default_orgs.all()}
+    for name in INTEGRATION_DEFAULT_ORG_NAMES:
+        found = by_name.get(name)
         if found is not None:
             return found
 

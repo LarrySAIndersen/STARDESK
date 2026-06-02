@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -38,15 +39,23 @@ def _connect_args(url: str) -> dict[str, bool]:
     return {}
 
 
+def _pool_settings() -> tuple[int, int]:
+    """Smaller pool on Vercel serverless (performance-50 #9); larger for local/load tests."""
+    if os.getenv("VERCEL"):
+        return 2, 3
+    return 10, 20
+
+
 if settings.database_url:
     _raw_url = settings.database_url
     _db_url = normalize_database_url(_raw_url)
+    _pool_size, _max_overflow = _pool_settings()
     engine = create_async_engine(
         _db_url,
         echo=False,
         connect_args=_connect_args(_raw_url),
-        pool_size=10,
-        max_overflow=20,
+        pool_size=_pool_size,
+        max_overflow=_max_overflow,
         pool_pre_ping=True,
         pool_recycle=300,
     )
