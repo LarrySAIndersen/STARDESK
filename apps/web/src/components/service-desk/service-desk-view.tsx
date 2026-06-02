@@ -187,8 +187,10 @@ export function ServiceDeskView({
   const rangeEnd = Math.min(offset + PAGE_SIZE, total);
 
   const resolveTicketForDrop = useCallback(
-    (ticketId: string) => tableTickets.find((t) => t.id === ticketId),
-    [tableTickets],
+    (ticketId: string) =>
+      pageTickets.find((t) => t.id === ticketId) ??
+      tableTickets.find((t) => t.id === ticketId),
+    [pageTickets, tableTickets],
   );
 
   const handleDropTeam = useCallback(

@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { apiGet } from "@/lib/api";
+import { isInServiceDeskQueue, serviceDeskTeamIds } from "@/lib/service-desk-queue";
+import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 export function AgentDashboardClient({
   tickets: initialTickets,
@@ -21,8 +23,21 @@ export function AgentDashboardClient({
   const [tickets, setTickets] = useState(initialTickets);
   const [teams, setTeams] = useState(initialTeams);
   const [selected, setSelected] = useState<Ticket | null>(null);
+  const [draggingTicket, setDraggingTicket] = useState<Ticket | null>(null);
   const [slackTabRequest, setSlackTabRequest] = useState(0);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const deskTeamIds = useMemo(() => serviceDeskTeamIds(teams), [teams]);
+
+  const handleTicketAssigned = useCallback((detail: TicketDetail) => {
+    setTickets((prev) => mergeTicketAssignmentInList(prev, detail.id, detail));
+    setSelected((prev) =>
+      prev?.id === detail.id
+        ? mergeTicketAssignmentInList([prev], detail.id, detail)[0] ?? prev
+        : prev,
+    );
+    setDraggingTicket(null);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,16 +67,18 @@ export function AgentDashboardClient({
     };
   }, []);
 
+  /** Kun sager i desk-kø — forsvinder fra listen når de tildeles en operativ gruppe. */
   const recentTickets = useMemo(
     () =>
       [...tickets]
         .filter((t) => !["closed", "cancelled"].includes(t.status))
+        .filter((t) => isInServiceDeskQueue(t, deskTeamIds))
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         .slice(0, 8),
-    [tickets],
+    [tickets, deskTeamIds],
   );
 
   useEffect(() => {
@@ -104,7 +121,9 @@ export function AgentDashboardClient({
         </div>
         <WireframeTicketTable
           tickets={recentTickets}
-          draggable
+          draggable={recentTickets.length > 0}
+          onDragStart={(ticket) => setDraggingTicket(ticket)}
+          onDragEnd={() => setDraggingTicket(null)}
           onRowClick={(t) => {
             setSelected(t);
             const panel = document.getElementById("dispatch-panel");
@@ -122,6 +141,8 @@ export function AgentDashboardClient({
         teams={teams}
         slackTabRequest={slackTabRequest}
         selectedTicket={selected}
+        draggingTicket={draggingTicket}
+        onTicketAssigned={handleTicketAssigned}
       />
     </div>
   );
