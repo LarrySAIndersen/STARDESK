@@ -106,6 +106,14 @@ const TICKET_ID_RE =
 /** Safe filename segment for report paths (load-test summary.scenario is config-controlled). */
 const SCENARIO_FILE_RE = /^[a-z0-9][a-z0-9-]{0,31}$/;
 
+function ticketIdForApiPath(raw) {
+  const id = String(raw ?? "").trim();
+  if (!TICKET_ID_RE.test(id)) {
+    throw new Error("Invalid ticket id from API");
+  }
+  return id;
+}
+
 function safeScenarioFileSegment(scenario) {
   const normalized = String(scenario ?? "run")
     .toLowerCase()
@@ -202,10 +210,11 @@ async function runUserJourney(config, metrics, vuId, iteration) {
   }
 
   if (firstTicketId && TICKET_ID_RE.test(firstTicketId)) {
+    const ticketId = ticketIdForApiPath(firstTicketId);
     await measuredFetch(
       metrics,
       "ticket-detail",
-      `${config.baseUrl}${config.ticketsPath}/${firstTicketId}`,
+      `${config.baseUrl}${config.ticketsPath}/${ticketId}`,
       {
         method: "GET",
         headers: authHeaders,

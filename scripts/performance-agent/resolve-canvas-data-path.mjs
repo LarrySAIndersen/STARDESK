@@ -28,7 +28,7 @@ function assertSafeCanvasDataPath(envPath) {
   return resolved;
 }
 
-/** Cursor workspace canvas sidecar (preferred) + legacy project path. */
+/** Cursor workspace canvas sidecar (preferred); repo reports/ fallback for CI/VM. */
 export function resolveCanvasDataPath() {
   if (process.env.PERF_CANVAS_DATA_PATH) {
     return assertSafeCanvasDataPath(process.env.PERF_CANVAS_DATA_PATH);
@@ -51,6 +51,7 @@ export function resolveCanvasDataPath() {
       "canvases",
       CANVAS_FILE,
     ),
+    path.join(REPO_ROOT, "reports", CANVAS_FILE),
   ];
 
   for (const candidate of candidates) {
@@ -59,5 +60,5 @@ export function resolveCanvasDataPath() {
     }
   }
 
-  return candidates[0];
+  return path.join(REPO_ROOT, "reports", CANVAS_FILE);
 }
