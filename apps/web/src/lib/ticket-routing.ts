@@ -7,18 +7,30 @@ export function routingConfidenceForAssign(
   memberKey: string,
   teams: Team[],
 ): number {
+  const memberTeam = teams
+    .flatMap((t) => t.members.map((m) => ({ teamId: t.id, userId: m.user_id })))
+    .find((m) => m.userId === memberKey);
+  if (memberTeam) {
+    return routingConfidenceForTeamAssign(ticket, memberTeam.teamId, teams);
+  }
+  return routingConfidenceForTeamAssign(ticket, memberKey, teams);
+}
+
+/** Team-level match score for group drop targets. */
+export function routingConfidenceForTeamAssign(
+  ticket: Ticket,
+  teamId: string,
+  _teams: Team[],
+): number {
   const routing = ticket.routing;
   if (routing?.suggested_team_id && routing.routing_confidence != null) {
-    const memberTeam = teams
-      .flatMap((t) => t.members.map((m) => ({ teamId: t.id, userId: m.user_id })))
-      .find((m) => m.userId === memberKey);
-    if (memberTeam?.teamId === routing.suggested_team_id) {
+    if (routing.suggested_team_id === teamId) {
       return routing.routing_confidence;
     }
     return Math.max(25, routing.routing_confidence - 35);
   }
   let hash = 0;
-  const s = `${ticket.id}:${memberKey}`;
+  const s = `${ticket.id}:${teamId}`;
   for (let i = 0; i < s.length; i++) {
     hash = (hash * 31 + s.charCodeAt(i)) % 9973;
   }

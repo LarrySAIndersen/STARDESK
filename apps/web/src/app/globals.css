@@ -1347,6 +1347,10 @@
     @apply border-star-red text-white;
   }
 
+  .wire-bereder-streg {
+    @apply select-none;
+  }
+
   .wire-confirm-overlay {
     @apply bg-star-navy/50 fixed inset-0 z-[500] flex items-center justify-center;
   }
@@ -1725,10 +1729,20 @@
   align-items: flex-start;
   justify-content: center;
   padding: 4.5rem 1rem 1rem;
+}
+
+.classic-modal-backdrop__dismiss {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
   background: rgba(0, 0, 0, 0.35);
+  cursor: pointer;
 }
 
 .classic-modal {
+  position: relative;
+  z-index: 1;
   width: min(100%, 28rem);
   background: #fff;
   color: var(--star-text);
