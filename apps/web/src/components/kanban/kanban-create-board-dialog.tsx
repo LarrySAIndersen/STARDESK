@@ -3,6 +3,10 @@
 import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { useId, useState } from "react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,21 +99,12 @@ export function KanbanCreateBoardDialog({
   const selectedTemplate = KANBAN_BOARD_TEMPLATES.find((t) => t.id === template);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 border-0 bg-black/50 p-0"
-        aria-label="Luk dialog"
-        onClick={handleClose}
-      />
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="ledger-card relative max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.key === "Escape" && handleClose()}
+    <AccessibleModalBackdrop onClose={handleClose}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={handleClose}
+        className="ledger-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-5"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -245,7 +240,7 @@ export function KanbanCreateBoardDialog({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }

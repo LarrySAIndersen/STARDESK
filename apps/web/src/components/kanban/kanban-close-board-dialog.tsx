@@ -3,6 +3,10 @@
 import { Archive } from "lucide-react";
 import { useId, useState } from "react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,8 +67,13 @@ export function KanbanCloseBoardDialog({
   }
 
   return (
-    <MotionlessDialogBackdrop onClose={handleDismiss}>
-      <MotionlessDialogPanel trapRef={trapRef} titleId={titleId} onClose={handleDismiss}>
+    <AccessibleModalBackdrop onClose={handleDismiss}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={handleDismiss}
+        className="ledger-card w-full max-w-md p-5"
+      >
         <form onSubmit={handleSubmit}>
           <div className="flex items-start gap-3">
             <span className="bg-destructive/10 text-destructive flex size-10 shrink-0 items-center justify-center rounded-lg">
@@ -121,53 +130,7 @@ export function KanbanCloseBoardDialog({
             </Button>
           </div>
         </form>
-      </MotionlessDialogPanel>
-    </MotionlessDialogBackdrop>
-  );
-}
-
-function MotionlessDialogBackdrop({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 border-0 bg-black/50 p-0"
-        aria-label="Luk dialog"
-        onClick={onClose}
-      />
-      {children}
-    </div>
-  );
-}
-
-function MotionlessDialogPanel({
-  children,
-  trapRef,
-  titleId,
-  onClose,
-}: {
-  children: React.ReactNode;
-  trapRef: React.RefObject<HTMLDivElement | null>;
-  titleId: string;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      ref={trapRef}
-      role="dialog"
-      aria-labelledby={titleId}
-      aria-modal="true"
-      className="ledger-card relative w-full max-w-md p-5"
-      onMouseDown={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.key === "Escape" && onClose()}
-    >
-      {children}
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }
