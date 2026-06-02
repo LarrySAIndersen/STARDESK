@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,36 +27,10 @@ function assertSafeCanvasDataPath(envPath) {
   return resolved;
 }
 
-/** Cursor workspace canvas sidecar (preferred) + legacy project path. */
+/** Repo-local default; override with validated PERF_CANVAS_DATA_PATH for Cursor workspace sidecar. */
 export function resolveCanvasDataPath() {
   if (process.env.PERF_CANVAS_DATA_PATH) {
     return assertSafeCanvasDataPath(process.env.PERF_CANVAS_DATA_PATH);
   }
-
-  const home = process.env.USERPROFILE || process.env.HOME || "";
-  const candidates = [
-    path.join(
-      home,
-      ".cursor",
-      "projects",
-      "c-Users-kjaer-cursor-projects-c-Users-kjaer-STARDESK-Cursor-canvases",
-      CANVAS_FILE,
-    ),
-    path.join(
-      home,
-      ".cursor",
-      "projects",
-      "c-Users-kjaer-STARDESK-Cursor",
-      "canvases",
-      CANVAS_FILE,
-    ),
-  ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-
-  return candidates[0];
+  return path.join(REPO_ROOT, "reports", CANVAS_FILE);
 }
