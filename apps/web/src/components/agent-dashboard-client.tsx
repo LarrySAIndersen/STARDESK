@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { apiGet } from "@/lib/api";
+import {
+  isAssignableFromServiceDeskQueue,
+  serviceDeskTeamIds,
+} from "@/lib/service-desk-queue";
+import {
+  mergeTicketAssignmentFromDetail,
+  reconcileLocalTicketsWithServer,
+} from "@/lib/ticket-assignment";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 export function AgentDashboardClient({
   tickets: initialTickets,
@@ -21,8 +29,34 @@ export function AgentDashboardClient({
   const [tickets, setTickets] = useState(initialTickets);
   const [teams, setTeams] = useState(initialTeams);
   const [selected, setSelected] = useState<Ticket | null>(null);
+  const [draggingTicket, setDraggingTicket] = useState<Ticket | null>(null);
+  const draggingTicketRef = useRef<Ticket | null>(null);
   const [slackTabRequest, setSlackTabRequest] = useState(0);
   const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const deskTeamIds = useMemo(() => serviceDeskTeamIds(teams), [teams]);
+
+  useEffect(() => {
+    setTickets((prev) => reconcileLocalTicketsWithServer(prev, initialTickets));
+  }, [initialTickets]);
+
+  useEffect(() => {
+    setTeams(initialTeams);
+  }, [initialTeams]);
+
+  const handleTicketAssigned = useCallback((detail: TicketDetail) => {
+    setTickets((prev) => {
+      const existing = prev.find((ticket) => ticket.id === detail.id);
+      if (!existing) {
+        return prev;
+      }
+      const merged = mergeTicketAssignmentFromDetail(existing, detail);
+      setSelected(merged);
+      return prev.map((ticket) => (ticket.id === merged.id ? merged : ticket));
+    });
+    draggingTicketRef.current = null;
+    setDraggingTicket(null);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +67,7 @@ export function AgentDashboardClient({
           apiGet<Team[]>("/api/v1/teams"),
         ]);
         if (!cancelled) {
-          setTickets(freshTickets);
+          setTickets((prev) => reconcileLocalTicketsWithServer(prev, freshTickets));
           setTeams(freshTeams);
           setRefreshError(null);
         }
@@ -52,16 +86,17 @@ export function AgentDashboardClient({
     };
   }, []);
 
-  const recentTickets = useMemo(
+  /** Kun sager der kan fordeles — forsvinder når de tildeles operativ gruppe. */
+  const assignableTickets = useMemo(
     () =>
-      [...tickets]
-        .filter((t) => !["closed", "cancelled"].includes(t.status))
+      tickets
+        .filter((t) => isAssignableFromServiceDeskQueue(t, deskTeamIds))
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         )
         .slice(0, 8),
-    [tickets],
+    [tickets, deskTeamIds],
   );
 
   useEffect(() => {
@@ -75,7 +110,7 @@ export function AgentDashboardClient({
     return () => obs.disconnect();
   }, []);
 
-  const aiTicket = firstUnassignedWithRouting(tickets) ?? recentTickets[0];
+  const aiTicket = firstUnassignedWithRouting(tickets) ?? assignableTickets[0];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -102,15 +137,32 @@ export function AgentDashboardClient({
             Se alle →
           </Link>
         </div>
-        <WireframeTicketTable
-          tickets={recentTickets}
-          draggable
-          onRowClick={(t) => {
-            setSelected(t);
-            const panel = document.getElementById("dispatch-panel");
-            panel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          }}
-        />
+        {assignableTickets.length === 0 ? (
+          <p className="text-[var(--gray-mid)] text-sm">
+            Ingen sager i fordelingskøen — tildelte sager vises under teknikere i Teams-panelet
+            nedenfor.
+          </p>
+        ) : (
+          <WireframeTicketTable
+            tickets={assignableTickets}
+            draggable
+            onDragStart={(ticket) => {
+              draggingTicketRef.current = ticket;
+              setDraggingTicket(ticket);
+            }}
+            onDragEnd={() => {
+              window.setTimeout(() => {
+                draggingTicketRef.current = null;
+                setDraggingTicket(null);
+              }, 0);
+            }}
+            onRowClick={(t) => {
+              setSelected(t);
+              const panel = document.getElementById("dispatch-panel");
+              panel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }}
+          />
+        )}
         <p className="mt-2 text-center text-[11px] text-[var(--gray-mid)]">
           Grib en sag og træk den ned til en tekniker — AI viser konfidens-score mens du
           trækker
@@ -122,6 +174,8 @@ export function AgentDashboardClient({
         teams={teams}
         slackTabRequest={slackTabRequest}
         selectedTicket={selected}
+        draggingTicket={draggingTicket}
+        onTicketAssigned={handleTicketAssigned}
       />
     </div>
   );

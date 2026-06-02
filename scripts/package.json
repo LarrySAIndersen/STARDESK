@@ -42,6 +42,7 @@
     "gate:deliverable:full": "node ./run-deliverable-gate.mjs --full",
     "gate:deliverable:staging": "node ./run-deliverable-gate.mjs --staging",
     "gate:deliverable:staging:full": "node ./run-deliverable-gate.mjs --staging --full",
+    "gate:hello-world:prod": "node ./hello-world-gate-prod.mjs",
     "watchdog": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once",
     "watchdog:dry-run": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1 -Once -DryRun",
     "watchdog:start": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./stardesk-watchdog.ps1",

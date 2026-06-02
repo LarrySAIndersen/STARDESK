@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
-import { DRAG_TYPE } from "@/components/wireframe/wireframe-ticket-table";
 import { WireTags } from "@/components/wireframe/wire-tags";
 import { apiPatch } from "@/lib/api";
+import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
+import { readDraggedTicketId } from "@/lib/ticket-drag";
+import { isOpenTicket } from "@/lib/service-desk-queue";
 import { routingConfidenceForAssign } from "@/lib/ticket-routing";
 import {
   confidenceColor,
@@ -16,7 +17,7 @@ import {
 import { RoutingReadinessBanner } from "@/components/routing-readiness-banner";
 import { cn } from "@/lib/utils";
 import type { Team, TeamMember } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 type TabId = "teams" | "content" | "slack";
 
@@ -73,8 +74,27 @@ function buildTechnicians(teams: Team[]): TechTarget[] {
   return out;
 }
 
-function readTicketId(dt: DataTransfer): string {
-  return dt.getData(DRAG_TYPE) || dt.getData("text/plain");
+const TECH_TICKET_PREVIEW = 5;
+
+function buildTicketsByUser(tickets: Ticket[]): Map<string, Ticket[]> {
+  const map = new Map<string, Ticket[]>();
+  for (const ticket of tickets) {
+    if (!ticket.assigned_user_id || !isOpenTicket(ticket)) {
+      continue;
+    }
+    const list = map.get(ticket.assigned_user_id) ?? [];
+    list.push(ticket);
+    map.set(ticket.assigned_user_id, list);
+  }
+  for (const [userId, list] of map) {
+    list.sort(
+      (a, b) =>
+        new Date(b.updated_at ?? b.created_at).getTime() -
+        new Date(a.updated_at ?? a.created_at).getTime(),
+    );
+    map.set(userId, list.slice(0, TECH_TICKET_PREVIEW));
+  }
+  return map;
 }
 
 export function AgentBottomPanel({
@@ -82,14 +102,19 @@ export function AgentBottomPanel({
   teams,
   slackTabRequest = 0,
   selectedTicket = null,
+  draggingTicket = null,
+  onTicketAssigned,
 }: {
   tickets: Ticket[];
   teams: Team[];
   slackTabRequest?: number;
   selectedTicket?: Ticket | null;
+  /** Active drag from Seneste sager — drives AI ghost overlay and drop targets. */
+  draggingTicket?: Ticket | null;
+  onTicketAssigned?: (detail: TicketDetail) => void;
 }) {
-  const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
+  const activeDragRef = useRef<Ticket | null>(null);
   const [height, setHeight] = useState(220);
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<TabId>("teams");
@@ -106,9 +131,9 @@ export function AgentBottomPanel({
   const [assignOpen, setAssignOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const dragTicketRef = useRef<Ticket | null>(null);
 
   const technicians = useMemo(() => buildTechnicians(teams), [teams]);
+  const ticketsByUser = useMemo(() => buildTicketsByUser(tickets), [tickets]);
   const ticketMap = useMemo(
     () => new Map(tickets.map((t) => [t.id, t])),
     [tickets],
@@ -126,6 +151,15 @@ export function AgentBottomPanel({
     setSelected(selectedTicket);
   }, [selectedTicket]);
 
+  useEffect(() => {
+    if (!draggingTicket) {
+      return;
+    }
+    setTab("teams");
+    setPanelOpen(true);
+    setHeight((h) => (h < 120 ? 220 : h));
+  }, [draggingTicket]);
+
   const togglePanel = () => {
     if (panelOpen) {
       setHeight(37);
@@ -137,47 +171,78 @@ export function AgentBottomPanel({
   };
 
   useEffect(() => {
+    activeDragRef.current = draggingTicket;
+  }, [draggingTicket]);
+
+  useEffect(() => {
+    function onDragStart(event: DragEvent) {
+      if (!event.dataTransfer) {
+        return;
+      }
+      const id = readDraggedTicketId(event.dataTransfer);
+      if (!id) {
+        return;
+      }
+      const ticket = ticketMap.get(id);
+      if (ticket) {
+        activeDragRef.current = ticket;
+      }
+    }
+    function clearDrag() {
+      activeDragRef.current = null;
+      setGhost(null);
+      setHoverKey(null);
+    }
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("dragend", clearDrag);
+    document.addEventListener("drop", clearDrag);
+    return () => {
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("dragend", clearDrag);
+      document.removeEventListener("drop", clearDrag);
+    };
+  }, [ticketMap]);
+
+  useEffect(() => {
     function onDragOver(e: DragEvent) {
-      if (!dragTicketRef.current) return;
+      const ticket = activeDragRef.current ?? draggingTicket;
+      if (!ticket) return;
       e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const card = el?.closest("[data-tech-key]") as HTMLElement | null;
       const key = card?.dataset.techKey ?? null;
       const target = key ? technicians.find((t) => t.key === key) ?? null : null;
-      const conf =
-        dragTicketRef.current && target
-          ? routingConfidenceForAssign(dragTicketRef.current, target.key, teams)
-          : 0;
+      const conf = target
+        ? routingConfidenceForAssign(ticket, target.key, teams)
+        : 0;
       setHoverKey(key);
       setGhost({
-        ticket: dragTicketRef.current,
+        ticket,
         x: e.clientX + 16,
         y: e.clientY - 30,
         target,
         confidence: conf,
       });
     }
-    function onDragEnd() {
-      dragTicketRef.current = null;
-      setGhost(null);
-      setHoverKey(null);
-    }
     window.addEventListener("dragover", onDragOver);
-    window.addEventListener("dragend", onDragEnd);
-    window.addEventListener("drop", onDragEnd);
     return () => {
       window.removeEventListener("dragover", onDragOver);
-      window.removeEventListener("dragend", onDragEnd);
-      window.removeEventListener("drop", onDragEnd);
     };
-  }, [technicians, teams]);
+  }, [draggingTicket, technicians, teams]);
 
   const handleTechDrop = useCallback(
     (target: TechTarget) => (e: React.DragEvent) => {
       e.preventDefault();
-      const id = readTicketId(e.dataTransfer);
-      const ticket = ticketMap.get(id) ?? dragTicketRef.current;
-      dragTicketRef.current = null;
+      e.stopPropagation();
+      const id = readDraggedTicketId(e.dataTransfer);
+      const ticket =
+        (id ? ticketMap.get(id) : null) ??
+        activeDragRef.current ??
+        draggingTicket ??
+        null;
       setGhost(null);
       setHoverKey(null);
       if (!ticket) return;
@@ -185,7 +250,7 @@ export function AgentBottomPanel({
       setPending({ ticket, target, confidence });
       setAssignOpen(true);
     },
-    [ticketMap, teams],
+    [ticketMap, teams, draggingTicket],
   );
 
   async function confirmAssignment(data: {
@@ -197,15 +262,23 @@ export function AgentBottomPanel({
     setSaving(true);
     setError(null);
     try {
-      await apiPatch(`/api/v1/tickets/${pending.ticket.id}/assignment`, {
-        assigned_team_id: data.teamId,
-        assigned_user_id: pending.target.key,
-        assignment_reason: data.reason,
-        fault_displayed: data.faultDisplayed,
-      });
+      const detail = await apiPatch<TicketDetail>(
+        `/api/v1/tickets/${pending.ticket.id}/assignment`,
+        {
+          assigned_team_id: data.teamId,
+          assigned_user_id: pending.target.key,
+          assignment_reason: data.reason,
+          fault_displayed: data.faultDisplayed,
+        },
+      );
+      const merged = mergeTicketAssignmentFromDetail(pending.ticket, detail);
+      setSelected(merged);
+      setTab("teams");
+      setPanelOpen(true);
+      onTicketAssigned?.(detail);
       setAssignOpen(false);
       setPending(null);
-      router.refresh();
+      activeDragRef.current = null;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
     } finally {
@@ -311,6 +384,7 @@ export function AgentBottomPanel({
                     const conf =
                       ghost?.target?.key === tech.key ? ghost.confidence : 0;
                     const dropOk = conf >= 50;
+                    const assignedTickets = ticketsByUser.get(tech.key) ?? [];
                     return (
                       <div
                         key={tech.key}
@@ -318,13 +392,14 @@ export function AgentBottomPanel({
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={handleTechDrop(tech)}
                         className={cn(
-                          "relative mb-1 flex items-center gap-2 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2 transition-all",
+                          "relative mb-1 flex flex-col gap-1 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2 transition-all",
                           isHover &&
                             (dropOk
                               ? "border-[#1A7A44] bg-[#E6F5EC] ring-2 ring-[#1A7A44]/20"
                               : "border-star-red bg-star-red-light ring-2 ring-star-red/20"),
                         )}
                       >
+                        <div className="flex items-center gap-2">
                         {isHover ? (
                           <span
                             className={cn(
@@ -360,6 +435,23 @@ export function AgentBottomPanel({
                             {tech.loadPct}%
                           </p>
                         </div>
+                        </div>
+                        {assignedTickets.length > 0 ? (
+                          <ul className="border-t border-[var(--gray-border)] pt-1.5">
+                            {assignedTickets.map((ticket) => (
+                              <li
+                                key={ticket.id}
+                                className="truncate text-[10px] font-medium text-star-navy"
+                                title={`${ticket.ticket_number} ${ticket.title}`}
+                              >
+                                <span className="font-mono">{ticket.ticket_number}</span>
+                                <span className="text-muted-foreground ml-1 font-normal">
+                                  {ticket.title}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </div>
                     );
                   })}

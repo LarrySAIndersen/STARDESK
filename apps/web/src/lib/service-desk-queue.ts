@@ -48,6 +48,17 @@ export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>):
   return isAssignedToDeskTeam(ticket, deskTeamIds);
 }
 
+/** Dashboard / desk distribution: open tickets still in the desk queue. */
+export function isAssignableFromServiceDeskQueue(
+  ticket: Ticket,
+  deskTeamIds?: Set<string>,
+): boolean {
+  if (["closed", "cancelled", "resolved"].includes(ticket.status)) {
+    return false;
+  }
+  return isInServiceDeskQueue(ticket, deskTeamIds);
+}
+
 /** Tildelt en operativ gruppe (vises i højre rail — ikke desk-kø). */
 export function isInTeamsQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
   if (!ticket.assigned_team_id) {
