@@ -1,7 +1,7 @@
 {
   "version": "1",
   "source": "workboard/constitution/STARDESK-kodepraksis-50.md",
-  "updatedAt": "2026-06-02T19:09:07.706Z",
+  "updatedAt": "2026-06-02T19:10:09.724Z",
   "currentN": null,
   "items": [
     {
@@ -10,8 +10,8 @@
       "attempts": 1,
       "lastFallback": "partial",
       "notes": "Phase1: SIM,RET,ARG,PTH enabled and clean. Phase2 deferred: C90,S,D (782 hits).",
-      "prUrl": null,
-      "completedAt": "2026-06-02T19:06:22.217Z"
+      "prUrl": "https://github.com/LarrySAIndersen/STARDESK/pull/81",
+      "completedAt": "2026-06-02T19:10:09.476Z"
     },
     {
       "n": 40,
@@ -19,8 +19,8 @@
       "attempts": 0,
       "lastFallback": null,
       "notes": "pre-commit: ruff+ruff-format+web eslint/tsc via scripts/pre-commit/web-quality.sh",
-      "prUrl": null,
-      "completedAt": "2026-06-02T19:09:07.706Z"
+      "prUrl": "https://github.com/LarrySAIndersen/STARDESK/pull/81",
+      "completedAt": "2026-06-02T19:10:09.724Z"
     },
     {
       "n": 43,
@@ -459,6 +459,8 @@
     "2026-06-02T19:04:56.977Z init-queue: 50 items, order 39,40,43,44,50,3,41,42,1,2,7,8,10,4,9,5,6,11,12,18,13,14,17,19,20,21,29,22,23,24,25,30,26,27,28,15,16,31,32,33,34,35,36,37,38,45,46,47,48,49",
     "2026-06-02T19:04:57.479Z tick start #39 attempt 1",
     "2026-06-02T19:06:22.217Z tick end #39 status=partial fallback=partial pr=-",
-    "2026-06-02T19:09:07.706Z tick end #40 status=done fallback=- pr=-"
+    "2026-06-02T19:09:07.706Z tick end #40 status=done fallback=- pr=-",
+    "2026-06-02T19:10:09.477Z tick end #39 status=partial fallback=- pr=https://github.com/LarrySAIndersen/STARDESK/pull/81",
+    "2026-06-02T19:10:09.724Z tick end #40 status=done fallback=- pr=https://github.com/LarrySAIndersen/STARDESK/pull/81"
   ]
 }
