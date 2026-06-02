@@ -126,8 +126,8 @@ export function AgentDashboardClient({
               {aiTicket.ticket_number} {aiTicket.title}
             </strong>{" "}
             {aiTicket.routing?.suggested_team_name && !aiTicket.assigned_team_id
-              ? `— AI foreslår ${aiTicket.routing.suggested_team_name}. Træk til tekniker i bundpanelet.`
-              : "— træk sagen til en tekniker i bundpanelet for AI-assisteret tildeling."}
+              ? `— AI foreslår ${aiTicket.routing.suggested_team_name}. Træk til en gruppe i bundpanelet.`
+              : "— træk sagen til en gruppe i bundpanelet for AI-assisteret tildeling."}
           </WireAiBanner>
         ) : null}
 
@@ -139,8 +139,8 @@ export function AgentDashboardClient({
         </div>
         {assignableTickets.length === 0 ? (
           <p className="text-[var(--gray-mid)] text-sm">
-            Ingen sager i fordelingskøen — tildelte sager vises under teknikere i Teams-panelet
-            nedenfor.
+            Ingen sager i fordelingskøen — nye ubehandlede sager vises her. Tildelte sager vises
+            under den pågældende gruppe i bundpanelet.
           </p>
         ) : (
           <WireframeTicketTable
@@ -164,8 +164,7 @@ export function AgentDashboardClient({
           />
         )}
         <p className="mt-2 text-center text-[11px] text-[var(--gray-mid)]">
-          Grib en sag og træk den ned til en tekniker — AI viser konfidens-score mens du
-          trækker
+          Grib en sag og træk den ned til en gruppe — bereder-stregen lyser op mens du trækker
         </p>
       </div>
 
