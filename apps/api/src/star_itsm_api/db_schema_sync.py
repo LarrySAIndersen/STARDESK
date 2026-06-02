@@ -114,9 +114,7 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
         return True
     if not await _table_exists(engine, "kanban_boards"):
         return True
-    if not await _table_exists(engine, "kanban_board_tickets"):
-        return True
-    return False
+    return bool(not await _table_exists(engine, "kanban_board_tickets"))
 
 
 def _run_migrations(database_url: str) -> None:

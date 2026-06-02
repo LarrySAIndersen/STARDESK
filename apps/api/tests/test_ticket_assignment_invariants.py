@@ -13,18 +13,20 @@ from star_itsm_api.services.ticket_assignment import resolve_ticket_assignment
 async def test_user_without_team_requires_group_when_multiple_memberships() -> None:
     db = AsyncMock()
     user_id = uuid.uuid4()
-    with patch(
-        "star_itsm_api.services.ticket_assignment.get_user_team_ids",
-        new_callable=AsyncMock,
-        return_value=[uuid.uuid4(), uuid.uuid4()],
+    with (
+        patch(
+            "star_itsm_api.services.ticket_assignment.get_user_team_ids",
+            new_callable=AsyncMock,
+            return_value=[uuid.uuid4(), uuid.uuid4()],
+        ),
+        pytest.raises(HTTPException) as exc,
     ):
-        with pytest.raises(HTTPException) as exc:
-            await resolve_ticket_assignment(
-                db,
-                current_team_id=None,
-                current_user_id=None,
-                updates={"assigned_user_id": user_id},
-            )
+        await resolve_ticket_assignment(
+            db,
+            current_team_id=None,
+            current_user_id=None,
+            updates={"assigned_user_id": user_id},
+        )
 
     assert exc.value.status_code == 400
     assert "Gruppe" in exc.value.detail

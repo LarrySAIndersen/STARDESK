@@ -14,8 +14,6 @@ TEAM_ID = uuid.UUID("a1000001-0000-4000-8000-000000000001")
 USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000041")
 
 
-
-
 def _fake_agent_user() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),

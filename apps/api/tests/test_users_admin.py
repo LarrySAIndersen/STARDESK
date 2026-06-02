@@ -32,8 +32,6 @@ NEW_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000043")
 TARGET_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000041")
 
 
-
-
 def _fake_agent_user() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),

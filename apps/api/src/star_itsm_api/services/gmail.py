@@ -101,10 +101,7 @@ def _message_targets_sync_mailbox(message: InboundEmailMessage) -> bool:
     raw = (message.to_email or "").strip()
     if not raw:
         return True
-    for part in raw.split(","):
-        if _normalize_email(part.strip()) == expected:
-            return True
-    return False
+    return any(_normalize_email(part.strip()) == expected for part in raw.split(","))
 
 
 def build_outbound_from_address(*, connected_email: str | None) -> str:

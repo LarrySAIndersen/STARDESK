@@ -147,6 +147,7 @@ def compute_suggested_priority(
     *,
     topics: list[str],
 ) -> tuple[str, list[str]]:
+    _ = topics
     reasons: list[str] = []
     level = _PRIORITY_ORDER.get(ticket.priority, 2)
 
