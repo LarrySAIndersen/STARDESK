@@ -1,6 +1,6 @@
 # Build from monorepo root:
 #   docker build -t stardesk-api -f apps/api/Dockerfile .
-FROM python:3.12-slim-bookworm
+FROM python:3.14.5-slim-bookworm
 
 WORKDIR /app
 
