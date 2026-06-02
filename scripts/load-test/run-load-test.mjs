@@ -317,6 +317,18 @@ function writeReport(summary) {
   mkdirSync(reportsDir, { recursive: true });
   const path = resolve(reportsDir, "latest.json");
   writeFileSync(path, JSON.stringify(summary, null, 2), "utf8");
+
+  const repoReportsDir = resolve(loadTestDir, "../../reports");
+  mkdirSync(repoReportsDir, { recursive: true });
+  const latestPath = resolve(repoReportsDir, "performance-load-test-latest.json");
+  writeFileSync(latestPath, JSON.stringify(summary, null, 2), "utf8");
+  const stamp = (summary.finishedAt ?? new Date().toISOString()).replace(/[:.]/g, "-");
+  writeFileSync(
+    resolve(repoReportsDir, `load-test-${summary.scenario}-${stamp}.json`),
+    JSON.stringify(summary, null, 2),
+    "utf8",
+  );
+
   return path;
 }
 

@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 
 from sqlalchemy import func, select
@@ -29,6 +30,8 @@ from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
 logger = logging.getLogger(__name__)
 
 SYSTEM_REPORTER_DISPLAY_NAME = "System"
+_ACTIVE_TEAMS_TTL_SECONDS = 300.0
+_active_teams_cache: tuple[float, list[_TeamRef]] | None = None
 
 
 async def load_user_display_names(
@@ -223,8 +226,16 @@ def _ticket_to_read(
 
 
 async def _load_active_teams(db: AsyncSession) -> list[_TeamRef]:
+    global _active_teams_cache
+    now = time.monotonic()
+    if _active_teams_cache is not None:
+        cached_at, cached = _active_teams_cache
+        if now - cached_at < _ACTIVE_TEAMS_TTL_SECONDS:
+            return cached
     rows = await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc()))
-    return [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
+    refs = [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
+    _active_teams_cache = (now, refs)
+    return refs
 
 
 async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[TicketRead]:
