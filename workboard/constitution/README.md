@@ -34,6 +34,7 @@ Fallback: primær → partial → defer → wontfix. Se `scripts/kodepraksis-age
 
 ## Relation til resten af repoet
 
+- Cursor agent-regel (altid aktiv): `.cursor/rules/stardesk-constitution-paradigme.mdc`
 - Operativ agent-regel: `AGENTS.md`, `CLAUDE.md`
 - Release/PR: `docs/pr-only-period.md`
 - Work Board canvas: pensioneret — se `workboard/README.md`
