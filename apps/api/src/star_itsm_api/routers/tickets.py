@@ -73,7 +73,7 @@ from star_itsm_api.services.dashboard_scope import (
     apply_dashboard_scope_stmt,
     parse_dashboard_scope,
 )
-from star_itsm_api.services.db_resilience import optional_db_read, rollback_session
+from star_itsm_api.services.db_resilience import optional_db_read
 from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
 from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
 from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
