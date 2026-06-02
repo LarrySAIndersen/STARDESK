@@ -112,6 +112,17 @@ Default Preview URLs (`STARDESK_STAGING_API_URL` / `STARDESK_STAGING_WEB_URL` to
 
 Requires **`DATABASE_URL`** (Neon **`test`**) on Vercel **api** → **Preview** — see **[staging-vercel-preview-env.md](./staging-vercel-preview-env.md)**. Protected deployments: `vercel link` or `VERCEL_PROTECTION_BYPASS` (Windows gate uses `vercel curl` fallback when possible).
 
+## Production (after `staging` → `main` release)
+
+The standard deliverable gate **rejects** `stardesk_env=production` on purpose. After Jan merges production, run the dedicated prod smoke:
+
+```bash
+cd scripts
+TEST_USER_PASSWORD='Stardesk2026!' npm run gate:hello-world:prod
+```
+
+Checks: API `/health` + login + tickets (`sf01@example.dk`), web PRODUKTION banner, BFF login (`sf02@example.dk` by default), **Alle sager** on `/tickets` or `/service-desk`. Override URLs with `STARDESK_WEB_URL` / `STARDESK_API_URL`. Latest run summary: [reports/prod-hello-world-gate-latest.md](../reports/prod-hello-world-gate-latest.md).
+
 ## Related docs
 
 - [AGENTS.md](../AGENTS.md) — Cloud VM setup
