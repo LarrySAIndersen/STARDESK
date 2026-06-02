@@ -2,6 +2,10 @@
 
 import { useId, useState } from "react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,21 +76,12 @@ export function KanbanImportBacklogDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 border-0 bg-black/50 p-0"
-        aria-label="Luk dialog"
-        onClick={onClose}
-      />
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-labelledby={titleId}
-        aria-modal="true"
-        className="ledger-card relative w-full max-w-2xl p-5"
-        onMouseDown={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.key === "Escape" && onClose()}
+    <AccessibleModalBackdrop onClose={onClose}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={onClose}
+        className="ledger-card w-full max-w-2xl p-5"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -121,7 +116,7 @@ export function KanbanImportBacklogDialog({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }

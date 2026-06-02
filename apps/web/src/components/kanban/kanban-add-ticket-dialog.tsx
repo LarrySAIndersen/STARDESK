@@ -4,6 +4,10 @@ import { fireAndForget } from "@/lib/fire-and-forget";
 
 import { useCallback, useEffect, useId, useState } from "react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,17 +92,12 @@ export function KanbanAddTicketDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
-      <div
-        ref={trapRef}
-        role="dialog"
-        aria-labelledby={titleId}
+    <AccessibleModalBackdrop onClose={onClose}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={onClose}
         className="ledger-card w-full max-w-lg space-y-4 p-5"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.key === "Escape" && onClose()}
       >
         <h2 id={titleId} className="text-lg font-semibold">
           Tilføj eksisterende sag
@@ -151,7 +150,7 @@ export function KanbanAddTicketDialog({
             Luk
           </Button>
         </div>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }
