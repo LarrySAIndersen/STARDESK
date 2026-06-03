@@ -19,9 +19,16 @@ Read `docs/pr-only-period.md`.
 1. Branch from latest `staging`: `cursor/<beskrivelse>-9a30` or `opgave-NN-slug`
 2. Commit on that branch only
 3. `git push -u origin <branch>`
-4. Create **draft PR** → base **`staging`**
-5. Deliverable gate before marking done
-6. Final message must include **PR URL** — not "pushed to main"
+4. Create PR → base **`staging`** (mark ready when CI should run)
+5. **Deliverable must land on `staging`:** merge the PR when CI is green (auto-merge OK). Do not stop at “PR opened” — Jan expects **committed + merged to `staging`**.
+6. Deliverable gate before marking done
+7. Final message must include **PR URL** and confirm **merged to `staging`** (or why merge is blocked)
+
+## Production — Jan godkender manuelt (hårdt krav)
+
+- **Never** merge or auto-merge **`staging` → `main`** unless Jan explicitly asks in that session.
+- Prod deploy = open PR `staging` → `main` for Jan’s manual review/merge only.
+- Do not push to `main`, do not tell Jan “deployed to prod” from agent work alone.
 
 Production release: only Jan merges **`staging` → `main`** via separate PR.
 ## Production (Flow 2 — hard requirement)

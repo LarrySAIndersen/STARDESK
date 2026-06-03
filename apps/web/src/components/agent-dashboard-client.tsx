@@ -7,10 +7,7 @@ import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { useBoardDataSync } from "@/hooks/use-board-data-sync";
-import {
-  isAssignableFromServiceDeskQueue,
-  serviceDeskTeamIds,
-} from "@/lib/service-desk-queue";
+import { isNewStatusTicket } from "@/lib/service-desk-queue";
 import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
@@ -30,8 +27,6 @@ export function AgentDashboardClient({
   const draggingTicketRef = useRef<Ticket | null>(null);
   const [slackTabRequest, setSlackTabRequest] = useState(0);
   const [refreshError, setRefreshError] = useState<string | null>(null);
-
-  const deskTeamIds = useMemo(() => serviceDeskTeamIds(teams), [teams]);
 
   useEffect(() => {
     setTickets(initialTickets);
@@ -61,17 +56,16 @@ export function AgentDashboardClient({
     setDraggingTicket(null);
   }, []);
 
-  /** Kun sager der kan fordeles — forsvinder når de tildeles operativ gruppe. */
-  const assignableTickets = useMemo(
+  /** Alle åbne sager med status Ny (nyeste først). */
+  const newStatusTickets = useMemo(
     () =>
       tickets
-        .filter((t) => isAssignableFromServiceDeskQueue(t, deskTeamIds))
+        .filter(isNewStatusTicket)
         .sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        )
-        .slice(0, 8),
-    [tickets, deskTeamIds],
+        ),
+    [tickets],
   );
 
   useEffect(() => {
@@ -85,7 +79,7 @@ export function AgentDashboardClient({
     return () => obs.disconnect();
   }, []);
 
-  const aiTicket = firstUnassignedWithRouting(tickets) ?? assignableTickets[0];
+  const aiTicket = firstUnassignedWithRouting(tickets) ?? newStatusTickets[0];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -107,19 +101,18 @@ export function AgentDashboardClient({
         ) : null}
 
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="wire-sec-title">Seneste sager</h2>
+          <h2 className="wire-sec-title">Nye sager</h2>
           <Link href="/tickets" className="wire-btn wire-btn-sm">
             Se alle →
           </Link>
         </div>
-        {assignableTickets.length === 0 ? (
+        {newStatusTickets.length === 0 ? (
           <p className="text-[var(--gray-mid)] text-sm">
-            Ingen sager i fordelingskøen — nye ubehandlede sager vises her. Tildelte sager vises
-            under den pågældende gruppe i bundpanelet.
+            Ingen sager med status Ny. Når nye sager oprettes, vises de her til fordeling.
           </p>
         ) : (
           <WireframeTicketTable
-            tickets={assignableTickets}
+            tickets={newStatusTickets}
             draggable
             onDragStart={(ticket) => {
               draggingTicketRef.current = ticket;

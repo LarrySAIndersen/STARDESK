@@ -55,7 +55,7 @@ export function AgentBottomPanel({
   teams: Team[];
   slackTabRequest?: number;
   selectedTicket?: Ticket | null;
-  /** Active drag from Seneste sager — drives AI ghost overlay and drop targets. */
+  /** Active drag from Nye sager — drives AI ghost overlay and drop targets. */
   draggingTicket?: Ticket | null;
   onTicketAssigned?: (detail: TicketDetail) => void;
 }) {

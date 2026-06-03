@@ -38,7 +38,7 @@ function isAssignedToDeskTeam(ticket: Ticket, deskTeamIds?: Set<string>): boolea
 }
 
 /**
- * Distribution queue (Seneste sager / I service desk):
+ * Distribution queue (Nye sager / I service desk):
  * - Tickets without an assigned team ("uden gruppe"), OR
  * - Tickets with status "new" (freshly created, regardless of pre-assigned team).
  *
@@ -52,6 +52,11 @@ export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>):
     return true;
   }
   return isAssignedToDeskTeam(ticket, deskTeamIds);
+}
+
+/** Status Ny — distribution list on agent dashboard. */
+export function isNewStatusTicket(ticket: Ticket): boolean {
+  return ticket.status === "new";
 }
 
 /** Dashboard / desk distribution: open tickets still in the desk queue. */
