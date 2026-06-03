@@ -31,30 +31,32 @@ The **Security** workflow (`.github/workflows/security.yml`, job `api-security`)
 
 Download from a workflow run: **Actions → Security → api-security → Artifacts**.
 
-## SonarCloud — coverage import (t-27)
+## SonarCloud — coverage import (CI)
 
 `sonar-project.properties` at repo root configures:
 
 - `sonar.python.coverage.reportPaths=apps/api/coverage.xml`
 - `sonar.tests=apps/api/tests`
 
-There is **no SonarScanner step in CI yet** — the Sonar Agent uses the SonarCloud REST API for issue triage. To push coverage to SonarCloud (manual or future CI):
+**CI workflow:** `.github/workflows/sonarcloud.yml` runs on every push/PR to `staging` and `main`:
 
-1. Generate coverage locally (command above) or download the CI artifact.
-2. Ensure `apps/api/coverage.xml` exists at repo root relative path.
-3. Run SonarScanner with `SONAR_TOKEN` (never commit the token):
+1. `pytest` with Cobertura XML (`apps/api/coverage.xml`)
+2. `SonarSource/sonarqube-scan-action` imports coverage into SonarCloud
 
-```bash
-# Install SonarScanner CLI once — see https://docs.sonarsource.com/sonarqube-cloud/advanced-setup/ci-overview/
-export SONAR_TOKEN=your-pat   # from SonarCloud → My Account → Security
-sonar-scanner \
-  -Dsonar.host.url=https://sonarcloud.io \
-  -Dsonar.token="$SONAR_TOKEN"
-```
+**Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the job fails with a clear error.
 
 SonarCloud project: [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK)
 
-After merge to `main`, run the scanner (or add a dedicated workflow) to refresh coverage metrics in the dashboard.
+Optional: mark the **SonarCloud** check as required under branch protection for `staging` / `main`.
+
+### Manual scan (local / agent VM)
+
+```bash
+cd apps/api && uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
+cd ../.. && cd scripts && npm run sonar:scan
+```
+
+Never commit `SONAR_TOKEN`.
 
 ## Web — phase 2 (deferred)
 

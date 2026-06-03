@@ -86,6 +86,6 @@ cd ../..
 sonar-scanner -Dsonar.host.url=https://sonarcloud.io -Dsonar.token="$SONAR_TOKEN"
 ```
 
-See [docs/test-coverage.md](../../docs/test-coverage.md) for CI artifacts and web phase 2.
+CI: `.github/workflows/sonarcloud.yml` runs pytest coverage + SonarCloud scan on `staging`/`main` (secret `SONAR`). See [docs/test-coverage.md](../../docs/test-coverage.md).
 
 Rollback: revert branch or run `git checkout main -- <paths>` before re-applying codemods.
