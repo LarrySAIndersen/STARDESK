@@ -38,10 +38,16 @@ function isAssignedToDeskTeam(ticket: Ticket, deskTeamIds?: Set<string>): boolea
 }
 
 /**
- * Venstre tabel / service desk-kø: ingen gruppe, eller kun SF Service Desk.
- * Andre grupper (SF, Infrastruktur, osv.) vises kun i gruppe-rail til højre.
+ * Distribution queue (Seneste sager / I service desk):
+ * - Tickets without an assigned team ("uden gruppe"), OR
+ * - Tickets with status "new" (freshly created, regardless of pre-assigned team).
+ *
+ * Once a ticket moves out of "new" and is assigned to a non-desk team, it leaves the queue.
  */
 export function isInServiceDeskQueue(ticket: Ticket, deskTeamIds?: Set<string>): boolean {
+  if (ticket.status === "new") {
+    return true;
+  }
   if (!ticket.assigned_team_id) {
     return true;
   }

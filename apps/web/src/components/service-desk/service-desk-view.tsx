@@ -447,7 +447,6 @@ export function ServiceDeskView({
             <DispatchGroupsStrip
               teams={railTeams}
               ticketsByTeam={ticketsByTeam}
-              allTickets={localTickets.filter(isOpenTicket)}
               dragOverTeamId={dragOverTeamId}
               onDragOverTeam={handleDragOverTeam}
               onDragLeaveTeam={handleDragLeaveTeam}

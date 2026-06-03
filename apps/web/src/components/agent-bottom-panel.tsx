@@ -8,7 +8,7 @@ import { apiPatch } from "@/lib/api";
 import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import {
-  isOpenTicket,
+  isInTeamsQueue,
   serviceDeskTeamIds,
   teamsForServiceDeskRail,
 } from "@/lib/service-desk-queue";
@@ -34,15 +34,19 @@ type PendingAssign = Readonly<{
 
 const TEAM_TICKET_PREVIEW = 6;
 
-function buildTicketsByTeam(tickets: Ticket[]): Map<string, Ticket[]> {
+function buildTicketsByTeam(
+  tickets: Ticket[],
+  deskTeamIds: Set<string>,
+): Map<string, Ticket[]> {
   const map = new Map<string, Ticket[]>();
   for (const ticket of tickets) {
-    if (!ticket.assigned_team_id || !isOpenTicket(ticket)) {
+    if (!isInTeamsQueue(ticket, deskTeamIds)) {
       continue;
     }
-    const list = map.get(ticket.assigned_team_id) ?? [];
+    const teamId = ticket.assigned_team_id!;
+    const list = map.get(teamId) ?? [];
     list.push(ticket);
-    map.set(ticket.assigned_team_id, list);
+    map.set(teamId, list);
   }
   for (const [teamId, list] of map) {
     list.sort(
@@ -50,7 +54,7 @@ function buildTicketsByTeam(tickets: Ticket[]): Map<string, Ticket[]> {
         new Date(b.updated_at ?? b.created_at).getTime() -
         new Date(a.updated_at ?? a.created_at).getTime(),
     );
-    map.set(teamId, list.slice(0, TEAM_TICKET_PREVIEW));
+    map.set(teamId, list);
   }
   return map;
 }
@@ -96,7 +100,10 @@ export function AgentBottomPanel({
     () => teamsForServiceDeskRail(sortTeamsForDisplay(teams), deskTeamIds),
     [teams, deskTeamIds],
   );
-  const ticketsByTeam = useMemo(() => buildTicketsByTeam(tickets), [tickets]);
+  const ticketsByTeam = useMemo(
+    () => buildTicketsByTeam(tickets, deskTeamIds),
+    [tickets, deskTeamIds],
+  );
   const ticketMap = useMemo(
     () => new Map(tickets.map((t) => [t.id, t])),
     [tickets],
@@ -320,12 +327,9 @@ export function AgentBottomPanel({
               const conf =
                 ghost?.team?.id === team.id ? ghost.confidence : 0;
               const dropOk = conf >= 50;
-              const teamTickets = ticketsByTeam.get(team.id) ?? [];
-              const totalTeamTickets =
-                tickets.filter(
-                  (t) =>
-                    t.assigned_team_id === team.id && isOpenTicket(t),
-                ).length;
+              const teamTicketList = ticketsByTeam.get(team.id) ?? [];
+              const totalTeamTickets = teamTicketList.length;
+              const teamTickets = teamTicketList.slice(0, TEAM_TICKET_PREVIEW);
               return (
                 <div
                   key={team.id}

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 
-import { isOpenTicket } from "@/lib/service-desk-queue";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
@@ -12,7 +11,6 @@ export const GROUPS_STRIP_TICKET_PREVIEW = 6;
 export function DispatchGroupsStrip({
   teams,
   ticketsByTeam,
-  allTickets,
   dragOverTeamId,
   onDragOverTeam,
   onDragLeaveTeam,
@@ -24,8 +22,6 @@ export function DispatchGroupsStrip({
 }: {
   teams: Team[];
   ticketsByTeam: Map<string, Ticket[]>;
-  /** Full ticket list for open-count badges per group. */
-  allTickets: Ticket[];
   dragOverTeamId: string | null;
   onDragOverTeam: (teamId: string, event: React.DragEvent) => void;
   onDragLeaveTeam: () => void;
@@ -50,13 +46,9 @@ export function DispatchGroupsStrip({
       {teams.map((team) => {
         const isSelected = selectedTeamId === team.id;
         const isHover = dragOverTeamId === team.id;
-        const teamTickets = (ticketsByTeam.get(team.id) ?? []).slice(
-          0,
-          GROUPS_STRIP_TICKET_PREVIEW,
-        );
-        const totalTeamTickets = allTickets.filter(
-          (t) => t.assigned_team_id === team.id && isOpenTicket(t),
-        ).length;
+        const teamTicketList = ticketsByTeam.get(team.id) ?? [];
+        const totalTeamTickets = teamTicketList.length;
+        const teamTickets = teamTicketList.slice(0, GROUPS_STRIP_TICKET_PREVIEW);
 
         return (
           <div
