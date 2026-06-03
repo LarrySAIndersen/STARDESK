@@ -72,4 +72,12 @@ Write-Host "  Start servers: pwsh -File scripts/dev-up.ps1"
 Write-Host "  Gate:          pwsh -File scripts/run-deliverable-gate.ps1"
 Write-Host "  Web:  http://localhost:3000"
 Write-Host "  API:  http://localhost:8000/health"
-Write-Host "  Demo: sf01@example.dk / Stardesk2026!"
+if (-not $SkipDb) {
+    Write-Host "  Prototype users (from database):"
+    Push-Location $ApiDir
+    try {
+        & uv run python (Join-Path $Root "scripts/list_prototype_users.py")
+    } finally {
+        Pop-Location
+    }
+}
