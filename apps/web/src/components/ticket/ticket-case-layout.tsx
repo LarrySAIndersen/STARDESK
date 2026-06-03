@@ -55,9 +55,11 @@ export function TicketCaseLayout({
         commentFormId={commentAnchorId}
       />
 
-      <section className="portal-v2-card p-4 sm:p-5" aria-label="Statusforløb">
-        <StatusTimeline ticket={ticket} />
-      </section>
+      {!showEditableDetails ? (
+        <section className="portal-v2-card p-4 sm:p-5" aria-label="Statusforløb">
+          <StatusTimeline ticket={ticket} />
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

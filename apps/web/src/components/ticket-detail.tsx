@@ -208,13 +208,15 @@ export function TicketDetailView({
         </div>
       </WireDetailCard>
 
-      <TicketDetailTopBand
-        ticket={ticket}
-        teams={teams}
-        categories={categories}
-        editableMetadata={metadataEditable}
-        staffView={staff}
-      />
+      {!metadataEditable ? (
+        <TicketDetailTopBand
+          ticket={ticket}
+          teams={teams}
+          categories={categories}
+          editableMetadata={false}
+          staffView={staff}
+        />
+      ) : null}
 
       {(ticket.tags?.length ?? 0) > 0 ? (
         <WireDetailCard title="Tags">
@@ -259,33 +261,26 @@ export function TicketDetailView({
         </WireDetailCard>
       ) : null}
 
-      <WireDetailCard title="Tildeling og status" id="ticket-assign">
-        <div className="space-y-4">
-          <TicketMetadataForm ticket={ticket} staff={staff} />
-          {metadataEditable ? (
-            <p className="text-muted-foreground text-xs">
-              Kategori, prioritet, gruppe og sagsbehandler kan også redigeres i Detaljer-kortet til
-              højre — tryk Gem for at gemme.
-            </p>
-          ) : (
-            <>
-              <TicketPriorityForm
+      {!metadataEditable ? (
+        <WireDetailCard title="Tildeling og status" id="ticket-assign">
+          <div className="space-y-4">
+            <TicketMetadataForm ticket={ticket} staff={staff} />
+            <TicketPriorityForm
+              ticketId={ticket.id}
+              currentPriority={ticket.priority}
+              routing={ticket.routing}
+            />
+            {teams.length === 0 ? (
+              <TicketAssignmentForm
                 ticketId={ticket.id}
-                currentPriority={ticket.priority}
-                routing={ticket.routing}
+                teams={teams}
+                currentTeamId={ticket.assigned_team_id}
+                currentUserId={ticket.assigned_user_id}
               />
-              {teams.length === 0 ? (
-                <TicketAssignmentForm
-                  ticketId={ticket.id}
-                  teams={teams}
-                  currentTeamId={ticket.assigned_team_id}
-                  currentUserId={ticket.assigned_user_id}
-                />
-              ) : null}
-            </>
-          )}
-        </div>
-      </WireDetailCard>
+            ) : null}
+          </div>
+        </WireDetailCard>
+      ) : null}
     </>
   ) : null;
 
