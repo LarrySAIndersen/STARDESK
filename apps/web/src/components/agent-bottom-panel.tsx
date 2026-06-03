@@ -568,7 +568,7 @@ export function AgentBottomPanel({
 
       {ghost ? (
         <div
-          className="pointer-events-none fixed z-[9999] min-w-[290px] rounded border-2 border-star-navy bg-white p-3 shadow-xl"
+          className="border-border bg-popover text-popover-foreground pointer-events-none fixed z-[9999] min-w-[290px] rounded border-2 p-3 shadow-xl"
           style={{
             left: ghost.x,
             top: ghost.y,

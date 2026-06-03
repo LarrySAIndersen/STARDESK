@@ -40,7 +40,7 @@ export function Gauge({
           <path
             d={ARC_D}
             fill="none"
-            stroke="#e2e8f0"
+            stroke="var(--gray-border)"
             strokeWidth="12"
             strokeLinecap="round"
           />
@@ -64,7 +64,7 @@ export function Gauge({
         </div>
       </div>
       <div className="flex w-full flex-col items-center gap-0.5 text-center">
-        <figcaption className="text-star-navy text-sm font-semibold leading-snug">
+        <figcaption className="text-foreground text-sm font-semibold leading-snug">
           {label}
         </figcaption>
         {hint ? (

@@ -329,7 +329,7 @@ export function ServiceDeskView({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="wire-scroll-content min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
       <header className="shrink-0">
-        <h1 className="text-star-navy text-2xl font-bold tracking-tight">Service Desk</h1>
+        <h1 className="text-foreground text-2xl font-bold tracking-tight">Service Desk</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           Kø og fordeling — træk en sag til bundpanelet (Grupper / Sagsindhold) eller til
           gruppen til højre.
@@ -390,7 +390,7 @@ export function ServiceDeskView({
                     "rounded-[2px] border px-3 py-1.5 text-xs font-semibold transition-colors",
                     queue === tab.id
                       ? "border-star-navy bg-star-navy text-white"
-                      : "border-[var(--gray-border)] bg-white text-[var(--star-text)] hover:bg-[var(--gray-bg)]",
+                      : "border-[var(--gray-border)] bg-card text-[var(--star-text)] hover:bg-[var(--gray-bg)]",
                   )}
                   onClick={() => {
                     setQueue(tab.id);
@@ -544,7 +544,7 @@ export function ServiceDeskView({
           selectedTeamId={selectedTeamId}
           onSelectTeam={handleSelectTeam}
           title="Interne grupper"
-          description="Klik en gruppe for at se sager — træk hertil for at tildele"
+          description="Fold grupper ud/luk med pil — træk sag til bereder-streg når gruppen er åben"
         />
       </ResizableSplit>
 

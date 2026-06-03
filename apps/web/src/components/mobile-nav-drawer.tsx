@@ -59,7 +59,7 @@ export function MobileNavDrawer({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          "mobile-nav-drawer-panel wire-sidebar absolute inset-y-0 left-0 flex w-[min(100vw-3rem,18rem)] max-w-full flex-col border-r border-[var(--gray-border)] bg-white shadow-xl outline-none",
+          "mobile-nav-drawer-panel wire-sidebar absolute inset-y-0 left-0 flex w-[min(100vw-3rem,18rem)] max-w-full flex-col border-r border-border bg-sidebar shadow-xl outline-none",
           className,
         )}
       >

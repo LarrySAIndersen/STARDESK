@@ -72,7 +72,7 @@ export function AgentTopBar({
           <button
             type="button"
             onClick={onOpenNav}
-            className="wire-touch-target wire-topbar-menu-btn text-[var(--gray-mid)] hover:bg-star-blue-light hover:text-star-navy -ml-1 flex items-center justify-center rounded-sm lg:hidden"
+            className="wire-touch-target wire-topbar-menu-btn text-muted-foreground hover:bg-accent hover:text-foreground -ml-1 flex items-center justify-center rounded-sm lg:hidden"
             aria-label="Åbn navigation"
           >
             <Menu className="size-5" aria-hidden />
