@@ -6,8 +6,8 @@ Phase 1 delivers **API coverage** in CI and SonarCloud import wiring. Web covera
 
 SonarCloud **cannot** run Automatic Analysis and CI analysis at the same time.
 
-1. Open [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK) → **Project Settings** → **Analysis Method**
-2. **Disable** Automatic Analysis
+1. Open [Analysis Method](https://sonarcloud.io/project/analysis_method?id=LarrySAIndersen_STARDESK) for **LarrySAIndersen_STARDESK**
+2. **Disable** Automatic Analysis (uncheck “Enabled for this project”)
 3. **Enable** analysis via GitHub Actions / CI (SonarScanner)
 
 Until step 2 is done, the `SonarCloud Scan` CI step fails with: *"You are running CI analysis while Automatic Analysis is enabled."*
