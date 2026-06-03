@@ -29,6 +29,7 @@ import {
   PendingImageAttachments,
   usePendingImageAttachments,
 } from "@/components/pending-image-attachments";
+import { dispatchBoardTicketsChanged } from "@/hooks/use-board-data-sync";
 import { apiGet, apiPost } from "@/lib/api";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Category } from "@/types/category";
@@ -268,6 +269,7 @@ export function CreateTicketForm({
       if (pendingAttachments.length > 0) {
         await uploadTicketAttachments(ticket.id, pendingAttachments);
       }
+      dispatchBoardTicketsChanged();
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
     } catch (err) {

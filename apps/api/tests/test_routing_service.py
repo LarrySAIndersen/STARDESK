@@ -51,14 +51,10 @@ async def test_apply_routing_skips_low_priority() -> None:
         assign_user_id=None,
         set_priority=None,
     )
-    default_team = uuid.uuid4()
 
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(
-        side_effect=[
-            MagicMock(scalars=lambda: MagicMock(all=lambda: [low_rule])),
-            MagicMock(scalar_one_or_none=lambda: default_team),
-        ]
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [low_rule]))
     )
 
     result = await routing.apply_routing(
@@ -69,19 +65,15 @@ async def test_apply_routing_skips_low_priority() -> None:
         priority="low",
     )
 
-    assert result.assigned_team_id == default_team
+    assert result.assigned_team_id is None
     assert result.priority == "low"
 
 
 @pytest.mark.asyncio
 async def test_apply_routing_falls_back_when_no_rules() -> None:
-    default_team = uuid.uuid4()
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(
-        side_effect=[
-            MagicMock(scalars=lambda: MagicMock(all=lambda: [])),
-            MagicMock(scalar_one_or_none=lambda: default_team),
-        ]
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: []))
     )
 
     result = await routing.apply_routing(
@@ -92,5 +84,5 @@ async def test_apply_routing_falls_back_when_no_rules() -> None:
         priority="medium",
     )
 
-    assert result.assigned_team_id == default_team
+    assert result.assigned_team_id is None
     assert result.assigned_user_id is None

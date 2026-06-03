@@ -843,7 +843,7 @@ async def create_ticket_from_sf_chat_session(
         ticket_type="incident",
         title=resolved_title.strip(),
         description=description,
-        status="assigned" if routing.assigned_team_id else "new",
+        status="new",
         priority=routing.priority,
         reporter_user_id=agent.id,
         organization_id=get_user_organization_id(agent),
