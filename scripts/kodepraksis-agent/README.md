@@ -30,4 +30,4 @@ npm run kodepraksis:result -- --n 39 --status done --notes "..." --pr https://..
 Prompt: `.cursor/prompts/kodepraksis-remediation-loop.md`  
 Skill: `.cursor/skills/stardesk-kodepraksis-agent/SKILL.md`
 
-**Not** the Sonar auto-merge loop — use normal PR-only flow to `staging`.
+**Not** the Sonar auto-merge loop — use normal PR-only flow to `staging` with **staging batch policy** (`docs/staging-batch-policy.md`: up to 10 commits per deploy).

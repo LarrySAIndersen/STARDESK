@@ -15,7 +15,7 @@ description: Execute STARDESK kodepraksis-50 constitution items one at a time wi
 1. `cd scripts && npm run kodepraksis:tick` — read latest.md
 2. Implement **only** `queue.currentN` item; on failure use fallback ladder (partial → defer → wontfix)
 3. `bash scripts/run-deliverable-gate.sh` (+ `--full` for web)
-4. PR to `staging` (normal PR-only — not Sonar auto-merge)
+4. Commit on shared branch (e.g. `cursor/kodepraksis-batch`); draft PR to `staging`; merge when **10 commits** or label `batch-ready` — see `docs/staging-batch-policy.md`
 5. `npm run kodepraksis:result -- --n <N> --status done|partial|deferred|wontfix [--fallback partial] [--pr URL]`
 
 ## Sources
