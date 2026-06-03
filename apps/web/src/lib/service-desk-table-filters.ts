@@ -79,6 +79,12 @@ export function applyServiceDeskTableFilters(
     if (filters.sla === "breached" && !ticket.sla_breached) {
       return false;
     }
+    if (filters.sla === "due_soon") {
+      const remaining = ticket.sla_remaining_seconds;
+      if (remaining == null || remaining < 0 || remaining > 3600) {
+        return false;
+      }
+    }
     if (filters.sla === "ok" && ticket.sla_breached) {
       return false;
     }

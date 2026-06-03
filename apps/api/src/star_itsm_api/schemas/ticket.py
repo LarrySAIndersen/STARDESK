@@ -60,7 +60,12 @@ class TicketRead(BaseModel):
     subcategory_name_da: str | None = None
     assigned_team_id: UUID | None = None
     assigned_team_name: str | None = None
+    assigned_user_id: UUID | None = None
     assigned_user_name: str | None = None
+    description: str = ""
+    comment_count: int = 0
+    internal_comment_count: int = 0
+    attachment_count: int = 0
     reporter_user_id: UUID | None = None
     reporter_display_name: str | None = None
     response_due_at: datetime | None = None
@@ -90,18 +95,10 @@ class TicketDetailRead(TicketRead):
     children: list[TicketSummaryRead] = Field(default_factory=list)
     related_major_tickets: list[TicketSummaryRead] = Field(default_factory=list)
     intelligence: TicketIntelligenceRead | None = None
-    description: str
     category_id: UUID | None
     subcategory_id: UUID | None
-    assigned_team_id: UUID | None
-    assigned_team_name: str | None = None
-    assigned_user_id: UUID | None = None
-    assigned_user_name: str | None = None
-    response_due_at: datetime | None
-    resolution_due_at: datetime | None
     escalation_level: int
     assignment_reason: str | None = None
-    fault_displayed: bool = False
     gdpr_consent: bool = False
     gdpr_consent_at: datetime | None = None
     subject_cpr: str | None = None
