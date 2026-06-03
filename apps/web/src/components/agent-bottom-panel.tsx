@@ -12,6 +12,7 @@ import {
   serviceDeskTeamIds,
   teamsForServiceDeskRail,
 } from "@/lib/service-desk-queue";
+import { buildTicketsByTeamMap, getTicketsForTeam } from "@/lib/tickets-by-team";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
 import { routingConfidenceForTeamAssign } from "@/lib/ticket-routing";
 import {
@@ -34,29 +35,12 @@ type PendingAssign = Readonly<{
 
 const TEAM_TICKET_PREVIEW = 6;
 
-function buildTicketsByTeam(
+function buildAgentPanelTicketsByTeam(
   tickets: Ticket[],
   deskTeamIds: Set<string>,
 ): Map<string, Ticket[]> {
-  const map = new Map<string, Ticket[]>();
-  for (const ticket of tickets) {
-    if (!isInTeamsQueue(ticket, deskTeamIds)) {
-      continue;
-    }
-    const teamId = ticket.assigned_team_id!;
-    const list = map.get(teamId) ?? [];
-    list.push(ticket);
-    map.set(teamId, list);
-  }
-  for (const [teamId, list] of map) {
-    list.sort(
-      (a, b) =>
-        new Date(b.updated_at ?? b.created_at).getTime() -
-        new Date(a.updated_at ?? a.created_at).getTime(),
-    );
-    map.set(teamId, list);
-  }
-  return map;
+  const inTeams = tickets.filter((t) => isInTeamsQueue(t, deskTeamIds));
+  return buildTicketsByTeamMap(inTeams);
 }
 
 export function AgentBottomPanel({
@@ -101,7 +85,7 @@ export function AgentBottomPanel({
     [teams, deskTeamIds],
   );
   const ticketsByTeam = useMemo(
-    () => buildTicketsByTeam(tickets, deskTeamIds),
+    () => buildAgentPanelTicketsByTeam(tickets, deskTeamIds),
     [tickets, deskTeamIds],
   );
   const ticketMap = useMemo(
@@ -327,9 +311,11 @@ export function AgentBottomPanel({
               const conf =
                 ghost?.team?.id === team.id ? ghost.confidence : 0;
               const dropOk = conf >= 50;
-              const teamTicketList = ticketsByTeam.get(team.id) ?? [];
+              const teamTicketList = getTicketsForTeam(ticketsByTeam, team.id);
               const totalTeamTickets = teamTicketList.length;
-              const teamTickets = teamTicketList.slice(0, TEAM_TICKET_PREVIEW);
+              const teamTickets = isSelected
+                ? teamTicketList
+                : teamTicketList.slice(0, TEAM_TICKET_PREVIEW);
               return (
                 <div
                   key={team.id}

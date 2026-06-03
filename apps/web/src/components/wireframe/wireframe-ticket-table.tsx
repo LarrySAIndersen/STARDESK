@@ -16,6 +16,7 @@ import { TICKET_DRAG_TYPE, setTicketDragData } from "@/lib/ticket-drag";
 export function WireframeTicketTable({
   tickets,
   draggable = false,
+  showTeamColumn = false,
   onRowClick,
   onDragStart,
   onDragEnd,
@@ -24,6 +25,8 @@ export function WireframeTicketTable({
 }: {
   tickets: Ticket[];
   draggable?: boolean;
+  /** Service desk: show assigned group on each row. */
+  showTeamColumn?: boolean;
   onRowClick?: (ticket: Ticket) => void;
   onDragStart?: (ticket: Ticket, event: React.DragEvent) => void;
   onDragEnd?: (ticket: Ticket) => void;
@@ -31,6 +34,9 @@ export function WireframeTicketTable({
   /** Replaces static column headers (e.g. filter/sort row). */
   columnFilters?: ReactNode;
 }) {
+  const gridClass = showTeamColumn
+    ? "wire-table-grid-tickets-desk"
+    : "wire-table-grid-tickets";
   const router = useRouter();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const didDragRef = useRef(false);
@@ -43,13 +49,14 @@ export function WireframeTicketTable({
     <div className={cn("wire-table-wrap", className)}>
       <div className="wire-table-scroll wire-table-scroll--tickets">
       {columnFilters ?? (
-        <div className="wire-table-head wire-table-grid-tickets" role="row">
+        <div className={cn("wire-table-head", gridClass)} role="row">
           <span>Sagsnr</span>
           <span>Titel og tags</span>
           <span>Kilde</span>
           <span>Kategori</span>
           <span>Status</span>
           <span>Prioritet</span>
+          {showTeamColumn ? <span>Gruppe</span> : null}
           <span>SLA</span>
         </div>
       )}
@@ -58,7 +65,8 @@ export function WireframeTicketTable({
           key={ticket.id}
           role="row"
           className={cn(
-            "wire-table-row wire-table-grid-tickets",
+            "wire-table-row",
+            gridClass,
             draggable && "cursor-grab active:cursor-grabbing",
             draggingId === ticket.id && "wire-table-row--dragging",
           )}
@@ -115,6 +123,11 @@ export function WireframeTicketTable({
           <span>
             <WirePriorityBadge priority={ticket.priority} />
           </span>
+          {showTeamColumn ? (
+            <span className="truncate text-[11px] font-semibold text-star-navy">
+              {ticket.assigned_team_name ?? "—"}
+            </span>
+          ) : null}
           <span>
             <SlaCountdown
               status={ticket.status}

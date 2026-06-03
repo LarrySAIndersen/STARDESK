@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import {
   ticketSourceFilterLabel,
@@ -62,14 +63,20 @@ export function TicketTableColumnFilters({
   filters,
   onChange,
   options,
+  showTeamColumn = false,
 }: {
   filters: ServiceDeskTableFilters;
   onChange: (patch: Partial<ServiceDeskTableFilters>) => void;
   options: ReturnType<typeof collectServiceDeskFilterOptions>;
+  showTeamColumn?: boolean;
 }) {
+  const gridClass = showTeamColumn
+    ? "wire-table-grid-tickets-desk"
+    : "wire-table-grid-tickets";
+
   return (
     <div
-      className="wire-table-head wire-table-grid-tickets min-h-9 items-stretch py-1"
+      className={cn("wire-table-head min-h-9 items-stretch py-1", gridClass)}
       role="row"
       aria-label="Filtrer og sorter sager"
     >
@@ -189,6 +196,15 @@ export function TicketTableColumnFilters({
           ))}
         </select>
       </label>
+
+      {showTeamColumn ? (
+        <span className="flex min-w-0 flex-col justify-center gap-0.5">
+          <span className="text-[9px] font-bold tracking-wide uppercase opacity-80">
+            Gruppe
+          </span>
+          <span className="text-[10px] opacity-70">Tildelt gruppe</span>
+        </span>
+      ) : null}
 
       <label className="flex min-w-0 flex-col justify-center gap-0.5">
         <span className="text-[9px] font-bold tracking-wide uppercase opacity-80">SLA</span>

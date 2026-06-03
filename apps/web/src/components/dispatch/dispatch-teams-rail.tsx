@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { getTicketsForTeam } from "@/lib/tickets-by-team";
+import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { Team } from "@/types/team";
 
@@ -16,6 +18,8 @@ export function DispatchTeamsRail({
   onDragOverTeam,
   onDragLeaveTeam,
   onDropTeam,
+  selectedTeamId = null,
+  onSelectTeam,
   title = "Grupper",
   description = "Slip en sag her for at tildele",
   sectionLabel = "Interne grupper",
@@ -27,6 +31,8 @@ export function DispatchTeamsRail({
   onDragOverTeam: (teamId: string, event: React.DragEvent) => void;
   onDragLeaveTeam: () => void;
   onDropTeam: (team: Team, event: React.DragEvent) => void;
+  selectedTeamId?: string | null;
+  onSelectTeam?: (teamId: string | null) => void;
   title?: string;
   description?: string;
   sectionLabel?: string;
@@ -46,9 +52,12 @@ export function DispatchTeamsRail({
         <p className="star-section-desc">{description}</p>
       </div>
       {teams.map((team) => {
-        const allTeamTickets = ticketsByTeam.get(team.id) ?? [];
+        const isSelected = selectedTeamId === team.id;
+        const allTeamTickets = getTicketsForTeam(ticketsByTeam, team.id);
         const totalCount = allTeamTickets.length;
-        const teamTickets = allTeamTickets.slice(0, limit);
+        const teamTickets = isSelected
+          ? allTeamTickets
+          : allTeamTickets.slice(0, limit);
         const isOver = dragOverTeamId === team.id;
         return (
           <div
@@ -58,19 +67,33 @@ export function DispatchTeamsRail({
             onDragOver={(event) => onDragOverTeam(team.id, event)}
             onDragLeave={onDragLeaveTeam}
             onDrop={(event) => onDropTeam(team, event)}
-            className={`rounded-md border-2 border-dashed p-4 transition-colors ${
+            className={cn(
+              "rounded-md border-2 border-dashed p-4 transition-colors",
               isOver
                 ? "border-star-blue bg-star-blue-light"
-                : "border-star-blue/30 bg-white"
-            }`}
+                : isSelected
+                  ? "border-star-navy bg-star-blue-light/50 ring-2 ring-star-navy/20"
+                  : "border-star-blue/30 bg-white",
+            )}
           >
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                onClick={() => onSelectTeam?.(isSelected ? null : team.id)}
+                disabled={!onSelectTeam}
+                aria-pressed={isSelected}
+              >
                 <p className="text-star-navy font-semibold">{team.name}</p>
                 {team.name === "SF" ? (
                   <p className="text-star-navy text-xs font-medium uppercase">Hovedgruppe</p>
                 ) : null}
-              </div>
+                {isSelected ? (
+                  <p className="text-muted-foreground mt-1 text-[11px]">
+                    Viser alle sager i gruppen
+                  </p>
+                ) : null}
+              </button>
               <Badge variant="outline">
                 {totalCount} sag{totalCount === 1 ? "" : "er"}
               </Badge>

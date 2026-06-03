@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { getTicketsForTeam } from "@/lib/tickets-by-team";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
@@ -46,9 +47,11 @@ export function DispatchGroupsStrip({
       {teams.map((team) => {
         const isSelected = selectedTeamId === team.id;
         const isHover = dragOverTeamId === team.id;
-        const teamTicketList = ticketsByTeam.get(team.id) ?? [];
+        const teamTicketList = getTicketsForTeam(ticketsByTeam, team.id);
         const totalTeamTickets = teamTicketList.length;
-        const teamTickets = teamTicketList.slice(0, GROUPS_STRIP_TICKET_PREVIEW);
+        const teamTickets = isSelected
+          ? teamTicketList
+          : teamTicketList.slice(0, GROUPS_STRIP_TICKET_PREVIEW);
 
         return (
           <div

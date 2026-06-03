@@ -22,7 +22,11 @@ import { ResizableSplit } from "@/components/ui/resizable-split";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
-import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
+import {
+  mergeTicketAssignmentInList,
+  reconcileLocalTicketsWithServer,
+} from "@/lib/ticket-assignment";
+import { buildTicketsByTeamMap } from "@/lib/tickets-by-team";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
@@ -68,24 +72,6 @@ type PendingDrop = Readonly<{
   teamName?: string;
 }>;
 
-function buildTicketsByTeam(openTickets: Ticket[]): Map<string, Ticket[]> {
-  const map = new Map<string, Ticket[]>();
-  for (const ticket of openTickets) {
-    if (ticket.assigned_team_id) {
-      const list = map.get(ticket.assigned_team_id) ?? [];
-      list.push(ticket);
-      map.set(ticket.assigned_team_id, list);
-    }
-  }
-  for (const [teamId, list] of map) {
-    list.sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
-    map.set(teamId, list);
-  }
-  return map;
-}
-
 export function ServiceDeskView({
   tickets,
   teams,
@@ -110,14 +96,14 @@ export function ServiceDeskView({
   const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLocalTickets(tickets);
+    setLocalTickets((prev) => reconcileLocalTicketsWithServer(prev, tickets));
   }, [tickets]);
 
   useEffect(() => {
     setLocalTeams(teams);
   }, [teams]);
 
-  useBoardDataSync({
+  const { refreshNow } = useBoardDataSync({
     setTickets: setLocalTickets,
     setTeams: setLocalTeams,
     onError: setSyncError,
@@ -176,9 +162,16 @@ export function ServiceDeskView({
   }, [localTickets, search, tableFilters, queue, deskTeamIds]);
 
   const ticketsByTeam = useMemo(
-    () => buildTicketsByTeam(railTeamTickets),
+    () => buildTicketsByTeamMap(railTeamTickets),
     [railTeamTickets],
   );
+
+  const handleSelectTeam = useCallback((teamId: string | null) => {
+    setSelectedTeamId(teamId);
+    if (teamId) {
+      setQueue("teams");
+    }
+  }, []);
 
   const deskCount = useMemo(
     () => filterByServiceDeskQueue(localTickets, "desk", deskTeamIds).length,
@@ -262,11 +255,23 @@ export function ServiceDeskView({
           fault_displayed: data.faultDisplayed,
         },
       );
+      const teamName =
+        detail.assigned_team_name ??
+        pending.teamName ??
+        railTeams.find((t) => t.id === data.teamId)?.name ??
+        null;
+      const assignmentPatch = {
+        ...detail,
+        assigned_team_name: teamName,
+      };
       setLocalTickets((prev) =>
-        mergeTicketAssignmentInList(prev, pending.ticketId, detail),
+        mergeTicketAssignmentInList(prev, pending.ticketId, assignmentPatch),
       );
       setPending(null);
+      setSelectedTeamId(data.teamId);
+      setQueue("teams");
       dispatchBoardTicketsChanged();
+      await refreshNow();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
@@ -379,11 +384,13 @@ export function ServiceDeskView({
             ) : null}
             <WireframeTicketTable
               tickets={pageTickets}
+              showTeamColumn
               draggable={queue !== "teams" && tableTickets.length > 0}
               columnFilters={
                 <TicketTableColumnFilters
                   filters={tableFilters}
                   options={filterOptions}
+                  showTeamColumn
                   onChange={(patch) => {
                     setTableFilters((prev) => ({ ...prev, ...patch }));
                     setOffset(0);
@@ -452,7 +459,7 @@ export function ServiceDeskView({
               onDragLeaveTeam={handleDragLeaveTeam}
               onDropTeam={handleDropTeam}
               selectedTeamId={selectedTeamId}
-              onSelectTeam={setSelectedTeamId}
+              onSelectTeam={handleSelectTeam}
               ticketHref={(ticketId) => `/tickets/${ticketId}`}
             />
           </div>
@@ -465,8 +472,10 @@ export function ServiceDeskView({
           onDragOverTeam={handleDragOverTeam}
           onDragLeaveTeam={handleDragLeaveTeam}
           onDropTeam={handleDropTeam}
+          selectedTeamId={selectedTeamId}
+          onSelectTeam={handleSelectTeam}
           title="Interne grupper"
-          description="Slip en sag her — begrund tildeling i dialogen"
+          description="Klik en gruppe for at se sager — træk hertil for at tildele"
         />
       </ResizableSplit>
 
