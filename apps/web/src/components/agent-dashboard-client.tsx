@@ -6,15 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { WireAiBanner } from "@/components/wireframe/wire-ai-banner";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
-import { apiGet } from "@/lib/api";
+import { useBoardDataSync } from "@/hooks/use-board-data-sync";
 import {
   isAssignableFromServiceDeskQueue,
   serviceDeskTeamIds,
 } from "@/lib/service-desk-queue";
-import {
-  mergeTicketAssignmentFromDetail,
-  reconcileLocalTicketsWithServer,
-} from "@/lib/ticket-assignment";
+import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
 import type { Ticket, TicketDetail } from "@/types/ticket";
@@ -37,12 +34,18 @@ export function AgentDashboardClient({
   const deskTeamIds = useMemo(() => serviceDeskTeamIds(teams), [teams]);
 
   useEffect(() => {
-    setTickets((prev) => reconcileLocalTicketsWithServer(prev, initialTickets));
+    setTickets(initialTickets);
   }, [initialTickets]);
 
   useEffect(() => {
     setTeams(initialTeams);
   }, [initialTeams]);
+
+  useBoardDataSync({
+    setTickets,
+    setTeams,
+    onError: setRefreshError,
+  });
 
   const handleTicketAssigned = useCallback((detail: TicketDetail) => {
     setTickets((prev) => {
@@ -56,34 +59,6 @@ export function AgentDashboardClient({
     });
     draggingTicketRef.current = null;
     setDraggingTicket(null);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [freshTickets, freshTeams] = await Promise.all([
-          apiGet<Ticket[]>("/api/v1/tickets?board=true&limit=500"),
-          apiGet<Team[]>("/api/v1/teams"),
-        ]);
-        if (!cancelled) {
-          setTickets((prev) => reconcileLocalTicketsWithServer(prev, freshTickets));
-          setTeams(freshTeams);
-          setRefreshError(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setRefreshError(
-            error instanceof Error
-              ? error.message
-              : "Kunne ikke opdatere sager. Viser seneste kendte data.",
-          );
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   /** Kun sager der kan fordeles — forsvinder når de tildeles operativ gruppe. */
