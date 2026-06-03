@@ -1,14 +1,17 @@
 "use client";
 
-import Link from "next/link";
-
+import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
 import { Badge } from "@/components/ui/badge";
-import { getTicketsForTeam } from "@/lib/tickets-by-team";
+import {
+  isTeamSelected,
+  resolveTeamTicketDisplay,
+  toggleSelectedTeamId,
+} from "@/lib/team-group-view";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
 import type { Team } from "@/types/team";
 
-/** Nyeste sager vist per gruppe i rail — badge viser samlet antal. */
+/** Nyeste sager vist per gruppe i rail når gruppen ikke er valgt. */
 export const TEAM_RAIL_TICKET_PREVIEW = 5;
 
 export function DispatchTeamsRail({
@@ -21,7 +24,7 @@ export function DispatchTeamsRail({
   selectedTeamId = null,
   onSelectTeam,
   title = "Grupper",
-  description = "Slip en sag her for at tildele",
+  description = "Klik en gruppe for at se alle sager — træk hertil for at tildele",
   sectionLabel = "Interne grupper",
   previewLimit,
 }: {
@@ -41,7 +44,10 @@ export function DispatchTeamsRail({
   const limit = previewLimit ?? TEAM_RAIL_TICKET_PREVIEW;
 
   return (
-    <aside className="flex min-h-0 flex-col space-y-3 overflow-y-auto" aria-labelledby="dispatch-groups-heading">
+    <aside
+      className="flex min-h-0 flex-col space-y-3 overflow-y-auto"
+      aria-labelledby="dispatch-groups-heading"
+    >
       <div className="star-section-header shrink-0 rounded-t-md">
         <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-widest uppercase">
           {sectionLabel}
@@ -52,13 +58,15 @@ export function DispatchTeamsRail({
         <p className="star-section-desc">{description}</p>
       </div>
       {teams.map((team) => {
-        const isSelected = selectedTeamId === team.id;
-        const allTeamTickets = getTicketsForTeam(ticketsByTeam, team.id);
-        const totalCount = allTeamTickets.length;
-        const teamTickets = isSelected
-          ? allTeamTickets
-          : allTeamTickets.slice(0, limit);
+        const isSelected = isTeamSelected(selectedTeamId ?? null, team.id);
+        const display = resolveTeamTicketDisplay(
+          ticketsByTeam,
+          team.id,
+          selectedTeamId ?? null,
+          limit,
+        );
         const isOver = dragOverTeamId === team.id;
+
         return (
           <div
             key={team.id}
@@ -80,7 +88,9 @@ export function DispatchTeamsRail({
               <button
                 type="button"
                 className="min-w-0 flex-1 text-left"
-                onClick={() => onSelectTeam?.(isSelected ? null : team.id)}
+                onClick={() =>
+                  onSelectTeam?.(toggleSelectedTeamId(selectedTeamId ?? null, team.id))
+                }
                 disabled={!onSelectTeam}
                 aria-pressed={isSelected}
               >
@@ -88,42 +98,23 @@ export function DispatchTeamsRail({
                 {team.name === "SF" ? (
                   <p className="text-star-navy text-xs font-medium uppercase">Hovedgruppe</p>
                 ) : null}
-                {isSelected ? (
-                  <p className="text-muted-foreground mt-1 text-[11px]">
-                    Viser alle sager i gruppen
-                  </p>
-                ) : null}
               </button>
               <Badge variant="outline">
-                {totalCount} sag{totalCount === 1 ? "" : "er"}
+                {display.total} sag{display.total === 1 ? "" : "er"}
               </Badge>
             </div>
             <p className="text-muted-foreground mt-2 text-xs">{team.members.length} medlemmer</p>
-            {totalCount > 0 ? (
-              <>
-                <ul className="mt-3 space-y-1.5 border-t border-star-blue/15 pt-3">
-                  {teamTickets.map((ticket) => (
-                    <li key={ticket.id}>
-                      <Link
-                        href={`/tickets/${ticket.id}`}
-                        className="text-star-blue hover:text-star-navy block text-xs leading-snug font-medium hover:underline"
-                        draggable={false}
-                      >
-                        <span className="font-mono">{ticket.ticket_number}</span>
-                        <span className="text-foreground ml-1 font-normal">{ticket.title}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                {totalCount > limit ? (
-                  <p className="text-muted-foreground mt-2 text-[11px]">
-                    Viser {limit} nyeste af {totalCount}
-                  </p>
-                ) : null}
-              </>
-            ) : (
-              <p className="text-muted-foreground mt-2 text-xs">Ingen tildelte sager</p>
-            )}
+            <div className="mt-3 border-t border-star-blue/15 pt-3">
+              <TeamGroupTicketList
+                tickets={display.visible}
+                total={display.total}
+                isSelected={display.isSelected}
+                showingAll={display.showingAll}
+                previewLimit={limit}
+                ticketHref={(ticketId) => `/tickets/${ticketId}`}
+                emptyLabel="Ingen tildelte sager"
+              />
+            </div>
           </div>
         );
       })}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -26,7 +27,11 @@ import {
   mergeTicketAssignmentInList,
   reconcileLocalTicketsWithServer,
 } from "@/lib/ticket-assignment";
-import { buildTicketsByTeamMap } from "@/lib/tickets-by-team";
+import {
+  buildOpenAssignedTicketsByTeamMap,
+  isTeamSelected,
+} from "@/lib/team-group-view";
+import { getTicketsForTeam } from "@/lib/tickets-by-team";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
@@ -161,9 +166,10 @@ export function ServiceDeskView({
     return sortServiceDeskTable(filtered, tableFilters.sort);
   }, [localTickets, search, tableFilters, queue, deskTeamIds]);
 
+  /** All open tickets per group — badge + click shows full group (not only desk-rail subset). */
   const ticketsByTeam = useMemo(
-    () => buildTicketsByTeamMap(railTeamTickets),
-    [railTeamTickets],
+    () => buildOpenAssignedTicketsByTeamMap(localTickets),
+    [localTickets],
   );
 
   const handleSelectTeam = useCallback((teamId: string | null) => {
@@ -172,6 +178,20 @@ export function ServiceDeskView({
       setQueue("teams");
     }
   }, []);
+
+  const selectedTeam = useMemo(
+    () =>
+      selectedTeamId
+        ? (railTeams.find((t) => isTeamSelected(selectedTeamId, t.id)) ?? null)
+        : null,
+    [railTeams, selectedTeamId],
+  );
+
+  const selectedTeamTickets = useMemo(
+    () =>
+      selectedTeamId ? getTicketsForTeam(ticketsByTeam, selectedTeamId) : [],
+    [selectedTeamId, ticketsByTeam],
+  );
 
   const deskCount = useMemo(
     () => filterByServiceDeskQueue(localTickets, "desk", deskTeamIds).length,
@@ -439,12 +459,38 @@ export function ServiceDeskView({
             </div>
           </div>
 
+          {selectedTeam && selectedTeamTickets.length > 0 ? (
+            <div className="wire-card mb-3 max-h-48 shrink-0 overflow-hidden">
+              <div className="border-b border-[var(--gray-border)] px-3 py-2">
+                <p className="text-star-navy text-xs font-bold">
+                  {selectedTeam.name} — {selectedTeamTickets.length} sager
+                </p>
+                <p className="text-muted-foreground text-[10px]">
+                  Klik gruppen igen for at lukke — eller se listen til højre
+                </p>
+              </div>
+              <ul className="max-h-36 overflow-y-auto px-3 py-2">
+                {selectedTeamTickets.map((ticket) => (
+                  <li key={ticket.id}>
+                    <Link
+                      href={`/tickets/${ticket.id}`}
+                      className="text-star-navy hover:text-star-blue block truncate py-0.5 text-[11px] font-medium"
+                    >
+                      <span className="font-mono">{ticket.ticket_number}</span>
+                      <span className="text-muted-foreground ml-1">{ticket.title}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="border-star-red mt-2 shrink-0 border-t-[3px] pt-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div>
                 <h2 className="text-star-navy text-sm font-bold">Grupper</h2>
                 <p className="text-muted-foreground text-[11px]">
-                  Træk sag til bereder-streg — eller brug gruppepanelet til højre
+                  Klik en gruppe for alle sager — træk til bereder-streg eller til højre
                 </p>
               </div>
               <span className="rounded-full bg-star-navy px-2 py-0.5 text-[10px] font-bold text-white">
