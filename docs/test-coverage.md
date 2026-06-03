@@ -51,7 +51,7 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 - `sonar.python.coverage.reportPaths=apps/api/coverage.xml`
 - `sonar.tests=apps/api/tests`
 
-**Path rewrite (required):** Coverage XML uses `src/...` paths relative to `apps/api`. Sonar sources are `apps/api/src` at repo root. CI runs `python scripts/fix_coverage_xml_for_sonar.py` to prefix paths as `apps/api/src/...` before the Sonar scan.
+**Path rewrite (required):** Coverage XML from pytest uses `filename="src/star_itsm_api/..."`. Cobertura resolves `<source>` + `filename`, so CI runs `python scripts/fix_coverage_xml_for_sonar.py` to set `<source>apps/api/src</source>` and strip the leading `src/` from each filename (not the full repo path in both fields).
 
 **CI (primary):** `.github/workflows/security.yml` job `api-security` — after pytest coverage + path rewrite, `SonarSource/sonarqube-scan-action` imports `apps/api/coverage.xml` on every push/PR to `staging` and `main`.
 
