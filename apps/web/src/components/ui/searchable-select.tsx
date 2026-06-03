@@ -69,11 +69,15 @@ export function SearchableSelect({
     <div ref={rootRef} className={cn("relative min-w-0", className)}>
       <Input
         id={inputId}
-        type="text"
+        name={inputId}
+        type="search"
         role="combobox"
         aria-expanded={open}
         aria-controls={listboxId}
         aria-autocomplete="list"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         disabled={disabled}
         value={shownValue}
         placeholder={placeholder}

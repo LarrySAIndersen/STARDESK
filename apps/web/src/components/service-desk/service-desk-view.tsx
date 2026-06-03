@@ -4,6 +4,11 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import {
+  dispatchBoardTicketsChanged,
+  useBoardDataSync,
+} from "@/hooks/use-board-data-sync";
+
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { DispatchGroupsStrip } from "@/components/dispatch/dispatch-groups-strip";
@@ -17,10 +22,7 @@ import { ResizableSplit } from "@/components/ui/resizable-split";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
-import {
-  mergeTicketAssignmentInList,
-  reconcileLocalTicketsWithServer,
-} from "@/lib/ticket-assignment";
+import { mergeTicketAssignmentInList } from "@/lib/ticket-assignment";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
@@ -104,15 +106,27 @@ export function ServiceDeskView({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [localTickets, setLocalTickets] = useState<Ticket[]>(tickets);
+  const [localTeams, setLocalTeams] = useState<Team[]>(teams);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLocalTickets((prev) => reconcileLocalTicketsWithServer(prev, tickets));
+    setLocalTickets(tickets);
   }, [tickets]);
 
-  const internalTeams = useMemo(() => {
-    const { internal } = partitionTeamsByCategory(teams);
-    return sortTeamsForDisplay(internal);
+  useEffect(() => {
+    setLocalTeams(teams);
   }, [teams]);
+
+  useBoardDataSync({
+    setTickets: setLocalTickets,
+    setTeams: setLocalTeams,
+    onError: setSyncError,
+  });
+
+  const internalTeams = useMemo(() => {
+    const { internal } = partitionTeamsByCategory(localTeams);
+    return sortTeamsForDisplay(internal);
+  }, [localTeams]);
 
   const deskTeamIds = useMemo(() => serviceDeskTeamIds(internalTeams), [internalTeams]);
 
@@ -252,6 +266,7 @@ export function ServiceDeskView({
         mergeTicketAssignmentInList(prev, pending.ticketId, detail),
       );
       setPending(null);
+      dispatchBoardTicketsChanged();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
@@ -268,6 +283,11 @@ export function ServiceDeskView({
           Kø, fordeling og overblik over åbne sager — træk en sag til en gruppe nedenfor eller
           til panelet til højre.
         </p>
+        {syncError ? (
+          <p className="text-star-red mt-2 text-sm" role="alert">
+            {syncError}
+          </p>
+        ) : null}
       </header>
 
       <div className="grid shrink-0 gap-3 md:grid-cols-3">

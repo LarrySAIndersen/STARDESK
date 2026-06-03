@@ -522,7 +522,7 @@ async def create_ticket(
         ticket_type=payload.ticket_type,
         title=payload.title,
         description=payload.description,
-        status="assigned" if routing.assigned_team_id else "new",
+        status="new",
         priority=routing.priority,
         reporter_user_id=current_user.id,
         organization_id=get_user_organization_id(current_user),

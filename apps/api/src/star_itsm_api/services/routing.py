@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.constants import PRIORITY_ORDER
 from star_itsm_api.models.routing_rule import RoutingRule
-from star_itsm_api.models.team import Team
 
 
 @dataclass
@@ -14,17 +13,6 @@ class RoutingResult:
     assigned_team_id: uuid.UUID | None
     assigned_user_id: uuid.UUID | None
     priority: str
-
-
-async def _default_team_id(db: AsyncSession) -> uuid.UUID | None:
-    for team_name in ("SF Service Desk", "Service Desk"):
-        result = await db.execute(
-            select(Team.id).where(Team.name == team_name, Team.is_active.is_(True)).limit(1)
-        )
-        team_id = result.scalar_one_or_none()
-        if team_id is not None:
-            return team_id
-    return None
 
 
 async def apply_routing(
@@ -62,8 +50,9 @@ async def apply_routing(
             priority=rule.set_priority or priority,
         )
 
+    # No rule match: leave unassigned so the ticket enters the distribution queue.
     return RoutingResult(
-        assigned_team_id=await _default_team_id(db),
+        assigned_team_id=None,
         assigned_user_id=None,
         priority=priority,
     )
