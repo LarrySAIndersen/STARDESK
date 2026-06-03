@@ -9,6 +9,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { PLAN_ITEMS } from "./performance-plan.mjs";
+import { resolveCommandPath } from "../lib/script-security.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -442,9 +443,14 @@ function zipShareFolder(sourceDir, zipPath) {
     );
     return (r.status ?? 1) === 0;
   }
-  const r = spawnSync("zip", ["-r", zipPath, "."], { cwd: sourceDir, stdio: "inherit" });
-  if ((r.status ?? 1) !== 0) {
+  const zipExe = resolveCommandPath("zip");
+  if (!zipExe) {
     console.warn("zip CLI unavailable — share folder created without .zip archive");
+    return false;
+  }
+  const r = spawnSync(zipExe, ["-r", zipPath, "."], { cwd: sourceDir, stdio: "inherit", shell: false });
+  if ((r.status ?? 1) !== 0) {
+    console.warn("zip CLI failed — share folder created without .zip archive");
     return false;
   }
   return true;
