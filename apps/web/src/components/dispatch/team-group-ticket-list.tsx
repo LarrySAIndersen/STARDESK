@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
+import { TeamGroupTicketRow } from "@/components/dispatch/team-group-ticket-row";
 import { TEAM_GROUP_PREVIEW_LIMIT } from "@/lib/team-group-view";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types/ticket";
@@ -23,6 +22,7 @@ export function TeamGroupTicketList({
   showingAll: boolean;
   previewLimit?: number;
   ticketHref?: (ticketId: string) => string;
+  /** Opens inline sagens kort when set (takes precedence over navigation). */
   onTicketClick?: (ticket: Ticket) => void;
   emptyLabel?: string;
 }) {
@@ -34,7 +34,7 @@ export function TeamGroupTicketList({
     <>
       {isSelected && total > 0 ? (
         <p className="text-muted-foreground mb-1 text-[9px] font-semibold">
-          Viser alle {total} sager
+          Klik en sag for sagens kort — {total} i alt
         </p>
       ) : null}
       <ul
@@ -45,35 +45,14 @@ export function TeamGroupTicketList({
       >
         {tickets.map((ticket) => (
           <li key={ticket.id}>
-            {ticketHref ? (
-              <Link
-                href={ticketHref(ticket.id)}
-                className="block truncate rounded-[2px] px-1 py-0.5 text-[10px] font-medium text-star-navy hover:bg-star-blue-light/40"
-                title={`${ticket.ticket_number} ${ticket.title}`}
-                draggable={false}
-              >
-                <span className="font-mono">{ticket.ticket_number}</span>
-                <span className="text-muted-foreground ml-1 font-normal">{ticket.title}</span>
-              </Link>
-            ) : onTicketClick ? (
-              <button
-                type="button"
-                className="w-full truncate rounded-[2px] px-1 py-0.5 text-left text-[10px] font-medium text-star-navy hover:bg-star-blue-light/40"
-                title={`${ticket.ticket_number} ${ticket.title}`}
-                onClick={() => onTicketClick(ticket)}
-              >
-                <span className="font-mono">{ticket.ticket_number}</span>
-                <span className="text-muted-foreground ml-1 font-normal">{ticket.title}</span>
-              </button>
-            ) : (
-              <span
-                className="block truncate px-1 py-0.5 text-[10px] font-medium text-star-navy"
-                title={`${ticket.ticket_number} ${ticket.title}`}
-              >
-                <span className="font-mono">{ticket.ticket_number}</span>
-                <span className="text-muted-foreground ml-1 font-normal">{ticket.title}</span>
-              </span>
-            )}
+            <TeamGroupTicketRow
+              ticket={ticket}
+              onOpen={
+                onTicketClick ? () => onTicketClick(ticket) : undefined
+              }
+              href={onTicketClick ? undefined : ticketHref?.(ticket.id)}
+              size="sm"
+            />
           </li>
         ))}
       </ul>

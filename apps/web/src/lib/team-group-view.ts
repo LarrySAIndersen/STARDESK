@@ -9,6 +9,11 @@ import type { Ticket } from "@/types/ticket";
 /** Default preview count when a group is not selected. */
 export const TEAM_GROUP_PREVIEW_LIMIT = 6;
 
+/** Staff ticket detail — sagens kort (full page). */
+export function ticketDetailHref(ticketId: string): string {
+  return `/tickets/${ticketId}`;
+}
+
 /** All open tickets with assigned_team_id — group badge + click-to-view (system-wide). */
 export function buildOpenAssignedTicketsByTeamMap(
   tickets: Iterable<Ticket>,

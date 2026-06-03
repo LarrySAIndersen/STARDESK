@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
@@ -14,8 +15,10 @@ import {
   buildOpenAssignedTicketsByTeamMap,
   isTeamSelected,
   resolveTeamTicketDisplay,
+  ticketDetailHref,
   toggleSelectedTeamId,
 } from "@/lib/team-group-view";
+import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
 import { getTicketsForTeam } from "@/lib/tickets-by-team";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
 import { routingConfidenceForTeamAssign } from "@/lib/ticket-routing";
@@ -113,6 +116,17 @@ export function AgentBottomPanel({
     [tickets],
   );
 
+  const openTicketCard = useCallback(
+    (ticket: Ticket) => {
+      const full = ticketMap.get(ticket.id) ?? ticket;
+      setSelected(full);
+      setTab("content");
+      setPanelOpen(true);
+      setHeight(PANEL_MAX_HEIGHT);
+    },
+    [ticketMap],
+  );
+
   useEffect(() => {
     if (slackTabRequest > 0) {
       setTab("slack");
@@ -122,8 +136,11 @@ export function AgentBottomPanel({
   }, [slackTabRequest]);
 
   useEffect(() => {
-    setSelected(selectedTicket);
-  }, [selectedTicket]);
+    if (!selectedTicket) {
+      return;
+    }
+    openTicketCard(selectedTicket);
+  }, [selectedTicket, openTicketCard]);
 
   useEffect(() => {
     if (!draggingTicket) {
@@ -299,6 +316,7 @@ export function AgentBottomPanel({
             <button
               key={id}
               type="button"
+              data-tab={id}
               className={cn("wire-bp-tab", tab === id && "wire-bp-tab--active")}
               onClick={() => {
                 setTab(id);
@@ -330,10 +348,7 @@ export function AgentBottomPanel({
                 team={selectedTeam}
                 tickets={selectedTeamTickets}
                 onClose={() => setSelectedTeamId(null)}
-                onTicketClick={(ticket) => {
-                  setSelected(ticket);
-                  setTab("content");
-                }}
+                onTicketClick={openTicketCard}
               />
             ) : null}
             <div className="flex min-h-0 flex-1 overflow-x-auto p-3">
@@ -404,23 +419,19 @@ export function AgentBottomPanel({
                     )}
                   </div>
 
-                  {!isSelected ? (
-                    <TeamGroupTicketList
-                      tickets={display.visible}
-                      total={display.total}
-                      isSelected={false}
-                      showingAll={false}
-                      previewLimit={TEAM_TICKET_PREVIEW}
-                      onTicketClick={(ticket) => {
-                        setSelected(ticket);
-                        setTab("content");
-                      }}
-                    />
-                  ) : (
+                  <TeamGroupTicketList
+                    tickets={display.visible}
+                    total={display.total}
+                    isSelected={isSelected}
+                    showingAll={display.showingAll}
+                    previewLimit={TEAM_TICKET_PREVIEW}
+                    onTicketClick={openTicketCard}
+                  />
+                  {isSelected ? (
                     <p className="text-[10px] text-[var(--gray-mid)]">
-                      Se listen ovenfor
+                      Eller vælg sag i listen ovenfor
                     </p>
-                  )}
+                  ) : null}
                   <p className="mt-1.5 text-[9px] text-[var(--gray-mid)]">
                     {team.members.length} medlemmer
                   </p>
@@ -435,14 +446,24 @@ export function AgentBottomPanel({
           <div className="flex h-[calc(100%-37px)] gap-3 overflow-x-auto p-3">
             {selected ? (
               <>
-                <div className="w-[220px] shrink-0">
+                <div className="w-[240px] shrink-0">
                   <div className="wire-card mb-0">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <WireStatusBadge status={selected.status} />
+                      <WirePriorityBadge priority={selected.priority} />
+                    </div>
                     <p className="text-[9px] font-bold tracking-widest text-[var(--gray-mid)] uppercase">
                       Sag {selected.ticket_number}
                     </p>
                     <p className="text-star-navy mt-1 text-[13px] font-bold">
                       {selected.title}
                     </p>
+                    <Link
+                      href={ticketDetailHref(selected.id)}
+                      className="text-star-blue mt-2 inline-block text-[11px] font-semibold hover:underline"
+                    >
+                      Åbn fuld sag →
+                    </Link>
                     <WireTags tags={selected.tags} />
                     {selected.routing && !selected.routing.routing_ready ? (
                       <div className="mt-2">
@@ -516,7 +537,7 @@ export function AgentBottomPanel({
               </>
             ) : (
               <p className="w-full py-6 text-center text-xs text-[var(--gray-mid)]">
-                Klik på en sag i tabellen — eller træk til en gruppe i bundpanelet
+                Klik på en sag i tabellen eller under en gruppe — eller træk til en gruppe
               </p>
             )}
           </div>

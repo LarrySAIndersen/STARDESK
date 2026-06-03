@@ -23,6 +23,7 @@ export function DispatchTeamsRail({
   onDropTeam,
   selectedTeamId = null,
   onSelectTeam,
+  onTicketClick,
   title = "Grupper",
   description = "Klik en gruppe for at se alle sager — træk hertil for at tildele",
   sectionLabel = "Interne grupper",
@@ -36,6 +37,7 @@ export function DispatchTeamsRail({
   onDropTeam: (team: Team, event: React.DragEvent) => void;
   selectedTeamId?: string | null;
   onSelectTeam?: (teamId: string | null) => void;
+  onTicketClick?: (ticket: Ticket) => void;
   title?: string;
   description?: string;
   sectionLabel?: string;
@@ -111,6 +113,7 @@ export function DispatchTeamsRail({
                 isSelected={display.isSelected}
                 showingAll={display.showingAll}
                 previewLimit={limit}
+                onTicketClick={onTicketClick}
                 ticketHref={(ticketId) => `/tickets/${ticketId}`}
                 emptyLabel="Ingen tildelte sager"
               />

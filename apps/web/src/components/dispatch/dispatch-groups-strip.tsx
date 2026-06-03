@@ -22,6 +22,7 @@ export function DispatchGroupsStrip({
   onDropTeam,
   selectedTeamId = null,
   onSelectTeam,
+  onTicketClick,
   ticketHref,
   className,
 }: {
@@ -33,6 +34,7 @@ export function DispatchGroupsStrip({
   onDropTeam: (team: Team, event: React.DragEvent) => void;
   selectedTeamId?: string | null;
   onSelectTeam?: (teamId: string | null) => void;
+  onTicketClick?: (ticket: Ticket) => void;
   ticketHref?: (ticketId: string) => string;
   className?: string;
 }) {
@@ -111,6 +113,7 @@ export function DispatchGroupsStrip({
               isSelected={display.isSelected}
               showingAll={display.showingAll}
               previewLimit={GROUPS_STRIP_TICKET_PREVIEW}
+              onTicketClick={onTicketClick}
               ticketHref={ticketHref}
             />
             <p className="mt-1.5 text-[9px] text-[var(--gray-mid)]">
