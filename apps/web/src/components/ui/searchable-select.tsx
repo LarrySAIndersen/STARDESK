@@ -70,7 +70,7 @@ export function SearchableSelect({
       <Input
         id={inputId}
         name={`stardesk-${inputId}`}
-        type="search"
+        type="text"
         role="combobox"
         aria-expanded={open}
         aria-controls={listboxId}
@@ -82,7 +82,7 @@ export function SearchableSelect({
         disabled={disabled}
         value={shownValue}
         placeholder={placeholder}
-        className="border-[var(--gray-border)] h-8 text-right text-xs"
+        className="border-[var(--gray-border)] bg-card text-card-foreground placeholder:text-muted-foreground h-8 text-right text-xs"
         onFocus={() => setOpen(true)}
         onChange={(event) => {
           const next = event.target.value;
