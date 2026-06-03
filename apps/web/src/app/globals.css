@@ -1312,9 +1312,9 @@
     @apply border-star-navy bg-star-navy text-white placeholder:text-white/65 focus:border-white/40 focus:ring-white/20;
   }
 
-  .star-page input[type="search"],
-  .wire-scroll-content input[type="search"],
-  .wire-app input[type="search"] {
+  /* Kun topbar/liste-søgning — ikke Detaljer-felter (SearchableSelect m.fl.) */
+  input.wire-search-input,
+  input.wire-search-input[type="search"] {
     @apply rounded-[2px] border border-star-navy bg-star-navy text-white outline-none placeholder:text-white/65 focus:border-white/40 focus:ring-2 focus:ring-white/20;
   }
 
