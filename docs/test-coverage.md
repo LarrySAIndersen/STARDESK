@@ -47,6 +47,7 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 
 `sonar-project.properties` at repo root configures:
 
+- `sonar.python.version=3.12` (also passed explicitly in CI `args` on Sonar scan steps)
 - `sonar.python.coverage.reportPaths=apps/api/coverage.xml`
 - `sonar.tests=apps/api/tests`
 

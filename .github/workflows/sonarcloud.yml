@@ -50,6 +50,9 @@ jobs:
       # SONAR repo secret required (cannot branch on secrets in if: — GitHub limitation)
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v7.1.0
+        with:
+          args: >
+            -Dsonar.python.version=3.12
         env:
           SONAR_TOKEN: ${{ secrets.SONAR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
