@@ -81,6 +81,7 @@ Generate API coverage before a SonarScanner run so SonarCloud picks up metrics:
 cd apps/api
 uv sync --group dev
 uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
+cd ../.. && python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
 cd ../..
 # SONAR_TOKEN from SonarCloud — never commit
 sonar-scanner -Dsonar.host.url=https://sonarcloud.io -Dsonar.token="$SONAR_TOKEN"

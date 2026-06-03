@@ -38,6 +38,8 @@ jobs:
             --cov-report=xml:coverage.xml
       - name: Verify coverage artifact
         run: test -f coverage.xml
+      - name: Rewrite coverage paths for SonarCloud
+        run: python ../../scripts/fix_coverage_xml_for_sonar.py coverage.xml
       - name: Upload API coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -45,7 +47,7 @@ jobs:
           path: apps/api/coverage.xml
           if-no-files-found: error
       - name: SonarCloud Scan (coverage import)
-        uses: SonarSource/sonarqube-scan-action@v7.1.0
+        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7.1.0
         with:
           args: >
             -Dsonar.python.version=3.12

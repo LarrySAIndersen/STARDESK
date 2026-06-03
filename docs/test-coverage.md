@@ -51,7 +51,9 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 - `sonar.python.coverage.reportPaths=apps/api/coverage.xml`
 - `sonar.tests=apps/api/tests`
 
-**CI (primary):** `.github/workflows/security.yml` job `api-security` — after pytest coverage, `SonarSource/sonarqube-scan-action` imports `apps/api/coverage.xml` on every push/PR to `staging` and `main`.
+**Path rewrite (required):** Coverage XML uses `src/...` paths relative to `apps/api`. Sonar sources are `apps/api/src` at repo root. CI runs `python scripts/fix_coverage_xml_for_sonar.py` to prefix paths as `apps/api/src/...` before the Sonar scan.
+
+**CI (primary):** `.github/workflows/security.yml` job `api-security` — after pytest coverage + path rewrite, `SonarSource/sonarqube-scan-action` imports `apps/api/coverage.xml` on every push/PR to `staging` and `main`.
 
 **CI (dedicated):** `.github/workflows/sonarcloud.yml` — same flow as a standalone job (runs after merge to `staging`/`main`; new workflow files in PRs may need Actions approval once).
 
@@ -65,7 +67,8 @@ Optional: mark the **SonarCloud** check as required under branch protection for 
 
 ```bash
 cd apps/api && uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
-cd ../.. && cd scripts && npm run sonar:scan
+cd ../.. && python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
+cd scripts && npm run sonar:scan
 ```
 
 Never commit `SONAR_TOKEN`.
