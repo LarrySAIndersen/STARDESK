@@ -69,7 +69,7 @@ export function SearchableSelect({
     <div ref={rootRef} className={cn("relative min-w-0", className)}>
       <Input
         id={inputId}
-        name={inputId}
+        name={`stardesk-${inputId}`}
         type="search"
         role="combobox"
         aria-expanded={open}
@@ -78,6 +78,7 @@ export function SearchableSelect({
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
+        list=""
         disabled={disabled}
         value={shownValue}
         placeholder={placeholder}

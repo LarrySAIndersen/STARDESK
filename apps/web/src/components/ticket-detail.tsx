@@ -13,7 +13,6 @@ import { TicketIntelligencePanel } from "@/components/ticket-intelligence-panel"
 import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketPriorityForm } from "@/components/ticket-priority-form";
 import { TicketSlackPush } from "@/components/ticket-slack-push";
-import { TicketStatusForm } from "@/components/ticket-status-form";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { TicketCaseLayout } from "@/components/ticket/ticket-case-layout";
 import { TicketDetailTopBand } from "@/components/ticket/ticket-detail-top-band";
@@ -285,7 +284,6 @@ export function TicketDetailView({
               ) : null}
             </>
           )}
-          <TicketStatusForm ticketId={ticket.id} currentStatus={ticket.status} />
         </div>
       </WireDetailCard>
     </>
