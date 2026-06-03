@@ -1,5 +1,6 @@
 import { ClassicTopBarTools } from "@/components/classic/classic-top-bar-tools";
 import { ClassicUiSwitcher } from "@/components/classic/classic-ui-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { User } from "@/types/user";
 
 export function ClassicTopBar({
@@ -17,6 +18,7 @@ export function ClassicTopBar({
       </div>
       <h1 className="classic-topbar__title">{title}</h1>
       <div className="classic-topbar__actions">
+        <ThemeToggle />
         <ClassicTopBarTools user={user} />
         <ClassicUiSwitcher
           targetMode="modern"

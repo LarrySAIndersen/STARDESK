@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { getClientUser } from "@/lib/auth";
 import { portalRoleLabel } from "@/lib/portal-access";
@@ -54,7 +55,8 @@ export function PortalTopBar({
           {titleForPath(pathname)}
         </h1>
       </div>
-      <div className="flex min-w-0 shrink-0 items-center">
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
+        <ThemeToggle />
         <TopBarUserMenu user={{ ...user, role_label: portalRoleLabel(user) }} />
       </div>
     </header>

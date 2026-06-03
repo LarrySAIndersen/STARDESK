@@ -7,6 +7,7 @@ import { AgentClock } from "@/components/agent/agent-clock";
 import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
 import { PageLayoutEditTopBarControl } from "@/components/page-layout/page-layout-edit-top-bar-control";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { resolveUserAvatar } from "@/lib/user-avatar";
 import type { User } from "@/types/user";
@@ -87,6 +88,7 @@ export function AgentTopBar({
       <div className="wire-topbar__end flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
         <ApiHealthIndicator />
         <AgentClock />
+        <ThemeToggle />
         {actions}
         {resolvedUser ? <TopBarUserMenu user={resolvedUser} /> : null}
       </div>
