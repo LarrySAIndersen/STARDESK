@@ -70,21 +70,22 @@ Du gør **ikke** noget i Vercel her.
 
 ---
 
-## Trin 2 — PR til staging (dev) — automatisk merge
+## Trin 2 — PR til staging (dev) — batch + auto-merge
 
 | Hvad | Hvem |
 |------|------|
-| PR **base = `staging`** | Agent |
+| PR **base = `staging`** (draft indtil batch klar) | Agent |
+| **Op til 10 commits** per PR før merge | Agent — se [staging-batch-policy.md](./staging-batch-policy.md) |
 | CI: **Security** + **Deliverable gate** (hvis `DATABASE_URL` secret) | GitHub Actions |
-| **Merge til `staging`** når checks er grønne | Workflow **Auto-merge to staging** |
+| **Merge til `staging`** når batch (≥10 commits eller label) + checks grønne | Workflow **Auto-merge to staging** |
 
 Efter merge:
 
 - Vercel laver **Preview**-deploy (hvis Preview-env er sat).
 - Test på Preview-URL fra PR eller fra seneste `staging`-deploy.
 
-Du behøver **ikke** klikke merge på dev-PR’en, hvis auto-merge kører (se workflow).  
-Du **kan** stadig læse PR’en på: https://github.com/LarrySAIndersen/STARDESK/pulls (filtrér base `staging`).
+Du behøver **ikke** klikke merge på dev-PR’en, når auto-merge kører og batchen er klar.  
+For tidlig deploy: tilføj label **`batch-ready`** på PR, eller merge manuelt i GitHub.
 
 ---
 
@@ -120,10 +121,9 @@ Valgfrit: GitHub → **Actions** → **Promote staging to main (manual)** — ku
 
 ## Agent-regler (kort)
 
-- Gren fra **`staging`**, PR mod **`staging`**, aldrig direkte til **`main`**.
-- Draft PR indtil CI er grøn; merge til staging kan være automatisk.
-- Deliverable gate: `bash scripts/run-deliverable-gate.sh` før “færdig”.
-- Prod: nævn i handoff at Jan skal oprette/merge **release-PR** `staging` → `main`.
+- Gren fra **`staging`**, draft PR mod **`staging`**, saml **op til 10 commits** før ready/auto-merge.
+- Deliverable gate: `bash scripts/run-deliverable-gate.sh` før PR markeres ready.
+- Prod: **kun Jan** — opret evt. release-PR `staging` → `main`, merge aldrig selv.
 
 ---
 
