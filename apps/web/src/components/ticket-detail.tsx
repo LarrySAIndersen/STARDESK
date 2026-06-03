@@ -264,8 +264,8 @@ export function TicketDetailView({
           <TicketMetadataForm ticket={ticket} staff={staff} />
           {metadataEditable ? (
             <p className="text-muted-foreground text-xs">
-              Kategori, prioritet, gruppe og sagsbehandler redigeres under Metadata i toppanelet
-              ovenfor.
+              Kategori, prioritet, gruppe og sagsbehandler kan også redigeres i Detaljer-kortet til
+              højre — tryk Gem for at gemme.
             </p>
           ) : (
             <>
@@ -295,6 +295,9 @@ export function TicketDetailView({
         <TicketCaseLayout
           ticket={ticket}
           staffView
+          editableDetails={metadataEditable}
+          teams={teams}
+          categories={categories}
           breadcrumb={<StaffCaseBreadcrumb ticketNumber={ticket.ticket_number} />}
           below={staffBelow}
         />

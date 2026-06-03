@@ -37,6 +37,7 @@ const args = [
   `-Dsonar.host.url=${host}`,
   `-Dsonar.token=${token}`,
   `-Dsonar.projectKey=${projectKey}`,
+  "-Dsonar.python.version=3.12",
 ];
 if (organization) {
   args.push(`-Dsonar.organization=${organization}`);

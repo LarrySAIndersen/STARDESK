@@ -1,4 +1,5 @@
 # Auto-merge PRs into staging when Security check succeeds (dev path).
+# Batch policy: min 10 commits per staging deploy (see docs/staging-batch-policy.md).
 # Does NOT touch main — prod stays manual (staging → main PR).
 name: Auto-merge to staging
 
@@ -93,6 +94,26 @@ jobs:
 
             if (pr.mergeable_state === 'blocked' || pr.mergeable_state === 'dirty') {
               core.info(`PR not mergeable: ${pr.mergeable_state}`);
+              return;
+            }
+
+            const STAGING_BATCH_MIN_COMMITS = 10;
+            const labelNames = (pr.labels || []).map((l) => l.name);
+            const batchExempt =
+              labelNames.includes('batch-ready') || labelNames.includes('hotfix');
+
+            const { data: compare } = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `${pr.base.sha}...${pr.head.sha}`,
+            });
+            const commitCount = compare.ahead_by ?? 0;
+
+            if (!batchExempt && commitCount < STAGING_BATCH_MIN_COMMITS) {
+              core.info(
+                `Staging batch policy: ${commitCount}/${STAGING_BATCH_MIN_COMMITS} commits — ` +
+                  'keep draft or add label batch-ready / hotfix to merge early.',
+              );
               return;
             }
 
