@@ -52,7 +52,7 @@ if [[ "$SKIP_TESTS" -eq 0 ]]; then
   # shellcheck disable=SC1091
   [[ -f .env ]] && source .env
   set +a
-  uv run pytest -q --tb=line 2>&1 | tail -5
+  uv run --no-build pytest -q --tb=line 2>&1 | tail -5
 fi
 
 echo ""
