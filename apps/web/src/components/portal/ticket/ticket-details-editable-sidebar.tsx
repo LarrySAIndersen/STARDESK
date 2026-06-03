@@ -19,10 +19,12 @@ import {
   isUnassignedOption,
   type SearchableOption,
 } from "@/lib/assignment-search";
+import { apiPatch } from "@/lib/api";
 import {
   filterCategoriesForSearch,
   filterPrioritiesForSearch,
   filterSourcesForSearch,
+  filterStatusesForSearch,
   filterSubcategoriesForSearch,
 } from "@/lib/metadata-search";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
@@ -32,11 +34,11 @@ import {
   ticketToDetailDraft,
   type TicketDetailDraft,
 } from "@/lib/ticket-detail-draft-save";
-import { priorityLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
-import type { TicketDetail } from "@/types/ticket";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 function EditableRow({
   label,
@@ -85,6 +87,7 @@ export function TicketDetailsEditableSidebar({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [statusQuery, setStatusQuery] = useState("");
   const [categoryQuery, setCategoryQuery] = useState("");
   const [subcategoryQuery, setSubcategoryQuery] = useState("");
   const [priorityQuery, setPriorityQuery] = useState("");
@@ -113,6 +116,10 @@ export function TicketDetailsEditableSidebar({
     return category?.subcategories ?? [];
   }, [categories, draft.category_id]);
 
+  const statusOptions = useMemo(
+    () => filterStatusesForSearch(statusQuery),
+    [statusQuery],
+  );
   const categoryOptions = useMemo(
     () => filterCategoriesForSearch(categories, categoryQuery),
     [categories, categoryQuery],
@@ -220,6 +227,27 @@ export function TicketDetailsEditableSidebar({
     }));
   }
 
+  async function handleStatusSelect(option: SearchableOption) {
+    if (isUnassignedOption(option.id) || option.id === ticket.status) {
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updated = await apiPatch<Ticket>(`/api/v1/tickets/${ticket.id}`, {
+        status: option.id,
+      });
+      const detail = { ...ticket, ...updated };
+      setTicket(detail);
+      onTicketUpdated?.(detail);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke gemme status");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function handleSave() {
     if (!hasChanges || isSaving) {
       return;
@@ -255,6 +283,23 @@ export function TicketDetailsEditableSidebar({
         Detaljer
       </h2>
       <PageLayoutGrid className="space-y-0">
+        <PageLayoutField fieldId="status" defaultLabel="Status" defaultOrder={5}>
+          <EditableRow
+            label={getField("status", { label: "Status", order: 5 }).label}
+          >
+            <SearchableSelect
+              valueId={ticket.status}
+              displayValue={statusLabel(ticket.status)}
+              options={statusOptions}
+              placeholder="Søg status…"
+              emptyLabel="—"
+              allowClear={false}
+              disabled={isSaving}
+              onQueryChange={setStatusQuery}
+              onSelect={handleStatusSelect}
+            />
+          </EditableRow>
+        </PageLayoutField>
         <PageLayoutField fieldId="category" defaultLabel="Kategori" defaultOrder={10}>
           <EditableRow
             label={getField("category", { label: "Kategori", order: 10 }).label}
