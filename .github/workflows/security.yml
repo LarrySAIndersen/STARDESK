@@ -9,11 +9,16 @@ on:
 jobs:
   api-security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -39,6 +44,11 @@ jobs:
           name: api-coverage-xml
           path: apps/api/coverage.xml
           if-no-files-found: error
+      - name: SonarCloud Scan (coverage import)
+        uses: SonarSource/sonarqube-scan-action@v7.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Bandit (SAST)
         run: bandit -r src -ll -q
       - name: pip-audit (dependencies)
