@@ -50,6 +50,7 @@ export function AgentBottomPanel({
   selectedTicket = null,
   draggingTicket = null,
   onTicketAssigned,
+  teamsTabLabel = "Grupper",
 }: {
   tickets: Ticket[];
   teams: Team[];
@@ -58,6 +59,8 @@ export function AgentBottomPanel({
   /** Active drag from Nye sager — drives AI ghost overlay and drop targets. */
   draggingTicket?: Ticket | null;
   onTicketAssigned?: (detail: TicketDetail) => void;
+  /** First tab label (e.g. Service Desk uses "Sagsdeling"). */
+  teamsTabLabel?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const activeDragRef = useRef<Ticket | null>(null);
@@ -308,7 +311,7 @@ export function AgentBottomPanel({
         <div className="wire-bp-tabs">
           {(
             [
-              ["teams", "Grupper", railTeams.length],
+              ["teams", teamsTabLabel, railTeams.length],
               ["content", "Sagsindhold", selected?.ticket_number ?? "—"],
               ["slack", "Slack", null],
             ] as const

@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
 import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   isTeamSelected,
   resolveTeamTicketDisplay,
@@ -31,6 +32,8 @@ export function DispatchTeamsRail({
   description = "Klik en gruppe for at se alle sager — træk hertil for at tildele",
   sectionLabel = "Interne grupper",
   previewLimit,
+  panelOpen = true,
+  onTogglePanel,
 }: {
   teams: Team[];
   ticketsByTeam: Map<string, Ticket[]>;
@@ -45,6 +48,9 @@ export function DispatchTeamsRail({
   description?: string;
   sectionLabel?: string;
   previewLimit?: number;
+  /** When set with onTogglePanel, shows ▼/▲ to hide the whole rail (parent controls layout). */
+  panelOpen?: boolean;
+  onTogglePanel?: () => void;
 }) {
   const limit = previewLimit ?? TEAM_RAIL_TICKET_PREVIEW;
   const listId = useId();
@@ -76,20 +82,48 @@ export function DispatchTeamsRail({
     });
   }
 
-  return (
+  const rail = (
     <aside
-      className="flex min-h-0 flex-col space-y-3 overflow-y-auto"
+      className="flex min-h-0 flex-col overflow-y-auto"
       aria-labelledby="dispatch-groups-heading"
     >
       <div className="star-section-header shrink-0 rounded-t-md">
-        <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-widest uppercase">
-          {sectionLabel}
-        </p>
-        <h2 id="dispatch-groups-heading" className="star-section-title">
-          {title}
-        </h2>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-muted-foreground mb-1 text-[10px] font-bold tracking-widest uppercase">
+              {sectionLabel}
+            </p>
+            <h2 id="dispatch-groups-heading" className="star-section-title">
+              {title}
+            </h2>
+          </div>
+          {onTogglePanel ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-star-navy/25 text-star-navy hover:bg-star-blue-light/60 shrink-0 gap-1 text-xs font-semibold"
+              onClick={onTogglePanel}
+              aria-label={panelOpen ? "Skjul interne grupper" : "Vis interne grupper"}
+              aria-expanded={panelOpen}
+            >
+              {panelOpen ? (
+                <>
+                  <PanelRightClose className="size-3.5" aria-hidden />
+                  Skjul
+                </>
+              ) : (
+                <>
+                  <PanelRightOpen className="size-3.5" aria-hidden />
+                  Vis
+                </>
+              )}
+            </Button>
+          ) : null}
+        </div>
         <p className="star-section-desc">{description}</p>
       </div>
+      <div className={cn("space-y-3", onTogglePanel ? "p-3" : "")}>
       {teams.map((team) => {
         const isSelected = isTeamSelected(selectedTeamId ?? null, team.id);
         const display = resolveTeamTicketDisplay(
@@ -203,6 +237,17 @@ export function DispatchTeamsRail({
           </div>
         );
       })}
+      </div>
     </aside>
+  );
+
+  if (!onTogglePanel) {
+    return rail;
+  }
+
+  return (
+    <div className="star-section-card flex h-full min-h-0 flex-col overflow-hidden">
+      {rail}
+    </div>
   );
 }
