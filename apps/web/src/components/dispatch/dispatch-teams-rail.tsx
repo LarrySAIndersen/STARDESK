@@ -83,7 +83,7 @@ export function DispatchTeamsRail({
                 ? "border-star-blue bg-star-blue-light"
                 : isSelected
                   ? "border-star-navy bg-star-blue-light/50 ring-2 ring-star-navy/20"
-                  : "border-star-blue/30 bg-white",
+                  : "border-star-blue/30 bg-card",
             )}
           >
             <div className="flex items-start justify-between gap-2">
@@ -96,9 +96,9 @@ export function DispatchTeamsRail({
                 disabled={!onSelectTeam}
                 aria-pressed={isSelected}
               >
-                <p className="text-star-navy font-semibold">{team.name}</p>
+                <p className="text-foreground font-semibold">{team.name}</p>
                 {team.name === "SF" ? (
-                  <p className="text-star-navy text-xs font-medium uppercase">Hovedgruppe</p>
+                  <p className="text-muted-foreground text-xs font-medium uppercase">Hovedgruppe</p>
                 ) : null}
               </button>
               <Badge variant="outline">

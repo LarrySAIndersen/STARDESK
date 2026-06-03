@@ -100,7 +100,7 @@ export function SearchableSelect({
         <ul
           id={listboxId}
           role="listbox"
-          className="border-[var(--gray-border)] absolute top-full right-0 z-50 mt-1 max-h-48 w-full min-w-[220px] overflow-y-auto rounded-[2px] border bg-white py-1 text-left shadow-md"
+          className="border-border bg-popover text-popover-foreground absolute top-full right-0 z-50 mt-1 max-h-48 w-full min-w-[220px] overflow-y-auto rounded-[2px] border py-1 text-left shadow-md"
         >
           {options.length === 0 && query.trim() ? (
             <li className="text-muted-foreground px-3 py-2 text-xs">Ingen match</li>
