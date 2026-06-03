@@ -3,16 +3,16 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   dispatchBoardTicketsChanged,
   useBoardDataSync,
 } from "@/hooks/use-board-data-sync";
 
+import { AgentBottomPanel } from "@/components/agent-bottom-panel";
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
-import { DispatchGroupsStrip } from "@/components/dispatch/dispatch-groups-strip";
 import { DispatchTeamsRail } from "@/components/dispatch/dispatch-teams-rail";
 import {
   collectServiceDeskFilterOptions,
@@ -24,6 +24,7 @@ import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-ta
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
 import {
+  mergeTicketAssignmentFromDetail,
   mergeTicketAssignmentInList,
   reconcileLocalTicketsWithServer,
 } from "@/lib/ticket-assignment";
@@ -34,6 +35,7 @@ import {
 import { getTicketsForTeam } from "@/lib/tickets-by-team";
 import { partitionTeamsByCategory, sortTeamsForDisplay } from "@/lib/team-categories";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
+import { routingConfidenceForTeamAssign } from "@/lib/ticket-routing";
 import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import {
   filterByServiceDeskQueue,
@@ -75,6 +77,8 @@ type PendingDrop = Readonly<{
   ticketTitle: string;
   teamId?: string;
   teamName?: string;
+  confidence?: number;
+  routingReasonDa?: string | null;
 }>;
 
 export function ServiceDeskView({
@@ -99,6 +103,9 @@ export function ServiceDeskView({
   const [localTickets, setLocalTickets] = useState<Ticket[]>(tickets);
   const [localTeams, setLocalTeams] = useState<Team[]>(teams);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [draggingTicket, setDraggingTicket] = useState<Ticket | null>(null);
+  const draggingTicketRef = useRef<Ticket | null>(null);
 
   useEffect(() => {
     setLocalTickets((prev) => reconcileLocalTicketsWithServer(prev, tickets));
@@ -113,6 +120,22 @@ export function ServiceDeskView({
     setTeams: setLocalTeams,
     onError: setSyncError,
   });
+
+  const handleTicketAssigned = useCallback((detail: TicketDetail) => {
+    setLocalTickets((prev) => {
+      const existing = prev.find((ticket) => ticket.id === detail.id);
+      if (!existing) {
+        return prev;
+      }
+      const merged = mergeTicketAssignmentFromDetail(existing, detail);
+      setSelectedTicket(merged);
+      return prev.map((ticket) => (ticket.id === merged.id ? merged : ticket));
+    });
+    draggingTicketRef.current = null;
+    setDraggingTicket(null);
+    void refreshNow();
+    router.refresh();
+  }, [refreshNow, router]);
 
   const internalTeams = useMemo(() => {
     const { internal } = partitionTeamsByCategory(localTeams);
@@ -250,9 +273,11 @@ export function ServiceDeskView({
         ticketTitle: ticket.title,
         teamId: team.id,
         teamName: team.name,
+        confidence: routingConfidenceForTeamAssign(ticket, team.id, internalTeams),
+        routingReasonDa: ticket.routing?.routing_reason_da,
       });
     },
-    [resolveTicketForDrop],
+    [resolveTicketForDrop, internalTeams],
   );
 
   async function confirmAssignment(data: {
@@ -301,12 +326,13 @@ export function ServiceDeskView({
   }
 
   return (
-    <div className="wire-scroll-content flex min-h-0 flex-1 flex-col space-y-4 px-4 py-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="wire-scroll-content min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
       <header className="shrink-0">
         <h1 className="text-star-navy text-2xl font-bold tracking-tight">Service Desk</h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Kø, fordeling og overblik over åbne sager — træk en sag til en gruppe nedenfor eller
-          til panelet til højre.
+          Kø og fordeling — træk en sag til bundpanelet (Grupper / Sagsindhold) eller til
+          gruppen til højre.
         </p>
         {syncError ? (
           <p className="text-star-red mt-2 text-sm" role="alert">
@@ -389,8 +415,8 @@ export function ServiceDeskView({
 
           <p className="text-muted-foreground shrink-0 text-xs">
             {queue === "teams"
-              ? "Sager tildelt en gruppe vises under gruppen nedenfor og til højre."
-              : "Venstre liste: sager uden gruppe eller på SF Service Desk. Træk til en gruppe nedenfor eller til højre — sagen forsvinder her og vises under gruppen."}
+              ? "Sager tildelt en gruppe vises i bundpanelet og til højre."
+              : "Venstre liste: sager uden gruppe eller på SF Service Desk. Træk til bundpanelet (AI-match) eller til højre."}
           </p>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
@@ -406,6 +432,23 @@ export function ServiceDeskView({
               tickets={pageTickets}
               showTeamColumn
               draggable={queue !== "teams" && tableTickets.length > 0}
+              onDragStart={(ticket) => {
+                draggingTicketRef.current = ticket;
+                setDraggingTicket(ticket);
+              }}
+              onDragEnd={() => {
+                window.setTimeout(() => {
+                  draggingTicketRef.current = null;
+                  setDraggingTicket(null);
+                }, 0);
+              }}
+              onRowClick={(ticket) => {
+                setSelectedTicket(ticket);
+                document.getElementById("dispatch-panel")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "nearest",
+                });
+              }}
               columnFilters={
                 <TicketTableColumnFilters
                   filters={tableFilters}
@@ -485,30 +528,10 @@ export function ServiceDeskView({
             </div>
           ) : null}
 
-          <div className="border-star-red mt-2 shrink-0 border-t-[3px] pt-3">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-star-navy text-sm font-bold">Grupper</h2>
-                <p className="text-muted-foreground text-[11px]">
-                  Klik en gruppe for alle sager — træk til bereder-streg eller til højre
-                </p>
-              </div>
-              <span className="rounded-full bg-star-navy px-2 py-0.5 text-[10px] font-bold text-white">
-                {railTeams.length}
-              </span>
-            </div>
-            <DispatchGroupsStrip
-              teams={railTeams}
-              ticketsByTeam={ticketsByTeam}
-              dragOverTeamId={dragOverTeamId}
-              onDragOverTeam={handleDragOverTeam}
-              onDragLeaveTeam={handleDragLeaveTeam}
-              onDropTeam={handleDropTeam}
-              selectedTeamId={selectedTeamId}
-              onSelectTeam={handleSelectTeam}
-              ticketHref={(ticketId) => `/tickets/${ticketId}`}
-            />
-          </div>
+          <p className="text-muted-foreground mt-2 shrink-0 text-center text-[11px]">
+            Grib en sag og træk den til bundpanelet — bereder-stregen viser AI-match mens du
+            trækker
+          </p>
         </section>
 
         <DispatchTeamsRail
@@ -537,10 +560,21 @@ export function ServiceDeskView({
           teamName={pending.teamName}
           teamId={pending.teamId}
           teams={internalTeams}
+          confidence={pending.confidence}
+          routingReasonDa={pending.routingReasonDa}
           onConfirm={confirmAssignment}
           onCancel={() => !isSaving && setPending(null)}
         />
       ) : null}
+      </div>
+
+      <AgentBottomPanel
+        tickets={localTickets}
+        teams={internalTeams}
+        selectedTicket={selectedTicket}
+        draggingTicket={draggingTicket}
+        onTicketAssigned={handleTicketAssigned}
+      />
     </div>
   );
 }
