@@ -12,6 +12,7 @@ import { loadPerfEnv } from "./load-perf-env.mjs";
 import { buildPerformanceReport } from "./build-performance-report.mjs";
 import { buildPerformanceEvidence } from "./build-performance-evidence.mjs";
 import { buildPerformanceSharePack } from "./export-performance-share-pack.mjs";
+import { resolveCommandPath } from "../lib/script-security.mjs";
 
 loadPerfEnv();
 
@@ -68,13 +69,19 @@ async function main() {
     console.log("=== Persist benchmarks to DB (PERF_PERSIST_DB=1) ===");
     const persistScript = path.join(__dirname, "persist_benchmark_to_db.py");
     const apiDir = path.resolve(__dirname, "../../apps/api");
-    const persist = spawnSync(
-      "uv",
-      ["run", "python", persistScript],
-      { cwd: apiDir, env: process.env, stdio: "inherit", shell: process.platform === "win32" },
-    );
-    if ((persist.status ?? 1) !== 0) {
-      console.warn("DB persist failed — reports still on disk.");
+    const uvPath = resolveCommandPath("uv");
+    if (!uvPath) {
+      console.warn("uv not found on PATH — skipping DB persist.");
+    } else {
+      const persist = spawnSync(uvPath, ["run", "python", persistScript], {
+        cwd: apiDir,
+        env: process.env,
+        stdio: "inherit",
+        shell: false,
+      });
+      if ((persist.status ?? 1) !== 0) {
+        console.warn("DB persist failed — reports still on disk.");
+      }
     }
   }
 
