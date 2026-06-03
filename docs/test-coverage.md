@@ -2,6 +2,18 @@
 
 Phase 1 delivers **API coverage** in CI and SonarCloud import wiring. Web coverage (Vitest + LCOV) is deferred to a follow-up PR.
 
+## One-time SonarCloud setup (required for CI coverage)
+
+SonarCloud **cannot** run Automatic Analysis and CI analysis at the same time.
+
+1. Open [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK) → **Project Settings** → **Analysis Method**
+2. **Disable** Automatic Analysis
+3. **Enable** analysis via GitHub Actions / CI (SonarScanner)
+
+Until step 2 is done, the `SonarCloud Scan` CI step fails with: *"You are running CI analysis while Automatic Analysis is enabled."*
+
+After CI is enabled, the Coverage panel is filled from `apps/api/coverage.xml` on each `staging`/`main` build.
+
 ## API — local
 
 From repo root or `apps/api`:
