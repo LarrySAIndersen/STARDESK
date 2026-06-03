@@ -6,6 +6,7 @@ artifacts/hello-world-gate/
 .env.local
 .env.production
 .env.*.local
+scripts/local-postgres.env
 !.env.example
 !.env.*.example
 

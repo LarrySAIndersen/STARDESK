@@ -4,39 +4,17 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 import psycopg
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts" / "lib"))
+from dev_database_url import load_database_url  # noqa: E402
 
 ROLE_ORDER = ("top_admin", "admin", "supporter", "agent", "end_user")
-
-
-def _normalize_url(url: str) -> str:
-    return url.replace("postgresql+asyncpg://", "postgresql://")
-
-
-def load_database_url() -> str:
-    from_env = os.environ.get("DATABASE_URL", "").strip()
-    if from_env:
-        return _normalize_url(from_env)
-
-    for name in (".env.local", ".env"):
-        env_path = ROOT / "apps" / "api" / name
-        if not env_path.exists():
-            continue
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if line.startswith("DATABASE_URL="):
-                url = line.split("=", 1)[1].strip().strip('"').strip("'")
-                if url:
-                    return _normalize_url(url)
-    raise SystemExit("DATABASE_URL not found")
+EMAIL_SUFFIX = "%@example.dk"
 
 
 def fetch_prototype_users(
@@ -49,7 +27,7 @@ def fetch_prototype_users(
         FROM users
         WHERE deleted_at IS NULL
           AND is_active = TRUE
-          AND email LIKE '%@example.dk'
+          AND email LIKE %s
     """
     count_sql = f"SELECT COUNT(*) {base_where}"
     list_sql = f"""
@@ -63,13 +41,13 @@ def fetch_prototype_users(
           email
     """
     with conn.cursor() as cur:
-        cur.execute(count_sql)
+        cur.execute(count_sql, (EMAIL_SUFFIX,))
         total = int(cur.fetchone()[0])
         if limit is not None:
             list_sql += " LIMIT %s"
-            cur.execute(list_sql, (limit,))
+            cur.execute(list_sql, (EMAIL_SUFFIX, limit))
         else:
-            cur.execute(list_sql)
+            cur.execute(list_sql, (EMAIL_SUFFIX,))
         rows = cur.fetchall()
     users = [(str(email), str(display_name), str(role)) for email, display_name, role in rows]
     return users, total
@@ -113,7 +91,7 @@ def main() -> int:
         print(format_user_line(email, display_name, role))
 
     if limit is not None and total > len(users):
-        print(f"  … and {total - len(users)} more (scripts/list_prototype_users.py --limit 0)")
+        print(f"  ... and {total - len(users)} more (scripts/list_prototype_users.py --limit 0)")
 
     print("  Password: PROTOTYPE_BOOTSTRAP_PASSWORD in apps/api/.env")
     return 0

@@ -5,6 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+GATE_BANNER='=============================================='
 
 FULL=0
 STAGING=0
@@ -35,21 +36,13 @@ resolve_prototype_demo_password() {
   if [[ -n "${TEST_USER_PASSWORD:-}" ]]; then
     return 0
   fi
-  cd "$ROOT/apps/api"
-  set -a
-  # shellcheck disable=SC1091
-  [[ -f .env ]] && source .env
-  set +a
-  if [[ -z "${PROTOTYPE_BOOTSTRAP_PASSWORD:-}" ]]; then
-    echo "PROTOTYPE_BOOTSTRAP_PASSWORD missing in apps/api/.env (see .env.development.example)" >&2
-    exit 1
-  fi
-  export TEST_USER_PASSWORD="${PROTOTYPE_BOOTSTRAP_PASSWORD}"
+  export TEST_USER_PASSWORD
+  TEST_USER_PASSWORD="$(bash "$ROOT/scripts/lib/resolve-prototype-demo-password.sh")"
 }
 
-echo "=============================================="
+echo "$GATE_BANNER"
 echo " STARDESK deliverable gate (hello-world)"
-echo "=============================================="
+echo "$GATE_BANNER"
 
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
   echo ""
@@ -70,7 +63,7 @@ if [[ "$FULL" -eq 1 ]]; then
   echo ""
   if [[ ! -d "$ROOT/scripts/node_modules/playwright" ]]; then
     echo "==> Installing Playwright (scripts/)"
-    npm --prefix "$ROOT/scripts" install --no-audit --no-fund
+    npm --prefix "$ROOT/scripts" install --no-audit --no-fund --ignore-scripts
     npx --prefix "$ROOT/scripts" playwright install chromium
   fi
   node "$ROOT/scripts/hello-world-gate.mjs"
@@ -94,7 +87,7 @@ if [[ "$RUN_STAGING" -eq 1 ]]; then
 fi
 
 echo ""
-echo "=============================================="
+echo "$GATE_BANNER"
 if [[ "$RUN_STAGING" -eq 1 ]]; then
   echo " DELIVERABLE GATE PASSED (local + staging hello-world)"
 else
@@ -102,4 +95,4 @@ else
   echo " Tip: after merge to staging, run with --staging for cloud Preview check."
 fi
 echo " Attach this output (+ screenshots if --full) to your PR/handoff."
-echo "=============================================="
+echo "$GATE_BANNER"
