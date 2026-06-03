@@ -1,5 +1,8 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+
 import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +47,34 @@ export function DispatchTeamsRail({
   previewLimit?: number;
 }) {
   const limit = previewLimit ?? TEAM_RAIL_TICKET_PREVIEW;
+  const listId = useId();
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!selectedTeamId) {
+      return;
+    }
+    setExpandedIds((prev) => {
+      if (prev.has(selectedTeamId)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(selectedTeamId);
+      return next;
+    });
+  }, [selectedTeamId]);
+
+  function toggleExpanded(teamId: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  }
 
   return (
     <aside
@@ -68,6 +99,8 @@ export function DispatchTeamsRail({
           limit,
         );
         const isOver = dragOverTeamId === team.id;
+        const isExpanded = expandedIds.has(team.id) || isOver;
+        const panelId = `${listId}-${team.id}`;
 
         return (
           <div
@@ -78,7 +111,8 @@ export function DispatchTeamsRail({
             onDragLeave={onDragLeaveTeam}
             onDrop={(event) => onDropTeam(team, event)}
             className={cn(
-              "rounded-md border-2 border-dashed p-4 transition-colors",
+              "rounded-md border-2 border-dashed transition-colors",
+              isExpanded ? "p-4" : "px-3 py-2",
               isOver
                 ? "border-star-blue bg-star-blue-light"
                 : isSelected
@@ -86,38 +120,86 @@ export function DispatchTeamsRail({
                   : "border-star-blue/30 bg-card",
             )}
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2">
               <button
                 type="button"
-                className="min-w-0 flex-1 text-left"
-                onClick={() =>
-                  onSelectTeam?.(toggleSelectedTeamId(selectedTeamId ?? null, team.id))
-                }
-                disabled={!onSelectTeam}
-                aria-pressed={isSelected}
+                className="text-muted-foreground hover:text-foreground mt-0.5 shrink-0 rounded p-0.5 transition-colors"
+                onClick={() => toggleExpanded(team.id)}
+                aria-expanded={isExpanded}
+                aria-controls={panelId}
+                aria-label={isExpanded ? `Fold ${team.name} sammen` : `Fold ${team.name} ud`}
               >
-                <p className="text-foreground font-semibold">{team.name}</p>
-                {team.name === "SF" ? (
-                  <p className="text-muted-foreground text-xs font-medium uppercase">Hovedgruppe</p>
-                ) : null}
+                <ChevronDown
+                  className={cn("size-4 transition-transform", isExpanded && "rotate-180")}
+                  aria-hidden
+                />
               </button>
-              <Badge variant="outline">
-                {display.total} sag{display.total === 1 ? "" : "er"}
-              </Badge>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-foreground font-semibold">{team.name}</p>
+                    {team.name === "SF" ? (
+                      <p className="text-muted-foreground text-xs font-medium uppercase">
+                        Hovedgruppe
+                      </p>
+                    ) : null}
+                    {!isExpanded ? (
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {display.total} sag{display.total === 1 ? "" : "er"} ·{" "}
+                        {team.members.length} medlemmer
+                      </p>
+                    ) : null}
+                  </div>
+                  <Badge variant="outline" className="shrink-0">
+                    {display.total} sag{display.total === 1 ? "" : "er"}
+                  </Badge>
+                </div>
+                {isExpanded ? (
+                  <p className="text-muted-foreground mt-2 text-xs">
+                    {team.members.length} medlemmer
+                    {onSelectTeam ? (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          className="text-star-blue hover:text-star-navy font-semibold underline underline-offset-2"
+                          onClick={() =>
+                            onSelectTeam(toggleSelectedTeamId(selectedTeamId ?? null, team.id))
+                          }
+                          aria-pressed={isSelected}
+                        >
+                          {isSelected ? "Vis forhåndsvisning" : "Vis alle sager"}
+                        </button>
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <p className="text-muted-foreground mt-2 text-xs">{team.members.length} medlemmer</p>
-            <div className="mt-3 border-t border-star-blue/15 pt-3">
-              <TeamGroupTicketList
-                tickets={display.visible}
-                total={display.total}
-                isSelected={display.isSelected}
-                showingAll={display.showingAll}
-                previewLimit={limit}
-                onTicketClick={onTicketClick}
-                ticketHref={(ticketId) => `/tickets/${ticketId}`}
-                emptyLabel="Ingen tildelte sager"
-              />
-            </div>
+            {isExpanded ? (
+              <div id={panelId} className="mt-3 border-t border-star-blue/15 pt-3">
+                <div
+                  className={cn(
+                    "wire-bereder-streg mb-3 flex min-h-[2rem] items-center justify-center rounded-[2px] border-2 border-dashed px-2 py-1.5 text-center text-[10px] font-semibold",
+                    isOver
+                      ? "border-[#1A7A44] bg-[#E6F5EC] text-[#1A7A44]"
+                      : "border-[var(--gray-border)] bg-[var(--gray-bg)] text-[var(--gray-mid)]",
+                  )}
+                >
+                  {isOver ? "Slip sag her" : "Træk sag hertil"}
+                </div>
+                <TeamGroupTicketList
+                  tickets={display.visible}
+                  total={display.total}
+                  isSelected={display.isSelected}
+                  showingAll={display.showingAll}
+                  previewLimit={limit}
+                  onTicketClick={onTicketClick}
+                  ticketHref={(ticketId) => `/tickets/${ticketId}`}
+                  emptyLabel="Ingen tildelte sager"
+                />
+              </div>
+            ) : null}
           </div>
         );
       })}

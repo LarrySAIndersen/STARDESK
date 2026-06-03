@@ -544,7 +544,7 @@ export function ServiceDeskView({
           selectedTeamId={selectedTeamId}
           onSelectTeam={handleSelectTeam}
           title="Interne grupper"
-          description="Klik en gruppe for at se sager — træk hertil for at tildele"
+          description="Fold grupper ud/luk med pil — træk sag til bereder-streg når gruppen er åben"
         />
       </ResizableSplit>
 
