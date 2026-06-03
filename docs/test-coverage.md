@@ -2,6 +2,18 @@
 
 Phase 1 delivers **API coverage** in CI and SonarCloud import wiring. Web coverage (Vitest + LCOV) is deferred to a follow-up PR.
 
+## One-time SonarCloud setup (required for CI coverage)
+
+SonarCloud **cannot** run Automatic Analysis and CI analysis at the same time.
+
+1. Open [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK) → **Project Settings** → **Analysis Method**
+2. **Disable** Automatic Analysis
+3. **Enable** analysis via GitHub Actions / CI (SonarScanner)
+
+Until step 2 is done, the `SonarCloud Scan` CI step fails with: *"You are running CI analysis while Automatic Analysis is enabled."*
+
+After CI is enabled, the Coverage panel is filled from `apps/api/coverage.xml` on each `staging`/`main` build.
+
 ## API — local
 
 From repo root or `apps/api`:
@@ -35,15 +47,15 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 
 `sonar-project.properties` at repo root configures:
 
+- `sonar.python.version=3.12` (also passed explicitly in CI `args` on Sonar scan steps)
 - `sonar.python.coverage.reportPaths=apps/api/coverage.xml`
 - `sonar.tests=apps/api/tests`
 
-**CI workflow:** `.github/workflows/sonarcloud.yml` runs on every push/PR to `staging` and `main`:
+**CI (primary):** `.github/workflows/security.yml` job `api-security` — after pytest coverage, `SonarSource/sonarqube-scan-action` imports `apps/api/coverage.xml` on every push/PR to `staging` and `main`.
 
-1. `pytest` with Cobertura XML (`apps/api/coverage.xml`)
-2. `SonarSource/sonarqube-scan-action` imports coverage into SonarCloud
+**CI (dedicated):** `.github/workflows/sonarcloud.yml` — same flow as a standalone job (runs after merge to `staging`/`main`; new workflow files in PRs may need Actions approval once).
 
-**Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the job fails with a clear error.
+**Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the Sonar scan step fails (auth error).
 
 SonarCloud project: [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK)
 
