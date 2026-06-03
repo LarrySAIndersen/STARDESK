@@ -36,8 +36,8 @@ done
 export PATH="${HOME}/.local/bin:${PATH}"
 
 echo "==> Installing dependencies"
-cd "$ROOT/apps/web" && npm ci
-cd "$ROOT/apps/api" && uv sync --group dev
+cd "$ROOT/apps/web" && npm ci --ignore-scripts
+cd "$ROOT/apps/api" && uv sync --group dev --no-build
 
 echo "==> Environment files"
 if [[ -n "${DATABASE_URL:-${STARDESK_NEON_DATABASE_URL:-}}" ]]; then
@@ -76,7 +76,7 @@ set -a
 # shellcheck disable=SC1091
 [[ -f .env ]] && source .env
 set +a
-uv run pytest -q --tb=no -q 2>&1 | tail -3
+uv run --no-build pytest -q --tb=no -q 2>&1 | tail -3
 
 echo "==> Environment identity (compare to production)"
 HEALTH="$(curl -sf http://localhost:8000/health 2>/dev/null || true)"

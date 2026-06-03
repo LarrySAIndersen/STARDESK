@@ -12,20 +12,21 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+API_VENV_PYTHON="$ROOT/apps/api/.venv/bin/python"
 
 load_local_postgres_env() {
-  if [[ -f "$ROOT/scripts/local-postgres.env" ]]; then
-    # shellcheck disable=SC1091
-    source "$ROOT/scripts/local-postgres.env"
-  elif [[ -f "$ROOT/scripts/local-postgres.env.example" ]]; then
-    # shellcheck disable=SC1091
-    source "$ROOT/scripts/local-postgres.env.example"
-  fi
-  STARDESK_LOCAL_PG_USER="${STARDESK_LOCAL_PG_USER:-stardesk}"
-  if [[ -z "${STARDESK_LOCAL_PG_PASSWORD:-}" ]]; then
-    echo "Set STARDESK_LOCAL_PG_PASSWORD (see scripts/local-postgres.env.example)" >&2
+  if [[ ! -f "$ROOT/scripts/local-postgres.env" ]]; then
+    echo "Copy scripts/local-postgres.env.example to scripts/local-postgres.env and set STARDESK_LOCAL_PG_PASSWORD" >&2
     exit 1
   fi
+  # shellcheck disable=SC1091
+  source "$ROOT/scripts/local-postgres.env"
+  STARDESK_LOCAL_PG_USER="${STARDESK_LOCAL_PG_USER:-stardesk}"
+  if [[ -z "${STARDESK_LOCAL_PG_PASSWORD:-}" ]]; then
+    echo "STARDESK_LOCAL_PG_PASSWORD is empty in scripts/local-postgres.env" >&2
+    exit 1
+  fi
+  export STARDESK_LOCAL_PG_USER STARDESK_LOCAL_PG_PASSWORD
 }
 
 LOCAL_POSTGRES=0
@@ -59,7 +60,7 @@ ensure_uv() {
     return 0
   fi
   echo "Installing uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+  curl -LsSf --proto-redir '=https' https://astral.sh/uv/install.sh | sh
   export PATH="${HOME}/.local/bin:${PATH}"
 }
 
@@ -71,8 +72,7 @@ write_dev_env_files() {
     cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
     if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
       load_local_postgres_env
-      sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://${STARDESK_LOCAL_PG_USER}:${STARDESK_LOCAL_PG_PASSWORD}@localhost:5432/stardesk|" \
-        "$ROOT/apps/api/.env"
+      uv run python "$ROOT/scripts/dev_local_postgres.py" write-env
     fi
     echo "Created apps/api/.env from .env.development.example"
   fi
@@ -92,27 +92,17 @@ setup_local_postgres() {
   fi
   sudo pg_ctlcluster 16 main start 2>/dev/null || sudo service postgresql start 2>/dev/null || true
 
-  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
-DO \$\$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${STARDESK_LOCAL_PG_USER}') THEN
-    CREATE ROLE ${STARDESK_LOCAL_PG_USER} WITH LOGIN PASSWORD '${STARDESK_LOCAL_PG_PASSWORD}' CREATEDB;
-  END IF;
-END
-\$\$;
-SELECT 'CREATE DATABASE stardesk OWNER ${STARDESK_LOCAL_PG_USER}'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'stardesk')\\gexec
-SQL
-
-  sudo -u postgres psql -d stardesk -v ON_ERROR_STOP=1 <<'SQL'
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS vector;
-SQL
-  echo "Local PostgreSQL ready (${STARDESK_LOCAL_PG_USER} @ localhost:5432/stardesk)"
+  sudo -u postgres env \
+    STARDESK_LOCAL_PG_USER="$STARDESK_LOCAL_PG_USER" \
+    STARDESK_LOCAL_PG_PASSWORD="$STARDESK_LOCAL_PG_PASSWORD" \
+    "$API_VENV_PYTHON" "$ROOT/scripts/dev_local_postgres.py" setup
 }
 
 ensure_uv
+cd "$ROOT/apps/api"
+uv sync --group dev --no-build
+cd "$ROOT"
+
 if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
   setup_local_postgres
 fi
@@ -120,7 +110,6 @@ fi
 write_dev_env_files
 
 cd "$ROOT/apps/api"
-uv sync --group dev
 
 NEON_ARGS=()
 if [[ "$MIGRATIONS_ONLY" -eq 1 ]]; then
@@ -138,12 +127,10 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 fi
 
 SKIP_SQL=0
-if [[ "$FORCE_SQL" -ne 1 ]]; then
-  if uv run python "$ROOT/scripts/db_bootstrap_status.py"; then
-    echo "Database already has schema and users — skipping SQL migrations/seeds."
-    echo "  (use --force-sql to re-run run_neon_setup.py)"
-    SKIP_SQL=1
-  fi
+if [[ "$FORCE_SQL" -ne 1 ]] && uv run python "$ROOT/scripts/db_bootstrap_status.py"; then
+  echo "Database already has schema and users — skipping SQL migrations/seeds."
+  echo "  (use --force-sql to re-run run_neon_setup.py)"
+  SKIP_SQL=1
 fi
 
 if [[ "$SKIP_SQL" -eq 0 ]]; then

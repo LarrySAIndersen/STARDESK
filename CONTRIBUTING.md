@@ -14,7 +14,7 @@ Focused guide for developers working in this monorepo (`apps/web` + `apps/api`).
 
 ```bash
 bash scripts/bootstrap-dev-database.sh              # uses DATABASE_URL from apps/api/.env
-bash scripts/bootstrap-dev-database.sh --local-postgres   # VM without Neon
+bash scripts/bootstrap-dev-database.sh --local-postgres   # VM without Neon (copy scripts/local-postgres.env.example → local-postgres.env first)
 ```
 
 See [AGENTS.md](./AGENTS.md) for Cloud Agent details.
