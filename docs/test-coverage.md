@@ -43,7 +43,7 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 1. `pytest` with Cobertura XML (`apps/api/coverage.xml`)
 2. `SonarSource/sonarqube-scan-action` imports coverage into SonarCloud
 
-**Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the job fails with a clear error.
+**Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the Sonar scan step fails (auth error).
 
 SonarCloud project: [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK)
 
