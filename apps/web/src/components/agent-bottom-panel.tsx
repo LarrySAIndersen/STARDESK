@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
@@ -7,11 +8,18 @@ import { WireTags } from "@/components/wireframe/wire-tags";
 import { apiPatch } from "@/lib/api";
 import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
 import { readDraggedTicketId } from "@/lib/ticket-drag";
+import { TeamGroupDetailPane } from "@/components/dispatch/team-group-detail-pane";
+import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
+import { serviceDeskTeamIds, teamsForServiceDeskRail } from "@/lib/service-desk-queue";
 import {
-  isOpenTicket,
-  serviceDeskTeamIds,
-  teamsForServiceDeskRail,
-} from "@/lib/service-desk-queue";
+  buildOpenAssignedTicketsByTeamMap,
+  isTeamSelected,
+  resolveTeamTicketDisplay,
+  ticketDetailHref,
+  toggleSelectedTeamId,
+} from "@/lib/team-group-view";
+import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
+import { getTicketsForTeam } from "@/lib/tickets-by-team";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
 import { routingConfidenceForTeamAssign } from "@/lib/ticket-routing";
 import {
@@ -33,27 +41,7 @@ type PendingAssign = Readonly<{
 }>;
 
 const TEAM_TICKET_PREVIEW = 6;
-
-function buildTicketsByTeam(tickets: Ticket[]): Map<string, Ticket[]> {
-  const map = new Map<string, Ticket[]>();
-  for (const ticket of tickets) {
-    if (!ticket.assigned_team_id || !isOpenTicket(ticket)) {
-      continue;
-    }
-    const list = map.get(ticket.assigned_team_id) ?? [];
-    list.push(ticket);
-    map.set(ticket.assigned_team_id, list);
-  }
-  for (const [teamId, list] of map) {
-    list.sort(
-      (a, b) =>
-        new Date(b.updated_at ?? b.created_at).getTime() -
-        new Date(a.updated_at ?? a.created_at).getTime(),
-    );
-    map.set(teamId, list.slice(0, TEAM_TICKET_PREVIEW));
-  }
-  return map;
-}
+const PANEL_MAX_HEIGHT = 420;
 
 export function AgentBottomPanel({
   tickets,
@@ -96,10 +84,47 @@ export function AgentBottomPanel({
     () => teamsForServiceDeskRail(sortTeamsForDisplay(teams), deskTeamIds),
     [teams, deskTeamIds],
   );
-  const ticketsByTeam = useMemo(() => buildTicketsByTeam(tickets), [tickets]);
+  const ticketsByTeam = useMemo(
+    () => buildOpenAssignedTicketsByTeamMap(tickets),
+    [tickets],
+  );
+
+  const selectedTeam = useMemo(
+    () =>
+      selectedTeamId
+        ? (railTeams.find((t) => isTeamSelected(selectedTeamId, t.id)) ?? null)
+        : null,
+    [railTeams, selectedTeamId],
+  );
+
+  const selectedTeamTickets = useMemo(
+    () =>
+      selectedTeamId ? getTicketsForTeam(ticketsByTeam, selectedTeamId) : [],
+    [selectedTeamId, ticketsByTeam],
+  );
+
+  const handleSelectTeam = useCallback((teamId: string | null) => {
+    setSelectedTeamId(teamId);
+    if (teamId) {
+      setPanelOpen(true);
+      setHeight(PANEL_MAX_HEIGHT);
+      setTab("teams");
+    }
+  }, []);
   const ticketMap = useMemo(
     () => new Map(tickets.map((t) => [t.id, t])),
     [tickets],
+  );
+
+  const openTicketCard = useCallback(
+    (ticket: Ticket) => {
+      const full = ticketMap.get(ticket.id) ?? ticket;
+      setSelected(full);
+      setTab("content");
+      setPanelOpen(true);
+      setHeight(PANEL_MAX_HEIGHT);
+    },
+    [ticketMap],
   );
 
   useEffect(() => {
@@ -111,8 +136,11 @@ export function AgentBottomPanel({
   }, [slackTabRequest]);
 
   useEffect(() => {
-    setSelected(selectedTicket);
-  }, [selectedTicket]);
+    if (!selectedTicket) {
+      return;
+    }
+    openTicketCard(selectedTicket);
+  }, [selectedTicket, openTicketCard]);
 
   useEffect(() => {
     if (!draggingTicket) {
@@ -288,6 +316,7 @@ export function AgentBottomPanel({
             <button
               key={id}
               type="button"
+              data-tab={id}
               className={cn("wire-bp-tab", tab === id && "wire-bp-tab--active")}
               onClick={() => {
                 setTab(id);
@@ -313,19 +342,28 @@ export function AgentBottomPanel({
         </div>
 
         {panelOpen && tab === "teams" ? (
-          <div className="flex h-[calc(100%-37px)] overflow-x-auto p-3">
+          <div className="flex h-[calc(100%-37px)] min-h-0 flex-col">
+            {selectedTeam ? (
+              <TeamGroupDetailPane
+                team={selectedTeam}
+                tickets={selectedTeamTickets}
+                onClose={() => setSelectedTeamId(null)}
+                onTicketClick={openTicketCard}
+              />
+            ) : null}
+            <div className="flex min-h-0 flex-1 overflow-x-auto p-3">
             {railTeams.map((team) => {
-              const isSelected = selectedTeamId === team.id;
+              const isSelected = isTeamSelected(selectedTeamId, team.id);
               const isHover = hoverTeamId === team.id;
               const conf =
                 ghost?.team?.id === team.id ? ghost.confidence : 0;
               const dropOk = conf >= 50;
-              const teamTickets = ticketsByTeam.get(team.id) ?? [];
-              const totalTeamTickets =
-                tickets.filter(
-                  (t) =>
-                    t.assigned_team_id === team.id && isOpenTicket(t),
-                ).length;
+              const display = resolveTeamTicketDisplay(
+                ticketsByTeam,
+                team.id,
+                selectedTeamId,
+                TEAM_TICKET_PREVIEW,
+              );
               return (
                 <div
                   key={team.id}
@@ -337,9 +375,7 @@ export function AgentBottomPanel({
                   <button
                     type="button"
                     onClick={() =>
-                      setSelectedTeamId((prev) =>
-                        prev === team.id ? null : team.id,
-                      )
+                      handleSelectTeam(toggleSelectedTeamId(selectedTeamId, team.id))
                     }
                     className={cn(
                       "mb-1.5 flex w-full items-center justify-between rounded-[2px] px-2 py-1.5 text-left text-[11px] font-bold transition-colors",
@@ -356,7 +392,7 @@ export function AgentBottomPanel({
                         isSelected ? "bg-white/20 text-white" : "bg-star-navy text-white",
                       )}
                     >
-                      {totalTeamTickets}
+                      {display.total}
                     </span>
                   </button>
 
@@ -383,38 +419,26 @@ export function AgentBottomPanel({
                     )}
                   </div>
 
-                  {teamTickets.length > 0 ? (
-                    <ul className="space-y-1 border-t border-[var(--gray-border)] pt-1.5">
-                      {teamTickets.map((ticket) => (
-                        <li key={ticket.id}>
-                          <button
-                            type="button"
-                            className="w-full truncate rounded-[2px] px-1 py-0.5 text-left text-[10px] font-medium text-star-navy hover:bg-star-blue-light/40"
-                            title={`${ticket.ticket_number} ${ticket.title}`}
-                            onClick={() => {
-                              setSelected(ticket);
-                              setTab("content");
-                            }}
-                          >
-                            <span className="font-mono">{ticket.ticket_number}</span>
-                            <span className="text-muted-foreground ml-1 font-normal">
-                              {ticket.title}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
+                  <TeamGroupTicketList
+                    tickets={display.visible}
+                    total={display.total}
+                    isSelected={isSelected}
+                    showingAll={display.showingAll}
+                    previewLimit={TEAM_TICKET_PREVIEW}
+                    onTicketClick={openTicketCard}
+                  />
+                  {isSelected ? (
                     <p className="text-[10px] text-[var(--gray-mid)]">
-                      Ingen tildelte sager
+                      Eller vælg sag i listen ovenfor
                     </p>
-                  )}
+                  ) : null}
                   <p className="mt-1.5 text-[9px] text-[var(--gray-mid)]">
                     {team.members.length} medlemmer
                   </p>
                 </div>
               );
             })}
+            </div>
           </div>
         ) : null}
 
@@ -422,14 +446,24 @@ export function AgentBottomPanel({
           <div className="flex h-[calc(100%-37px)] gap-3 overflow-x-auto p-3">
             {selected ? (
               <>
-                <div className="w-[220px] shrink-0">
+                <div className="w-[240px] shrink-0">
                   <div className="wire-card mb-0">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <WireStatusBadge status={selected.status} />
+                      <WirePriorityBadge priority={selected.priority} />
+                    </div>
                     <p className="text-[9px] font-bold tracking-widest text-[var(--gray-mid)] uppercase">
                       Sag {selected.ticket_number}
                     </p>
                     <p className="text-star-navy mt-1 text-[13px] font-bold">
                       {selected.title}
                     </p>
+                    <Link
+                      href={ticketDetailHref(selected.id)}
+                      className="text-star-blue mt-2 inline-block text-[11px] font-semibold hover:underline"
+                    >
+                      Åbn fuld sag →
+                    </Link>
                     <WireTags tags={selected.tags} />
                     {selected.routing && !selected.routing.routing_ready ? (
                       <div className="mt-2">
@@ -503,7 +537,7 @@ export function AgentBottomPanel({
               </>
             ) : (
               <p className="w-full py-6 text-center text-xs text-[var(--gray-mid)]">
-                Klik på en sag i tabellen — eller træk til en gruppe i bundpanelet
+                Klik på en sag i tabellen eller under en gruppe — eller træk til en gruppe
               </p>
             )}
           </div>

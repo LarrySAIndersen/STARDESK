@@ -1,38 +1,40 @@
 "use client";
 
-import Link from "next/link";
-
-import { isOpenTicket } from "@/lib/service-desk-queue";
+import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
+import {
+  TEAM_GROUP_PREVIEW_LIMIT,
+  resolveTeamTicketDisplay,
+  isTeamSelected,
+  toggleSelectedTeamId,
+} from "@/lib/team-group-view";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
 import type { Ticket } from "@/types/ticket";
 
-export const GROUPS_STRIP_TICKET_PREVIEW = 6;
+export const GROUPS_STRIP_TICKET_PREVIEW = TEAM_GROUP_PREVIEW_LIMIT;
 
 export function DispatchGroupsStrip({
   teams,
   ticketsByTeam,
-  allTickets,
   dragOverTeamId,
   onDragOverTeam,
   onDragLeaveTeam,
   onDropTeam,
   selectedTeamId = null,
   onSelectTeam,
+  onTicketClick,
   ticketHref,
   className,
 }: {
   teams: Team[];
   ticketsByTeam: Map<string, Ticket[]>;
-  /** Full ticket list for open-count badges per group. */
-  allTickets: Ticket[];
   dragOverTeamId: string | null;
   onDragOverTeam: (teamId: string, event: React.DragEvent) => void;
   onDragLeaveTeam: () => void;
   onDropTeam: (team: Team, event: React.DragEvent) => void;
   selectedTeamId?: string | null;
   onSelectTeam?: (teamId: string | null) => void;
-  /** When set, ticket rows link to detail instead of button-only. */
+  onTicketClick?: (ticket: Ticket) => void;
   ticketHref?: (ticketId: string) => string;
   className?: string;
 }) {
@@ -48,15 +50,14 @@ export function DispatchGroupsStrip({
       }}
     >
       {teams.map((team) => {
-        const isSelected = selectedTeamId === team.id;
+        const isSelected = isTeamSelected(selectedTeamId ?? null, team.id);
         const isHover = dragOverTeamId === team.id;
-        const teamTickets = (ticketsByTeam.get(team.id) ?? []).slice(
-          0,
+        const display = resolveTeamTicketDisplay(
+          ticketsByTeam,
+          team.id,
+          selectedTeamId ?? null,
           GROUPS_STRIP_TICKET_PREVIEW,
         );
-        const totalTeamTickets = allTickets.filter(
-          (t) => t.assigned_team_id === team.id && isOpenTicket(t),
-        ).length;
 
         return (
           <div
@@ -68,7 +69,9 @@ export function DispatchGroupsStrip({
           >
             <button
               type="button"
-              onClick={() => onSelectTeam?.(isSelected ? null : team.id)}
+              onClick={() =>
+                onSelectTeam?.(toggleSelectedTeamId(selectedTeamId ?? null, team.id))
+              }
               disabled={!onSelectTeam}
               className={cn(
                 "mb-1.5 flex w-full items-center justify-between rounded-[2px] px-2 py-1.5 text-left text-[11px] font-bold transition-colors",
@@ -85,7 +88,7 @@ export function DispatchGroupsStrip({
                   isSelected ? "bg-white/20 text-white" : "bg-star-navy text-white",
                 )}
               >
-                {totalTeamTickets}
+                {display.total}
               </span>
             </button>
 
@@ -104,39 +107,15 @@ export function DispatchGroupsStrip({
               {isHover ? "Slip her" : "Træk sag hertil"}
             </div>
 
-            {teamTickets.length > 0 ? (
-              <ul className="space-y-1 border-t border-[var(--gray-border)] pt-1.5">
-                {teamTickets.map((ticket) => (
-                  <li key={ticket.id}>
-                    {ticketHref ? (
-                      <Link
-                        href={ticketHref(ticket.id)}
-                        className="block truncate rounded-[2px] px-1 py-0.5 text-[10px] font-medium text-star-navy hover:bg-star-blue-light/40"
-                        title={`${ticket.ticket_number} ${ticket.title}`}
-                        draggable={false}
-                      >
-                        <span className="font-mono">{ticket.ticket_number}</span>
-                        <span className="text-muted-foreground ml-1 font-normal">
-                          {ticket.title}
-                        </span>
-                      </Link>
-                    ) : (
-                      <span
-                        className="block truncate px-1 py-0.5 text-[10px] font-medium text-star-navy"
-                        title={`${ticket.ticket_number} ${ticket.title}`}
-                      >
-                        <span className="font-mono">{ticket.ticket_number}</span>
-                        <span className="text-muted-foreground ml-1 font-normal">
-                          {ticket.title}
-                        </span>
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-[10px] text-[var(--gray-mid)]">Ingen tildelte sager</p>
-            )}
+            <TeamGroupTicketList
+              tickets={display.visible}
+              total={display.total}
+              isSelected={display.isSelected}
+              showingAll={display.showingAll}
+              previewLimit={GROUPS_STRIP_TICKET_PREVIEW}
+              onTicketClick={onTicketClick}
+              ticketHref={ticketHref}
+            />
             <p className="mt-1.5 text-[9px] text-[var(--gray-mid)]">
               {team.members.length} medlemmer
             </p>
