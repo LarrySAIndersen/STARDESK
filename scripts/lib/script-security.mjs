@@ -1,10 +1,27 @@
 /**
- * Shared helpers for Sonar jssecurity rules (S5145 logging, S8476 fetch URLs).
+ * Shared helpers for Sonar jssecurity rules (S5145 logging, S8476 fetch URLs, S4036 PATH).
  */
+import { spawnSync } from "node:child_process";
 
 const WORKBOARD_CANVAS_ID_RE = /^t-\d{1,8}$/i;
+const PATH_PROBE = process.platform === "win32" ? "where.exe" : "which";
 const TASK_NUMBER_RE = /^\d{1,8}$/;
 const API_BASE_URL_RE = /^https?:\/\/[a-z0-9][-a-z0-9.]*(?::\d{1,5})?$/i;
+
+/**
+ * Resolve the first absolute path for a command on PATH (Sonar javascript:S4036).
+ * Use the returned path as spawnSync/execSync executable instead of a bare name.
+ */
+export function resolveCommandPath(command) {
+  const run = spawnSync(PATH_PROBE, [command], {
+    encoding: "utf8",
+    shell: false,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (run.status !== 0 || !run.stdout?.trim()) return null;
+  const first = run.stdout.trim().split(/\r?\n/)[0]?.trim();
+  return first || null;
+}
 
 /** Safe label for CLI logging (no raw user-controlled strings). */
 export function formatSafeLogLabel(value) {

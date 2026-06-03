@@ -1178,6 +1178,11 @@
     grid-template-columns: 58px minmax(0, 1fr) minmax(4.5rem, 5.5rem) 100px 90px 80px 90px;
   }
 
+  .wire-table-grid-tickets-desk {
+    grid-template-columns:
+      58px minmax(0, 1fr) minmax(4.5rem, 5.5rem) 100px 90px 80px minmax(5rem, 7rem) 90px;
+  }
+
   .wire-table-grid-portal-tickets {
     grid-template-columns: 58px minmax(0, 1fr) minmax(4.5rem, 5.5rem) 90px minmax(7rem, 9rem);
   }
