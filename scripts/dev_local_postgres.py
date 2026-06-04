@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -12,9 +13,16 @@ from urllib.parse import quote_plus
 import psycopg
 from psycopg import sql
 
-ROOT = Path(__file__).resolve().parents[1]
-API_ENV = ROOT / "apps" / "api" / ".env"
-LOCAL_PG_ENV = ROOT / "scripts" / "local-postgres.env"
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+from lib.safe_repo_paths import resolve_repo_file, write_text_under_repo
+
+_ENV_KEY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+API_ENV = resolve_repo_file("apps", "api", ".env")
+LOCAL_PG_ENV = resolve_repo_file("scripts", "local-postgres.env")
 
 
 def _parse_env_file(path: Path) -> dict[str, str]:
@@ -28,6 +36,22 @@ def _parse_env_file(path: Path) -> dict[str, str]:
         key, value = line.split("=", 1)
         values[key.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def _preserved_env_lines(raw: str) -> list[str]:
+    """Keep comments and allowlisted keys; drop DATABASE_URL for replacement."""
+    kept: list[str] = []
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            kept.append(line)
+            continue
+        if stripped.startswith("DATABASE_URL="):
+            continue
+        key, _, _ = stripped.partition("=")
+        if _ENV_KEY_RE.fullmatch(key.strip()):
+            kept.append(line)
+    return kept
 
 
 def load_credentials() -> tuple[str, str]:
@@ -88,16 +112,9 @@ def write_api_database_url(user: str, password: str) -> None:
         f"postgresql+asyncpg://{quote_plus(user)}:{quote_plus(password)}"
         "@localhost:5432/stardesk"
     )
-    lines = API_ENV.read_text(encoding="utf-8").splitlines()
-    updated = False
-    for index, line in enumerate(lines):
-        if line.startswith("DATABASE_URL="):
-            lines[index] = f"DATABASE_URL={database_url}"
-            updated = True
-            break
-    if not updated:
-        lines.append(f"DATABASE_URL={database_url}")
-    API_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    lines = _preserved_env_lines(API_ENV.read_text(encoding="utf-8"))
+    lines.append(f"DATABASE_URL={database_url}")
+    write_text_under_repo(API_ENV, "\n".join(lines) + "\n")
 
 
 def main() -> int:
