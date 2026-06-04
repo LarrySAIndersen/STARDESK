@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
-import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
+import { SidebarNavEdgeToggle } from "@/components/sidebar-nav-edge-toggle";
 import { ShellNavPanelProvider } from "@/components/shell-nav-panel-context";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import { useIsLgUp } from "@/hooks/use-media-query";
@@ -87,7 +87,7 @@ export function AgentShellColumns({
           {children}
         </Panel>
       </Group>
-        {collapsed ? <SidebarRailExpand onExpand={toggleNav} /> : null}
+        {collapsed ? <SidebarNavEdgeToggle onToggle={toggleNav} /> : null}
       </div>
     </ShellNavPanelProvider>
   );

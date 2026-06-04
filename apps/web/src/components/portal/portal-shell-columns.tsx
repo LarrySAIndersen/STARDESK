@@ -6,7 +6,7 @@ import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-pan
 
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
-import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
+import { SidebarNavEdgeToggle } from "@/components/sidebar-nav-edge-toggle";
 import { ShellNavPanelProvider } from "@/components/shell-nav-panel-context";
 import { PortalTopBar } from "@/components/portal/portal-top-bar";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
@@ -119,7 +119,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
               {mainContent}
             </Panel>
           </Group>
-          {collapsed ? <SidebarRailExpand onExpand={toggleNav} /> : null}
+          {collapsed ? <SidebarNavEdgeToggle onToggle={toggleNav} /> : null}
         </div>
       </ShellNavPanelProvider>
     </div>
