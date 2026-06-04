@@ -8,7 +8,12 @@ from unittest.mock import AsyncMock
 import pytest
 from httpx import AsyncClient
 
-from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER, get_current_user, get_current_user_session
+from star_itsm_api.core.security import (
+    ROLE_AGENT,
+    ROLE_SUBMITTER,
+    get_current_user,
+    get_current_user_session,
+)
 from star_itsm_api.main import app
 from star_itsm_api.services import personal_service
 
