@@ -6,10 +6,12 @@ import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-pan
 
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
-import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
+import { SidebarNavEdgeToggle } from "@/components/sidebar-nav-edge-toggle";
+import { ShellNavPanelProvider } from "@/components/shell-nav-panel-context";
 import { PortalTopBar } from "@/components/portal/portal-top-bar";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import { useIsLgUp } from "@/hooks/use-media-query";
+import { useShellNavToggle, useSyncShellNavPanel } from "@/hooks/use-sync-shell-nav-panel";
 import { getClientUser, isStaff } from "@/lib/auth";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import {
@@ -55,16 +57,8 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
     [PORTAL_PANEL_NAV]: PORTAL_NAV.default,
   };
 
-  useLayoutEffect(() => {
-    if (!isLgUp) return;
-    const panel = navPanelRef.current;
-    if (!panel) return;
-    if (collapsed) {
-      panel.collapse();
-    } else {
-      panel.expand();
-    }
-  }, [collapsed, navPanelRef, isLgUp]);
+  useSyncShellNavPanel(navPanelRef, collapsed, PORTAL_NAV.default, isLgUp);
+  const toggleNav = useShellNavToggle(navPanelRef, collapsed, toggle, PORTAL_NAV.default);
 
   const mainContent = (
     <>
@@ -95,35 +89,39 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
   return (
     <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       {mobileDrawer}
-      <Group
-        id={PORTAL_SHELL_WIDTHS_STORAGE_KEY}
-        orientation="horizontal"
-        className="min-h-0 min-w-0 flex-1"
-        defaultLayout={initialLayout}
-        onLayoutChanged={onLayoutChanged}
-        resizeTargetMinimumSize={{ fine: 4, coarse: 28 }}
-      >
-        <Panel
-          id={PORTAL_PANEL_NAV}
-          panelRef={navPanelRef}
-          defaultSize={PORTAL_NAV.default}
-          minSize={PORTAL_NAV.min}
-          maxSize={PORTAL_NAV.max}
-          collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
-          collapsible
-          groupResizeBehavior="preserve-pixel-size"
-          className="min-h-0 min-w-0"
-        >
-          <div className="relative h-full min-h-0">
-            <PortalSidebar collapsed={collapsed} onToggle={toggle} />
-            {collapsed ? <SidebarRailExpand onExpand={toggle} /> : null}
-          </div>
-        </Panel>
-        {collapsed ? null : <ShellResizeSeparator />}
-        <Panel id={PORTAL_PANEL_MAIN} minSize={280} className="min-h-0 min-w-0">
-          {mainContent}
-        </Panel>
-      </Group>
+      <ShellNavPanelProvider toggleNav={toggleNav}>
+        <div className="relative min-h-0 min-w-0 flex-1">
+          <Group
+            id={PORTAL_SHELL_WIDTHS_STORAGE_KEY}
+            orientation="horizontal"
+            className="min-h-0 min-w-0 flex-1"
+            defaultLayout={initialLayout}
+            onLayoutChanged={onLayoutChanged}
+            resizeTargetMinimumSize={{ fine: 4, coarse: 28 }}
+          >
+            <Panel
+              id={PORTAL_PANEL_NAV}
+              panelRef={navPanelRef}
+              defaultSize={PORTAL_NAV.default}
+              minSize={PORTAL_NAV.min}
+              maxSize={PORTAL_NAV.max}
+              collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
+              collapsible
+              groupResizeBehavior="preserve-pixel-size"
+              className="min-h-0 min-w-0"
+            >
+              <div className="relative h-full min-h-0">
+                <PortalSidebar collapsed={collapsed} onToggle={toggle} />
+              </div>
+            </Panel>
+            <ShellResizeSeparator disabled={collapsed} hidden={collapsed} />
+            <Panel id={PORTAL_PANEL_MAIN} minSize={280} className="min-h-0 min-w-0">
+              {mainContent}
+            </Panel>
+          </Group>
+          {collapsed ? <SidebarNavEdgeToggle onToggle={toggleNav} /> : null}
+        </div>
+      </ShellNavPanelProvider>
     </div>
   );
 }

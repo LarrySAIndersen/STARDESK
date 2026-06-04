@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { BookOpen, Home, Plus } from "lucide-react";
 
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
+import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -30,6 +31,7 @@ export function PortalSidebar({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const toggleNav = useShellNavPanelToggle(onToggle);
 
   return (
     <aside
@@ -38,7 +40,7 @@ export function PortalSidebar({
     >
       {!collapsed ? (
         <div className="wire-shell-col-header wire-shell-col-header--nav flex items-center justify-end px-1">
-          {onToggle ? <SidebarCollapseToggle collapsed={false} onToggle={onToggle} /> : null}
+          {onToggle ? <SidebarCollapseToggle collapsed={false} onToggle={toggleNav} /> : null}
         </div>
       ) : null}
 
@@ -73,7 +75,7 @@ export function PortalSidebar({
       </nav>
       {collapsed && onToggle ? (
         <footer className="wire-sidebar-footer flex justify-center border-t border-border px-1.5 py-2">
-          <SidebarCollapseToggle collapsed onToggle={onToggle} />
+          <SidebarCollapseToggle collapsed onToggle={toggleNav} />
         </footer>
       ) : null}
     </aside>

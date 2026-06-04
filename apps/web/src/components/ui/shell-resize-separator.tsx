@@ -8,6 +8,9 @@ type ShellResizeSeparatorProps = Readonly<{
   id?: string;
   orientation?: "horizontal" | "vertical";
   label?: string;
+  disabled?: boolean;
+  /** Zero-width invisible separator (keeps panel group structure stable). */
+  hidden?: boolean;
 }>;
 
 /** Wide drag hit area with a subtle divider line between shell columns. */
@@ -15,19 +18,27 @@ export function ShellResizeSeparator({
   id,
   orientation = "horizontal",
   label = "Træk for at ændre bredde",
+  disabled = false,
+  hidden = false,
 }: ShellResizeSeparatorProps) {
   const horizontal = orientation === "horizontal";
 
   return (
     <Separator
       id={id}
+      disabled={disabled}
       className={cn(
         "group relative z-20 shrink-0 bg-transparent",
-        horizontal
-          ? "w-2 min-w-2 cursor-col-resize"
-          : "h-2 min-h-2 cursor-row-resize",
+        hidden
+          ? horizontal
+            ? "pointer-events-none w-0 min-w-0 overflow-hidden opacity-0"
+            : "pointer-events-none h-0 min-h-0 overflow-hidden opacity-0"
+          : horizontal
+            ? "w-2 min-w-2 cursor-col-resize"
+            : "h-2 min-h-2 cursor-row-resize",
       )}
       aria-label={label}
+      aria-hidden={hidden || undefined}
     >
       <span
         className={cn(
