@@ -65,6 +65,26 @@ export function HelpdeskLoginPage() {
     const root = rootRef.current;
     if (!root) return;
 
+    if (activeView === "starbot") {
+      const chatWindow = root.querySelector("#view-starbot .chat-window");
+      if (chatWindow) {
+        const librechatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL || "http://localhost:3080";
+        chatWindow.innerHTML = `
+          <iframe
+            src="${librechatUrl}/?embed=true"
+            style="width: 100%; height: 550px; border: none; border-radius: 12px; background: white; box-shadow: var(--shadow-sm);"
+            title="STAR-bot"
+          ></iframe>
+        `;
+      }
+    }
+  }, [activeView]);
+
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
     function onClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;
       if (!target) return;
