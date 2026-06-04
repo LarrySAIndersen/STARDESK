@@ -46,6 +46,16 @@ jobs:
           name: api-coverage-xml
           path: apps/api/coverage.xml
           if-no-files-found: error
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Run web tests with coverage
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run test:coverage
       - name: SonarCloud Scan (coverage import)
         uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7.1.0
         with:

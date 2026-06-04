@@ -50,6 +50,18 @@ jobs:
       - name: Rewrite coverage paths for SonarCloud
         run: python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Run web tests with coverage
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run test:coverage
+
       # SONAR repo secret required (cannot branch on secrets in if: — GitHub limitation)
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v7.1.0
