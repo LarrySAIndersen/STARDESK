@@ -27,15 +27,17 @@ function isVercelHosted(): boolean {
 
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
-  // Preview / branch deploys on Vercel → same prod API + Neon data as production web.
+  const configured = process.env.STARDESK_API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+  if (configured) {
+    return configured.replace(/\/$/, "");
+  }
+
+  // Preview without explicit API URL → prod API until Neon test Preview API is default.
   if (isVercelHosted() && !isVercelProductionDeployment() && previewUsesProductionApi()) {
     return VERCEL_PROTOTYPE_API_FALLBACK;
   }
 
-  const configured = process.env.STARDESK_API_URL ?? process.env.NEXT_PUBLIC_API_URL;
-  const base =
-    configured ??
-    (isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000");
+  const base = isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000";
   return base.replace(/\/$/, "");
 }
 
