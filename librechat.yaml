@@ -1,0 +1,22 @@
+version: 1.1.5
+
+cache: true
+
+endpoints:
+  google:
+    userKey: false
+    apiKey: "${GOOGLE_KEY}"
+    models:
+      default: ["gemini-1.5-flash", "gemini-1.5-pro"]
+      fetch: true
+    titleConvo: true
+    titleModel: "gemini-1.5-flash"
+    modelDisplayLabel: "Google Gemini"
+
+mcpServers:
+  stardesk:
+    type: sse
+    url: "http://api:8000/mcp/sse"
+    timeout: 30000
+    initTimeout: 15000
+    serverInstructions: true
