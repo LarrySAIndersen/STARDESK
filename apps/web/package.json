@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "sbom": "cyclonedx-npm --output-format JSON --output-file public/sbom.json",
+    "build": "npm run sbom && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit"
@@ -27,6 +28,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@cyclonedx/cyclonedx-npm": "^1.19.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
