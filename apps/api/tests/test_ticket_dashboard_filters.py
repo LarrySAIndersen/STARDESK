@@ -9,7 +9,9 @@ from star_itsm_api.services.reports import BUCKET_MODTAGET
 from star_itsm_api.services.ticket_dashboard_filters import (
     apply_bucket_filter,
     filter_tickets_by_sla,
+    filter_tickets_closed_on,
     filter_tickets_closed_since,
+    filter_tickets_created_on,
     filter_tickets_opened_since,
 )
 
@@ -59,6 +61,25 @@ def test_filter_tickets_closed_since_uses_closed_at() -> None:
     )
     open_ticket = _ticket(status="in_progress")
     result = filter_tickets_closed_since([closed, open_ticket], days=7, now=now)
+    assert result == [closed]
+
+
+def test_filter_tickets_created_on() -> None:
+    day = datetime(2026, 6, 5, 10, 0, tzinfo=UTC).date()
+    match = _ticket(created_at=datetime(2026, 6, 5, 8, 0, tzinfo=UTC))
+    other = _ticket(created_at=datetime(2026, 6, 4, 8, 0, tzinfo=UTC))
+    result = filter_tickets_created_on([match, other], on=day)
+    assert result == [match]
+
+
+def test_filter_tickets_closed_on() -> None:
+    day = datetime(2026, 6, 5, 10, 0, tzinfo=UTC).date()
+    closed = _ticket(
+        status="closed",
+        closed_at=datetime(2026, 6, 5, 9, 0, tzinfo=UTC),
+    )
+    open_ticket = _ticket(status="in_progress")
+    result = filter_tickets_closed_on([closed, open_ticket], on=day)
     assert result == [closed]
 
 

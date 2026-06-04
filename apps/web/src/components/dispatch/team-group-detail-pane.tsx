@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { TeamGroupTicketRow } from "@/components/dispatch/team-group-ticket-row";
+import { ClickableMetric } from "@/components/dashboard/clickable-metric";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { ticketDetailHref } from "@/lib/team-group-view";
 import { cn } from "@/lib/utils";
 import type { Team } from "@/types/team";
@@ -32,8 +34,23 @@ export function TeamGroupDetailPane({
         <div className="min-w-0">
           <p className="text-star-navy text-xs font-bold">{team.name}</p>
           <p className="text-muted-foreground text-[11px]">
-            {tickets.length} åben{tickets.length === 1 ? "" : "e"} sag
-            {tickets.length === 1 ? "" : "er"} — klik en sag for sagens kort
+            <ClickableMetric
+              href={
+                tickets.length > 0
+                  ? buildTicketsFilterHref({
+                      scope: "all",
+                      assignedTeamId: team.id,
+                      openOnly: true,
+                    })
+                  : undefined
+              }
+              inline
+              ariaLabel={`${team.name}: ${tickets.length} åbne sager`}
+            >
+              {tickets.length} åben{tickets.length === 1 ? "" : "e"} sag
+              {tickets.length === 1 ? "" : "er"}
+            </ClickableMetric>{" "}
+            — klik en sag for sagens kort
           </p>
         </div>
         <button

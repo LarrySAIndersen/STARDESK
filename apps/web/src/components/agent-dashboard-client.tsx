@@ -9,6 +9,7 @@ import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-ta
 import { useBoardDataSync } from "@/hooks/use-board-data-sync";
 import { isNewStatusTicket } from "@/lib/service-desk-queue";
 import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { firstUnassignedWithRouting } from "@/lib/ticket-routing";
 import type { Team } from "@/types/team";
 import type { Ticket, TicketDetail } from "@/types/ticket";
@@ -100,9 +101,23 @@ export function AgentDashboardClient({
           </WireAiBanner>
         ) : null}
 
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="wire-sec-title">Nye sager</h2>
-          <Link href="/tickets" className="wire-btn wire-btn-sm">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="wire-sec-title">
+            Nye sager{" "}
+            {newStatusTickets.length > 0 ? (
+              <Link
+                href={buildTicketsFilterHref({ scope: "all", status: "new", openOnly: true })}
+                className="text-star-blue hover:text-star-navy tabular-nums hover:underline"
+                aria-label={`${newStatusTickets.length} nye sager — åbn sagliste`}
+              >
+                ({newStatusTickets.length})
+              </Link>
+            ) : null}
+          </h2>
+          <Link
+            href={buildTicketsFilterHref({ scope: "all", bucket: "modtaget" })}
+            className="wire-btn wire-btn-sm"
+          >
             Se alle →
           </Link>
         </div>

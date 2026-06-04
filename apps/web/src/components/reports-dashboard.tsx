@@ -2,9 +2,11 @@
 
 import { fireAndForget } from "@/lib/fire-and-forget";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ItilTicketTable } from "@/components/itil-ticket-table";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { StarSectionCard } from "@/components/star/section-card";
 import { TicketExcelExportButton } from "@/components/ticket-excel-export-button";
 import { Button } from "@/components/ui/button";
@@ -28,20 +30,34 @@ function ReportKpiCard({
   label,
   value,
   sub,
+  href,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  href?: string;
 }) {
-  return (
-    <div className="ledger-card border-t-primary border-t-4 p-4">
+  const inner = (
+    <>
       <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
         {label}
       </p>
       <p className="text-star-navy mt-1 text-2xl font-bold tabular-nums sm:text-3xl">{value}</p>
       {sub ? <p className="text-muted-foreground mt-1 text-xs">{sub}</p> : null}
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="ledger-card border-t-primary block border-t-4 p-4 transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue"
+        aria-label={`${label}: ${value}`}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="ledger-card border-t-primary border-t-4 p-4">{inner}</div>;
 }
 
 function reportRowToTicket(row: StandardReport["buckets"][0]["tickets"][0]): Ticket {
@@ -67,23 +83,41 @@ function BucketCard({
   bucket,
   active,
   onSelect,
+  ticketsHref,
 }: {
   bucket: StandardReport["buckets"][0];
   active: boolean;
   onSelect: () => void;
+  ticketsHref?: string;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <div
       className={`ledger-card border-t-4 p-4 text-left transition-shadow hover:shadow-md ${
         BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue"
       } ${active ? "ring-star-blue ring-2" : ""}`}
     >
-      <p className="text-star-navy text-2xl font-bold tabular-nums">{bucket.count}</p>
-      <p className="text-star-navy mt-1 text-sm font-semibold">{bucket.label_da}</p>
-      <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{bucket.description_da}</p>
-    </button>
+      {ticketsHref && bucket.count > 0 ? (
+        <Link
+          href={ticketsHref}
+          className="text-star-navy block text-2xl font-bold tabular-nums hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue"
+          aria-label={`${bucket.label_da}: ${bucket.count} sager — åbn sagliste`}
+        >
+          {bucket.count}
+        </Link>
+      ) : (
+        <p className="text-star-navy text-2xl font-bold tabular-nums">{bucket.count}</p>
+      )}
+      <button
+        type="button"
+        onClick={onSelect}
+        className="mt-1 w-full text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue"
+      >
+        <span className="text-star-navy text-sm font-semibold">{bucket.label_da}</span>
+        <span className="text-muted-foreground mt-1 block line-clamp-2 text-xs">
+          {bucket.description_da}
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -173,6 +207,9 @@ export function ReportsDashboard() {
         ? "seneste dag"
         : `seneste ${periodDays} dage`;
 
+  const reportTicketLink = (bucketKey: string) =>
+    buildTicketsFilterHref({ scope: "all", bucket: bucketKey });
+
   return (
     <div className="space-y-8">
       <StarSectionCard
@@ -209,22 +246,33 @@ export function ReportsDashboard() {
             Nøgletal (drift)
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-            <ReportKpiCard label="Åbne sager" value={dashboard.open_count} />
+            <ReportKpiCard
+              label="Åbne sager"
+              value={dashboard.open_count}
+              href={buildTicketsFilterHref({ scope: "all", openOnly: true })}
+            />
             <ReportKpiCard
               label="I pipeline"
               value={openFromReport}
               sub="Modtaget + igangsat"
+              href={buildTicketsFilterHref({ scope: "all", bucket: "modtaget" })}
             />
-            <ReportKpiCard label="Lukket (7 dage)" value={dashboard.closed_last_7_days} />
+            <ReportKpiCard
+              label="Lukket (7 dage)"
+              value={dashboard.closed_last_7_days}
+              href={buildTicketsFilterHref({ scope: "all", closedSinceDays: 7 })}
+            />
             <ReportKpiCard
               label="Gns. alder (åbne)"
               value={
                 dashboard.avg_open_age_days != null ? `${dashboard.avg_open_age_days} d` : "—"
               }
+              href={buildTicketsFilterHref({ scope: "all", openOnly: true })}
             />
             <ReportKpiCard
               label="Løsningsgrad (30 d)"
               value={`${dashboard.resolution_rate_pct}%`}
+              href={buildTicketsFilterHref({ scope: "all", closedSinceDays: 30 })}
             />
             <ReportKpiCard
               label="SLA overskredet"
@@ -234,6 +282,11 @@ export function ReportsDashboard() {
                   ? `${dashboard.sla_due_soon_count} forfalder snart`
                   : undefined
               }
+              href={buildTicketsFilterHref({
+                scope: "all",
+                openOnly: true,
+                sla: "overdue",
+              })}
             />
           </div>
         </section>
@@ -255,6 +308,7 @@ export function ReportsDashboard() {
                   bucket={bucket}
                   active={activeBucket === bucket.key}
                   onSelect={() => setActiveBucket(bucket.key)}
+                  ticketsHref={reportTicketLink(bucket.key)}
                 />
               ))}
             </div>
@@ -295,10 +349,16 @@ export function ReportsDashboard() {
                   bucket={genaabnetBucket}
                   active={activeBucket === GENAABNET_KEY}
                   onSelect={() => setActiveBucket(GENAABNET_KEY)}
+                  ticketsHref={reportTicketLink(GENAABNET_KEY)}
                 />
                 <p className="text-muted-foreground self-center text-sm lg:col-start-2">
-                  {genaabnetBucket.count} genåbning{genaabnetBucket.count === 1 ? "" : "er"} i{" "}
-                  {periodLabel}.
+                  <Link
+                    href={reportTicketLink(GENAABNET_KEY)}
+                    className="text-star-navy font-semibold hover:underline"
+                  >
+                    {genaabnetBucket.count} genåbning{genaabnetBucket.count === 1 ? "" : "er"}
+                  </Link>{" "}
+                  i {periodLabel}.
                 </p>
               </div>
             ) : null}
@@ -332,7 +392,12 @@ export function ReportsDashboard() {
 
           <p className="text-muted-foreground text-xs">
             Genereret {new Date(report.generated_at).toLocaleString("da-DK")} ·{" "}
-            {report.total_tickets} sager i alt
+            <Link
+              href={buildTicketsFilterHref({ scope: "all" })}
+              className="text-star-navy font-medium hover:underline"
+            >
+              {report.total_tickets} sager i alt
+            </Link>
           </p>
         </>
       ) : null}

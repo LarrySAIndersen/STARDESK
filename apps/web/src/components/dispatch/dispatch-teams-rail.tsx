@@ -3,7 +3,9 @@
 import { ChevronDown, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
+import { ClickableMetric } from "@/components/dashboard/clickable-metric";
 import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -188,13 +190,57 @@ export function DispatchTeamsRail({
                     ) : null}
                     {!isExpanded ? (
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        {display.total} sag{display.total === 1 ? "" : "er"} ·{" "}
-                        {team.members.length} medlemmer
+                        <ClickableMetric
+                          href={
+                            display.total > 0
+                              ? buildTicketsFilterHref({
+                                  scope: "all",
+                                  assignedTeamId: team.id,
+                                  openOnly: true,
+                                })
+                              : undefined
+                          }
+                          onClick={
+                            display.total > 0 && onSelectTeam
+                              ? () => {
+                                  onSelectTeam(team.id);
+                                  setExpandedIds((prev) => new Set(prev).add(team.id));
+                                }
+                              : undefined
+                          }
+                          inline
+                          ariaLabel={`${team.name}: ${display.total} sager`}
+                        >
+                          {display.total} sag{display.total === 1 ? "" : "er"}
+                        </ClickableMetric>{" "}
+                        · {team.members.length} medlemmer
                       </p>
                     ) : null}
                   </div>
                   <Badge variant="outline" className="shrink-0">
-                    {display.total} sag{display.total === 1 ? "" : "er"}
+                    <ClickableMetric
+                      href={
+                        display.total > 0
+                          ? buildTicketsFilterHref({
+                              scope: "all",
+                              assignedTeamId: team.id,
+                              openOnly: true,
+                            })
+                          : undefined
+                      }
+                      onClick={
+                        display.total > 0 && onSelectTeam
+                          ? () => {
+                              onSelectTeam(team.id);
+                              setExpandedIds((prev) => new Set(prev).add(team.id));
+                            }
+                          : undefined
+                      }
+                      inline
+                      ariaLabel={`${team.name}: ${display.total} sager`}
+                    >
+                      {display.total} sag{display.total === 1 ? "" : "er"}
+                    </ClickableMetric>
                   </Badge>
                 </div>
                 {isExpanded ? (

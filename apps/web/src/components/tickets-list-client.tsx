@@ -93,6 +93,7 @@ export function TicketsListClient({
     defaultFilters: {
       ...DEFAULT_TICKET_FILTERS,
       status: pickParam(initialParams.status) ?? "",
+      priority: pickParam(initialParams.priority) ?? "",
     },
   });
 
