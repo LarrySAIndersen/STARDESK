@@ -1,15 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { Group, Panel, useDefaultLayout } from "react-resizable-panels";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
+import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
+import { AssetColumnEdgeExpand } from "@/components/agent/asset-column-edge-expand";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import { useIsMdUp } from "@/hooks/use-media-query";
+import { useAssetPanelNarrow, useSyncAssetPanels } from "@/hooks/use-sync-asset-panels";
+import { ASSETS_AUDIT, ASSETS_TREE } from "@/lib/assets-layout";
 import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
 
 const ASSETS_RESIZE_HIT = { fine: 12, coarse: 32 } as const;
 
-const ASSETS_LAYOUT_STORAGE_KEY = "stardesk-assets-columns";
+const ASSETS_LAYOUT_STORAGE_KEY = "stardesk-assets-columns-v2";
 
 const PANEL_AUDIT = "audit";
 const PANEL_TREE = "tree";
@@ -28,6 +31,25 @@ type AssetsResizableLayoutProps = Readonly<{
   ticketsPanel: ReactNode;
 }>;
 
+function AssetPanelShell({
+  children,
+  narrow,
+  onExpand,
+  expandLabel,
+}: {
+  children: ReactNode;
+  narrow: boolean;
+  onExpand: () => void;
+  expandLabel: string;
+}) {
+  return (
+    <div className="relative h-full min-h-0 min-w-0">
+      {children}
+      {narrow ? <AssetColumnEdgeExpand onExpand={onExpand} label={expandLabel} /> : null}
+    </div>
+  );
+}
+
 export function AssetsResizableLayout({
   showAudit,
   showTree,
@@ -39,6 +61,11 @@ export function AssetsResizableLayout({
   ticketsPanel,
 }: AssetsResizableLayoutProps) {
   const isMdUp = useIsMdUp();
+  const auditPanelRef = usePanelRef();
+  const treePanelRef = usePanelRef();
+
+  const [auditWidthPx, setAuditWidthPx] = useState<number | null>(null);
+  const [treeWidthPx, setTreeWidthPx] = useState<number | null>(null);
 
   const outerPanelIds = [
     ...(showAudit ? [PANEL_AUDIT] : []),
@@ -65,8 +92,8 @@ export function AssetsResizableLayout({
   });
 
   const outerDefault = outerLayout ?? {
-    ...(showAudit ? { [PANEL_AUDIT]: 16 } : {}),
-    ...(showTree ? { [PANEL_TREE]: 18 } : {}),
+    ...(showAudit ? { [PANEL_AUDIT]: ASSETS_AUDIT.default } : {}),
+    ...(showTree ? { [PANEL_TREE]: ASSETS_TREE.default } : {}),
     [PANEL_WORKSPACE]: showAudit && showTree ? 66 : showAudit || showTree ? 82 : 100,
   };
 
@@ -74,6 +101,37 @@ export function AssetsResizableLayout({
     [PANEL_GRAPH]: showDetail ? 72 : 100,
     ...(showDetail ? { [PANEL_DETAIL]: 28 } : {}),
   };
+
+  const syncTargets = useMemo(
+    () => [
+      {
+        ref: auditPanelRef,
+        enabled: showAudit && isMdUp,
+        defaultWidthPx: ASSETS_AUDIT.default,
+        narrowThresholdPx: ASSETS_AUDIT.narrow,
+      },
+      {
+        ref: treePanelRef,
+        enabled: showTree && isMdUp,
+        defaultWidthPx: ASSETS_TREE.default,
+        narrowThresholdPx: ASSETS_TREE.narrow,
+      },
+    ],
+    [auditPanelRef, isMdUp, showAudit, showTree, treePanelRef],
+  );
+
+  useSyncAssetPanels(syncTargets);
+
+  const auditNarrow = useAssetPanelNarrow(auditWidthPx, ASSETS_AUDIT.narrow);
+  const treeNarrow = useAssetPanelNarrow(treeWidthPx, ASSETS_TREE.narrow);
+
+  const expandAudit = useCallback(() => {
+    auditPanelRef.current?.resize(ASSETS_AUDIT.default);
+  }, [auditPanelRef]);
+
+  const expandTree = useCallback(() => {
+    treePanelRef.current?.resize(ASSETS_TREE.default);
+  }, [treePanelRef]);
 
   if (!isMdUp) {
     return (
@@ -107,12 +165,21 @@ export function AssetsResizableLayout({
         <>
           <Panel
             id={PANEL_AUDIT}
-            defaultSize={16}
-            minSize={12}
-            maxSize={35}
+            panelRef={auditPanelRef}
+            defaultSize={ASSETS_AUDIT.default}
+            minSize={ASSETS_AUDIT.min}
+            maxSize={ASSETS_AUDIT.max}
+            groupResizeBehavior="preserve-pixel-size"
             className="min-h-0 min-w-0"
+            onResize={(size) => setAuditWidthPx(size.inPixels)}
           >
-            {auditPanel}
+            <AssetPanelShell
+              narrow={auditNarrow}
+              onExpand={expandAudit}
+              expandLabel="Udvid ændringslog"
+            >
+              {auditPanel}
+            </AssetPanelShell>
           </Panel>
           <ShellResizeSeparator
             id={`${outerLayoutKey}-sep-audit`}
@@ -125,12 +192,21 @@ export function AssetsResizableLayout({
         <>
           <Panel
             id={PANEL_TREE}
-            defaultSize={18}
-            minSize={14}
-            maxSize={40}
+            panelRef={treePanelRef}
+            defaultSize={ASSETS_TREE.default}
+            minSize={ASSETS_TREE.min}
+            maxSize={ASSETS_TREE.max}
+            groupResizeBehavior="preserve-pixel-size"
             className="min-h-0 min-w-0"
+            onResize={(size) => setTreeWidthPx(size.inPixels)}
           >
-            {treePanel}
+            <AssetPanelShell
+              narrow={treeNarrow}
+              onExpand={expandTree}
+              expandLabel="Udvid aktivliste"
+            >
+              {treePanel}
+            </AssetPanelShell>
           </Panel>
           <ShellResizeSeparator
             id={`${outerLayoutKey}-sep-tree`}
