@@ -2130,6 +2130,10 @@
 }
 
 /* Admin page layout editor (per-page field order/labels) */
+.page-layout-grid > *:not([data-field-id]) {
+  order: 999;
+}
+
 .page-layout-grid--edit {
   position: relative;
 }
