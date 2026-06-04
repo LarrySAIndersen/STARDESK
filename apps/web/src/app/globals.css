@@ -1154,7 +1154,7 @@
   }
 
   .ticket-create-llm-panel {
-    @apply rounded-[2px] border border-[var(--gray-border)] bg-card p-4 lg:sticky lg:top-4;
+    @apply rounded-[2px] border-0 bg-transparent p-0;
   }
 
   .ticket-create-llm-chat {

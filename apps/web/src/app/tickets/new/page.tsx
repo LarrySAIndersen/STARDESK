@@ -32,7 +32,7 @@ export default async function NewTicketPage({
   }
 
   return (
-    <div className="wire-scroll-content mx-auto w-full max-w-6xl flex-1">
+    <div className="wire-scroll-content mx-auto w-full max-w-3xl flex-1">
       <CreateTicketForm
         categories={categories}
         teams={teams}
