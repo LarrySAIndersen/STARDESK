@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from star_itsm_api.models.organization import Organization
-from star_itsm_api.models.team import Team
 from star_itsm_api.models.team_member import TeamMember
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.user_admin import OrganizationOption, UserTeamSummary
@@ -170,7 +169,7 @@ async def test_get_user_admin_success() -> None:
     
     with patch("star_itsm_api.services.user_admin._team_summaries_for_users") as mock_teams, \
          patch("star_itsm_api.services.user_admin.fetch_user_roles") as mock_roles, \
-         patch("star_itsm_api.services.user_admin.attach_roles_to_user") as mock_attach:
+         patch("star_itsm_api.services.user_admin.attach_roles_to_user"):
         
         mock_teams.return_value = {user_id: [UserTeamSummary(id=uuid.uuid4(), name="Support")]}
         mock_roles.return_value = ["staff"]
@@ -199,7 +198,7 @@ async def test_get_user_admin_no_org() -> None:
     
     with patch("star_itsm_api.services.user_admin._team_summaries_for_users") as mock_teams, \
          patch("star_itsm_api.services.user_admin.fetch_user_roles") as mock_roles, \
-         patch("star_itsm_api.services.user_admin.attach_roles_to_user") as mock_attach:
+         patch("star_itsm_api.services.user_admin.attach_roles_to_user"):
         
         mock_teams.return_value = {}
         mock_roles.return_value = []

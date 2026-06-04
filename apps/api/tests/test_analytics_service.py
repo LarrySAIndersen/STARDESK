@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from star_itsm_api.models.category import Category
