@@ -84,37 +84,36 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
     for column in _REQUIRED_TICKET_COLUMNS:
         if not await _schema_has_column(engine, column):
             return True
-    if not await _schema_has_column(engine, "scan_status", table_name="attachments"):
-        return True
-    if not await _table_exists(engine, "comment_reactions"):
-        return True
-    if not await _table_exists(engine, "ticket_links"):
-        return True
-    if not await _schema_has_column(engine, "must_change_password", table_name="users"):
-        return True
-    if not await _schema_has_column(engine, "avatar_url", table_name="users"):
-        return True
-    if not await _schema_has_column(engine, "avatar_preset_id", table_name="users"):
-        return True
-    if not await _schema_has_column(engine, "password_policy_exempt", table_name="users"):
-        return True
-    if not await _table_exists(engine, "organization_integrations"):
-        return True
-    if not await _table_exists(engine, "email_integrations"):
-        return True
-    if not await _table_exists(engine, "ticket_emails"):
-        return True
-    if not await _table_exists(engine, "sf_chat_sessions"):
-        return True
-    if not await _schema_has_column(engine, "is_system", table_name="sf_chat_messages"):
-        return True
-    if not await _table_exists(engine, "cmdb_catalog"):
-        return True
-    if not await _table_exists(engine, "cmdb_audit_log"):
-        return True
-    if not await _table_exists(engine, "kanban_boards"):
-        return True
-    return bool(not await _table_exists(engine, "kanban_board_tickets"))
+
+    required_columns = [
+        ("attachments", "scan_status"),
+        ("users", "must_change_password"),
+        ("users", "avatar_url"),
+        ("users", "avatar_preset_id"),
+        ("users", "password_policy_exempt"),
+        ("sf_chat_messages", "is_system"),
+    ]
+    for table, column in required_columns:
+        if not await _schema_has_column(engine, column, table_name=table):
+            return True
+
+    required_tables = [
+        "comment_reactions",
+        "ticket_links",
+        "organization_integrations",
+        "email_integrations",
+        "ticket_emails",
+        "sf_chat_sessions",
+        "cmdb_catalog",
+        "cmdb_audit_log",
+        "kanban_boards",
+        "kanban_board_tickets",
+    ]
+    for table in required_tables:
+        if not await _table_exists(engine, table):
+            return True
+
+    return False
 
 
 def _run_migrations(database_url: str) -> None:
