@@ -57,3 +57,32 @@ jobs:
           name: sbom-api-json
           path: apps/api/src/star_itsm_api/sbom.json
           if-no-files-found: error
+
+      # --- UPLOAD TO DEPENDENCY-TRACK ---
+      - name: Upload Web SBOM to Dependency-Track
+        if: env.DEPENDENCYTRACK_APIKEY != '' && env.DEPENDENCYTRACK_HOSTNAME != ''
+        uses: DependencyTrack/gh-upload-sbom@v3
+        with:
+          serverHostname: ${{ env.DEPENDENCYTRACK_HOSTNAME }}
+          apiKey: ${{ env.DEPENDENCYTRACK_APIKEY }}
+          projectName: 'star-itsm-web'
+          projectVersion: ${{ github.ref_name }}
+          bomFilename: 'apps/web/public/sbom.json'
+          autoCreate: true
+        env:
+          DEPENDENCYTRACK_APIKEY: ${{ secrets.DEPENDENCYTRACK_APIKEY }}
+          DEPENDENCYTRACK_HOSTNAME: ${{ secrets.DEPENDENCYTRACK_HOSTNAME }}
+
+      - name: Upload API SBOM to Dependency-Track
+        if: env.DEPENDENCYTRACK_APIKEY != '' && env.DEPENDENCYTRACK_HOSTNAME != ''
+        uses: DependencyTrack/gh-upload-sbom@v3
+        with:
+          serverHostname: ${{ env.DEPENDENCYTRACK_HOSTNAME }}
+          apiKey: ${{ env.DEPENDENCYTRACK_APIKEY }}
+          projectName: 'star-itsm-api'
+          projectVersion: ${{ github.ref_name }}
+          bomFilename: 'apps/api/src/star_itsm_api/sbom.json'
+          autoCreate: true
+        env:
+          DEPENDENCYTRACK_APIKEY: ${{ secrets.DEPENDENCYTRACK_APIKEY }}
+          DEPENDENCYTRACK_HOSTNAME: ${{ secrets.DEPENDENCYTRACK_HOSTNAME }}
