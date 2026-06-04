@@ -20,6 +20,7 @@ import {
   SHELL_NAV_COLLAPSED_WIDTH,
 } from "@/lib/shell-layout";
 import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
+import { syncShellNavPanel } from "@/lib/sync-shell-nav-panel";
 import type { User } from "@/types/user";
 
 type PortalShellColumnsProps = Readonly<{
@@ -57,13 +58,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
 
   useLayoutEffect(() => {
     if (!isLgUp) return;
-    const panel = navPanelRef.current;
-    if (!panel) return;
-    if (collapsed) {
-      panel.collapse();
-    } else {
-      panel.expand();
-    }
+    syncShellNavPanel(navPanelRef.current, collapsed, PORTAL_NAV.default);
   }, [collapsed, navPanelRef, isLgUp]);
 
   const mainContent = (

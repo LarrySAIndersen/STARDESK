@@ -9,7 +9,7 @@ type SidebarRailExpandProps = Readonly<{
   className?: string;
 }>;
 
-/** Always-visible expand control on the collapsed nav rail edge. */
+/** Expand control centered inside the collapsed nav rail (avoids main-panel click steal). */
 export function SidebarRailExpand({ onExpand, className }: SidebarRailExpandProps) {
   return (
     <button
@@ -18,7 +18,7 @@ export function SidebarRailExpand({ onExpand, className }: SidebarRailExpandProp
       aria-label="Vis menu"
       aria-expanded={false}
       className={cn(
-        "border-border text-foreground hover:bg-accent absolute top-[4.5rem] right-0 z-40 flex size-8 translate-x-1/2 items-center justify-center rounded-full border-2 bg-card shadow-md transition-colors",
+        "border-border text-foreground hover:bg-accent pointer-events-auto absolute top-[4.5rem] left-1/2 z-50 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border-2 bg-card shadow-md transition-colors",
         className,
       )}
     >

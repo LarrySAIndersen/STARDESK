@@ -14,6 +14,7 @@ import {
   SHELL_WIDTHS_STORAGE_KEY,
 } from "@/lib/shell-layout";
 import { getPanelLayoutStorage } from "@/lib/panel-layout-storage";
+import { syncShellNavPanel } from "@/lib/sync-shell-nav-panel";
 import { cn } from "@/lib/utils";
 
 type AgentShellColumnsProps = Readonly<{
@@ -47,13 +48,7 @@ export function AgentShellColumns({
 
   useLayoutEffect(() => {
     if (!isLgUp) return;
-    const panel = navPanelRef.current;
-    if (!panel) return;
-    if (collapsed) {
-      panel.collapse();
-    } else {
-      panel.expand();
-    }
+    syncShellNavPanel(navPanelRef.current, collapsed, SHELL_NAV.default);
   }, [collapsed, navPanelRef, isLgUp]);
 
   if (!isLgUp) {
