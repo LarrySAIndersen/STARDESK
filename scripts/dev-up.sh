@@ -4,6 +4,10 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="${HOME}/.local/bin:${PATH}"
+# shellcheck source=scripts/lib/api-venv.sh
+source "$ROOT/scripts/lib/api-venv.sh"
+API_DIR="$ROOT/apps/api"
+API_UVICORN="$(stardesk_api_venv_uvicorn "$API_DIR")"
 TMUX=(tmux -f /exec-daemon/tmux.portal.conf)
 
 SESSION_API="stardesk-api"
@@ -19,8 +23,8 @@ start_session() {
   "${TMUX[@]}" send-keys -t "$name:0.0" "$cmd" C-m
 }
 
-start_session "$SESSION_API" "$ROOT/apps/api" \
-  'export PATH="$HOME/.local/bin:$PATH" && set -a && source .env && set +a && uv run --no-build uvicorn star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000'
+start_session "$SESSION_API" "$API_DIR" \
+  "export PATH=\"\$HOME/.local/bin:\$PATH\" && set -a && source .env && set +a && \"$API_UVICORN\" star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000"
 
 start_session "$SESSION_WEB" "$ROOT/apps/web" \
   'npm run dev -- --hostname 0.0.0.0 --port 3000'

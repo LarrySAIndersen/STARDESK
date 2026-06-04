@@ -94,7 +94,7 @@ if (-not $SkipTests) {
     Write-Host "==> API unit tests (quick)"
     Push-Location $ApiDir
     try {
-        & uv run --no-build pytest -q --tb=line
+        & (Get-StardeskApiVenvPytest -ApiDir $ApiDir) -q --tb=line
         if ($LASTEXITCODE -ne 0) {
             throw "pytest failed with exit code $LASTEXITCODE"
         }

@@ -59,7 +59,7 @@ Write-Host "==> API unit tests"
 Import-StardeskDotEnv -Path $apiEnv
 Push-Location $ApiDir
 try {
-    & uv run --no-build pytest -q --tb=no
+    & (Get-StardeskApiVenvPytest -ApiDir $ApiDir) -q --tb=no
     if ($LASTEXITCODE -ne 0) { throw "pytest failed" }
 }
 finally {
@@ -76,7 +76,7 @@ if (-not $SkipDb) {
     Write-Host "  Prototype users (from database):"
     Push-Location $ApiDir
     try {
-        & uv run --no-build python (Join-Path $RepoRoot "scripts/list_prototype_users.py")
+        & (Get-StardeskApiVenvPython -ApiDir $ApiDir) (Join-Path $RepoRoot "scripts/list_prototype_users.py")
     } finally {
         Pop-Location
     }

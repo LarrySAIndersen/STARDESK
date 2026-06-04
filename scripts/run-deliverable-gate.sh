@@ -5,6 +5,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib/api-venv.sh
+source "$ROOT/scripts/lib/api-venv.sh"
+API_DIR="$ROOT/apps/api"
 GATE_BANNER='=============================================='
 
 FULL=0
@@ -47,12 +50,13 @@ echo "$GATE_BANNER"
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
   echo ""
   echo "==> API unit tests (quick)"
-  cd "$ROOT/apps/api"
+  cd "$API_DIR"
   set -a
   # shellcheck disable=SC1091
   [[ -f .env ]] && source .env
   set +a
-  uv run --no-build pytest -q --tb=line 2>&1 | tail -5
+  API_PYTEST="$(stardesk_api_venv_pytest "$API_DIR")"
+  "$API_PYTEST" -q --tb=line 2>&1 | tail -5
 fi
 
 echo ""

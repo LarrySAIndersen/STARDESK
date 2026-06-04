@@ -129,6 +129,45 @@ function Repair-StardeskApiVenv {
     Write-Host "[OK] API venv repaired" -ForegroundColor Green
 }
 
+function Get-StardeskApiVenvPython {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $pythonExe = Join-Path $ApiDir ".venv\Scripts\python.exe"
+    if (-not (Test-Path -LiteralPath $pythonExe)) {
+        throw "API venv python missing at $pythonExe — run Repair-StardeskApiVenv"
+    }
+    return $pythonExe
+}
+
+function Get-StardeskApiVenvPytest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $pytestExe = Join-Path $ApiDir ".venv\Scripts\pytest.exe"
+    if (-not (Test-Path -LiteralPath $pytestExe)) {
+        throw "API venv pytest missing at $pytestExe — run Repair-StardeskApiVenv"
+    }
+    return $pytestExe
+}
+
+function Get-StardeskApiVenvUvicorn {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $uvicornExe = Join-Path $ApiDir ".venv\Scripts\uvicorn.exe"
+    if (-not (Test-Path -LiteralPath $uvicornExe)) {
+        throw "API venv uvicorn missing at $uvicornExe — run Repair-StardeskApiVenv"
+    }
+    return $uvicornExe
+}
+
 function Get-StardeskPrototypeDemoPassword {
     param(
         [Parameter(Mandatory = $true)]

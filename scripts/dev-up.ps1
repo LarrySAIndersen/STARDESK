@@ -89,8 +89,9 @@ if (-not (Test-Path (Join-Path $WebDir "node_modules\.bin\next.cmd"))) {
     }
 }
 
-$apiProc = Start-Process -FilePath "uv" -PassThru -WindowStyle Hidden -WorkingDirectory $ApiDir -ArgumentList @(
-    "run", "--no-build", "uvicorn", "star_itsm_api.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"
+$apiUvicorn = Get-StardeskApiVenvUvicorn -ApiDir $ApiDir
+$apiProc = Start-Process -FilePath $apiUvicorn -PassThru -WindowStyle Hidden -WorkingDirectory $ApiDir -ArgumentList @(
+    "star_itsm_api.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"
 ) -RedirectStandardOutput (Join-Path $RepoRoot "reports\dev-up-api.log") -RedirectStandardError (Join-Path $RepoRoot "reports\dev-up-api.err.log")
 
 Write-Host "Starting API on http://localhost:8000 ..."
