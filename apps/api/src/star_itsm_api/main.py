@@ -19,6 +19,7 @@ from star_itsm_api.routers import (
     integrations,
     kanban,
     knowledge_articles,
+    personal,
     platform,
     reports,
     review_notes,
@@ -88,6 +89,7 @@ app.include_router(integrations.router, prefix=API_V1_PREFIX)
 app.include_router(knowledge_articles.router, prefix=API_V1_PREFIX)
 app.include_router(teams.router, prefix=API_V1_PREFIX)
 app.include_router(kanban.router, prefix=API_V1_PREFIX)
+app.include_router(personal.router, prefix=API_V1_PREFIX)
 app.include_router(workboard.router, prefix=API_V1_PREFIX)
 app.include_router(review_notes.router, prefix=API_V1_PREFIX)
 app.include_router(categories.router, prefix=API_V1_PREFIX)

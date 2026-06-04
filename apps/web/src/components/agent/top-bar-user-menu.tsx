@@ -29,6 +29,9 @@ function UserActionLinks({
 }) {
   return (
     <>
+      <Link href="/min-side" className={cn("wire-topbar-user-action", className)}>
+        Min side
+      </Link>
       <Link href={profileHref} className={cn("wire-topbar-user-action", className)}>
         Se mere
       </Link>

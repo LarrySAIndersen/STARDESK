@@ -114,9 +114,6 @@ from star_itsm_api.services.ticket_dashboard_filters import (
     filter_tickets_created_on,
     filter_tickets_opened_since,
 )
-
-DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
-DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -178,6 +175,9 @@ from star_itsm_api.services.ticket_timestamps import (
     maybe_set_first_response,
     touch_ticket_updated,
 )
+
+DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
+DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})
 
 logger = logging.getLogger(__name__)
 
