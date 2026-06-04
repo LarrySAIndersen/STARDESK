@@ -34,6 +34,7 @@ export function PageLayoutField({
   defaultLabel,
   defaultOrder,
   defaultSpan = "full",
+  pinOrder = false,
   children,
   className,
 }: {
@@ -41,6 +42,8 @@ export function PageLayoutField({
   defaultLabel: string;
   defaultOrder: number;
   defaultSpan?: PageLayoutFieldSpan;
+  /** When true, ignore saved layout order (structural sections e.g. submit). */
+  pinOrder?: boolean;
   children: ReactNode;
   className?: string;
 }) {
@@ -50,6 +53,7 @@ export function PageLayoutField({
     order: defaultOrder,
     span: defaultSpan,
   });
+  const displayOrder = pinOrder ? defaultOrder : config.order;
   const [labelDraft, setLabelDraft] = useState(config.label);
 
   useEffect(() => {
@@ -68,8 +72,9 @@ export function PageLayoutField({
         editMode && "page-layout-field--editing",
         className,
       )}
-      style={{ order: config.order }}
+      style={{ order: displayOrder }}
       data-field-id={fieldId}
+      data-order-pinned={pinOrder ? "true" : undefined}
     >
       {editMode ? (
         <div className="page-layout-field__toolbar mb-1 flex flex-wrap items-center gap-1 rounded border border-dashed border-[var(--accent)]/50 bg-muted/40 px-2 py-1">
@@ -91,6 +96,7 @@ export function PageLayoutField({
             variant="ghost"
             className="h-7 px-1.5"
             title="Flyt op"
+            disabled={pinOrder}
             onClick={() => moveField(fieldId, -1)}
           >
             <ChevronUp className="size-3.5" aria-hidden />
@@ -101,6 +107,7 @@ export function PageLayoutField({
             variant="ghost"
             className="h-7 px-1.5"
             title="Flyt ned"
+            disabled={pinOrder}
             onClick={() => moveField(fieldId, 1)}
           >
             <ChevronDown className="size-3.5" aria-hidden />
@@ -189,6 +196,8 @@ export function PageLayoutSection({
   fieldId,
   defaultLabel,
   defaultOrder,
+  hideHeading = false,
+  pinOrder = false,
   children,
   className,
   contentClassName,
@@ -196,6 +205,8 @@ export function PageLayoutSection({
   fieldId: string;
   defaultLabel: string;
   defaultOrder: number;
+  hideHeading?: boolean;
+  pinOrder?: boolean;
   children: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -208,10 +219,11 @@ export function PageLayoutSection({
       fieldId={fieldId}
       defaultLabel={defaultLabel}
       defaultOrder={defaultOrder}
+      pinOrder={pinOrder}
       className={className}
     >
       <section className={cn("space-y-4", contentClassName)}>
-        <h2 className="wire-card-title">{label}</h2>
+        {hideHeading ? null : <h2 className="wire-card-title">{label}</h2>}
         {children}
       </section>
     </PageLayoutField>

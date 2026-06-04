@@ -403,6 +403,40 @@ export function CreateTicketForm({
           </PageLayoutSection>
 
           <PageLayoutSection
+            fieldId="section-submit"
+            defaultLabel="Opret sag"
+            defaultOrder={15}
+            hideHeading
+            pinOrder
+            contentClassName="space-y-3 py-1"
+          >
+            {error ? (
+              <p className="text-destructive text-sm" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button
+                type="submit"
+                className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto sm:min-w-[10rem]"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? "Opretter sag…" : "Opret sag"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="wire-btn min-h-11 w-full sm:w-auto"
+                disabled={isSubmitting}
+                onClick={() => router.push("/tickets")}
+              >
+                Annuller
+              </Button>
+            </div>
+          </PageLayoutSection>
+
+          <PageLayoutSection
             fieldId="section-optional"
             defaultLabel="Valgfrit"
             defaultOrder={20}
@@ -733,32 +767,6 @@ export function CreateTicketForm({
               />
             </CreateTicketOptionalSection>
           </PageLayoutSection>
-
-          {error ? (
-            <p className="text-destructive text-sm" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="flex flex-col gap-3 border-t border-[var(--gray-border)] pt-5 sm:flex-row sm:items-center">
-            <Button
-              type="submit"
-              className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto sm:min-w-[10rem]"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
-            >
-              {isSubmitting ? "Opretter sag…" : "Opret sag"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="wire-btn min-h-11 w-full sm:w-auto"
-              disabled={isSubmitting}
-              onClick={() => router.push("/tickets")}
-            >
-              Annuller
-            </Button>
-          </div>
         </PageLayoutGrid>
       </form>
     </section>

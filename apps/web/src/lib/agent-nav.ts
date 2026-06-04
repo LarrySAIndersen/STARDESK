@@ -50,6 +50,7 @@ export function buildAgentNavItems(options: {
   const { staff, showAdmin, showForbedringer = false } = options;
   return [
     { id: "dashboard", href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { id: "min-side", href: "/min-side", label: "Min side", icon: UserCircle },
     ...(staff
       ? [{ id: "service-desk", href: "/service-desk", label: "Service Desk", icon: Headset }]
       : []),
