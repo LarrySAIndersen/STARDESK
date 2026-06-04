@@ -11,6 +11,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib/api-venv.sh
+source "$ROOT/scripts/lib/api-venv.sh"
+API_DIR="$ROOT/apps/api"
 
 LOCAL_POSTGRES=0
 NEON_ONLY=0
@@ -37,7 +40,9 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 echo "==> Installing dependencies"
 cd "$ROOT/apps/web" && npm ci --ignore-scripts
-cd "$ROOT/apps/api" && uv sync --group dev --no-build
+cd "$API_DIR" && uv sync --group dev --no-build
+API_VENV_PYTHON="$(stardesk_api_venv_python "$API_DIR")"
+API_PYTEST="$(stardesk_api_venv_pytest "$API_DIR")"
 
 echo "==> Environment files"
 if [[ -n "${DATABASE_URL:-${STARDESK_NEON_DATABASE_URL:-}}" ]]; then
@@ -71,12 +76,12 @@ if [[ "$SKIP_DB" -eq 0 ]]; then
 fi
 
 echo "==> API unit tests"
-cd "$ROOT/apps/api"
+cd "$API_DIR"
 set -a
 # shellcheck disable=SC1091
 [[ -f .env ]] && source .env
 set +a
-uv run --no-build pytest -q --tb=no -q 2>&1 | tail -3
+"$API_PYTEST" -q --tb=no -q 2>&1 | tail -3
 
 echo "==> Environment identity (compare to production)"
 HEALTH="$(curl -sf http://localhost:8000/health 2>/dev/null || true)"
@@ -93,6 +98,6 @@ echo "  Web:  http://localhost:3000  (banner: Lokal udvikling)"
 echo "  API:  http://localhost:8000/health"
 if [[ "$SKIP_DB" -eq 0 ]]; then
   echo "  Prototype users (from database):"
-  cd "$ROOT/apps/api"
-  uv run --no-build python "$ROOT/scripts/list_prototype_users.py" || true
+  cd "$API_DIR"
+  "$API_VENV_PYTHON" "$ROOT/scripts/list_prototype_users.py" || true
 fi

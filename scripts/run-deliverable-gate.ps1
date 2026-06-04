@@ -43,7 +43,7 @@ function Ensure-StardeskPlaywright {
     Write-Host "==> Installing Playwright (scripts/)"
     Push-Location (Join-Path $RepoRoot "scripts")
     try {
-        & npm install --no-audit --no-fund
+        & npm install --no-audit --no-fund --ignore-scripts
         if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
         & npx playwright install chromium
         if ($LASTEXITCODE -ne 0) { throw "playwright install failed" }
@@ -94,7 +94,7 @@ if (-not $SkipTests) {
     Write-Host "==> API unit tests (quick)"
     Push-Location $ApiDir
     try {
-        & uv run pytest -q --tb=line
+        & (Get-StardeskApiVenvPytest -ApiDir $ApiDir) -q --tb=line
         if ($LASTEXITCODE -ne 0) {
             throw "pytest failed with exit code $LASTEXITCODE"
         }

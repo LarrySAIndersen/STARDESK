@@ -12,7 +12,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-API_VENV_PYTHON="$ROOT/apps/api/.venv/bin/python"
+# shellcheck source=scripts/lib/api-venv.sh
+source "$ROOT/scripts/lib/api-venv.sh"
+API_DIR="$ROOT/apps/api"
 
 load_local_postgres_env() {
   if [[ ! -f "$ROOT/scripts/local-postgres.env" ]]; then
@@ -72,7 +74,7 @@ write_dev_env_files() {
     cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
     if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
       load_local_postgres_env
-      uv run --no-build python "$ROOT/scripts/dev_local_postgres.py" write-env
+      "$API_VENV_PYTHON" "$ROOT/scripts/dev_local_postgres.py" write-env
     fi
     echo "Created apps/api/.env from .env.development.example"
   fi
@@ -99,8 +101,9 @@ setup_local_postgres() {
 }
 
 ensure_uv
-cd "$ROOT/apps/api"
+cd "$API_DIR"
 uv sync --group dev --no-build
+API_VENV_PYTHON="$(stardesk_api_venv_python "$API_DIR")"
 cd "$ROOT"
 
 if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
@@ -127,7 +130,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 fi
 
 SKIP_SQL=0
-if [[ "$FORCE_SQL" -ne 1 ]] && uv run --no-build python "$ROOT/scripts/db_bootstrap_status.py"; then
+if [[ "$FORCE_SQL" -ne 1 ]] && "$API_VENV_PYTHON" "$ROOT/scripts/db_bootstrap_status.py"; then
   echo "Database already has schema and users — skipping SQL migrations/seeds."
   echo "  (use --force-sql to re-run run_neon_setup.py)"
   SKIP_SQL=1
@@ -135,12 +138,12 @@ fi
 
 if [[ "$SKIP_SQL" -eq 0 ]]; then
   echo "Running SQL setup (run_neon_setup.py)..."
-  uv run --no-build python "$ROOT/scripts/run_neon_setup.py" "${NEON_ARGS[@]}"
+  "$API_VENV_PYTHON" "$ROOT/scripts/run_neon_setup.py" "${NEON_ARGS[@]}"
 fi
 
 if [[ "$WITH_ALEMBIC" -eq 1 ]]; then
   echo "Syncing Alembic revisions..."
-  uv run --no-build python "$ROOT/scripts/alembic_after_sql_setup.py"
+  "$API_VENV_PYTHON" "$ROOT/scripts/alembic_after_sql_setup.py"
 fi
 
 echo "Database bootstrap complete."
