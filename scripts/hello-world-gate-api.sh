@@ -8,16 +8,8 @@ EMAIL="${TEST_USER_EMAIL:-sf01@example.dk}"
 REQUIRE_NON_PROD="${GATE_REQUIRE_NON_PROD:-1}"
 
 if [[ -z "${TEST_USER_PASSWORD:-}" ]]; then
-  cd "$ROOT/apps/api"
-  set -a
-  # shellcheck disable=SC1091
-  [[ -f .env ]] && source .env
-  set +a
-  if [[ -z "${PROTOTYPE_BOOTSTRAP_PASSWORD:-}" ]]; then
-    echo "PROTOTYPE_BOOTSTRAP_PASSWORD missing in apps/api/.env" >&2
-    exit 1
-  fi
-  export TEST_USER_PASSWORD="${PROTOTYPE_BOOTSTRAP_PASSWORD}"
+  export TEST_USER_PASSWORD
+  TEST_USER_PASSWORD="$(bash "$ROOT/scripts/lib/resolve-prototype-demo-password.sh")"
 fi
 PASSWORD="$TEST_USER_PASSWORD"
 

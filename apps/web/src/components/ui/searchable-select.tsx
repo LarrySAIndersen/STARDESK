@@ -70,7 +70,7 @@ export function SearchableSelect({
       <Input
         id={inputId}
         name={`stardesk-${inputId}`}
-        type="search"
+        type="text"
         role="combobox"
         aria-expanded={open}
         aria-controls={listboxId}
@@ -82,7 +82,7 @@ export function SearchableSelect({
         disabled={disabled}
         value={shownValue}
         placeholder={placeholder}
-        className="border-[var(--gray-border)] h-8 text-right text-xs"
+        className="border-[var(--gray-border)] bg-card text-card-foreground placeholder:text-muted-foreground h-8 text-right text-xs"
         onFocus={() => setOpen(true)}
         onChange={(event) => {
           const next = event.target.value;
@@ -100,7 +100,7 @@ export function SearchableSelect({
         <ul
           id={listboxId}
           role="listbox"
-          className="border-[var(--gray-border)] absolute top-full right-0 z-50 mt-1 max-h-48 w-full min-w-[220px] overflow-y-auto rounded-[2px] border bg-white py-1 text-left shadow-md"
+          className="border-border bg-popover text-popover-foreground absolute top-full right-0 z-50 mt-1 max-h-48 w-full min-w-[220px] overflow-y-auto rounded-[2px] border py-1 text-left shadow-md"
         >
           {options.length === 0 && query.trim() ? (
             <li className="text-muted-foreground px-3 py-2 text-xs">Ingen match</li>

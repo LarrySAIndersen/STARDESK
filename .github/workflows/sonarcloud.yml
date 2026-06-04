@@ -47,6 +47,9 @@ jobs:
       - name: Verify coverage report path
         run: test -f apps/api/coverage.xml
 
+      - name: Rewrite coverage paths for SonarCloud
+        run: python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
+
       # SONAR repo secret required (cannot branch on secrets in if: — GitHub limitation)
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v7.1.0

@@ -18,7 +18,7 @@ export function SidebarRailExpand({ onExpand, className }: SidebarRailExpandProp
       aria-label="Vis menu"
       aria-expanded={false}
       className={cn(
-        "border-star-navy/20 text-star-navy hover:bg-star-blue-light absolute top-[4.5rem] right-0 z-40 flex size-8 -translate-y-0 translate-x-1/2 items-center justify-center rounded-full border-2 bg-white shadow-md transition-colors",
+        "border-border text-foreground hover:bg-accent absolute top-[4.5rem] right-0 z-40 flex size-8 -translate-y-0 translate-x-1/2 items-center justify-center rounded-full border-2 bg-card shadow-md transition-colors",
         className,
       )}
     >

@@ -1,12 +1,14 @@
 import Link from "next/link";
 
-import { TicketsListClient } from "@/components/tickets-list-client";
+import { BacklogTicketsListClient } from "@/components/backlog/backlog-tickets-list-client";
 import { apiGetServer } from "@/lib/api-server";
+import { getServerUser } from "@/lib/auth-server";
 import type { Ticket } from "@/types/ticket";
 
 export const dynamic = "force-dynamic";
 
 export default async function BacklogPage() {
+  const user = await getServerUser();
   let tickets: Ticket[] = [];
   let fetchError: string | null = null;
 
@@ -41,7 +43,7 @@ export default async function BacklogPage() {
             {fetchError}
           </p>
         ) : (
-          <TicketsListClient tickets={tickets} />
+          <BacklogTicketsListClient tickets={tickets} currentUserId={user?.id} />
         )}
       </div>
     </div>
