@@ -20,7 +20,7 @@ start_session() {
 }
 
 start_session "$SESSION_API" "$ROOT/apps/api" \
-  'export PATH="$HOME/.local/bin:$PATH" && set -a && source .env && set +a && uv run uvicorn star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000'
+  'export PATH="$HOME/.local/bin:$PATH" && set -a && source .env && set +a && uv run --no-build uvicorn star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000'
 
 start_session "$SESSION_WEB" "$ROOT/apps/web" \
   'npm run dev -- --hostname 0.0.0.0 --port 3000'

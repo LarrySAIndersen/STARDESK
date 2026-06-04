@@ -14,4 +14,4 @@ if [ -z "${DATABASE_URL:-}" ]; then
   echo "DATABASE_URL is not set (export it or use apps/api/.env)" >&2
   exit 1
 fi
-uv run python "$ROOT/scripts/alembic_after_sql_setup.py"
+uv run --no-build python "$ROOT/scripts/alembic_after_sql_setup.py"
