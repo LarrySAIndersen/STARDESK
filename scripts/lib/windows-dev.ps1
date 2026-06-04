@@ -270,9 +270,9 @@ function Invoke-StardeskVercelCurl {
     }
 
     $lines = @($raw | ForEach-Object { "$_" })
-    $jsonLine = $lines | Where-Object { $_ -match '^\{' } | Select-Object -Last 1
+    $jsonLine = $lines | Where-Object { $_ -match '^[\[{]' } | Select-Object -Last 1
     if (-not $jsonLine) {
-        $jsonLine = $lines | Where-Object { $_ -match '"stardesk_env"|"access_token"|"detail"' } | Select-Object -Last 1
+        $jsonLine = $lines | Where-Object { $_ -match '"stardesk_env"|"access_token"|"detail"|"items"' } | Select-Object -Last 1
     }
     if (-not $jsonLine) {
         throw "vercel curl returned no JSON for $Method $Path"
