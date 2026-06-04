@@ -80,9 +80,12 @@ function newId(): string {
 export function TicketCreateLlmAssistant({
   onApplyDraft,
   disabled = false,
+  embedded = false,
 }: {
   onApplyDraft: (draft: IntakeAssistDraft) => void;
   disabled?: boolean;
+  /** When true, omit outer heading/banner (used inside collapsible section). */
+  embedded?: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -233,22 +236,26 @@ export function TicketCreateLlmAssistant({
   return (
     <aside
       className="ticket-create-llm-panel"
-      aria-labelledby="ticket-create-llm-heading"
+      aria-labelledby={embedded ? undefined : "ticket-create-llm-heading"}
     >
-      <div className="wire-ai-banner mb-4" role="note">
-        <span className="wire-ai-pill">Prototype</span>
-        <p className="wire-ai-text m-0">
-          AI-assistent (mock) — ingen rigtig LLM. Svar og udkast er regelbaserede; API:{" "}
-          <code className="text-[10px]">POST /api/v1/tickets/intake-assist</code>
-        </p>
-      </div>
+      {embedded ? null : (
+        <>
+          <div className="wire-ai-banner mb-4" role="note">
+            <span className="wire-ai-pill">Prototype</span>
+            <p className="wire-ai-text m-0">
+              AI-assistent (mock) — ingen rigtig LLM. Svar og udkast er regelbaserede; API:{" "}
+              <code className="text-[10px]">POST /api/v1/tickets/intake-assist</code>
+            </p>
+          </div>
 
-      <h2 id="ticket-create-llm-heading" className="wire-card-title mb-1">
-        AI-assistent (mock)
-      </h2>
-      <p className="text-muted-foreground mb-3 text-xs">
-        Skriv eller tal — valider forslaget, overfør til sagen efter godkendelse.
-      </p>
+          <h2 id="ticket-create-llm-heading" className="wire-card-title mb-1">
+            AI-assistent (mock)
+          </h2>
+          <p className="text-muted-foreground mb-3 text-xs">
+            Skriv eller tal — valider forslaget, overfør til sagen efter godkendelse.
+          </p>
+        </>
+      )}
 
       <div
         className="ticket-create-llm-chat mb-3"
