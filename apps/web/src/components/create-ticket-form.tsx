@@ -402,6 +402,32 @@ export function CreateTicketForm({
             </div>
           </PageLayoutSection>
 
+          {error ? (
+            <p className="order-[14] text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="order-[15] flex flex-col gap-3 py-1 sm:flex-row sm:items-center">
+            <Button
+              type="submit"
+              className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto sm:min-w-[10rem]"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? "Opretter sag…" : "Opret sag"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="wire-btn min-h-11 w-full sm:w-auto"
+              disabled={isSubmitting}
+              onClick={() => router.push("/tickets")}
+            >
+              Annuller
+            </Button>
+          </div>
+
           <PageLayoutSection
             fieldId="section-optional"
             defaultLabel="Valgfrit"
@@ -733,32 +759,6 @@ export function CreateTicketForm({
               />
             </CreateTicketOptionalSection>
           </PageLayoutSection>
-
-          {error ? (
-            <p className="text-destructive text-sm" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="flex flex-col gap-3 border-t border-[var(--gray-border)] pt-5 sm:flex-row sm:items-center">
-            <Button
-              type="submit"
-              className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto sm:min-w-[10rem]"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
-            >
-              {isSubmitting ? "Opretter sag…" : "Opret sag"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="wire-btn min-h-11 w-full sm:w-auto"
-              disabled={isSubmitting}
-              onClick={() => router.push("/tickets")}
-            >
-              Annuller
-            </Button>
-          </div>
         </PageLayoutGrid>
       </form>
     </section>
