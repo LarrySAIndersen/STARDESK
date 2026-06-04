@@ -94,6 +94,8 @@ export function AgentOperationsDashboard({
   scope?: DashboardScope;
 }) {
   const filter = { scope };
+  const ticketLink = (extra: Parameters<typeof buildTicketsFilterHref>[0]) =>
+    buildTicketsFilterHref({ ...filter, ...extra });
   const slaHealthPct =
     dashboard.open_count > 0
       ? Math.round(
@@ -130,7 +132,7 @@ export function AgentOperationsDashboard({
             label="Åbne sager"
             value={dashboard.open_count}
             accent="border-t-star-navy"
-            href={buildTicketsFilterHref({ ...filter, openOnly: true })}
+            href={ticketLink({ openOnly: true })}
           />
           <OpsKpiCard
             label="SLA overskredet"
@@ -138,7 +140,7 @@ export function AgentOperationsDashboard({
             sub={dashboard.sla_overdue_count > 0 ? "Kræver handling" : "Ingen overskridelser"}
             accent="border-t-star-red"
             highlight={dashboard.sla_overdue_count > 0}
-            href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "overdue" })}
+            href={ticketLink({ openOnly: true, sla: "overdue" })}
           />
           <OpsKpiCard
             label="SLA inden 4 t"
@@ -146,7 +148,7 @@ export function AgentOperationsDashboard({
             sub="Forfald inden for 4 timer"
             accent="border-t-amber-500"
             highlight={dashboard.sla_due_soon_count > 0}
-            href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "due_soon" })}
+            href={ticketLink({ openOnly: true, sla: "due_soon" })}
           />
           <OpsKpiCard
             label="Store sager"
@@ -154,14 +156,14 @@ export function AgentOperationsDashboard({
             sub="Åbne med markering Stor sag"
             accent="border-t-star-red"
             highlight={dashboard.major_open_count > 0}
-            href={buildTicketsFilterHref({ ...filter, majorOpen: true })}
+            href={ticketLink({ majorOpen: true })}
           />
           <OpsKpiCard
             label="Løsningsgrad"
             value={`${dashboard.resolution_rate_pct}%`}
             sub="Lukket/løst seneste 30 d vs. åbne"
             accent="border-t-emerald-600"
-            href={buildTicketsFilterHref({ ...filter, closedSinceDays: 30 })}
+            href={ticketLink({ closedSinceDays: 30 })}
           />
           <OpsKpiCard
             label="Gns. alder (åbne)"
@@ -170,7 +172,7 @@ export function AgentOperationsDashboard({
             }
             sub={`${dashboard.closed_count.toLocaleString("da-DK")} lukket i alt`}
             accent="border-t-star-blue"
-            href={buildTicketsFilterHref({ ...filter, openOnly: true })}
+            href={ticketLink({ openOnly: true })}
           />
         </div>
       </div>
@@ -184,7 +186,7 @@ export function AgentOperationsDashboard({
           {dashboard.bucket_counts.map((bucket) => (
             <Link
               key={bucket.key}
-              href={buildTicketsFilterHref({ ...filter, bucket: bucket.key })}
+              href={ticketLink({ bucket: bucket.key })}
               className={cn(
                 "ledger-card block border-t-4 p-4 transition-shadow hover:shadow-md",
                 BUCKET_ACCENTS[bucket.key] ?? "border-t-star-blue",
@@ -224,7 +226,7 @@ export function AgentOperationsDashboard({
               sub={`${dashboard.opened_last_7_days.toLocaleString("da-DK")} modtaget seneste 7 d`}
               accent="border-t-star-blue"
               compact
-              href={buildTicketsFilterHref({ ...filter, openedSinceDays: 7 })}
+              href={ticketLink({ openedSinceDays: 7 })}
             />
             <OpsKpiCard
               label="SLA-brud"
@@ -237,7 +239,7 @@ export function AgentOperationsDashboard({
               accent="border-t-star-red"
               highlight={dashboard.sla_overdue_count > 0}
               compact
-              href={buildTicketsFilterHref({ ...filter, openOnly: true, sla: "overdue" })}
+              href={ticketLink({ openOnly: true, sla: "overdue" })}
             />
           </div>
         </StarSectionCard>
@@ -251,19 +253,28 @@ export function AgentOperationsDashboard({
       >
         <div className="mb-6 flex flex-wrap items-center gap-2">
           {dashboard.major_open_count > 0 ? (
-            <Badge className="border-0 bg-star-red text-white hover:bg-star-red/90">
-              {dashboard.major_open_count} stor{dashboard.major_open_count === 1 ? "" : "e"} sag
-              {dashboard.major_open_count === 1 ? "" : "er"}
+            <Badge className="border-0 bg-star-red text-white [a]:hover:bg-star-red/90">
+              <Link href={ticketLink({ majorOpen: true })}>
+                {dashboard.major_open_count} stor{dashboard.major_open_count === 1 ? "" : "e"}{" "}
+                sag{dashboard.major_open_count === 1 ? "" : "er"}
+              </Link>
             </Badge>
           ) : null}
           {dashboard.sla_due_soon_count > 0 ? (
-            <Badge variant="secondary" className="border-star-blue/30 bg-white text-star-navy">
-              {dashboard.sla_due_soon_count} SLA inden 4 t
+            <Badge
+              variant="secondary"
+              className="border-star-blue/30 bg-white text-star-navy [a]:hover:bg-white/90"
+            >
+              <Link href={ticketLink({ openOnly: true, sla: "due_soon" })}>
+                {dashboard.sla_due_soon_count} SLA inden 4 t
+              </Link>
             </Badge>
           ) : null}
           {dashboard.sla_overdue_count > 0 ? (
             <Badge variant="destructive">
-              {dashboard.sla_overdue_count} SLA overskredet
+              <Link href={ticketLink({ openOnly: true, sla: "overdue" })}>
+                {dashboard.sla_overdue_count} SLA overskredet
+              </Link>
             </Badge>
           ) : null}
         </div>
@@ -274,6 +285,7 @@ export function AgentOperationsDashboard({
             max={backlogMax}
             hint={`Maks skala: ${backlogMax}`}
             accent="navy"
+            href={ticketLink({ openOnly: true })}
           />
           <Gauge
             label="SLA sundhed (åbne)"
@@ -286,15 +298,32 @@ export function AgentOperationsDashboard({
                 : "Ingen overskridelser"
             }
             accent={slaHealthPct >= 80 ? "green" : slaHealthPct >= 50 ? "blue" : "red"}
+            href={
+              dashboard.sla_overdue_count > 0
+                ? ticketLink({ openOnly: true, sla: "overdue" })
+                : ticketLink({ openOnly: true })
+            }
           />
-          <Gauge
-            label="Gennemløb (7 d)"
-            value={throughputPct}
-            max={100}
-            unit="%"
-            hint={`${dashboard.closed_last_7_days} lukket / ${dashboard.opened_last_7_days} modtaget`}
-            accent="blue"
-          />
+          <div className="flex flex-col items-center gap-1">
+            <Gauge
+              label="Gennemløb (7 d)"
+              value={throughputPct}
+              max={100}
+              unit="%"
+              hint="Seneste 7 dage — klik tal nedenfor"
+              accent="blue"
+              href={ticketLink({ closedSinceDays: 7 })}
+            />
+            <p className="text-muted-foreground flex flex-wrap justify-center gap-2 text-xs">
+              <Link href={ticketLink({ closedSinceDays: 7 })} className="text-star-navy font-semibold hover:underline">
+                {dashboard.closed_last_7_days} lukket
+              </Link>
+              <span aria-hidden>·</span>
+              <Link href={ticketLink({ openedSinceDays: 7 })} className="text-star-navy font-semibold hover:underline">
+                {dashboard.opened_last_7_days} modtaget
+              </Link>
+            </p>
+          </div>
         </div>
       </StarSectionCard>
 
@@ -304,11 +333,20 @@ export function AgentOperationsDashboard({
           title="Udvikling i sager"
           created={dashboard.daily_created}
           closed={dashboard.daily_closed}
+          getCreatedHref={(day) =>
+            day.count > 0 ? ticketLink({ createdOn: day.date }) : undefined
+          }
+          getClosedHref={(day) =>
+            day.count > 0 ? ticketLink({ closedOn: day.date }) : undefined
+          }
         />
         <HorizontalBars
           id="status-breakdown"
           title="Fordeling på status"
           items={dashboard.status_breakdown}
+          getItemHref={(item) =>
+            item.count > 0 ? ticketLink({ status: item.key }) : undefined
+          }
         />
       </div>
 
@@ -317,6 +355,11 @@ export function AgentOperationsDashboard({
           id="priority-breakdown"
           title="Åbne sager efter prioritet"
           items={dashboard.priority_breakdown}
+          getItemHref={(item) =>
+            item.count > 0
+              ? ticketLink({ openOnly: true, priority: item.key })
+              : undefined
+          }
         />
         <section className="ledger-card flex flex-col justify-center border-primary/20 bg-secondary/50">
           <p className="text-foreground font-semibold">Klar til tildeling?</p>

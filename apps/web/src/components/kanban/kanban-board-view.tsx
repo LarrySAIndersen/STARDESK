@@ -28,7 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ClickableMetric } from "@/components/dashboard/clickable-metric";
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { canManageUsers } from "@/lib/auth";
 import {
   serviceDeskTeamIds,
@@ -477,7 +479,21 @@ export function KanbanBoardView({
                       >
                         <h2 className="text-sm font-semibold">{column.name}</h2>
                         <p className="text-muted-foreground text-[10px]">
-                          {cards.length} sager
+                          <ClickableMetric
+                            href={
+                              cards.length > 0 && column.statuses[0]
+                                ? buildTicketsFilterHref({
+                                    scope: "all",
+                                    status: column.statuses[0],
+                                    openOnly: true,
+                                  })
+                                : undefined
+                            }
+                            inline
+                            ariaLabel={`${column.name}: ${cards.length} sager`}
+                          >
+                            {cards.length} sager
+                          </ClickableMetric>
                           {column.wip_limit != null ? ` · max ${column.wip_limit}` : ""}
                         </p>
                         {wip ? (

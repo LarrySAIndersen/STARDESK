@@ -10,6 +10,17 @@ export type DashboardTicketFilter = {
   majorOpen?: boolean;
   openedSinceDays?: number;
   closedSinceDays?: number;
+  status?: string;
+  priority?: string;
+  /** Calendar day YYYY-MM-DD — tickets created that day. */
+  createdOn?: string;
+  /** Calendar day YYYY-MM-DD — tickets closed/resolved that day. */
+  closedOn?: string;
+  ticketType?: string;
+  securityOnly?: boolean;
+  isStore?: boolean;
+  parentId?: string;
+  assignedTeamId?: string;
 };
 
 export function buildTicketsFilterHref(filter: DashboardTicketFilter): string {
@@ -34,6 +45,33 @@ export function buildTicketsFilterHref(filter: DashboardTicketFilter): string {
   }
   if (filter.closedSinceDays != null) {
     params.set("closed_since_days", String(filter.closedSinceDays));
+  }
+  if (filter.status) {
+    params.set("status", filter.status);
+  }
+  if (filter.priority) {
+    params.set("priority", filter.priority);
+  }
+  if (filter.createdOn) {
+    params.set("created_on", filter.createdOn);
+  }
+  if (filter.closedOn) {
+    params.set("closed_on", filter.closedOn);
+  }
+  if (filter.ticketType) {
+    params.set("ticket_type", filter.ticketType);
+  }
+  if (filter.securityOnly) {
+    params.set("security_only", "true");
+  }
+  if (filter.isStore) {
+    params.set("is_store", "true");
+  }
+  if (filter.parentId) {
+    params.set("parent_id", filter.parentId);
+  }
+  if (filter.assignedTeamId) {
+    params.set("assigned_team_id", filter.assignedTeamId);
   }
   const qs = params.toString();
   return qs ? `/tickets?${qs}` : "/tickets";
