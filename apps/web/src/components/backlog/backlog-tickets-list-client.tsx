@@ -2,22 +2,46 @@
 
 import { useMemo, useState } from "react";
 
-import { ClearFiltersButton } from "@/components/clear-filters-button";
 import {
   DEFAULT_TICKET_FIELD_FILTERS,
   TicketFieldFilterPanel,
 } from "@/components/backlog/ticket-field-filter-panel";
+import { ClearFiltersButton } from "@/components/clear-filters-button";
+import {
+  collectServiceDeskFilterOptions,
+  TicketTableColumnFilters,
+} from "@/components/service-desk/ticket-table-column-filters";
+import { TicketSearchInput } from "@/components/ticket-search-input";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
+import {
+  applyBacklogTableFilters,
+  DEFAULT_BACKLOG_TABLE_FILTERS,
+  hasActiveBacklogTableFilters,
+  type BacklogTableFilters,
+} from "@/lib/backlog-table-filters";
+import {
+  sortServiceDeskTable,
+  type ServiceDeskSortKey,
+} from "@/lib/service-desk-table-filters";
 import {
   applyTicketFieldFilters,
   hasActiveTicketFieldFilters,
   type TicketFieldFilters,
 } from "@/lib/ticket-field-filters";
-import {
-  sortServiceDeskTable,
-  type ServiceDeskSortKey,
-} from "@/lib/service-desk-table-filters";
+import { ticketTypeLabel } from "@/lib/ticket-labels";
+import { ticketMatchesSearch } from "@/lib/ticket-tags";
 import type { Ticket } from "@/types/ticket";
+
+const TICKET_TYPE_OPTIONS = ["", "incident", "service_request", "problem"] as const;
+
+const ASSIGNMENT_OPTIONS: {
+  value: BacklogTableFilters["assignment"];
+  label: string;
+}[] = [
+  { value: "", label: "Alle tildelinger" },
+  { value: "mine", label: "Tildelt mig" },
+  { value: "unassigned", label: "Uden agent" },
+];
 
 const DESK_SORT_KEYS = new Set<string>([
   "queue",
@@ -64,23 +88,80 @@ export function BacklogTicketsListClient({
   tickets: Ticket[];
   currentUserId?: string;
 }) {
-  const [filters, setFilters] = useState<TicketFieldFilters>(DEFAULT_TICKET_FIELD_FILTERS);
+  const [search, setSearch] = useState("");
+  const [fieldFilters, setFieldFilters] = useState<TicketFieldFilters>(DEFAULT_TICKET_FIELD_FILTERS);
+  const [tableFilters, setTableFilters] = useState<BacklogTableFilters>(DEFAULT_BACKLOG_TABLE_FILTERS);
   const [panelOpen, setPanelOpen] = useState(true);
 
-  const patchFilters = (patch: Partial<TicketFieldFilters>) => {
-    setFilters((prev) => ({ ...prev, ...patch }));
+  const patchFieldFilters = (patch: Partial<TicketFieldFilters>) => {
+    setFieldFilters((prev) => ({ ...prev, ...patch }));
+  };
+
+  const patchTableFilters = (patch: Partial<BacklogTableFilters>) => {
+    setTableFilters((prev) => ({ ...prev, ...patch }));
   };
 
   const filtered = useMemo(() => {
-    const narrowed = applyTicketFieldFilters(tickets, filters, { currentUserId });
-    return sortBacklogTickets(narrowed, filters.sort);
-  }, [tickets, filters, currentUserId]);
+    const searched = tickets.filter((t) => ticketMatchesSearch(t, search));
+    const fieldFiltered = applyTicketFieldFilters(searched, fieldFilters, { currentUserId });
+    const narrowed = applyBacklogTableFilters(fieldFiltered, tableFilters, currentUserId);
+    const sortKey =
+      tableFilters.sort !== DEFAULT_BACKLOG_TABLE_FILTERS.sort
+        ? tableFilters.sort
+        : fieldFilters.sort;
+    return sortBacklogTickets(narrowed, sortKey);
+  }, [tickets, search, fieldFilters, tableFilters, currentUserId]);
 
-  const hasActiveFilters = hasActiveTicketFieldFilters(filters);
+  const filterOptions = useMemo(() => collectServiceDeskFilterOptions(tickets), [tickets]);
+
+  const hasActiveFilters =
+    Boolean(search.trim()) ||
+    hasActiveTicketFieldFilters(fieldFilters) ||
+    hasActiveBacklogTableFilters(tableFilters);
+
+  const clearAllFilters = () => {
+    setSearch("");
+    setFieldFilters(DEFAULT_TICKET_FIELD_FILTERS);
+    setTableFilters(DEFAULT_BACKLOG_TABLE_FILTERS);
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
+        <select
+          className="wire-form-input h-8 w-auto min-w-[9rem] text-xs"
+          value={tableFilters.assignment}
+          onChange={(e) =>
+            patchTableFilters({
+              assignment: e.target.value as BacklogTableFilters["assignment"],
+            })
+          }
+          aria-label="Filtrer tildeling"
+        >
+          {ASSIGNMENT_OPTIONS.map((opt) => (
+            <option key={opt.value || "all"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="wire-form-input h-8 w-auto min-w-[8.5rem] text-xs"
+          value={tableFilters.ticket_type}
+          onChange={(e) =>
+            patchTableFilters({
+              ticket_type: e.target.value as BacklogTableFilters["ticket_type"],
+            })
+          }
+          aria-label="Filtrer sagstype"
+        >
+          <option value="">Alle typer</option>
+          {TICKET_TYPE_OPTIONS.filter(Boolean).map((type) => (
+            <option key={type} value={type}>
+              {ticketTypeLabel(type)}
+            </option>
+          ))}
+        </select>
+        <TicketSearchInput value={search} onChange={setSearch} />
         <button
           type="button"
           className="wire-btn wire-btn-sm"
@@ -92,17 +173,27 @@ export function BacklogTicketsListClient({
         <span className="text-muted-foreground text-xs">
           {filtered.length} sag{filtered.length === 1 ? "" : "er"}
         </span>
-        <ClearFiltersButton
-          onClick={() => setFilters(DEFAULT_TICKET_FIELD_FILTERS)}
-          visible={hasActiveFilters}
-        />
+        <ClearFiltersButton onClick={clearAllFilters} visible={hasActiveFilters} />
       </div>
 
       {panelOpen ? (
-        <TicketFieldFilterPanel tickets={tickets} filters={filters} onChange={patchFilters} />
+        <TicketFieldFilterPanel
+          tickets={tickets}
+          filters={fieldFilters}
+          onChange={patchFieldFilters}
+        />
       ) : null}
 
-      <WireframeTicketTable tickets={filtered} />
+      <WireframeTicketTable
+        tickets={filtered}
+        columnFilters={
+          <TicketTableColumnFilters
+            filters={tableFilters}
+            onChange={patchTableFilters}
+            options={filterOptions}
+          />
+        }
+      />
     </div>
   );
 }

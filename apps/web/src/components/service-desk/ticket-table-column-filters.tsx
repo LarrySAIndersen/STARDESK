@@ -220,6 +220,9 @@ export function TicketTableColumnFilters({
           <option value="breached" className="text-star-navy">
             Overskredet
           </option>
+          <option value="due_soon" className="text-star-navy">
+            Forfald &lt; 1 t
+          </option>
           <option value="ok" className="text-star-navy">
             Inden for SLA
           </option>
