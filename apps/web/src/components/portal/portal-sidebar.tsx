@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Home, Plus } from "lucide-react";
+import { BookOpen, Home, Plus, UserCircle } from "lucide-react";
 
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
 import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/portal", label: "Oversigt", icon: Home },
+  { href: "/min-side", label: "Min side", icon: UserCircle },
   { href: "/portal/knowledge", label: "Vidensartikler", icon: BookOpen },
   { href: "/tickets/new", label: "Opret sag", icon: Plus },
 ] as const;
@@ -17,6 +18,9 @@ const ITEMS = [
 function isActive(pathname: string, href: string): boolean {
   if (href === "/portal") {
     return pathname === "/portal";
+  }
+  if (href === "/min-side") {
+    return pathname === "/min-side" || pathname.startsWith("/min-side/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

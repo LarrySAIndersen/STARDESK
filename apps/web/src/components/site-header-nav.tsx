@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
 const NAV = [
+  { href: "/min-side", label: "Min side", staffOnly: false, adminOnly: false },
   { href: "/", label: "Sager", staffOnly: false, adminOnly: false },
   { href: "/groups", label: "Grupper", staffOnly: true, adminOnly: false },
   { href: "/users", label: "Brugere", staffOnly: false, adminOnly: true },
