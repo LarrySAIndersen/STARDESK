@@ -10,6 +10,7 @@ import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-sectio
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
+import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
 import { SidebarUiModeSwitch } from "@/components/sidebar-ui-mode-switch";
 import { Button } from "@/components/ui/button";
 import { useNavLayout } from "@/hooks/use-nav-layout";
@@ -210,6 +211,7 @@ export function AgentSidebar({
 }) {
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
+  const toggleNav = useShellNavPanelToggle(onToggle);
   const staff = isStaff(user);
   const agentShellUser = hasAgentShellAccess(user);
   const showAdmin = showUsersNavFromServer ?? canManageUsers(user);
@@ -401,7 +403,7 @@ export function AgentSidebar({
           collapsed ? "justify-center py-1" : "justify-end",
         )}
       >
-        {onToggle ? <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggle} /> : null}
+        {onToggle ? <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleNav} /> : null}
       </div>
 
       {topAdmin && !collapsed && !editMode ? (
