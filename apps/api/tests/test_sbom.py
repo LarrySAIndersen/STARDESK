@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -16,11 +16,16 @@ async def test_sbom_endpoint_success(client: AsyncClient) -> None:
     }
     
     with patch("star_itsm_api.routers.platform.Path.exists") as mock_exists, \
-         patch("builtins.open", create=True) as mock_open, \
-         patch("json.load") as mock_json_load:
+         patch("star_itsm_api.routers.platform.anyio.open_file") as mock_open:
         
         mock_exists.return_value = True
-        mock_json_load.return_value = dummy_sbom
+        
+        mock_file = AsyncMock()
+        mock_file.read = AsyncMock(return_value='{"bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1, "components": []}')
+        
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_file
+        mock_open.return_value = mock_cm
         
         response = await client.get("/api/v1/platform/sbom")
         assert response.status_code == 200
