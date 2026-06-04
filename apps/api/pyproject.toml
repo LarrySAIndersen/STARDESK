@@ -51,7 +51,7 @@ packages = ["src/star_itsm_api"]
 entrypoint = "star_itsm_api.main:app"
 
 [tool.vercel.scripts]
-build = "pip install ."
+build = "pip install . && pip install cyclonedx-bom && cyclonedx-py environment --output-format json -o src/star_itsm_api/sbom.json"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
