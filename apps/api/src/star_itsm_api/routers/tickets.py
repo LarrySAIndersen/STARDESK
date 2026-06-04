@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import select
@@ -109,9 +109,14 @@ from star_itsm_api.services.ticket_classification import (
 from star_itsm_api.services.ticket_dashboard_filters import (
     apply_bucket_filter,
     filter_tickets_by_sla,
+    filter_tickets_closed_on,
     filter_tickets_closed_since,
+    filter_tickets_created_on,
     filter_tickets_opened_since,
 )
+
+DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
+DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -305,6 +310,14 @@ async def list_tickets(
         default=None,
         description="Filter tickets assigned to this user (user management)",
     ),
+    assigned_team_id: uuid.UUID | None = Query(
+        default=None,
+        description="Filter tickets assigned to this team (dashboard drill-down)",
+    ),
+    ticket_type: str | None = Query(
+        default=None,
+        description="Filter by ticket type: incident, problem, service_request, etc.",
+    ),
     scope: str | None = Query(
         default=None,
         description="personal, mine, group, created, all — dashboard drill-down scope",
@@ -328,6 +341,22 @@ async def list_tickets(
         ge=1,
         le=365,
         description="Tickets closed/resolved within N days",
+    ),
+    status: str | None = Query(
+        default=None,
+        description="Exact ticket status (dashboard drill-down)",
+    ),
+    priority: str | None = Query(
+        default=None,
+        description="Ticket priority: critical, high, medium, low",
+    ),
+    created_on: str | None = Query(
+        default=None,
+        description="Tickets created on calendar day (YYYY-MM-DD)",
+    ),
+    closed_on: str | None = Query(
+        default=None,
+        description="Tickets closed/resolved on calendar day (YYYY-MM-DD)",
     ),
     sort: str = Query(
         default=DEFAULT_TICKET_SORT,
@@ -361,6 +390,22 @@ async def list_tickets(
             raise HTTPException(status_code=400, detail="Invalid scope")
         if sla is not None and sla not in ("overdue", "due_soon"):
             raise HTTPException(status_code=400, detail="Invalid sla filter")
+        if priority is not None and priority not in DASHBOARD_PRIORITY_VALUES:
+            raise HTTPException(status_code=400, detail="Invalid priority filter")
+        if ticket_type is not None and ticket_type not in DASHBOARD_TICKET_TYPES:
+            raise HTTPException(status_code=400, detail="Invalid ticket_type filter")
+        parsed_created_on: date | None = None
+        if created_on is not None:
+            try:
+                parsed_created_on = date.fromisoformat(created_on)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid created_on filter") from None
+        parsed_closed_on: date | None = None
+        if closed_on is not None:
+            try:
+                parsed_closed_on = date.fromisoformat(closed_on)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid closed_on filter") from None
         try:
             parsed_sort = parse_ticket_sort(sort)
         except ValueError:
@@ -371,6 +416,10 @@ async def list_tickets(
         stmt = apply_ticket_list_filter(stmt, current_user, store_sager=store_sager)
         if assignee_id is not None:
             stmt = stmt.where(Ticket.assigned_user_id == assignee_id)
+        if assigned_team_id is not None:
+            if not is_staff_role(current_user):
+                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+            stmt = stmt.where(Ticket.assigned_team_id == assigned_team_id)
         effective_scope = parsed_scope
         dashboard_filters = (
             effective_scope is not None
@@ -378,6 +427,15 @@ async def list_tickets(
             or sla is not None
             or opened_since_days is not None
             or closed_since_days is not None
+            or status is not None
+            or priority is not None
+            or parsed_created_on is not None
+            or parsed_closed_on is not None
+            or ticket_type is not None
+            or assigned_team_id is not None
+            or parent_id is not None
+            or is_store is True
+            or security_only
         )
         if effective_scope is not None and is_staff_role(current_user):
             stmt = await apply_dashboard_scope_stmt(db, stmt, current_user, effective_scope)
@@ -419,6 +477,12 @@ async def list_tickets(
             stmt = stmt.where(Ticket.is_security_ticket.is_(True))
         if open_only:
             stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
+        if status is not None:
+            stmt = stmt.where(Ticket.status == status)
+        if priority is not None:
+            stmt = stmt.where(Ticket.priority == priority)
+        if ticket_type is not None:
+            stmt = stmt.where(Ticket.ticket_type == ticket_type)
         stmt = apply_ticket_search_filter(stmt, q)
         if stakeholder == "me":
             stmt = apply_stakeholder_ticket_filter(stmt, user_id=current_user.id)
@@ -433,6 +497,10 @@ async def list_tickets(
             tickets = filter_tickets_opened_since(tickets, days=opened_since_days)
         if closed_since_days is not None:
             tickets = filter_tickets_closed_since(tickets, days=closed_since_days)
+        if parsed_created_on is not None:
+            tickets = filter_tickets_created_on(tickets, on=parsed_created_on)
+        if parsed_closed_on is not None:
+            tickets = filter_tickets_closed_on(tickets, on=parsed_closed_on)
         return await tickets_to_read_list(db, tickets)
     except HTTPException:
         raise

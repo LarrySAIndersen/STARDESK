@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { ClickableMetric } from "@/components/dashboard/clickable-metric";
 import { StarSectionCard } from "@/components/star/section-card";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { Badge } from "@/components/ui/badge";
 import { statusLabel } from "@/lib/ticket-labels";
 import type { Ticket } from "@/types/ticket";
@@ -24,8 +26,17 @@ export function MajorTicketsBoard({
     <StarSectionCard
       variant="accent"
       title="Stor sag"
-      description={`${major.length} stor${major.length === 1 ? "" : "e"} sag${major.length === 1 ? "" : "er"} — kolonnevisning`}
+      description="Kolonnevisning — klik antal for sagliste"
     >
+      <p className="text-muted-foreground mb-4 text-sm">
+        <ClickableMetric
+          href={buildTicketsFilterHref({ scope: "all", isStore: true })}
+          inline
+          ariaLabel={`${major.length} store sager`}
+        >
+          {major.length} stor{major.length === 1 ? "" : "e"} sag{major.length === 1 ? "" : "er"}
+        </ClickableMetric>
+      </p>
       {major.length === 0 ? (
         <p className="text-muted-foreground text-sm">Ingen store sager lige nu.</p>
       ) : (
@@ -37,7 +48,23 @@ export function MajorTicketsBoard({
             return (
               <div key={column.key}>
                 <p className="text-star-navy mb-2 border-b border-star-blue/30 pb-1 text-xs font-bold uppercase tracking-wide">
-                  {column.title}
+                  {column.title}{" "}
+                  <ClickableMetric
+                    href={
+                      columnTickets.length > 0
+                        ? buildTicketsFilterHref({
+                            scope: "all",
+                            isStore: true,
+                            status: column.statuses[0],
+                          })
+                        : undefined
+                    }
+                    inline
+                    className="tabular-nums"
+                    ariaLabel={`${column.title}: ${columnTickets.length} store sager`}
+                  >
+                    ({columnTickets.length})
+                  </ClickableMetric>
                 </p>
                 <ul className="space-y-2">
                   {columnTickets.length === 0 ? (

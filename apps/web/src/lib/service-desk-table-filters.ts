@@ -26,6 +26,8 @@ export type ServiceDeskTableFilters = {
   status: string;
   priority: string;
   sla: string;
+  /** Dashboard drill-down: P1 + P2 in desk queue. */
+  priorityTier: "" | "critical_high";
 };
 
 export const DEFAULT_SERVICE_DESK_TABLE_FILTERS: ServiceDeskTableFilters = {
@@ -36,6 +38,7 @@ export const DEFAULT_SERVICE_DESK_TABLE_FILTERS: ServiceDeskTableFilters = {
   status: "",
   priority: "",
   sla: "",
+  priorityTier: "",
 };
 
 const PRIORITY_RANK: Record<string, number> = {
@@ -74,6 +77,12 @@ export function applyServiceDeskTableFilters(
       return false;
     }
     if (filters.priority && ticket.priority !== filters.priority) {
+      return false;
+    }
+    if (
+      filters.priorityTier === "critical_high" &&
+      !["critical", "high"].includes(ticket.priority)
+    ) {
       return false;
     }
     if (filters.sla === "breached" && !ticket.sla_breached) {
@@ -184,6 +193,7 @@ export function hasActiveServiceDeskTableFilters(
     Boolean(filters.category) ||
     Boolean(filters.status) ||
     Boolean(filters.priority) ||
-    Boolean(filters.sla)
+    Boolean(filters.sla) ||
+    Boolean(filters.priorityTier)
   );
 }

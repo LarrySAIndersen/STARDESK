@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { cn } from "@/lib/utils";
 import type { CountByLabel } from "@/types/dashboard";
 
 const BAR_COLORS = [
@@ -13,10 +16,12 @@ export function HorizontalBars({
   title,
   items,
   id,
+  getItemHref,
 }: {
   title: string;
   items: CountByLabel[];
   id: string;
+  getItemHref?: (item: CountByLabel) => string | undefined;
 }) {
   const max = Math.max(1, ...items.map((i) => i.count));
 
@@ -31,8 +36,9 @@ export function HorizontalBars({
         ) : (
           items.map((item, index) => {
             const widthPct = (item.count / max) * 100;
-            return (
-              <li key={item.key}>
+            const href = getItemHref?.(item);
+            const row = (
+              <>
                 <div className="mb-1 flex justify-between text-xs">
                   <span className="text-star-navy font-medium">{item.label_da}</span>
                   <span className="text-muted-foreground tabular-nums">{item.count}</span>
@@ -43,6 +49,24 @@ export function HorizontalBars({
                     style={{ width: `${widthPct}%` }}
                   />
                 </div>
+              </>
+            );
+            return (
+              <li key={item.key}>
+                {href && item.count > 0 ? (
+                  <Link
+                    href={href}
+                    className={cn(
+                      "block rounded-md transition-shadow",
+                      "hover:shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue",
+                    )}
+                    aria-label={`${item.label_da}: ${item.count} sager`}
+                  >
+                    {row}
+                  </Link>
+                ) : (
+                  row
+                )}
               </li>
             );
           })

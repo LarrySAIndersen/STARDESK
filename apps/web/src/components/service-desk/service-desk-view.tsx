@@ -264,6 +264,35 @@ export function ServiceDeskView({
     [localTickets, deskTeamIds],
   );
 
+  const queueTabCounts = useMemo(
+    () => ({
+      all: filterByServiceDeskQueue(localTickets, "all", deskTeamIds).length,
+      desk: deskCount,
+      teams: filterByServiceDeskQueue(localTickets, "teams", deskTeamIds).length,
+    }),
+    [localTickets, deskTeamIds, deskCount],
+  );
+
+  const scrollToQueue = useCallback(() => {
+    document.getElementById("service-desk-queue")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, []);
+
+  const drillDeskQueue = useCallback(
+    (patch: Partial<ServiceDeskTableFilters>) => {
+      setQueue("desk");
+      setTableFilters({
+        ...DEFAULT_SERVICE_DESK_TABLE_FILTERS,
+        ...patch,
+      });
+      setOffset(0);
+      scrollToQueue();
+    },
+    [scrollToQueue],
+  );
+
   const total = tableTickets.length;
   const rangeEnd = Math.min(offset + PAGE_SIZE, total);
 
@@ -373,6 +402,7 @@ export function ServiceDeskView({
 
   const queueSection = (
     <section
+      id="service-desk-queue"
       className={cn(
         "flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden",
         !groupsRailOpen && "flex-1",
@@ -395,9 +425,11 @@ export function ServiceDeskView({
               onClick={() => {
                 setQueue(tab.id);
                 setOffset(0);
+                scrollToQueue();
               }}
             >
-              {tab.label}
+              {tab.label}{" "}
+              <span className="tabular-nums opacity-90">({queueTabCounts[tab.id]})</span>
             </button>
           ))}
         </div>
@@ -461,7 +493,15 @@ export function ServiceDeskView({
 
       <div className="flex shrink-0 flex-col items-center justify-between gap-2 sm:flex-row">
         <p className="text-muted-foreground text-xs">
-          Viser {total === 0 ? 0 : offset + 1}–{rangeEnd} af {total}
+          Viser {total === 0 ? 0 : offset + 1}–{rangeEnd} af{" "}
+          <button
+            type="button"
+            className="text-star-navy font-semibold hover:underline"
+            onClick={scrollToQueue}
+            aria-label={`${total} sager i køen`}
+          >
+            {total}
+          </button>
         </p>
         <div className="flex flex-wrap items-center gap-1">
           <Button
@@ -570,6 +610,7 @@ export function ServiceDeskView({
             max={Math.max(deskCount, 1)}
             accent="navy"
             hint="Åbne sager uden gruppe eller på SF Service Desk"
+            onClick={() => drillDeskQueue({})}
           />
         </div>
         <div className="wire-card flex min-h-[140px] flex-col justify-center py-4">
@@ -579,6 +620,7 @@ export function ServiceDeskView({
             max={Math.max(deskCount, 1)}
             accent="red"
             hint="Sager i desk-kø med brudt SLA"
+            onClick={() => drillDeskQueue({ sla: "breached" })}
           />
         </div>
         <div className="wire-card flex min-h-[140px] flex-col justify-center py-4">
@@ -588,6 +630,7 @@ export function ServiceDeskView({
             max={Math.max(deskCount, 1)}
             accent="blue"
             hint="P1/P2 i service desk"
+            onClick={() => drillDeskQueue({ priorityTier: "critical_high" })}
           />
         </div>
       </div>
