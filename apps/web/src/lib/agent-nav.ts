@@ -117,6 +117,13 @@ export function buildAgentNavItems(options: {
             icon: Shield,
             section: "Administration",
           },
+          {
+            id: "dependency-track",
+            href: process.env.NEXT_PUBLIC_DEPENDENCYTRACK_EXTERNAL_URL || "http://localhost:8081",
+            label: "Dependency-Track",
+            icon: Shield,
+            section: "Administration",
+          },
         ]
       : []),
     {

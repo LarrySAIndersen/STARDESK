@@ -1,13 +1,11 @@
 import math
-from datetime import UTC, datetime, timedelta
-from uuid import UUID
 from collections import defaultdict
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.category import Category
-from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.analytics import (
     AnalyticsResponse,
@@ -15,7 +13,7 @@ from star_itsm_api.schemas.analytics import (
     IntakeHeatmapCell,
     RiskTicket,
 )
-from star_itsm_api.services.reports import _ticket_scope_stmt, OPEN_STATUSES
+from star_itsm_api.services.reports import OPEN_STATUSES, _ticket_scope_stmt
 
 
 async def build_analytics(db: AsyncSession, user: User) -> AnalyticsResponse:

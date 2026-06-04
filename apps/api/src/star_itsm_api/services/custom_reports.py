@@ -1,9 +1,6 @@
-import math
-from datetime import UTC, datetime, timedelta
-from uuid import UUID
 from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.ticket import Ticket
@@ -11,17 +8,16 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.custom_reports import (
     CustomReportGroupRow,
     CustomReportResponse,
-    PredefinedReportSection,
     PredefinedReportItem,
+    PredefinedReportSection,
     PredefinedReportsResponse,
 )
-from star_itsm_api.schemas.report import ReportTicketRow
 from star_itsm_api.services.reports import (
+    OPEN_STATUSES,
+    _reopened_ticket_ids,
     _ticket_scope_stmt,
     _to_report_row,
-    _reopened_ticket_ids,
     status_label_da,
-    OPEN_STATUSES,
 )
 from star_itsm_api.services.ticket_read import tickets_to_read_list
 
