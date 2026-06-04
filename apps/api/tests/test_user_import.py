@@ -38,8 +38,6 @@ def test_parse_import_is_active(raw: str | bool | None, expected: bool) -> None:
     assert parse_import_is_active(raw) is expected
 
 
-
-
 @pytest.mark.asyncio
 async def test_import_users_success(
     override_db: AsyncMock,

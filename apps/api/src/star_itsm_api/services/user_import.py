@@ -6,6 +6,7 @@ from typing import Literal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import INVALID_GROUP
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
@@ -85,8 +86,8 @@ def _split_names(raw: str | None) -> list[str]:
     return [part.strip() for part in text.split(",") if part.strip()]
 
 
-async def _team_ids_by_names(
-    db: AsyncSession,
+def _team_ids_by_names(
+    _db: AsyncSession,
     names: list[str],
     *,
     teams_by_name: dict[str, uuid.UUID],
@@ -135,7 +136,7 @@ async def import_users_admin(
     db: AsyncSession,
     *,
     payload: UserImportRequest,
-    actor_role: str,
+    _actor_role: str,
 ) -> UserImportResult:
     team_rows = await db.execute(select(Team.id, Team.name).where(Team.is_active.is_(True)))
     teams_by_name = {name.lower(): team_id for team_id, name in team_rows.all()}
@@ -183,9 +184,7 @@ async def import_users_admin(
 
         is_active = parse_import_is_active(row.is_active)
         team_names = _split_names(row.teams)
-        team_ids, unknown_teams = await _team_ids_by_names(
-            db, team_names, teams_by_name=teams_by_name
-        )
+        team_ids, unknown_teams = _team_ids_by_names(db, team_names, teams_by_name=teams_by_name)
         if unknown_teams:
             errors.append(
                 UserImportRowError(
@@ -229,7 +228,7 @@ async def import_users_admin(
                 )
             except ValueError:
                 errors.append(
-                    UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                    UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                 )
                 continue
             updated += 1
@@ -271,7 +270,7 @@ async def import_users_admin(
                         )
                     except ValueError:
                         errors.append(
-                            UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                            UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                         )
                         continue
                     updated += 1
@@ -279,7 +278,7 @@ async def import_users_admin(
                     skipped += 1
             elif code == "invalid_team":
                 errors.append(
-                    UserImportRowError(row=index, email=email, message="Ugyldig gruppe"),
+                    UserImportRowError(row=index, email=email, message=INVALID_GROUP),
                 )
             else:
                 errors.append(

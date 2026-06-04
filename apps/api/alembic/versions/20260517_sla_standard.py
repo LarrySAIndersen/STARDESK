@@ -57,4 +57,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # SLA seed data migration — downgrade not supported.
     pass

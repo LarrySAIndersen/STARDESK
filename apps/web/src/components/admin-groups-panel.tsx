@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useId, useState, type ReactNode, type RefObject } from "react";
 
 import { GroupsTeamSections } from "@/components/groups-team-sections";
@@ -96,7 +98,7 @@ function GroupMembersDialog({
             type="button"
             className="bg-star-blue hover:bg-star-navy"
             disabled={saving}
-            onClick={() => void onSave()}
+            onClick={() => fireAndForget(onSave())}
           >
             {saving ? "Gemmer…" : "Gem medlemmer"}
           </Button>
@@ -163,7 +165,7 @@ export function AdminGroupsPanel({
   }, []);
 
   useEffect(() => {
-    void reloadTeams();
+    fireAndForget(reloadTeams());
   }, [reloadTeams]);
 
   useEffect(() => {
@@ -202,7 +204,7 @@ export function AdminGroupsPanel({
           team={editingTeam}
           allUsers={allUsers}
           onClose={() => setEditingTeam(null)}
-          onSaved={() => void reloadTeams()}
+          onSaved={() => fireAndForget(reloadTeams())}
         />
       ) : null}
     </>

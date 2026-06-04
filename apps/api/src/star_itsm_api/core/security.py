@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS, USER_NOT_FOUND
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.services.user_roles import (
@@ -127,12 +128,12 @@ async def get_current_user_session(
 
     user = await db.get(User, UUID(str(user_id)))
     if user is None or not user.is_active or user.deleted_at is not None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=USER_NOT_FOUND)
     await ensure_user_roles_loaded(db, user)
     return user
 
 
-async def get_current_user(
+def get_current_user(
     request: Request,
     user: User = Depends(get_current_user_session),
 ) -> User:
@@ -146,11 +147,11 @@ async def get_current_user(
 def require_roles(*roles: str):
     allowed = frozenset(roles)
 
-    async def _checker(user: User = Depends(get_current_user)) -> User:
+    def _checker(user: User = Depends(get_current_user)) -> User:
         if not (user_role_set(user) & allowed):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions",
+                detail=INSUFFICIENT_PERMISSIONS,
             )
         return user
 
@@ -187,11 +188,11 @@ def require_admin_session():
     completing their own first-time password change.
     """
 
-    async def _checker(user: User = Depends(get_current_user_session)) -> User:
+    def _checker(user: User = Depends(get_current_user_session)) -> User:
         if not user_has_any_role(user, ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Insufficient permissions",
+                detail=INSUFFICIENT_PERMISSIONS,
             )
         return user
 

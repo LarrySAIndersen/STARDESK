@@ -78,13 +78,10 @@ def attachment_pathname(*, ticket_id: str, attachment_id: str, filename: str) ->
 
 
 def write_temp_upload(content: bytes, *, suffix: str) -> Path:
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=f"_{suffix}")
-    try:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{suffix}") as tmp:
         tmp.write(content)
         tmp.flush()
-    finally:
-        tmp.close()
-    return Path(tmp.name)
+        return Path(tmp.name)
 
 
 def _blob_upload_access() -> str:

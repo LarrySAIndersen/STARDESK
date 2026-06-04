@@ -3,6 +3,10 @@
 import { useId, useState } from "react";
 import { X } from "lucide-react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import {
   type ClassicNotificationPreferences,
@@ -58,14 +62,17 @@ export function ClassicNotificationModal({
   }
 
   return (
-    <div className="classic-modal-backdrop" onClick={handleCancel}>
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
+    <AccessibleModalBackdrop
+      unstyled
+      onClose={handleCancel}
+      className="classic-modal-backdrop"
+      dismissClassName="classic-modal-backdrop__dismiss"
+    >
+      <AccessibleModalPanel
+        trapRef={panelRef}
+        titleId={titleId}
+        onClose={handleCancel}
         className="classic-modal"
-        onClick={(event) => event.stopPropagation()}
       >
         <header className="classic-modal__header">
           <h2 id={titleId} className="classic-modal__title">
@@ -117,7 +124,7 @@ export function ClassicNotificationModal({
             Annullér
           </button>
         </footer>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }

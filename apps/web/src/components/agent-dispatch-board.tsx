@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ import {
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { SecurityTicketFilter } from "@/components/security-ticket-filter";
 import { useListFilters } from "@/hooks/use-list-filters";
-import { TEAM_RAIL_TICKET_PREVIEW } from "@/components/dispatch/dispatch-teams-rail";
+import { DispatchTeamsRail } from "@/components/dispatch/dispatch-teams-rail";
 import { ResizableSplit } from "@/components/ui/resizable-split";
 import { TicketSearchInput } from "@/components/ticket-search-input";
 import { SlaCountdown } from "@/components/sla-countdown";
@@ -30,8 +30,8 @@ import {
   serviceDeskTeamIds,
   teamsForServiceDeskRail,
   ticketsForServiceDeskTable,
-  ticketsForServiceDeskTeamRail,
 } from "@/lib/service-desk-queue";
+import { buildOpenAssignedTicketsByTeamMap } from "@/lib/team-group-view";
 import {
   mergeTicketAssignmentInList,
   reconcileLocalTicketsWithServer,
@@ -96,6 +96,7 @@ export function AgentDispatchBoard({
   const router = useRouter();
   const [pending, setPending] = useState<PendingDrop | null>(null);
   const [dragOverTeamId, setDragOverTeamId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [localTickets, setLocalTickets] = useState(tickets);
@@ -155,28 +156,24 @@ export function AgentDispatchBoard({
     [openTickets, deskTeamIds],
   );
 
-  const railTickets = useMemo(
-    () => ticketsForServiceDeskTeamRail(openTickets, deskTeamIds),
-    [openTickets, deskTeamIds],
+  const ticketsByTeam = useMemo(
+    () => buildOpenAssignedTicketsByTeamMap(openTickets),
+    [openTickets],
   );
 
-  const ticketsByTeam = useMemo(() => {
-    const map = new Map<string, Ticket[]>();
-    for (const ticket of railTickets) {
-      if (ticket.assigned_team_id) {
-        const list = map.get(ticket.assigned_team_id) ?? [];
-        list.push(ticket);
-        map.set(ticket.assigned_team_id, list);
-      }
-    }
-    for (const [teamId, list] of map) {
-      list.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      map.set(teamId, list);
-    }
-    return map;
-  }, [railTickets]);
+  const handleSelectTeam = useCallback((teamId: string | null) => {
+    setSelectedTeamId(teamId);
+  }, []);
+
+  const handleDragOverTeam = useCallback((teamId: string, event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverTeamId(teamId);
+  }, []);
+
+  const handleDragLeaveTeam = useCallback(() => {
+    setDragOverTeamId(null);
+  }, []);
 
   function handleDragStart(ticketId: string) {
     return (event: React.DragEvent) => {
@@ -238,6 +235,7 @@ export function AgentDispatchBoard({
         mergeTicketAssignmentInList(prev, pending.ticketId, detail),
       );
       setPending(null);
+      setSelectedTeamId(data.teamId);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
@@ -405,83 +403,18 @@ export function AgentDispatchBoard({
           </div>
         </section>
 
-        <aside className="space-y-3" aria-labelledby="dispatch-groups-heading">
-          <div className="star-section-header rounded-t-md">
-            <h2 id="dispatch-groups-heading" className="star-section-title">
-              Grupper
-            </h2>
-            <p className="star-section-desc">Slip en sag her for at tildele</p>
-          </div>
-          {railTeams.map((team) => {
-            const allTeamTickets = ticketsByTeam.get(team.id) ?? [];
-            const totalCount = allTeamTickets.length;
-            const teamTickets = allTeamTickets.slice(0, TEAM_RAIL_TICKET_PREVIEW);
-            const isOver = dragOverTeamId === team.id;
-            return (
-              <div
-                key={team.id}
-                role="group"
-                aria-label={`${team.name}, slip sag her`}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                  setDragOverTeamId(team.id);
-                }}
-                onDragLeave={() => setDragOverTeamId(null)}
-                onDrop={handleDrop(team)}
-                className={`rounded-md border-2 border-dashed p-4 transition-colors ${
-                  isOver
-                    ? "border-star-blue bg-star-blue-light"
-                    : "border-star-blue/30 bg-white"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-star-navy font-semibold">{team.name}</p>
-                    {team.name === "SF" ? (
-                      <p className="text-star-navy text-xs font-medium uppercase">
-                        Hovedgruppe
-                      </p>
-                    ) : null}
-                  </div>
-                  <Badge variant="outline">
-                    {totalCount} sag{totalCount === 1 ? "" : "er"}
-                  </Badge>
-                </div>
-                <p className="text-muted-foreground mt-2 text-xs">
-                  {team.members.length} medlemmer
-                </p>
-                {totalCount > 0 ? (
-                  <>
-                    <ul className="mt-3 space-y-1.5 border-t border-star-blue/15 pt-3">
-                      {teamTickets.map((ticket) => (
-                        <li key={ticket.id}>
-                          <Link
-                            href={`/tickets/${ticket.id}`}
-                            className="text-star-blue hover:text-star-navy block text-xs leading-snug font-medium hover:underline"
-                            draggable={false}
-                          >
-                            <span className="font-mono">{ticket.ticket_number}</span>
-                            <span className="text-foreground ml-1 font-normal">
-                              {ticket.title}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                    {totalCount > TEAM_RAIL_TICKET_PREVIEW ? (
-                      <p className="text-muted-foreground mt-2 text-[11px]">
-                        Viser {TEAM_RAIL_TICKET_PREVIEW} nyeste af {totalCount}
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="text-muted-foreground mt-2 text-xs">Ingen tildelte sager</p>
-                )}
-              </div>
-            );
-          })}
-        </aside>
+        <DispatchTeamsRail
+          teams={railTeams}
+          ticketsByTeam={ticketsByTeam}
+          dragOverTeamId={dragOverTeamId}
+          onDragOverTeam={handleDragOverTeam}
+          onDragLeaveTeam={handleDragLeaveTeam}
+          onDropTeam={handleDrop}
+          selectedTeamId={selectedTeamId}
+          onSelectTeam={handleSelectTeam}
+          title="Grupper"
+          description="Klik en gruppe for alle sager — træk hertil for at tildele"
+        />
       </ResizableSplit>
 
       {error ? (

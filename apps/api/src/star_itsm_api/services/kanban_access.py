@@ -74,9 +74,7 @@ def user_can_delete_board(role: str | None, user: User, board: KanbanBoard) -> b
     if role == KANBAN_ROLE_OWNER:
         return True
     user_id = getattr(user, "id", None)
-    if user_id is not None and user_created_board(board, user_id):
-        return True
-    return False
+    return bool(user_id is not None and user_created_board(board, user_id))
 
 
 def user_can_delete_tickets(user: User) -> bool:

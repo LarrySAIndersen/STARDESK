@@ -1,6 +1,9 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { staffLandingPath } from "@/lib/classic-ui-mode";
@@ -24,11 +27,12 @@ type HelpdeskView =
   | "status";
 
 const PHOTO_INTERVAL_MS = 20_000;
+const LEGACY_HELPDESK_THEME_KEY = "star-helpdesk-theme";
 
 export function HelpdeskLoginPage() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme, setTheme } = useTheme();
   const [activeView, setActiveView] = useState<HelpdeskView>("landing");
-  const [dark, setDark] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,12 +43,13 @@ export function HelpdeskLoginPage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("star-helpdesk-theme");
-      if (saved === "dark") setDark(true);
+      const legacy = localStorage.getItem(LEGACY_HELPDESK_THEME_KEY);
+      if (legacy === "dark") setTheme("dark");
+      if (legacy) localStorage.removeItem(LEGACY_HELPDESK_THEME_KEY);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [setTheme]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -55,6 +60,26 @@ export function HelpdeskLoginPage() {
       panel.classList.toggle("active", id === activeView);
     });
   }, [activeView]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    if (activeView === "starbot") {
+      const chatWindow = root.querySelector("#view-starbot .chat-window");
+      if (chatWindow) {
+        const librechatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL || "http://localhost:3080";
+        chatWindow.innerHTML = `
+          <iframe
+            src="${librechatUrl}/?embed=true"
+            style="width: 100%; height: 550px; border: none; border-radius: 12px; background: white; box-shadow: var(--shadow-sm);"
+            title="STAR-bot"
+          ></iframe>
+        `;
+      }
+    }
+  }, [activeView]);
+
 
   useEffect(() => {
     const root = rootRef.current;
@@ -78,21 +103,13 @@ export function HelpdeskLoginPage() {
       const action = actionTrigger.getAttribute("data-hd-action");
       if (action === "toggle-theme") {
         event.preventDefault();
-        setDark((value) => {
-          const next = !value;
-          try {
-            localStorage.setItem("star-helpdesk-theme", next ? "dark" : "light");
-          } catch {
-            /* ignore */
-          }
-          return next;
-        });
+        setTheme(resolvedTheme === "dark" ? "light" : "dark");
       }
     }
 
     root.addEventListener("click", onClick);
     return () => root.removeEventListener("click", onClick);
-  }, [showView]);
+  }, [resolvedTheme, setTheme, showView]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -109,7 +126,7 @@ export function HelpdeskLoginPage() {
     function restartProgress() {
       if (!progressBar) return;
       progressBar.classList.remove("run");
-      void progressBar.offsetWidth;
+      progressBar.getBoundingClientRect();
       progressBar.classList.add("run");
     }
 
@@ -233,7 +250,7 @@ export function HelpdeskLoginPage() {
           setLoginError("Indtast bruger og adgangskode");
           return;
         }
-        void performLogin(email, password);
+        fireAndForget(performLogin(email, password));
       }
 
       credentialSubmit?.addEventListener("click", onSubmit);
@@ -279,7 +296,7 @@ export function HelpdeskLoginPage() {
   }, [activeView, loginError]);
 
   return (
-    <div className={`hd-login min-h-dvh ${dark ? "dark" : ""}`} ref={rootRef}>
+    <div className="hd-login min-h-dvh" ref={rootRef}>
       <div
         dangerouslySetInnerHTML={{ __html: HELPDESK_LOGIN_HTML }}
         suppressHydrationWarning

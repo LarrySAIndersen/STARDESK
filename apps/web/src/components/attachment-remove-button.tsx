@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -55,7 +57,7 @@ export function AttachmentRemoveButton({
         variant={variant}
         size={size}
         disabled={busy}
-        onClick={() => void handleRemove()}
+        onClick={() => fireAndForget(handleRemove())}
         aria-label={`Fjern ${filename}`}
         title="Fjern vedhæftning"
       >

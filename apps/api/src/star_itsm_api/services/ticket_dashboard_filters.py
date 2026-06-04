@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import Select
 
@@ -34,9 +34,10 @@ def filter_tickets_by_sla(
         if sla == "overdue":
             if sla_breached(resolution_due, now=reference, status=ticket.status):
                 filtered.append(ticket)
-        elif sla == "due_soon":
-            if sla_due_soon(resolution_due, now=reference, status=ticket.status):
-                filtered.append(ticket)
+        elif sla == "due_soon" and sla_due_soon(
+            resolution_due, now=reference, status=ticket.status
+        ):
+            filtered.append(ticket)
     return filtered
 
 
@@ -65,5 +66,32 @@ def filter_tickets_closed_since(
             continue
         closed_at = ticket.closed_at or ticket.resolved_at or ticket.updated_at
         if closed_at and closed_at >= since:
+            filtered.append(ticket)
+    return filtered
+
+
+def _closed_at_on_day(ticket: Ticket) -> datetime | None:
+    if ticket.status not in CLOSED_STATUSES:
+        return None
+    return ticket.closed_at or ticket.resolved_at or ticket.updated_at
+
+
+def filter_tickets_created_on(
+    tickets: list[Ticket],
+    *,
+    on: date,
+) -> list[Ticket]:
+    return [ticket for ticket in tickets if ticket.created_at.date() == on]
+
+
+def filter_tickets_closed_on(
+    tickets: list[Ticket],
+    *,
+    on: date,
+) -> list[Ticket]:
+    filtered: list[Ticket] = []
+    for ticket in tickets:
+        closed_at = _closed_at_on_day(ticket)
+        if closed_at and closed_at.date() == on:
             filtered.append(ticket)
     return filtered

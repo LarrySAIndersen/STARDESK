@@ -1,3 +1,7 @@
+import Link from "next/link";
+
+import { cn } from "@/lib/utils";
+
 type GaugeProps = Readonly<{
   label: string;
   value: number;
@@ -5,6 +9,8 @@ type GaugeProps = Readonly<{
   unit?: string;
   hint?: string;
   accent?: "blue" | "navy" | "red" | "green";
+  href?: string;
+  onClick?: () => void;
 }>;
 
 const ACCENT: Record<NonNullable<GaugeProps["accent"]>, string> = {
@@ -17,30 +23,27 @@ const ACCENT: Record<NonNullable<GaugeProps["accent"]>, string> = {
 /** Semicircle track: left (28,92) → top → right (172,92), center ~(100,92), r=72 */
 const ARC_D = "M 28 92 A 72 72 0 0 1 172 92";
 
-export function Gauge({
+function GaugeContent({
   label,
   value,
   max,
   unit = "",
   hint,
   accent = "blue",
-}: GaugeProps) {
+}: Omit<GaugeProps, "href" | "onClick">) {
   const safeMax = Math.max(max, 1);
   const pct = Math.min(Math.max(value / safeMax, 0), 1);
   const stroke = ACCENT[accent];
   const display = `${Math.round(value)}${unit}`;
 
   return (
-    <figure
-      className="flex h-full w-full min-w-0 flex-col items-center justify-between gap-2"
-      aria-label={`${label}: ${display}`}
-    >
+    <>
       <div className="relative mx-auto w-full max-w-[200px]" aria-hidden="true">
         <svg viewBox="0 0 200 110" className="block w-full" role="img" aria-hidden="true">
           <path
             d={ARC_D}
             fill="none"
-            stroke="#e2e8f0"
+            stroke="var(--gray-border)"
             strokeWidth="12"
             strokeLinecap="round"
           />
@@ -64,7 +67,7 @@ export function Gauge({
         </div>
       </div>
       <div className="flex w-full flex-col items-center gap-0.5 text-center">
-        <figcaption className="text-star-navy text-sm font-semibold leading-snug">
+        <figcaption className="text-foreground text-sm font-semibold leading-snug">
           {label}
         </figcaption>
         {hint ? (
@@ -73,6 +76,75 @@ export function Gauge({
           </p>
         ) : null}
       </div>
+    </>
+  );
+}
+
+export function Gauge({
+  label,
+  value,
+  max,
+  unit = "",
+  hint,
+  accent = "blue",
+  href,
+  onClick,
+}: GaugeProps) {
+  const safeMax = Math.max(max, 1);
+  const display = `${Math.round(value)}${unit ?? ""}`;
+  const interactive = Boolean(href || onClick);
+  const interactiveClass = interactive
+    ? "cursor-pointer rounded-lg transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue"
+    : undefined;
+
+  const inner = (
+    <GaugeContent
+      label={label}
+      value={value}
+      max={safeMax}
+      unit={unit}
+      hint={hint}
+      accent={accent}
+    />
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          "flex h-full w-full min-w-0 flex-col items-center justify-between gap-2",
+          interactiveClass,
+        )}
+        aria-label={`${label}: ${display} — vis sager`}
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex h-full w-full min-w-0 flex-col items-center justify-between gap-2 border-0 bg-transparent p-0",
+          interactiveClass,
+        )}
+        aria-label={`${label}: ${display} — filtrer kø`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <figure
+      className="flex h-full w-full min-w-0 flex-col items-center justify-between gap-2"
+      aria-label={`${label}: ${display}`}
+    >
+      {inner}
     </figure>
   );
 }

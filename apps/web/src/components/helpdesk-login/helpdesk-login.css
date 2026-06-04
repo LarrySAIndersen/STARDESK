@@ -23,7 +23,7 @@
         --radius-lg: 20px;
     }
 
-    .hd-login.dark {
+    .dark .hd-login {
         --star-blue: #5b8dff;
         --star-blue-dark: #4a76d6;
         --star-red: #ff5470;
@@ -223,7 +223,7 @@
         flex-shrink: 0;
         box-shadow: 0 0 0 3px rgba(0, 199, 177, 0.18);
     }
-    .hd-login.dark .status-pill .pill-dot {
+    .dark .hd-login .status-pill .pill-dot {
         background: var(--star-turkis);
         box-shadow: 0 0 0 3px rgba(46, 224, 200, 0.22);
     }
@@ -251,8 +251,8 @@
     .theme-toggle svg { display: block; }
     .theme-toggle .sun { display: none; }
     .theme-toggle .moon { display: block; }
-    .hd-login.dark .theme-toggle .sun { display: block; }
-    .hd-login.dark .theme-toggle .moon { display: none; }
+    .dark .hd-login .theme-toggle .sun { display: block; }
+    .dark .hd-login .theme-toggle .moon { display: none; }
 
     /* ===== Modern Hero ===== */
     .hero-modern {
@@ -298,9 +298,9 @@
         opacity: 0.1;
         animation: float-3 18s ease-in-out infinite;
     }
-    .hd-login.dark .mesh-blob { opacity: 0.25; }
-    .hd-login.dark .mesh-blob-1 { opacity: 0.2; }
-    .hd-login.dark .mesh-blob-3 { opacity: 0.15; }
+    .dark .hd-login .mesh-blob { opacity: 0.25; }
+    .dark .hd-login .mesh-blob-1 { opacity: 0.2; }
+    .dark .hd-login .mesh-blob-3 { opacity: 0.15; }
 
     @keyframes float-1 {
         0%, 100% { transform: translate(0, 0) scale(1); }
@@ -361,7 +361,7 @@
                 rgba(255, 255, 255, 0) 85%);
         pointer-events: none;
     }
-    .hd-login.dark .photo-fade {
+    .dark .hd-login .photo-fade {
         background:
             linear-gradient(90deg,
                 rgba(11, 18, 38, 0.97) 0%,
@@ -400,7 +400,7 @@
         border-radius: 50%;
         box-shadow: 0 0 0 3px rgba(0, 199, 177, 0.2);
     }
-    .hd-login.dark .eyebrow-dot { background: var(--star-turkis); }
+    .dark .hd-login .eyebrow-dot { background: var(--star-turkis); }
 
     .display {
         font-family: 'Source Serif 4', Georgia, serif;
@@ -419,7 +419,7 @@
         font-style: italic;
         font-weight: 600;
     }
-    .hd-login.dark .accent-modern {
+    .dark .hd-login .accent-modern {
         background: linear-gradient(135deg, var(--star-blue) 0%, var(--star-turkis) 100%);
         -webkit-background-clip: text;
         background-clip: text;
@@ -442,14 +442,14 @@
         background: rgba(0, 0, 0, 0.1);
         z-index: 3;
     }
-    .hd-login.dark .photo-progress { background: rgba(255, 255, 255, 0.1); }
+    .dark .hd-login .photo-progress { background: rgba(255, 255, 255, 0.1); }
     .photo-progress-bar {
         height: 100%;
         width: 0;
         background: var(--star-turkis-on-light);
         box-shadow: 0 0 8px rgba(0, 199, 177, 0.6);
     }
-    .hd-login.dark .photo-progress-bar { background: var(--star-turkis); }
+    .dark .hd-login .photo-progress-bar { background: var(--star-turkis); }
     .photo-progress-bar.run {
         width: 100%;
         transition: width 20s linear;
@@ -499,7 +499,7 @@
                 rgba(255, 255, 255, 0.55) 70%,
                 rgba(255, 255, 255, 0.3) 100%);
         }
-        .hd-login.dark .photo-fade {
+        .dark .hd-login .photo-fade {
             background: linear-gradient(180deg,
                 rgba(11, 18, 38, 0.94) 0%,
                 rgba(11, 18, 38, 0.88) 40%,
@@ -835,7 +835,7 @@
     .entry-row[data-type="star-city"] { --row-accent: var(--star-turkis-on-light); }
     .entry-row[data-type="star"] { --row-accent: var(--star-blue); }
     .entry-row[data-type="lokal"] { --row-accent: var(--star-red); }
-    .hd-login.dark .entry-row[data-type="star-city"] { --row-accent: var(--star-turkis); }
+    .dark .hd-login .entry-row[data-type="star-city"] { --row-accent: var(--star-turkis); }
 
     .entry-row-icon {
         width: 40px;
@@ -1143,7 +1143,7 @@
     .help-shortcut[data-accent="red"] { --shortcut-accent: var(--star-red); }
     .help-shortcut[data-accent="blue"] { --shortcut-accent: var(--star-blue); }
     .help-shortcut[data-accent="turkis"] { --shortcut-accent: var(--star-turkis-on-light); }
-    .hd-login.dark .help-shortcut[data-accent="turkis"] { --shortcut-accent: var(--star-turkis); }
+    .dark .hd-login .help-shortcut[data-accent="turkis"] { --shortcut-accent: var(--star-turkis); }
 
     .help-shortcut-text { flex: 1; min-width: 0; }
     .help-shortcut-text strong {

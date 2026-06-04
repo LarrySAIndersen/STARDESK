@@ -30,6 +30,32 @@ $LastTickFile = Join-Path $ReportsDir "sonar-loop-last-tick.json"
 $SonarReportFile = Join-Path $ReportsDir "sonar-agent-latest.json"
 $SonarEnvFile = Join-Path $RepoRoot "scripts/sonar-agent/.env"
 $SonarLoopBranch = "cursor/sonar-remediation-loop"
+$StagingBatchMinCommits = 10
+
+function Test-StagingBatchReady {
+    param([int]$PrNumber)
+    Push-Location $RepoRoot
+    try {
+        $raw = & gh pr view $PrNumber --json commits,labels,isDraft 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) { return @{ ready = $false; reason = "gh pr view failed" } }
+        $pr = $raw | ConvertFrom-Json
+        if ($pr.isDraft) {
+            return @{ ready = $false; reason = "draft"; commits = @($pr.commits).Count }
+        }
+        $commitCount = @($pr.commits).Count
+        $labels = @($pr.labels | ForEach-Object { $_.name })
+        $exempt = ($labels -contains "batch-ready") -or ($labels -contains "hotfix")
+        if ($exempt -or $commitCount -ge $StagingBatchMinCommits) {
+            return @{ ready = $true; commits = $commitCount; exempt = $exempt }
+        }
+        return @{
+            ready   = $false
+            reason  = "batch_incomplete"
+            commits = $commitCount
+            needed  = $StagingBatchMinCommits
+        }
+    } finally { Pop-Location }
+}
 
 function Write-WatchdogLog {
     param([string]$Message, [string]$Level = "INFO")
@@ -231,19 +257,24 @@ function Invoke-WatchdogTick {
                 $prs = @($json | ConvertFrom-Json)
                 if ($prs.Count -gt 0) {
                     foreach ($pr in $prs) {
-                        if ($pr.isDraft) {
-                            $results["sonar_loop_pr"] = @{ status = "draft"; number = $pr.number }
+                        $batch = Test-StagingBatchReady -PrNumber $pr.number
+                        if (-not $batch.ready) {
+                            $detail = if ($batch.reason -eq "batch_incomplete") {
+                                "batch $($batch.commits)/$($batch.needed) commits"
+                            } else { $batch.reason }
+                            $results["sonar_loop_pr"] = @{ status = "batch_waiting"; number = $pr.number; detail = $detail }
                             continue
                         }
                         $green = Test-PrChecksGreen -PrNumber $pr.number
                         $results["sonar_loop_pr"] = @{
                             status = if ($green) { "ready_to_merge" } else { "ci_pending" }; number = $pr.number
+                            commits = $batch.commits
                         }
                         if ($green) {
                             $results["sonar_loop_pr"].repair = Invoke-RepairAction -Name "merge_sonar_loop_pr" -Action {
                                 $mergeOut = & gh pr merge $pr.number --squash --delete-branch=false 2>&1 | Out-String
                                 if ($LASTEXITCODE -ne 0) { throw $mergeOut.Trim() }
-                                return "merged PR #$($pr.number) to staging"
+                                return "merged PR #$($pr.number) to staging ($($batch.commits) commits)"
                             }
                         }
                     }
@@ -254,7 +285,7 @@ function Invoke-WatchdogTick {
         } finally { Pop-Location }
     }
 
-    # (c) Open PR staging->main with green CI
+    # (c) Open PR staging->main — Jan merges prod; watchdog only reports status
     $results["flow2_pr"] = @{ status = "skipped"; detail = "gh not available" }
     if (Test-GhAvailable) {
         Push-Location $RepoRoot
@@ -262,26 +293,19 @@ function Invoke-WatchdogTick {
             $prList = & gh pr list --base main --state open --json number,title,headRefName,isDraft 2>&1 | Out-String
             if ($LASTEXITCODE -eq 0) {
                 $prs = @($prList | ConvertFrom-Json)
-                $flow2 = @($prs | Where-Object { $_.headRefName -eq "staging" -or $_.headRefName -like "cursor/sonar*" })
+                $flow2 = @($prs | Where-Object { $_.headRefName -eq "staging" })
                 if ($flow2.Count -eq 0) {
                     $results["flow2_pr"] = @{ status = "ok"; detail = "no open staging->main PR" }
                 } else {
                     foreach ($pr in $flow2) {
-                        if ($pr.isDraft) {
-                            $results["flow2_pr"] = @{ status = "draft"; number = $pr.number; title = $pr.title }
-                            continue
-                        }
                         $green = Test-PrChecksGreen -PrNumber $pr.number
                         $results["flow2_pr"] = @{
-                            status = if ($green) { "ready_to_merge" } else { "ci_pending" }
+                            status = if ($green) { "ready_for_jan" } else { "ci_pending" }
                             number = $pr.number; title = $pr.title
+                            detail = "prod merge is manual — Jan only"
                         }
                         if ($green) {
-                            $results["flow2_pr"].repair = Invoke-RepairAction -Name "merge_flow2_pr" -Action {
-                                $mergeOut = & gh pr merge $pr.number --squash --delete-branch=false 2>&1 | Out-String
-                                if ($LASTEXITCODE -ne 0) { throw $mergeOut.Trim() }
-                                return "merged PR #$($pr.number): $($pr.title)"
-                            }
+                            Write-WatchdogLog "Flow-2 PR #$($pr.number) CI green — awaiting Jan merge to main" "INFO"
                         }
                     }
                 }

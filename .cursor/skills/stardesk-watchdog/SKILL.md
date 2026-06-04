@@ -26,7 +26,7 @@ Background VM watchdog for the **Sonar remediation loop** and release path. Runs
 1. **Sonar scheduler** — PID `reports/sonar-loop-scheduler.pid`, log `reports/sonar-loop-scheduler.log`
 2. **Tick freshness** — `reports/sonar-loop-last-tick.json` (warn > 2× scheduler interval)
 3. **Staging sync** — `origin/staging` vs `origin/main` drift
-4. **PR merge backlog** — `cursor/sonar-remediation-loop` → `staging`, Flow-2 `staging` → `main`
+4. **PR merge backlog** — `cursor/sonar-remediation-loop` → `staging` (≥ 10 commits only)
 5. **Scan age** — `reports/sonar-agent-latest.json` (warn > 2 h when Sonar `.env` present)
 
 ## How to run
@@ -47,8 +47,8 @@ Full reference: `docs/stardesk-watchdog.md`
 | Scheduler down | Restart `run-sonar-loop-scheduler.ps1` |
 | Tick stale (>2× interval) | Run `run-sonar-loop-tick.ps1` |
 | Staging behind main | Log + escalate (Jan / manual PR) |
-| Sonar loop PR CI green | `gh pr merge` to staging |
-| Flow-2 PR CI green | `gh pr merge` staging→main |
+| Sonar loop PR CI green + ≥ 10 commits | `gh pr merge` to staging |
+| Flow-2 PR CI green | Log — **Jan merges** staging→main |
 | Scan stale (>2 h) | `npm run sonar:pipeline` |
 
 ## Escalate (log only)
@@ -75,7 +75,7 @@ Watchdog = **health layer**; loop = **work layer**.
 
 When watchdog detects stall: restart scheduler → trigger tick → if still stuck, agent reads `sonar-remediation-loop.md` and runs one full tick.
 
-**Sonar loop autonomous override** (narrow): auto-merge on `cursor/sonar-remediation-loop` and Flow-2 when CI green — only for that loop per `docs/pr-only-period.md`.
+**Sonar loop:** auto-merge to **staging only** when batch has **≥ 10 commits** (`docs/staging-batch-policy.md`). Never auto-merge to `main`.
 
 Stop Sonar scheduler separately:
 
@@ -93,4 +93,4 @@ powershell -File scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 
 - Never log secrets
 - No force-push
-- Sonar loop exception only for narrow auto-merge scope (see `docs/pr-only-period.md`)
+- Staging batch policy: `docs/staging-batch-policy.md` — no auto-merge to `main`

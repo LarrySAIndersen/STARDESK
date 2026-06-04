@@ -22,7 +22,7 @@ $WebDir = Join-Path $RepoRoot "apps\web"
 Write-Host "==> Installing dependencies"
 Push-Location $WebDir
 try {
-    & npm ci
+    & npm ci --ignore-scripts
     if ($LASTEXITCODE -ne 0) { throw "npm ci failed in apps/web" }
 }
 finally {
@@ -59,7 +59,7 @@ Write-Host "==> API unit tests"
 Import-StardeskDotEnv -Path $apiEnv
 Push-Location $ApiDir
 try {
-    & uv run pytest -q --tb=no
+    & (Get-StardeskApiVenvPytest -ApiDir $ApiDir) -q --tb=no
     if ($LASTEXITCODE -ne 0) { throw "pytest failed" }
 }
 finally {
@@ -72,4 +72,12 @@ Write-Host "  Start servers: pwsh -File scripts/dev-up.ps1"
 Write-Host "  Gate:          pwsh -File scripts/run-deliverable-gate.ps1"
 Write-Host "  Web:  http://localhost:3000"
 Write-Host "  API:  http://localhost:8000/health"
-Write-Host "  Demo: sf01@example.dk / Stardesk2026!"
+if (-not $SkipDb) {
+    Write-Host "  Prototype users (from database):"
+    Push-Location $ApiDir
+    try {
+        & (Get-StardeskApiVenvPython -ApiDir $ApiDir) (Join-Path $RepoRoot "scripts/list_prototype_users.py")
+    } finally {
+        Pop-Location
+    }
+}

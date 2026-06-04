@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.db import get_db
 
 
-async def require_db(
+def require_db(
     db: AsyncSession | None = Depends(get_db),
 ) -> AsyncSession:
     if db is None:

@@ -56,4 +56,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Irreversible prototype password reset — intentionally empty.
     pass

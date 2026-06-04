@@ -1,6 +1,6 @@
 -- 9 indmelder-organisationer, 27 agenter (3 per gruppe; SF Koncern fjernet)
 -- Password for all: Stardesk2026!
--- Run docs/org-migration.sql first, then this file in Neon
+-- Run apps/api/src/star_itsm_api/sql/migrations/02_org-migration.sql first, then this file in Neon
 
 INSERT INTO organizations (id, name, description, is_active) VALUES ('e1000001-0000-4000-8000-000000000001', 'Es Trifft', 'Indmelder-organisation', TRUE) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, is_active = TRUE;
 INSERT INTO teams (name, description, is_active, organization_id) VALUES ('Es Trifft', 'Gruppe for Es Trifft', TRUE, (SELECT id FROM organizations WHERE name = 'Es Trifft')) ON CONFLICT (name) DO UPDATE SET organization_id = EXCLUDED.organization_id, is_active = TRUE;

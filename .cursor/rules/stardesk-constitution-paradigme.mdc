@@ -1,0 +1,46 @@
+---
+description: STARDESK udviklingsparadigme — debate-first workflow, tre søjler, constitution-agenter
+alwaysApply: true
+---
+
+# STARDESK udviklingsparadigme
+
+Read `workboard/constitution/STARDESK-udviklingsparadigme.md` first, then `workboard/constitution/README.md`. Full 50-punkts planer live under `workboard/constitution/` — **not** Work Board canvas.
+
+## Debate-first (obligatorisk)
+
+Before writing code for constitution work (sikkerhed, performance, kodepraksis):
+
+1. Read the full document for the chosen pillar
+2. Per item: debate relevance, attack vector / bottleneck, tradeoffs
+3. Recommend: implement / benchmark / defer / reject — with rationale
+4. Present plan as a **table before code**
+5. Implement only after user approval
+6. Deliver via PR to `staging` + deliverable gate (see `.cursor/rules/deliverable-gate.mdc`)
+
+**Principle:** Measure and understand before fixing. Security ≠ enable everything. Performance ≠ guesswork.
+
+## Tre søjler
+
+| Pillar | Constitution | Priority |
+|--------|--------------|----------|
+| Sikkerhed | `STARDESK-sikkerhed-50.md` | KRITISK 1–10 first |
+| Performance | `STARDESK-performance-50.md` | KRITISK 1–10 first; benchmark before DB changes |
+| Kodepraksis | `STARDESK-kodepraksis-50.md` + `-plan.md` | Scorecard 7/10; one item at a time |
+
+## Agent commands
+
+```bash
+cd scripts
+npm run kodepraksis:tick          # next kodepraksis item → reports/kodepraksis-agent-latest.md
+npm run kodepraksis:result -- --n N --status done --pr "<url>"
+npm run perf:pipeline             # JMeter + Playwright baseline (see performance-agent/README.md)
+```
+
+Fallback ladder (kodepraksis): primary → partial → defer → wontfix. Skills: `.cursor/skills/stardesk-kodepraksis-agent/`, `.cursor/skills/stardesk-performance-agent/`.
+
+## Release & done
+
+- PR-only to **`staging`** — see `.cursor/rules/pr-only-period.mdc` and `docs/pr-only-period.md`
+- Work Board kanban is **retired** — work from chat + constitution, not canvas tasks
+- Never mark done without deliverable gate: `bash scripts/run-deliverable-gate.sh` (`--full` for UI)

@@ -1,0 +1,26 @@
+# STARDESK local quality hooks (kodepraksis #40).
+# Install: pip install pre-commit && pre-commit install
+# Run all: pre-commit run --all-files
+
+default_language_version:
+  python: python3.12
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.11
+    hooks:
+      - id: ruff
+        name: ruff check (api)
+        files: ^apps/api/(src|tests|scripts)/
+      - id: ruff-format
+        name: ruff format (api)
+        files: ^apps/api/(src|tests|scripts)/
+
+  - repo: local
+    hooks:
+      - id: web-eslint-tsc
+        name: eslint + tsc (web)
+        entry: node scripts/pre-commit/web-quality.mjs
+        language: system
+        pass_filenames: false
+        files: ^apps/web/

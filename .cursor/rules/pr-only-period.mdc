@@ -1,35 +1,36 @@
 ---
-description: PR-only period — never push to main or staging; all changes via GitHub PR to staging
+description: PR-only period — never push to main or staging; batch up to 10 commits per staging deploy
 alwaysApply: true
 ---
 
 # PR-only periode (aktiv)
 
-Read `docs/pr-only-period.md`.
+Read `docs/pr-only-period.md` and **`docs/staging-batch-policy.md`**.
 
 ## Forbidden
 
 - `git push origin main`
 - `git push origin staging`
-- Merging to `main` without Jan's release process
+- Merging to `main` (agents never merge prod — Jan only)
 - PRs with **base `main`** for feature work (base must be **`staging`**)
+- Merge to `staging` before batch is ready (< 10 commits without `batch-ready` / `hotfix` label)
 
-## Required
+## Staging batch (10 commits per deploy)
 
 1. Branch from latest `staging`: `cursor/<beskrivelse>-9a30` or `opgave-NN-slug`
-2. Commit on that branch only
-3. `git push -u origin <branch>`
-4. Create **draft PR** → base **`staging`**
-5. Deliverable gate before marking done
-6. Final message must include **PR URL** — not "pushed to main"
+2. **Accumulate up to 10 commits** on the same branch before staging merge
+3. Open **draft** PR → base **`staging`** early if useful (CI on push)
+4. When batch has **10 commits** (or Jan adds `batch-ready` / `hotfix`): deliverable gate → mark **Ready for review**
+5. Auto-merge to `staging` when CI green and batch policy satisfied
+6. Final message: PR URL + confirm merged to `staging` (or why blocked — e.g. waiting for commit 7/10)
 
-Production release: only Jan merges **`staging` → `main`** via separate PR.
-## Production (Flow 2 — hard requirement)
+## Production — Jan only (hard requirement)
 
-- **main updates ONLY via open PR staging → main** — never direct push/merge to main
-- When staging is ahead of main and user asks for deploy/prod: **always create this PR** (Jan merges)
+- **Never** merge or auto-merge **`staging` → `main`**
+- Prod deploy = Jan merges release PR `staging` → `main` manually
+- Do not tell Jan "deployed to prod" from agent work
+- Flow 2: agent may **create** open PR `staging` → `main` when asked — never merge it
 
-## Exception — Sonar remediation loop only
+## Sonar remediation loop
 
-The Sonar remediation loop (`cursor/sonar-remediation-loop`, prompt `.cursor/prompts/sonar-remediation-loop.md`) is the **only** exception to the manual production flow above: it may auto-merge to `staging` and `staging`→`main` when CI is green, with no Human Review, narrowly scoped to Sonar security/code-smell fixes from the Sonar Agent canvas queue. All other work remains subject to every rule in this file and `docs/pr-only-period.md`.
-
+Follow `.cursor/prompts/sonar-remediation-loop.md`: one commit per tick on `cursor/sonar-remediation-loop`, draft PR until **10 commits**, then ready + auto-merge to **staging only**. No prod auto-merge.

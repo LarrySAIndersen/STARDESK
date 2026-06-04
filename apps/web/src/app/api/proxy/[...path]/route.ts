@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { vercelProtectionBypassHeaders } from "@/lib/vercel-protection-bypass";
 
 async function proxyRequest(request: Request, pathSegments: string[]) {
   const path = `/api/${pathSegments.join("/")}`;
@@ -19,6 +20,9 @@ async function proxyRequest(request: Request, pathSegments: string[]) {
   headers.set("Accept", request.headers.get("accept") ?? "application/json");
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+  for (const [key, value] of Object.entries(vercelProtectionBypassHeaders())) {
+    headers.set(key, value);
   }
 
   const method = request.method.toUpperCase();

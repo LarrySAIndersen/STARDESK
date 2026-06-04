@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.team import Team
@@ -69,9 +69,7 @@ async def sync_team_members(
         if valid_ids != set(user_ids):
             raise ValueError("invalid_user")
 
-    existing = await db.execute(select(TeamMember).where(TeamMember.team_id == team_id))
-    for membership in existing.scalars().all():
-        await db.delete(membership)
+    await db.execute(delete(TeamMember).where(TeamMember.team_id == team_id))
 
     from datetime import UTC, datetime
 

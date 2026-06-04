@@ -7,13 +7,14 @@ Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`,
 **`docs/pr-only-period.md`** — gælder indtil andet aftales.
 
 - **FORBUDT:** `git push` til `main` eller `staging`.
-- **KRAV:** feature-gren → **PR mod `staging`** → auto-merge (CI grøn) → prod kun Jan via PR `staging` → `main`.
+- **KRAV:** feature-gren → **op til 10 commits** → draft PR mod **`staging`** → auto-merge når batch + CI grøn → **prod kun Jan** via PR `staging` → `main`.
+- Se **`docs/staging-batch-policy.md`** — hold PR draft indtil 10 commits (eller label `batch-ready` / `hotfix`).
 - Afslut altid med **link til PR** i summary — ikke "committed to main".
 
 ## Git / release
 
 - Default branch for work: **`staging`** (not `main`).
-- Open PRs with **base `staging`**; auto-merge when CI passes (`.github/workflows/auto-merge-staging.yml`).
+- Open **draft** PRs with **base `staging`**; mark ready when batch has **10 commits** (see `docs/staging-batch-policy.md`); auto-merge when CI passes (`.github/workflows/auto-merge-staging.yml`).
 - **Work Board er pensioneret** — brug ikke `docs/workboard-agent-prompt.md` eller canvas-kanban til agent-flow. Arbejd direkte fra brugerens chat + PR mod `staging`.
 
 ## Mandatory: deliverable gate (never skip)

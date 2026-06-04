@@ -113,7 +113,7 @@ function Repair-StardeskApiVenv {
     Write-Host "Creating Windows API venv with uv..." -ForegroundColor Cyan
     Push-Location $ApiDir
     try {
-        & uv sync --group dev
+        & uv sync --group dev --no-build
         if ($LASTEXITCODE -ne 0) {
             throw "uv sync failed with exit code $LASTEXITCODE"
         }
@@ -127,6 +127,45 @@ function Repair-StardeskApiVenv {
     }
 
     Write-Host "[OK] API venv repaired" -ForegroundColor Green
+}
+
+function Get-StardeskApiVenvPython {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $pythonExe = Join-Path $ApiDir ".venv\Scripts\python.exe"
+    if (-not (Test-Path -LiteralPath $pythonExe)) {
+        throw "API venv python missing at $pythonExe — run Repair-StardeskApiVenv"
+    }
+    return $pythonExe
+}
+
+function Get-StardeskApiVenvPytest {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $pytestExe = Join-Path $ApiDir ".venv\Scripts\pytest.exe"
+    if (-not (Test-Path -LiteralPath $pytestExe)) {
+        throw "API venv pytest missing at $pytestExe — run Repair-StardeskApiVenv"
+    }
+    return $pytestExe
+}
+
+function Get-StardeskApiVenvUvicorn {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ApiDir
+    )
+
+    $uvicornExe = Join-Path $ApiDir ".venv\Scripts\uvicorn.exe"
+    if (-not (Test-Path -LiteralPath $uvicornExe)) {
+        throw "API venv uvicorn missing at $uvicornExe — run Repair-StardeskApiVenv"
+    }
+    return $uvicornExe
 }
 
 function Get-StardeskPrototypeDemoPassword {
@@ -231,9 +270,9 @@ function Invoke-StardeskVercelCurl {
     }
 
     $lines = @($raw | ForEach-Object { "$_" })
-    $jsonLine = $lines | Where-Object { $_ -match '^\{' } | Select-Object -Last 1
+    $jsonLine = $lines | Where-Object { $_ -match '^[\[{]' } | Select-Object -Last 1
     if (-not $jsonLine) {
-        $jsonLine = $lines | Where-Object { $_ -match '"stardesk_env"|"access_token"|"detail"' } | Select-Object -Last 1
+        $jsonLine = $lines | Where-Object { $_ -match '"stardesk_env"|"access_token"|"detail"|"items"' } | Select-Object -Last 1
     }
     if (-not $jsonLine) {
         throw "vercel curl returned no JSON for $Method $Path"

@@ -1,4 +1,3 @@
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
@@ -14,6 +13,7 @@ from star_itsm_api.services.knowledge_content import (
     get_knowledge_sections,
     set_knowledge_sections,
 )
+from tests.support.users import make_test_user
 
 
 def _article(*, status: str, visibility: str) -> MagicMock:
@@ -25,25 +25,25 @@ def _article(*, status: str, visibility: str) -> MagicMock:
 
 
 def test_staff_can_read_draft_internal() -> None:
-    user = SimpleNamespace(role=ROLE_AGENT)
+    user = make_test_user(role=ROLE_AGENT)
     article = _article(status=KNOWLEDGE_STATUS_DRAFT, visibility=KNOWLEDGE_VISIBILITY_INTERNAL)
     assert can_read_knowledge_article(user, article) is True
 
 
 def test_end_user_cannot_read_draft() -> None:
-    user = SimpleNamespace(role=ROLE_SUBMITTER)
+    user = make_test_user(role=ROLE_SUBMITTER)
     article = _article(status=KNOWLEDGE_STATUS_DRAFT, visibility=KNOWLEDGE_VISIBILITY_EXTERNAL)
     assert can_read_knowledge_article(user, article) is False
 
 
 def test_end_user_can_read_published_external() -> None:
-    user = SimpleNamespace(role=ROLE_SUBMITTER)
+    user = make_test_user(role=ROLE_SUBMITTER)
     article = _article(status=KNOWLEDGE_STATUS_PUBLISHED, visibility=KNOWLEDGE_VISIBILITY_EXTERNAL)
     assert can_read_knowledge_article(user, article) is True
 
 
 def test_end_user_cannot_read_published_internal() -> None:
-    user = SimpleNamespace(role=ROLE_SUBMITTER)
+    user = make_test_user(role=ROLE_SUBMITTER)
     article = _article(status=KNOWLEDGE_STATUS_PUBLISHED, visibility=KNOWLEDGE_VISIBILITY_INTERNAL)
     assert can_read_knowledge_article(user, article) is False
 

@@ -8,16 +8,8 @@ EMAIL="${TEST_USER_EMAIL:-sf01@example.dk}"
 REQUIRE_NON_PROD="${GATE_REQUIRE_NON_PROD:-1}"
 
 if [[ -z "${TEST_USER_PASSWORD:-}" ]]; then
-  cd "$ROOT/apps/api"
-  set -a
-  # shellcheck disable=SC1091
-  [[ -f .env ]] && source .env
-  set +a
-  if [[ -z "${PROTOTYPE_BOOTSTRAP_PASSWORD:-}" ]]; then
-    echo "PROTOTYPE_BOOTSTRAP_PASSWORD missing in apps/api/.env" >&2
-    exit 1
-  fi
-  export TEST_USER_PASSWORD="${PROTOTYPE_BOOTSTRAP_PASSWORD}"
+  export TEST_USER_PASSWORD
+  TEST_USER_PASSWORD="$(bash "$ROOT/scripts/lib/resolve-prototype-demo-password.sh")"
 fi
 PASSWORD="$TEST_USER_PASSWORD"
 
@@ -30,9 +22,18 @@ pass() {
   echo "GATE OK: $*"
 }
 
+curl_gate() {
+  # Optional Vercel Preview deployment protection (see docs/staging-vercel-preview-env.md).
+  if [[ -n "${VERCEL_PROTECTION_BYPASS:-}" ]]; then
+    curl -sf -H "x-vercel-protection-bypass: ${VERCEL_PROTECTION_BYPASS}" "$@"
+  else
+    curl -sf "$@"
+  fi
+}
+
 echo "==> Hello-world gate (API) — $API_URL"
 
-HEALTH="$(curl -sf "$API_URL/health" 2>/dev/null)" || fail "GET /health failed (is API running on $API_URL?)"
+HEALTH="$(curl_gate "$API_URL/health" 2>/dev/null)" || fail "GET /health failed (is API running on $API_URL?)"
 
 STARDESK_ENV="$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stardesk_env',''))" 2>/dev/null || true)"
 APP_ENV="$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('app_env',''))" 2>/dev/null || true)"
@@ -44,7 +45,7 @@ if [[ "$REQUIRE_NON_PROD" == "1" ]] && [[ "$STARDESK_ENV" == "production" ]]; th
   fail "stardesk_env=production — use local/test target (see docs/deliverable-gate.md)"
 fi
 
-LOGIN_JSON="$(curl -sf -X POST "$API_URL/api/v1/auth/login" \
+LOGIN_JSON="$(curl_gate -X POST "$API_URL/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")" || fail "POST /api/v1/auth/login failed for $EMAIL"
 
@@ -53,7 +54,7 @@ TOKEN="$(echo "$LOGIN_JSON" | python3 -c "import sys,json; print(json.load(sys.s
 
 pass "Login as $EMAIL"
 
-TICKETS_JSON="$(curl -sf "$API_URL/api/v1/tickets?page=1&page_size=5" \
+TICKETS_JSON="$(curl_gate "$API_URL/api/v1/tickets?page=1&page_size=5" \
   -H "Authorization: Bearer $TOKEN")" || fail "GET /api/v1/tickets failed"
 
 COUNT="$(echo "$TICKETS_JSON" | python3 -c "

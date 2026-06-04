@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { Bot, MessageCircle, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -74,30 +76,30 @@ export function SfChatAgentConsole() {
   }, []);
 
   useEffect(() => {
-    void loadPresence();
+    fireAndForget(loadPresence());
   }, [loadPresence]);
 
   useEffect(() => {
     if (!presence?.is_sf_member) return;
     const id = window.setInterval(() => {
-      void loadInbox();
+      fireAndForget(loadInbox());
     }, POLL_MS);
     return () => window.clearInterval(id);
   }, [presence?.is_sf_member, loadInbox]);
 
   useEffect(() => {
     if (!presence?.is_online) return;
-    void apiPostNoContent("/api/v1/sf-chat/presence/heartbeat", {}).catch(() => undefined);
+    fireAndForget(apiPostNoContent("/api/v1/sf-chat/presence/heartbeat", {}).catch(() => undefined));
     const id = window.setInterval(() => {
-      void apiPostNoContent("/api/v1/sf-chat/presence/heartbeat", {}).catch(() => undefined);
+      fireAndForget(apiPostNoContent("/api/v1/sf-chat/presence/heartbeat", {}).catch(() => undefined));
     }, HEARTBEAT_MS);
     return () => window.clearInterval(id);
   }, [presence?.is_online]);
 
   useEffect(() => {
     if (!threadId) return;
-    void pollThread(threadId);
-    const id = window.setInterval(() => void pollThread(threadId), POLL_MS);
+    fireAndForget(pollThread(threadId));
+    const id = window.setInterval(() => fireAndForget(pollThread(threadId)), POLL_MS);
     return () => window.clearInterval(id);
   }, [threadId, pollThread]);
 
@@ -105,7 +107,7 @@ export function SfChatAgentConsole() {
     if (!inbox || !presence?.is_online) return;
     if (typeof Notification === "undefined") return;
     if (Notification.permission === "default") {
-      void Notification.requestPermission();
+      fireAndForget(Notification.requestPermission());
     }
     for (const item of inbox.items) {
       if (item.unread_count <= 0) continue;
@@ -126,7 +128,7 @@ export function SfChatAgentConsole() {
     setThreadCustomerName(item.customer_display_name);
     setThreadSession(item.session);
     setTransferPrompt(false);
-    void pollThread(item.session.id);
+    fireAndForget(pollThread(item.session.id));
   };
 
   const toggleOnline = async () => {
@@ -140,7 +142,7 @@ export function SfChatAgentConsole() {
       });
       setPresence(updated);
       if (next) {
-        void loadInbox();
+        fireAndForget(loadInbox());
       }
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
@@ -170,7 +172,7 @@ export function SfChatAgentConsole() {
         body: text,
       });
       setMessages((prev) => [...prev, msg]);
-      void loadInbox();
+      fireAndForget(loadInbox());
     } catch {
       // ignore
     }
@@ -186,8 +188,8 @@ export function SfChatAgentConsole() {
         {},
       );
       setThreadSession(updated);
-      void pollThread(sid);
-      void loadInbox();
+      fireAndForget(pollThread(sid));
+      fireAndForget(loadInbox());
     } catch (e) {
       if (e instanceof ApiError) {
         window.alert(e.message);
@@ -251,7 +253,7 @@ export function SfChatAgentConsole() {
               size="sm"
               variant={presence.is_online ? "outline" : "default"}
               disabled={loadingPresence}
-              onClick={() => void toggleOnline()}
+              onClick={() => fireAndForget(toggleOnline())}
             >
               {presence.is_online ? "Gå offline" : "Log på chat"}
             </Button>
@@ -349,7 +351,7 @@ export function SfChatAgentConsole() {
                       variant="outline"
                       className="h-7 gap-1 text-[10px]"
                       disabled={!presence.is_online || startBotBusy}
-                      onClick={() => void startChatServiceBot()}
+                      onClick={() => fireAndForget(startChatServiceBot())}
                     >
                       <Bot className="size-3" aria-hidden />
                       Start chat-service bot
@@ -380,7 +382,7 @@ export function SfChatAgentConsole() {
                         size="sm"
                         className="h-7 text-[10px]"
                         disabled={transferBusy}
-                        onClick={() => void createTicketFromThread()}
+                        onClick={() => fireAndForget(createTicketFromThread())}
                       >
                         Ja
                       </Button>
@@ -454,7 +456,7 @@ export function SfChatAgentConsole() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        void sendReply();
+                        fireAndForget(sendReply());
                       }
                     }}
                   />
@@ -463,7 +465,7 @@ export function SfChatAgentConsole() {
                     size="icon"
                     className="sf-chat-send shrink-0"
                     disabled={!presence.is_online || threadClosed || !draft.trim()}
-                    onClick={() => void sendReply()}
+                    onClick={() => fireAndForget(sendReply())}
                     aria-label="Send svar"
                   >
                     <Send className="size-3.5" />

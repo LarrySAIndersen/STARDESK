@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import {
   createContext,
   useCallback,
@@ -88,11 +90,11 @@ export function PageLayoutEditProvider({
     if (userFromServer) {
       return;
     }
-    void hydrateClientSession().then((user) => {
+    fireAndForget(hydrateClientSession().then((user) => {
       if (user) {
         setSessionUser(user);
       }
-    });
+    }));
   }, [userFromServer]);
 
   const user = userFromServer ?? sessionUser ?? getClientUser();

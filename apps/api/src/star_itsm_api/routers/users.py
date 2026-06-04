@@ -4,6 +4,12 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.http_details import (
+    INSUFFICIENT_PERMISSIONS,
+    INVALID_GROUP,
+    MIN_ONE_GROUP_REQUIRED,
+    USER_NOT_FOUND,
+)
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_TOP_ADMIN,
@@ -72,13 +78,39 @@ def _assert_can_assign_role(actor: User, new_role: str, *, target_email: str) ->
         ) from exc
 
 
+def _normalize_roles_for_create(email: str, roles: list[str]) -> list[str]:
+    normalized = [role_after_top_admin_policy(email, role) for role in roles]
+    if ROLE_TOP_ADMIN in normalized and not can_hold_top_admin_role(email):
+        normalized = [role for role in normalized if role != ROLE_TOP_ADMIN]
+        if ROLE_ADMIN not in normalized:
+            normalized.append(ROLE_ADMIN)
+    return normalized
+
+
+def _raise_http_for_create_user_error(exc: ValueError) -> None:
+    code = str(exc)
+    if code == "email_taken":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="E-mail skal være unik",
+        ) from exc
+    if code == "clone_source_not_found":
+        raise HTTPException(status_code=404, detail="Kildebruger blev ikke fundet") from exc
+    if code == "invalid_team":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=INVALID_GROUP,
+        ) from exc
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=code) from exc
+
+
 @router.get("/meta")
 async def users_meta(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_admin()),
 ) -> UserAdminMeta:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     organizations = await list_organizations(db)
     return build_admin_meta(organizations)
 
@@ -92,7 +124,7 @@ async def list_users(
     current_user: User = Depends(require_admin()),
 ) -> UserAdminListResponse:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     return await list_users_admin(db, page=page, page_size=page_size, q=q)
 
 
@@ -103,7 +135,7 @@ async def import_users(
     current_user: User = Depends(require_admin_session()),
 ) -> UserImportResult:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     if payload.default_role == ROLE_TOP_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -112,7 +144,7 @@ async def import_users(
     return await import_users_admin(
         db,
         payload=payload,
-        actor_role=current_user.role,
+        _actor_role=current_user.role,
     )
 
 
@@ -123,7 +155,7 @@ async def create_user(
     current_user: User = Depends(require_admin_session()),
 ) -> UserAdminCreated:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     role = payload.role
     roles = list(payload.roles) if payload.roles else None
@@ -143,20 +175,14 @@ async def create_user(
         if role is None:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             )
         roles = [role]
 
     email = payload.email.lower().strip()
     for assigned_role in roles:
         _assert_can_assign_role(current_user, assigned_role, target_email=email)
-    normalized_roles = [
-        role_after_top_admin_policy(email, assigned_role) for assigned_role in roles
-    ]
-    if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(email):
-        normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
-        if ROLE_ADMIN not in normalized_roles:
-            normalized_roles.append(ROLE_ADMIN)
+    normalized_roles = _normalize_roles_for_create(email, roles)
 
     try:
         created, temporary_password = await create_user_admin(
@@ -171,26 +197,7 @@ async def create_user(
             initial_password=payload.initial_password,
         )
     except ValueError as exc:
-        code = str(exc)
-        if code == "email_taken":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="E-mail skal være unik",
-            ) from exc
-        if code == "clone_source_not_found":
-            raise HTTPException(
-                status_code=404,
-                detail="Kildebruger blev ikke fundet",
-            ) from exc
-        if code == "invalid_team":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ugyldig gruppe",
-            ) from exc
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=code,
-        ) from exc
+        _raise_http_for_create_user_error(exc)
 
     return UserAdminCreated(user=created, temporary_password=temporary_password)
 
@@ -231,10 +238,10 @@ async def get_user_tickets(
 ) -> UserTicketsGroupedRead:
     is_self = current_user.id == user_id
     if not can_manage_users(current_user) and not is_self:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     user = await get_user_admin(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return await list_user_tickets_grouped(db, user_id=user_id, limit=limit)
 
 
@@ -246,10 +253,10 @@ async def get_user(
 ) -> UserAdminRead:
     is_self = current_user.id == user_id
     if not can_manage_users(current_user) and not is_self:
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
     user = await get_user_admin(db, user_id)
     if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return user
 
 
@@ -261,11 +268,11 @@ async def update_user(
     current_user: User = Depends(require_admin_session()),
 ) -> UserAdminRead:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -281,7 +288,7 @@ async def update_user(
         if not next_roles:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             )
 
         for assigned_role in next_roles:
@@ -300,7 +307,7 @@ async def update_user(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Mindst én rettighedsgruppe er påkrævet",
+                detail=MIN_ONE_GROUP_REQUIRED,
             ) from None
 
     if "display_name" in updates:
@@ -334,13 +341,13 @@ async def update_user(
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Ugyldig gruppe",
+                detail=INVALID_GROUP,
             ) from None
 
     await db.commit()
     updated = await get_user_admin(db, user_id)
     if updated is None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
     return updated
 
 
@@ -352,11 +359,11 @@ async def reset_user_password(
     current_user: User = Depends(require_admin_session()),
 ) -> None:
     if not can_manage_users(current_user):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
 
     user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
 
     try:
         await set_user_password(db, user, payload.new_password)

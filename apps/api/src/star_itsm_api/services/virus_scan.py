@@ -63,7 +63,6 @@ async def run_virus_scan(db: AsyncSession, attachment: Attachment, file_path: Pa
 
 
 async def scan_pending_attachments(db: AsyncSession, limit: int = 20) -> int:
-
     from sqlalchemy import select
 
     from star_itsm_api.services import file_storage

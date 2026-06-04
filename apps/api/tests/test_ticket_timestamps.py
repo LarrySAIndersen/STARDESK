@@ -1,14 +1,14 @@
 from datetime import UTC, datetime
-from types import SimpleNamespace
 
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,
     maybe_set_first_response,
 )
+from tests.support.tickets import make_test_ticket
 
 
 def test_status_milestones_set_once() -> None:
-    ticket = SimpleNamespace(
+    ticket = make_test_ticket(
         in_progress_at=None,
         resolved_at=None,
         closed_at=None,
@@ -24,7 +24,7 @@ def test_status_milestones_set_once() -> None:
 
 
 def test_first_response_only_external_staff() -> None:
-    ticket = SimpleNamespace(first_response_at=None, updated_at=None)
+    ticket = make_test_ticket(first_response_at=None, updated_at=None)
     maybe_set_first_response(
         ticket, is_staff=True, is_internal=True, now=datetime(2026, 3, 1, 9, 0, tzinfo=UTC)
     )

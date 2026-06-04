@@ -68,7 +68,7 @@ Tabeller: `email_integrations`, `ticket_emails`.
 
 **Automatisk:** API kører `apps/api/src/star_itsm_api/sql/migrations/20_email-integration.sql` ved opstart, hvis tabeller mangler.
 
-**Manuelt i Neon SQL Editor:** kør hele scriptet i `docs/email-integration-migration.sql` (idempotent).
+**Manuelt i Neon SQL Editor:** kør hele scriptet i `apps/api/src/star_itsm_api/sql/migrations/20_email-integration.sql` (idempotent).
 
 ## 5) Kryptering af refresh tokens
 

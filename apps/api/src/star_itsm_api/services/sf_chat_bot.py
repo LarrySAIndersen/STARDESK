@@ -30,11 +30,13 @@ _PRIORITY_DA = {
     "critical": "Kritisk",
 }
 
+_MOCK_SYSTEM_STATUS_NORMAL = "Normal drift"
+
 _MOCK_SYSTEMS = [
-    ("STAR Platform", "STAR", "Normal drift"),
-    ("Infrastruktur", "INFRA", "Normal drift"),
+    ("STAR Platform", "STAR", _MOCK_SYSTEM_STATUS_NORMAL),
+    ("Infrastruktur", "INFRA", _MOCK_SYSTEM_STATUS_NORMAL),
     ("Integration", "INT", "Nedsat"),
-    ("Forretningsapplikationer", "BIZ", "Normal drift"),
+    ("Forretningsapplikationer", "BIZ", _MOCK_SYSTEM_STATUS_NORMAL),
 ]
 
 

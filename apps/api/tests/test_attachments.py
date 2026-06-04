@@ -35,8 +35,6 @@ def clean_attachment(tmp_path: Path) -> Attachment:
     )
 
 
-
-
 def test_is_blob_storage_key(tmp_path: Path) -> None:
     assert file_storage.is_blob_storage_key("blob:https://x.blob.vercel-storage.com/a.png")
     assert not file_storage.is_blob_storage_key(str(tmp_path / "a.png"))
@@ -256,7 +254,7 @@ async def test_download_ticket_attachment_happy_path_blob(
     )
     clean_attachment.storage_key = "blob:https://store.public.blob.vercel-storage.com/t.png"
 
-    async def _get(model, pk):
+    def _get(model, pk):
         if model is Ticket:
             return ticket
         if model is Attachment:
@@ -293,7 +291,7 @@ async def test_download_ticket_attachment_missing_file(
     )
     clean_attachment.storage_key = str(tmp_path / "uploads" / "missing.png")
 
-    async def _get(model, pk):
+    def _get(model, pk):
         if model is Ticket:
             return ticket
         if model is Attachment:

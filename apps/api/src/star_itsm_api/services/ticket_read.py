@@ -1,11 +1,14 @@
 import logging
+import time
 import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.constants import SYSTEM_USER_ID
+from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.category import Category, Subcategory
+from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
@@ -29,6 +32,8 @@ from star_itsm_api.services.ticket_routing import _TeamRef, build_ticket_routing
 logger = logging.getLogger(__name__)
 
 SYSTEM_REPORTER_DISPLAY_NAME = "System"
+_ACTIVE_TEAMS_TTL_SECONDS = 300.0
+_active_teams_cache: tuple[float, list[_TeamRef]] | None = None
 
 
 async def load_user_display_names(
@@ -153,6 +158,59 @@ async def _load_hierarchy_context(
     return parents, child_counts
 
 
+async def _load_engagement_counts(
+    db: AsyncSession,
+    ticket_ids: list[uuid.UUID],
+) -> tuple[dict[uuid.UUID, int], dict[uuid.UUID, int], dict[uuid.UUID, int]]:
+    """Per-ticket comment, internal comment, and attachment counts for list filters."""
+    if not ticket_ids:
+        return {}, {}, {}
+
+    comment_counts: dict[uuid.UUID, int] = {}
+    internal_comment_counts: dict[uuid.UUID, int] = {}
+    attachment_counts: dict[uuid.UUID, int] = {}
+
+    try:
+        comment_rows = await db.execute(
+            select(TicketComment.ticket_id, func.count())
+            .where(
+                TicketComment.ticket_id.in_(ticket_ids),
+                TicketComment.deleted_at.is_(None),
+            )
+            .group_by(TicketComment.ticket_id)
+        )
+        for ticket_id, count in comment_rows.all():
+            if ticket_id is not None:
+                comment_counts[ticket_id] = int(count)
+
+        internal_rows = await db.execute(
+            select(TicketComment.ticket_id, func.count())
+            .where(
+                TicketComment.ticket_id.in_(ticket_ids),
+                TicketComment.deleted_at.is_(None),
+                TicketComment.is_internal.is_(True),
+            )
+            .group_by(TicketComment.ticket_id)
+        )
+        for ticket_id, count in internal_rows.all():
+            if ticket_id is not None:
+                internal_comment_counts[ticket_id] = int(count)
+
+        attachment_rows = await db.execute(
+            select(Attachment.ticket_id, func.count())
+            .where(Attachment.ticket_id.in_(ticket_ids))
+            .group_by(Attachment.ticket_id)
+        )
+        for ticket_id, count in attachment_rows.all():
+            if ticket_id is not None:
+                attachment_counts[ticket_id] = int(count)
+    except Exception:
+        logger.warning("Could not load ticket engagement counts", exc_info=True)
+        await rollback_session(db)
+
+    return comment_counts, internal_comment_counts, attachment_counts
+
+
 def _ticket_to_read(
     ticket: Ticket,
     sub_causes: list[SubCauseRead],
@@ -165,6 +223,9 @@ def _ticket_to_read(
     child_counts: dict[uuid.UUID, int],
     active_teams: list[_TeamRef] | None = None,
     sla_settings: SlaRuntimeSettings | None = None,
+    comment_count: int = 0,
+    internal_comment_count: int = 0,
+    attachment_count: int = 0,
 ) -> TicketRead:
     sla = sla_fields_for_ticket(ticket, settings=sla_settings)
     ka_status = getattr(ticket, "knowledge_status", None)
@@ -189,7 +250,12 @@ def _ticket_to_read(
         else None,
         assigned_team_id=ticket.assigned_team_id,
         assigned_team_name=teams.get(ticket.assigned_team_id) if ticket.assigned_team_id else None,
+        assigned_user_id=ticket.assigned_user_id,
         assigned_user_name=users.get(ticket.assigned_user_id) if ticket.assigned_user_id else None,
+        description=ticket.description,
+        comment_count=comment_count,
+        internal_comment_count=internal_comment_count,
+        attachment_count=attachment_count,
         reporter_user_id=ticket.reporter_user_id,
         reporter_display_name=users.get(ticket.reporter_user_id),
         response_due_at=sla["response_due_at"],
@@ -223,8 +289,16 @@ def _ticket_to_read(
 
 
 async def _load_active_teams(db: AsyncSession) -> list[_TeamRef]:
+    global _active_teams_cache
+    now = time.monotonic()
+    if _active_teams_cache is not None:
+        cached_at, cached = _active_teams_cache
+        if now - cached_at < _ACTIVE_TEAMS_TTL_SECONDS:
+            return cached
     rows = await db.execute(select(Team).where(Team.is_active.is_(True)).order_by(Team.name.asc()))
-    return [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
+    refs = [_TeamRef(id=team.id, name=team.name) for team in rows.scalars().all()]
+    _active_teams_cache = (now, refs)
+    return refs
 
 
 async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[TicketRead]:
@@ -233,6 +307,10 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
     try:
         sub_map, categories, subcategories, teams, users = await _load_list_context(db, tickets)
         parents, child_counts = await _load_hierarchy_context(db, tickets)
+        comment_counts, internal_comment_counts, attachment_counts = await _load_engagement_counts(
+            db,
+            [t.id for t in tickets],
+        )
         active_teams = await _load_active_teams(db)
         sla_settings = await get_sla_runtime_settings(db)
     except Exception:
@@ -255,6 +333,9 @@ async def tickets_to_read_list(db: AsyncSession, tickets: list[Ticket]) -> list[
                     child_counts=child_counts,
                     active_teams=active_teams,
                     sla_settings=sla_settings,
+                    comment_count=comment_counts.get(ticket.id, 0),
+                    internal_comment_count=internal_comment_counts.get(ticket.id, 0),
+                    attachment_count=attachment_counts.get(ticket.id, 0),
                 )
             )
         except Exception:
@@ -271,9 +352,9 @@ async def ticket_hierarchy_detail_extras(
         children = await get_child_tickets(db, ticket.id)
         related: list[TicketSummaryRead] = []
         if ticket.is_major and ticket.parent_ticket_id is None:
-            related = await tickets_to_summaries(await get_related_major_tickets(db, ticket.id))
+            related = tickets_to_summaries(await get_related_major_tickets(db, ticket.id))
         return {
-            "children": await tickets_to_summaries(children),
+            "children": tickets_to_summaries(children),
             "related_major_tickets": related,
         }
     except Exception:
@@ -301,6 +382,8 @@ def _fallback_ticket_read(
         is_security_ticket=getattr(ticket, "is_security_ticket", False),
         parent_ticket_id=getattr(ticket, "parent_ticket_id", None),
         assigned_team_id=ticket.assigned_team_id,
+        assigned_user_id=getattr(ticket, "assigned_user_id", None),
+        description=getattr(ticket, "description", "") or "",
         reporter_user_id=ticket.reporter_user_id,
         reporter_display_name=reporter_display_name,
         response_due_at=sla["response_due_at"],

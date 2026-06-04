@@ -1,7 +1,5 @@
 """API router tests for /api/v1/tickets — list filters, mutations, and integrations."""
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -13,7 +11,7 @@ from httpx import AsyncClient
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER, get_current_user
 from star_itsm_api.main import app
-from star_itsm_api.schemas.comment import CommentRead, CommentReactionSummary
+from star_itsm_api.schemas.comment import CommentReactionSummary, CommentRead
 from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead
 from star_itsm_api.schemas.ticket_activity import TicketTimestampsRead
 from star_itsm_api.schemas.ticket_intelligence import (
@@ -22,7 +20,6 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketLlmOperationalRead,
     TicketSemanticBundleRead,
 )
-from star_itsm_api.services.ticket_intelligence import EVALUATION_RUBRIC_DA
 
 _FAKE_ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000030")
 
@@ -46,12 +43,12 @@ def _ticket_read(ticket_id: uuid.UUID | None = None) -> TicketRead:
 def _ticket_detail(ticket_id: uuid.UUID | None = None) -> TicketDetailRead:
     read = _ticket_read(ticket_id)
     now = read.created_at
+    base = read.model_dump()
+    base["description"] = "Printeren svarer ikke."
     return TicketDetailRead(
-        **read.model_dump(),
-        description="Printeren svarer ikke.",
+        **base,
         category_id=None,
         subcategory_id=None,
-        assigned_user_id=None,
         escalation_level=0,
         gdpr_consent=False,
         timestamps=TicketTimestampsRead(created_at=now),
@@ -516,6 +513,8 @@ async def test_llm_context_success(
     override_db: AsyncMock,
     api_client: AsyncClient,
 ) -> None:
+    from star_itsm_api.services.ticket_intelligence import EVALUATION_RUBRIC_DA
+
     ticket_id = uuid.uuid4()
     ticket = _ticket_row(ticket_id)
     override_db.get = AsyncMock(return_value=ticket)

@@ -1,0 +1,466 @@
+{
+  "version": "1",
+  "source": "workboard/constitution/STARDESK-kodepraksis-50.md",
+  "updatedAt": "2026-06-02T19:10:09.724Z",
+  "currentN": null,
+  "items": [
+    {
+      "n": 39,
+      "status": "partial",
+      "attempts": 1,
+      "lastFallback": "partial",
+      "notes": "Phase1: SIM,RET,ARG,PTH enabled and clean. Phase2 deferred: C90,S,D (782 hits).",
+      "prUrl": "https://github.com/LarrySAIndersen/STARDESK/pull/81",
+      "completedAt": "2026-06-02T19:10:09.476Z"
+    },
+    {
+      "n": 40,
+      "status": "done",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": "pre-commit: ruff+ruff-format+web eslint/tsc via scripts/pre-commit/web-quality.sh",
+      "prUrl": "https://github.com/LarrySAIndersen/STARDESK/pull/81",
+      "completedAt": "2026-06-02T19:10:09.724Z"
+    },
+    {
+      "n": 43,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 44,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 50,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 3,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 41,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 42,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 1,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 2,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 7,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 8,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 10,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 4,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 9,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 5,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 6,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 11,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 12,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 18,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 13,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 14,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 17,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 19,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 20,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 21,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 29,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 22,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 23,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 24,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 25,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 30,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 26,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 27,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 28,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 15,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 16,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 31,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 32,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 33,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 34,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 35,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 36,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 37,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 38,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 45,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 46,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 47,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 48,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    },
+    {
+      "n": 49,
+      "status": "open",
+      "attempts": 0,
+      "lastFallback": null,
+      "notes": null,
+      "prUrl": null,
+      "completedAt": null
+    }
+  ],
+  "activityLog": [
+    "2026-06-02T19:04:56.977Z init-queue: 50 items, order 39,40,43,44,50,3,41,42,1,2,7,8,10,4,9,5,6,11,12,18,13,14,17,19,20,21,29,22,23,24,25,30,26,27,28,15,16,31,32,33,34,35,36,37,38,45,46,47,48,49",
+    "2026-06-02T19:04:57.479Z tick start #39 attempt 1",
+    "2026-06-02T19:06:22.217Z tick end #39 status=partial fallback=partial pr=-",
+    "2026-06-02T19:09:07.706Z tick end #40 status=done fallback=- pr=-",
+    "2026-06-02T19:10:09.477Z tick end #39 status=partial fallback=- pr=https://github.com/LarrySAIndersen/STARDESK/pull/81",
+    "2026-06-02T19:10:09.724Z tick end #40 status=done fallback=- pr=https://github.com/LarrySAIndersen/STARDESK/pull/81"
+  ]
+}

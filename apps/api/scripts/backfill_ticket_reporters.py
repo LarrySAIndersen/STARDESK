@@ -41,8 +41,7 @@ async def _creator_from_events(db: AsyncSession, ticket_id: uuid.UUID) -> uuid.U
         .order_by(TicketEvent.created_at.asc())
         .limit(1)
     )
-    row = result.scalar_one_or_none()
-    return row
+    return result.scalar_one_or_none()
 
 
 async def backfill(*, dry_run: bool) -> int:
@@ -55,9 +54,7 @@ async def backfill(*, dry_run: bool) -> int:
         if SYSTEM_USER_ID not in valid_ids:
             print("WARNING: system user missing from users table")
 
-        tickets = await db.execute(
-            select(Ticket).where(Ticket.deleted_at.is_(None))
-        )
+        tickets = await db.execute(select(Ticket).where(Ticket.deleted_at.is_(None)))
         for ticket in tickets.scalars().all():
             if ticket.reporter_user_id in valid_ids:
                 continue
@@ -73,10 +70,7 @@ async def backfill(*, dry_run: bool) -> int:
             if replacement is None:
                 replacement = SYSTEM_USER_ID
 
-            print(
-                f"{ticket.ticket_number}: reporter {ticket.reporter_user_id} "
-                f"→ {replacement}"
-            )
+            print(f"{ticket.ticket_number}: reporter {ticket.reporter_user_id} → {replacement}")
             if not dry_run:
                 ticket.reporter_user_id = replacement
                 updated += 1

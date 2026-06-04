@@ -13,9 +13,7 @@ from star_itsm_api.services.sla_reset import SlaResetResult
 ADMIN_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
-
-
-async def _fake_admin() -> SimpleNamespace:
+def _fake_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=ADMIN_ID,
         email="admin@example.dk",
@@ -28,7 +26,7 @@ async def _fake_admin() -> SimpleNamespace:
     )
 
 
-async def _fake_agent() -> SimpleNamespace:
+def _fake_agent() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",

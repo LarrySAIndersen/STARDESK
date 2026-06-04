@@ -7,7 +7,7 @@ from star_itsm_api.core.security import ROLE_SUBMITTER, get_current_user
 from star_itsm_api.main import app
 
 
-async def _fake_end_user() -> SimpleNamespace:
+def _fake_end_user() -> SimpleNamespace:
     return SimpleNamespace(
         id="00000000-0000-0000-0000-000000000099",
         email="submitter@example.dk",

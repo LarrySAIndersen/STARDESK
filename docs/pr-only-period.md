@@ -20,10 +20,19 @@
 ## Flow (alt arbejde)
 
 ```text
-feature-gren → PR → staging (auto-merge når CI grøn) → [manuel] PR → main
+feature-gren → (op til 10 commits) → PR → staging (auto-merge når batch + CI grøn) → [Jan] PR → main
 ```
 
-Se [proces-visuelt.md](./proces-visuelt.md).
+Se [proces-visuelt.md](./proces-visuelt.md) og **[staging-batch-policy.md](./staging-batch-policy.md)** (10 commits per staging-deploy).
+
+---
+
+## Staging batch (10 commits)
+
+- Saml **op til 10 commits** på samme gren før merge til `staging` (færre Preview-deploys).
+- Auto-merge kræver **≥ 10 commits** eller label **`batch-ready`** / **`hotfix`**.
+- Hold PR som **draft** mens batchen bygges; markér **Ready for review** når batch er klar.
+- **Production:** kun Jan via PR `staging` → `main` — agenter merger **aldrig** til `main`.
 
 ## Flow 2 — Production (hårdt krav)
 
@@ -56,7 +65,8 @@ Samme, men tillad **auto-merge** når checks er grønne.
 
 ```text
 PR-ONLY PERIODE: Push ALDRIG til main eller staging.
-Alt via feature-gren + PR mod staging. Se docs/pr-only-period.md.
+Saml op til 10 commits per PR mod staging (draft indtil batch klar).
+Prod kun Jan: staging → main. Se docs/staging-batch-policy.md.
 ```
 
 ---
