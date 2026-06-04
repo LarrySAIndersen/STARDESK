@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,16 @@ const PAUSE_STATUS_OPTIONS = [
   { value: "pending", label: "Afventer (pending)" },
 ] as const;
 
+function patchSlaPolicy(
+  policies: SlaPolicy[],
+  policyId: string,
+  patch: Partial<SlaPolicy>,
+): SlaPolicy[] {
+  return policies.map((policy) =>
+    policy.id === policyId ? { ...policy, ...patch } : policy,
+  );
+}
+
 export function AdminSlaPanel() {
   const [policies, setPolicies] = useState<SlaPolicy[]>([]);
   const [rules, setRules] = useState<StandardRule[]>([]);
@@ -75,7 +87,7 @@ export function AdminSlaPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    fireAndForget(load());
   }, [load]);
 
   async function savePolicy(policy: SlaPolicy) {
@@ -270,7 +282,7 @@ export function AdminSlaPanel() {
               type="button"
               className="bg-star-navy"
               disabled={savingSettings}
-              onClick={() => void saveSettings()}
+              onClick={() => fireAndForget(saveSettings())}
             >
               {savingSettings ? "Gemmer…" : "Gem driftsregler"}
             </Button>
@@ -336,11 +348,9 @@ export function AdminSlaPanel() {
                       checked={policy.business_hours_only}
                       onChange={(e) =>
                         setPolicies((prev) =>
-                          prev.map((p) =>
-                            p.id === policy.id
-                              ? { ...p, business_hours_only: e.target.checked }
-                              : p,
-                          ),
+                          patchSlaPolicy(prev, policy.id, {
+                            business_hours_only: e.target.checked,
+                          }),
                         )
                       }
                     />
@@ -352,9 +362,7 @@ export function AdminSlaPanel() {
                       checked={policy.is_active}
                       onChange={(e) =>
                         setPolicies((prev) =>
-                          prev.map((p) =>
-                            p.id === policy.id ? { ...p, is_active: e.target.checked } : p,
-                          ),
+                          patchSlaPolicy(prev, policy.id, { is_active: e.target.checked }),
                         )
                       }
                     />
@@ -370,11 +378,9 @@ export function AdminSlaPanel() {
                   value={policy.response_time_minutes}
                   onChange={(e) =>
                     setPolicies((prev) =>
-                      prev.map((p) =>
-                        p.id === policy.id
-                          ? { ...p, response_time_minutes: Number(e.target.value) }
-                          : p,
-                      ),
+                      patchSlaPolicy(prev, policy.id, {
+                        response_time_minutes: Number(e.target.value),
+                      }),
                     )
                   }
                 />
@@ -387,11 +393,9 @@ export function AdminSlaPanel() {
                   value={policy.resolution_time_minutes}
                   onChange={(e) =>
                     setPolicies((prev) =>
-                      prev.map((p) =>
-                        p.id === policy.id
-                          ? { ...p, resolution_time_minutes: Number(e.target.value) }
-                          : p,
-                      ),
+                      patchSlaPolicy(prev, policy.id, {
+                        resolution_time_minutes: Number(e.target.value),
+                      }),
                     )
                   }
                 />
@@ -400,7 +404,7 @@ export function AdminSlaPanel() {
                 <Button
                   type="button"
                   className="bg-star-navy w-full"
-                  onClick={() => void savePolicy(policy)}
+                  onClick={() => fireAndForget(savePolicy(policy))}
                 >
                   Gem politik
                 </Button>

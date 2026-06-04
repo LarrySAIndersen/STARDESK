@@ -69,7 +69,7 @@ def is_reopen_transition(previous: str, new: str) -> bool:
     return previous in CLOSED_STATUSES and new in OPEN_STATUSES
 
 
-async def _ticket_scope_stmt(user: User):
+def _ticket_scope_stmt(user: User):
     stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
     org_id = get_user_organization_id(user)
     if not has_full_ticket_visibility(user) and org_id is not None:
@@ -138,7 +138,7 @@ async def build_standard_report(
     *,
     period_days: int | None = 30,
 ) -> StandardReportRead:
-    stmt = await _ticket_scope_stmt(user)
+    stmt = _ticket_scope_stmt(user)
     result = await db.execute(stmt.order_by(Ticket.created_at.desc()))
     tickets = list(result.scalars().all())
 

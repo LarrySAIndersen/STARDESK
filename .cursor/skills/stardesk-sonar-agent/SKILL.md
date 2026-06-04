@@ -63,11 +63,13 @@ Reports:
 
 ### 3. Fix (batched)
 
-- **Batch size:** max 5 BLOCKER/CRITICAL per agent run.
+- **One commit per agent run/tick** on the loop branch; accumulate until **10 commits** before staging merge.
+- **Batch size:** max 5 BLOCKER/CRITICAL issues per tick.
 - Fix code in repo; minimal scope; match existing conventions.
-- After each batch:
+- After each tick:
   - Run targeted tests (`cd apps/api && uv run pytest -q <relevant>`)
-  - Update canvas queue: `fixStatus: fixed`, `fixedAt`, `fixNotes` (files changed)
+  - Update canvas queue: `fixStatus: fixed`, `fixedAt`, `fixNotes`
+  - Push commit; keep PR **draft** until 10 commits (see `docs/staging-batch-policy.md`)
 - Set canvas `phase` → `fix`.
 
 ### 4. Verify
@@ -84,6 +86,7 @@ Write Danish summary in activityLog (Sonar canvas) or in PR description:
 Scan: <ISO tid> — N sikkerhedsissues (B blocker, C critical)
 Fix: <filer> — <hvad der ændredes>
 Verify: gate passed / sonar recount M remaining
+Staging batch: <N>/10 commits — draft|ready
 Næste batch: <top 3 åbne blocker>
 ```
 
@@ -104,7 +107,9 @@ Run `npm run sonar:sync-canvas` after Sonar rescan to merge new issues without l
 ## Do not
 
 - Commit `SONAR_TOKEN` or real production secrets
-- Fix >10 issues in one run without re-scan between batches
+- Fix >10 Sonar issues in one commit without re-scan between ticks
+- Merge to `staging` before 10 commits (unless label `batch-ready` / `hotfix`)
+- Auto-merge or merge `staging` → `main` (Jan only)
 - Suppress BLOCKER without code fix or documented prototype exception
 
 ## References

@@ -72,7 +72,7 @@ async def validate_stakeholder_user_ids(
         raise ValueError("Invalid user id in stakeholder list")
 
 
-async def record_entity_relationship(
+def record_entity_relationship(
     db: AsyncSession,
     *,
     source_type: str,
@@ -110,7 +110,7 @@ async def record_ticket_user_relationship(
     now: datetime | None = None,
 ) -> None:
     rel_type = RELATIONSHIP_TYPE_BY_ROLE.get(role, role)
-    await record_entity_relationship(
+    record_entity_relationship(
         db,
         source_type="user",
         source_id=user_id,
@@ -323,8 +323,8 @@ async def stakeholder_to_read(
     )
 
 
-async def soft_delete_stakeholder(
-    db: AsyncSession,
+def soft_delete_stakeholder(
+    _db: AsyncSession,
     row: TicketStakeholder,
     *,
     now: datetime | None = None,

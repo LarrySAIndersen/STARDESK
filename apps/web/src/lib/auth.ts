@@ -78,6 +78,33 @@ function roleLabelIndicatesAdmin(roleLabel: string | undefined): boolean {
   return label.includes("administrator") || label.includes("topadministrator");
 }
 
+function coerceParsedUser(parsed: User): User | null {
+  if (!parsed?.email) {
+    return null;
+  }
+  const parsedRoles = Array.isArray(parsed.roles)
+    ? parsed.roles
+        .map((role) => normalizeUserRole(String(role)))
+        .filter((role): role is UserRole => role !== null)
+    : [];
+  const role =
+    normalizeUserRole(parsed.role) ??
+    parsedRoles[0] ??
+    parsed.role;
+  const roles = parsedRoles.length > 0 ? parsedRoles : role ? [role as UserRole] : undefined;
+  const roleLabels = Array.isArray(parsed.role_labels)
+    ? parsed.role_labels.map(String)
+    : undefined;
+  return {
+    ...parsed,
+    role,
+    roles,
+    role_labels: roleLabels,
+    must_change_password: Boolean(parsed.must_change_password),
+    password_policy_exempt: Boolean(parsed.password_policy_exempt),
+  };
+}
+
 /** Parse `stardesk_user` from server cookies or `document.cookie` (encoded or plain JSON). */
 export function parseUserFromCookie(raw: string | undefined | null): User | null {
   if (!raw) {
@@ -92,30 +119,10 @@ export function parseUserFromCookie(raw: string | undefined | null): User | null
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate) as User;
-      if (!parsed?.email) {
-        continue;
+      const user = coerceParsedUser(parsed);
+      if (user) {
+        return user;
       }
-      const parsedRoles = Array.isArray(parsed.roles)
-        ? parsed.roles
-            .map((role) => normalizeUserRole(String(role)))
-            .filter((role): role is UserRole => role !== null)
-        : [];
-      const role =
-        normalizeUserRole(parsed.role) ??
-        parsedRoles[0] ??
-        parsed.role;
-      const roles = parsedRoles.length > 0 ? parsedRoles : role ? [role as UserRole] : undefined;
-      const roleLabels = Array.isArray(parsed.role_labels)
-        ? parsed.role_labels.map(String)
-        : undefined;
-      return {
-        ...parsed,
-        role,
-        roles,
-        role_labels: roleLabels,
-        must_change_password: Boolean(parsed.must_change_password),
-        password_policy_exempt: Boolean(parsed.password_policy_exempt),
-      };
     } catch {
       // try next candidate
     }

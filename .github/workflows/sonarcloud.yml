@@ -1,0 +1,68 @@
+# SonarCloud CI analysis with API test coverage import.
+# Requires repo secret SONAR (SonarCloud PAT). See docs/test-coverage.md.
+name: SonarCloud
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: sonarcloud-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarcloud:
+    name: Coverage + SonarCloud scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: apps/api/pyproject.toml
+
+      - name: Pytest with coverage (Cobertura for Sonar)
+        working-directory: apps/api
+        env:
+          PROTOTYPE_BOOTSTRAP_PASSWORD: Stardesk2026!
+        run: |
+          pip install -e ".[dev]"
+          pytest -q \
+            --cov=star_itsm_api \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+          test -f coverage.xml
+
+      - name: Verify coverage report path
+        run: test -f apps/api/coverage.xml
+
+      - name: Rewrite coverage paths for SonarCloud
+        run: python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
+
+      # SONAR repo secret required (cannot branch on secrets in if: — GitHub limitation)
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v7.1.0
+        with:
+          args: >
+            -Dsonar.python.version=3.12
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload API coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-xml-sonarcloud
+          path: apps/api/coverage.xml
+          if-no-files-found: error

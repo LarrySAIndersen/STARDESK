@@ -9,11 +9,16 @@ on:
 jobs:
   api-security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -23,8 +28,32 @@ jobs:
           pip install bandit pip-audit
       - name: Ruff lint
         run: pip install ruff && ruff check src tests
-      - name: Pytest
-        run: pytest -q
+      - name: Pytest with coverage
+        env:
+          PROTOTYPE_BOOTSTRAP_PASSWORD: Stardesk2026!
+        run: |
+          pytest -q \
+            --cov=star_itsm_api \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+      - name: Verify coverage artifact
+        run: test -f coverage.xml
+      - name: Rewrite coverage paths for SonarCloud
+        run: python ../../scripts/fix_coverage_xml_for_sonar.py coverage.xml
+      - name: Upload API coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-xml
+          path: apps/api/coverage.xml
+          if-no-files-found: error
+      - name: SonarCloud Scan (coverage import)
+        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7.1.0
+        with:
+          args: >
+            -Dsonar.python.version=3.12
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Bandit (SAST)
         run: bandit -r src -ll -q
       - name: pip-audit (dependencies)

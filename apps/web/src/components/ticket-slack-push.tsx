@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useState } from "react";
 
@@ -79,7 +81,7 @@ export function TicketSlackPush({
   }, []);
 
   useEffect(() => {
-    void loadStatus();
+    fireAndForget(loadStatus());
   }, [loadStatus]);
 
   useEffect(() => {
@@ -87,7 +89,7 @@ export function TicketSlackPush({
       setChannels([]);
       return;
     }
-    void loadChannels();
+    fireAndForget(loadChannels());
   }, [isConnected, isMockMode, loadChannels]);
 
   useEffect(() => {
@@ -228,7 +230,7 @@ export function TicketSlackPush({
                   type="button"
                   className="wire-btn wire-btn-primary"
                   disabled={isSubmitting || (!isConnected && !isMockMode)}
-                  onClick={() => void confirmPush()}
+                  onClick={() => fireAndForget(confirmPush())}
                 >
                   {isSubmitting ? "Sender…" : "Bekræft push"}
                 </Button>

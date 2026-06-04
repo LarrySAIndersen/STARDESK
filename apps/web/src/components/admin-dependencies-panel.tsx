@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
@@ -17,10 +19,12 @@ function SummaryCard({
   label,
   value,
   tone,
+  onClick,
 }: {
   label: string;
   value: number;
   tone: "critical" | "high" | "medium" | "low" | "neutral";
+  onClick?: () => void;
 }) {
   const toneClass =
     tone === "critical"
@@ -33,8 +37,23 @@ function SummaryCard({
             ? "border-sky-200 bg-sky-50 text-sky-900"
             : "border-[var(--gray-border)] bg-white text-[var(--gray-text)]";
 
+  const className = `wire-card flex flex-col gap-1 border text-left ${toneClass} ${
+    onClick && value > 0
+      ? "cursor-pointer transition-shadow hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue"
+      : ""
+  }`;
+
+  if (onClick && value > 0) {
+    return (
+      <button type="button" onClick={onClick} className={className} aria-label={`${label}: ${value}`}>
+        <span className="text-2xl font-semibold tabular-nums">{value}</span>
+        <span className="text-xs font-medium uppercase tracking-wide opacity-80">{label}</span>
+      </button>
+    );
+  }
+
   return (
-    <div className={`wire-card flex flex-col gap-1 border ${toneClass}`}>
+    <div className={className}>
       <span className="text-2xl font-semibold tabular-nums">{value}</span>
       <span className="text-xs font-medium uppercase tracking-wide opacity-80">{label}</span>
     </div>
@@ -79,6 +98,7 @@ export function AdminDependenciesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("cvss_score");
   const [sortAsc, setSortAsc] = useState(false);
+  const [severityFilter, setSeverityFilter] = useState<string | null>(null);
 
   const load = useCallback(async (refresh = false) => {
     setError(null);
@@ -96,13 +116,20 @@ export function AdminDependenciesPanel() {
   }, []);
 
   useEffect(() => {
-    void load(false);
+    fireAndForget(load(false));
   }, [load]);
 
   const sortedVulns = useMemo(() => {
     if (!report) return [];
-    return sortVulnerabilities(report.vulnerabilities, sortKey, sortAsc);
-  }, [report, sortKey, sortAsc]);
+    const rows = severityFilter
+      ? report.vulnerabilities.filter((row) => row.severity === severityFilter)
+      : report.vulnerabilities;
+    return sortVulnerabilities(rows, sortKey, sortAsc);
+  }, [report, sortKey, sortAsc, severityFilter]);
+
+  const scrollToSection = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -142,7 +169,7 @@ export function AdminDependenciesPanel() {
           type="button"
           className="wire-btn wire-btn-sm"
           disabled={refreshing}
-          onClick={() => void load(true)}
+          onClick={() => fireAndForget(load(true))}
         >
           {refreshing ? (
             <Loader2 className="size-4 animate-spin" aria-hidden />
@@ -187,12 +214,60 @@ export function AdminDependenciesPanel() {
           Oversigt
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <SummaryCard label="Kritisk (CVSS ≥9)" value={summary?.critical ?? 0} tone="critical" />
-          <SummaryCard label="Høj (7–8.9)" value={summary?.high ?? 0} tone="high" />
-          <SummaryCard label="Medium (4–6.9)" value={summary?.medium ?? 0} tone="medium" />
-          <SummaryCard label="Lav (&lt;4)" value={summary?.low ?? 0} tone="low" />
-          <SummaryCard label="Forældede pakker" value={summary?.outdated_count ?? 0} tone="neutral" />
-          <SummaryCard label="CVE-poster" value={summary?.cve_count ?? 0} tone="neutral" />
+          <SummaryCard
+            label="Kritisk (CVSS ≥9)"
+            value={summary?.critical ?? 0}
+            tone="critical"
+            onClick={() => {
+              setSeverityFilter("critical");
+              scrollToSection("dep-cve-heading");
+            }}
+          />
+          <SummaryCard
+            label="Høj (7–8.9)"
+            value={summary?.high ?? 0}
+            tone="high"
+            onClick={() => {
+              setSeverityFilter("high");
+              scrollToSection("dep-cve-heading");
+            }}
+          />
+          <SummaryCard
+            label="Medium (4–6.9)"
+            value={summary?.medium ?? 0}
+            tone="medium"
+            onClick={() => {
+              setSeverityFilter("medium");
+              scrollToSection("dep-cve-heading");
+            }}
+          />
+          <SummaryCard
+            label="Lav (&lt;4)"
+            value={summary?.low ?? 0}
+            tone="low"
+            onClick={() => {
+              setSeverityFilter("low");
+              scrollToSection("dep-cve-heading");
+            }}
+          />
+          <SummaryCard
+            label="Forældede pakker"
+            value={summary?.outdated_count ?? 0}
+            tone="neutral"
+            onClick={() => {
+              setSeverityFilter(null);
+              scrollToSection("dep-outdated-heading");
+            }}
+          />
+          <SummaryCard
+            label="CVE-poster"
+            value={summary?.cve_count ?? 0}
+            tone="neutral"
+            onClick={() => {
+              setSeverityFilter(null);
+              scrollToSection("dep-cve-heading");
+            }}
+          />
         </div>
       </section>
 

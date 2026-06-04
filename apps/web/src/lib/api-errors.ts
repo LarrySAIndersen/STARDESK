@@ -17,18 +17,64 @@ export function isMustChangePasswordError(
   return status === 403 && detail === MUST_CHANGE_PASSWORD_DETAIL;
 }
 
-export async function parseApiErrorDetail(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { detail?: string | { title?: string } };
-    if (typeof body.detail === "string") {
-      return body.detail;
-    }
-    if (body.detail && typeof body.detail === "object" && body.detail.title) {
-      return body.detail.title;
-    }
-  } catch {
-    // ignore
+function detailFromJsonBody(body: { detail?: string | { title?: string } }): string | null {
+  if (typeof body.detail === "string") {
+    return body.detail;
   }
+  if (body.detail && typeof body.detail === "object" && body.detail.title) {
+    return body.detail.title;
+  }
+  return null;
+}
+
+export async function parseApiErrorDetail(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type") ?? "";
+  let text = "";
+  try {
+    text = await response.text();
+  } catch {
+    return `API-fejl: ${response.status}`;
+  }
+
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const body = JSON.parse(trimmed) as { detail?: string | { title?: string } };
+      const detail = detailFromJsonBody(body);
+      if (detail) {
+        return detail;
+      }
+    } catch {
+      // fall through
+    }
+  } else if (contentType.includes("application/json")) {
+    try {
+      const body = JSON.parse(trimmed) as { detail?: string | { title?: string } };
+      const detail = detailFromJsonBody(body);
+      if (detail) {
+        return detail;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (
+    lower.includes("<!doctype html") &&
+    (lower.includes("authentication required") || lower.includes("vercel authentication"))
+  ) {
+    return "Deployment-beskyttelse blokerede API-kaldet. Genindlæs siden eller kontakt administrator.";
+  }
+
+  if (trimmed === "Authentication required") {
+    return "HTTP Basic Auth kræves for dette miljø.";
+  }
+
+  if (trimmed.length > 0 && trimmed.length <= 300 && !trimmed.includes("<")) {
+    return trimmed;
+  }
+
   return `API-fejl: ${response.status}`;
 }
 

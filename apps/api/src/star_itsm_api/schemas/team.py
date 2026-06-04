@@ -22,7 +22,7 @@ class TeamRead(BaseModel):
     name: str
     description: str | None
     is_active: bool
-    members: list[TeamMemberRead] = []
+    members: list[TeamMemberRead] = Field(default_factory=list)
 
 
 class TeamAdminUpdate(BaseModel):

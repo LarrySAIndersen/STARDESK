@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+SLUG_PATTERN = r"^[a-z][a-z0-9_]*$"
+
 
 class SubcategoryAdminRead(BaseModel):
     id: UUID
@@ -18,20 +20,18 @@ class CategoryAdminRead(BaseModel):
     name_da: str
     sort_order: int
     is_active: bool
-    subcategories: list[SubcategoryAdminRead] = []
+    subcategories: list[SubcategoryAdminRead] = Field(default_factory=list)
 
 
 class CategoryCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9_]*$")
+    name: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str = Field(min_length=1, max_length=128)
     sort_order: int = 0
     is_active: bool = True
 
 
 class CategoryUpdate(BaseModel):
-    name: str | None = Field(
-        default=None, min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9_]*$"
-    )
+    name: str | None = Field(default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str | None = Field(default=None, min_length=1, max_length=128)
     sort_order: int | None = None
     is_active: bool | None = None
@@ -39,16 +39,14 @@ class CategoryUpdate(BaseModel):
 
 class SubcategoryCreate(BaseModel):
     category_id: UUID
-    name: str = Field(min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9_]*$")
+    name: str = Field(min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str = Field(min_length=1, max_length=128)
     sort_order: int = 0
     is_active: bool = True
 
 
 class SubcategoryUpdate(BaseModel):
-    name: str | None = Field(
-        default=None, min_length=1, max_length=128, pattern=r"^[a-z][a-z0-9_]*$"
-    )
+    name: str | None = Field(default=None, min_length=1, max_length=128, pattern=SLUG_PATTERN)
     name_da: str | None = Field(default=None, min_length=1, max_length=128)
     sort_order: int | None = None
     is_active: bool | None = None

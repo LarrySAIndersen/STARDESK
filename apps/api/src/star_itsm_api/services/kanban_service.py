@@ -84,6 +84,15 @@ async def _load_member_maps(
     return role_by_board, members_by_board
 
 
+async def _list_board_columns(db: AsyncSession, board_id: uuid.UUID) -> list[KanbanColumn]:
+    result = await db.execute(
+        select(KanbanColumn)
+        .where(KanbanColumn.board_id == board_id)
+        .order_by(KanbanColumn.position.asc())
+    )
+    return list(result.scalars().all())
+
+
 async def _team_names(db: AsyncSession, team_ids: set[uuid.UUID]) -> dict[uuid.UUID, str]:
     if not team_ids:
         return {}
@@ -147,7 +156,7 @@ async def _require_edit_access(
     return my_role
 
 
-async def _ticket_in_board_scope(board: KanbanBoard, ticket: Ticket) -> bool:
+def _ticket_in_board_scope(board: KanbanBoard, ticket: Ticket) -> bool:
     if board.team_id is None:
         return True
     return ticket.assigned_team_id == board.team_id
@@ -453,17 +462,7 @@ async def get_board_detail(
     roles, members = await _require_board_access(db, board, user)
     my_role = resolve_member_role(board, user, roles)
 
-    columns = (
-        (
-            await db.execute(
-                select(KanbanColumn)
-                .where(KanbanColumn.board_id == board_id)
-                .order_by(KanbanColumn.position.asc())
-            )
-        )
-        .scalars()
-        .all()
-    )
+    columns = await _list_board_columns(db, board_id)
 
     placements = (
         (
@@ -559,7 +558,7 @@ async def add_card(
         visible = (await db.execute(stmt)).scalar_one_or_none()
         if visible is None:
             raise PermissionError("ticket_forbidden")
-        if not await _ticket_in_board_scope(board, ticket):
+        if not _ticket_in_board_scope(board, ticket):
             raise PermissionError("ticket_out_of_scope")
         existing = (
             await db.execute(
@@ -720,17 +719,7 @@ async def create_column(
         raise LookupError("board_not_found")
     await _require_edit_access(db, board, user)
 
-    columns = (
-        (
-            await db.execute(
-                select(KanbanColumn)
-                .where(KanbanColumn.board_id == board_id)
-                .order_by(KanbanColumn.position.asc())
-            )
-        )
-        .scalars()
-        .all()
-    )
+    columns = await _list_board_columns(db, board_id)
 
     position = payload.position
     if position is None:
@@ -786,17 +775,7 @@ async def update_column(
         column.default_status = payload.default_status
 
     if payload.position is not None and payload.position != column.position:
-        columns = (
-            (
-                await db.execute(
-                    select(KanbanColumn)
-                    .where(KanbanColumn.board_id == board_id)
-                    .order_by(KanbanColumn.position.asc())
-                )
-            )
-            .scalars()
-            .all()
-        )
+        columns = await _list_board_columns(db, board_id)
         old_pos = column.position
         new_pos = payload.position
         for col in columns:

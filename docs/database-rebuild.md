@@ -26,19 +26,19 @@ Kilde: `scripts/run_neon_setup.py`
 
 | # | Fil |
 |---|-----|
-| 1 | `docs/auth-migration.sql` |
-| 2 | `docs/org-migration.sql` |
-| 3 | `docs/ticket-underaarsag-migration.sql` |
-| 4 | `docs/gdpr-attachments-migration.sql` |
-| 5 | `docs/ticket-activity-timestamps-migration.sql` |
-| 6 | `docs/ticket-assignment-fields-migration.sql` |
-| 7 | `docs/ticket-tags-emoji-migration.sql` |
-| 8 | `docs/ticket-intelligence-migration.sql` |
+| 1 | `apps/api/src/star_itsm_api/sql/migrations/01_auth-migration.sql` |
+| 2 | `apps/api/src/star_itsm_api/sql/migrations/02_org-migration.sql` |
+| 3 | `apps/api/src/star_itsm_api/sql/migrations/03_ticket-underaarsag-migration.sql` |
+| 4 | `apps/api/src/star_itsm_api/sql/migrations/04_gdpr-attachments-migration.sql` |
+| 5 | `apps/api/src/star_itsm_api/sql/migrations/05_ticket-activity-timestamps-migration.sql` |
+| 6 | `apps/api/src/star_itsm_api/sql/migrations/06_ticket-assignment-fields-migration.sql` |
+| 7 | `apps/api/src/star_itsm_api/sql/migrations/07_ticket-tags-emoji-migration.sql` |
+| 8 | `apps/api/src/star_itsm_api/sql/migrations/08_ticket-intelligence-migration.sql` |
 | … | (comment reactions through security flag — see `run_neon_setup.py`) |
-| 15 | `docs/ticket-routing-metadata-migration.sql` |
-| 16 | `docs/knowledge-articles-migration.sql` |
-| 17 | `docs/must-change-password-migration.sql` |
-| 18 | `docs/user-avatar-url-migration.sql` |
+| 15 | `apps/api/src/star_itsm_api/sql/migrations/15_ticket-routing-metadata-migration.sql` |
+| 16 | `apps/api/src/star_itsm_api/sql/migrations/16_knowledge-articles-migration.sql` |
+| 17 | `apps/api/src/star_itsm_api/sql/migrations/17_must-change-password.sql` |
+| 18 | `apps/api/src/star_itsm_api/sql/migrations/18_user-avatar-url.sql` |
 
 `run_neon_setup.py` is the source of truth for the full ordered list.
 
@@ -92,7 +92,7 @@ WHERE table_name = 'tickets' AND column_name IN ('tags', 'ease_score', 'semantic
 
 Ny kolonne kræver **begge**:
 
-1. `docs/<navn>-migration.sql`
+1. `apps/api/src/star_itsm_api/sql/migrations/<NN>_<navn>.sql`
 2. SQLAlchemy model + Pydantic schema + evt. TypeScript type
 
 Se [data-model.md](./data-model.md).

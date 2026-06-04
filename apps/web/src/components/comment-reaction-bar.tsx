@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +44,7 @@ export function CommentReactionBar({
         size="sm"
         className={positiveActive ? "bg-star-blue hover:bg-star-navy h-8 gap-1" : "h-8 gap-1"}
         disabled={pending !== null}
-        onClick={() => void toggle("positive")}
+        onClick={() => fireAndForget(toggle("positive"))}
         aria-pressed={positiveActive}
       >
         <span aria-hidden>👍</span>
@@ -55,7 +57,7 @@ export function CommentReactionBar({
         size="sm"
         className="h-8 gap-1"
         disabled={pending !== null}
-        onClick={() => void toggle("negative")}
+        onClick={() => fireAndForget(toggle("negative"))}
         aria-pressed={negativeActive}
       >
         <span aria-hidden>👎</span>

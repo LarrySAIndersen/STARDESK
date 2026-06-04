@@ -5,14 +5,21 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=scripts/lib/api-venv.sh
+source "$ROOT/scripts/lib/api-venv.sh"
+API_DIR="$ROOT/apps/api"
+GATE_BANNER='=============================================='
 
 FULL=0
-SKIP_API=0
+STAGING=0
+SKIP_STAGING=0
 SKIP_TESTS=0
 
 for arg in "$@"; do
   case "$arg" in
     --full) FULL=1 ;;
+    --staging) STAGING=1 ;;
+    --skip-staging) SKIP_STAGING=1 ;;
     --api-only) FULL=0 ;;
     --skip-tests) SKIP_TESTS=1 ;;
     -h|--help)
@@ -32,25 +39,24 @@ resolve_prototype_demo_password() {
   if [[ -n "${TEST_USER_PASSWORD:-}" ]]; then
     return 0
   fi
-  export TEST_USER_PASSWORD="$(
-    cd "$ROOT/apps/api" && uv run python -c \
-      "from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD; print(PROTOTYPE_BOOTSTRAP_PASSWORD, end='')"
-  )"
+  export TEST_USER_PASSWORD
+  TEST_USER_PASSWORD="$(bash "$ROOT/scripts/lib/resolve-prototype-demo-password.sh")"
 }
 
-echo "=============================================="
+echo "$GATE_BANNER"
 echo " STARDESK deliverable gate (hello-world)"
-echo "=============================================="
+echo "$GATE_BANNER"
 
 if [[ "$SKIP_TESTS" -eq 0 ]]; then
   echo ""
   echo "==> API unit tests (quick)"
-  cd "$ROOT/apps/api"
+  cd "$API_DIR"
   set -a
   # shellcheck disable=SC1091
   [[ -f .env ]] && source .env
   set +a
-  uv run pytest -q --tb=line 2>&1 | tail -5
+  API_PYTEST="$(stardesk_api_venv_pytest "$API_DIR")"
+  "$API_PYTEST" -q --tb=line 2>&1 | tail -5
 fi
 
 echo ""
@@ -61,14 +67,36 @@ if [[ "$FULL" -eq 1 ]]; then
   echo ""
   if [[ ! -d "$ROOT/scripts/node_modules/playwright" ]]; then
     echo "==> Installing Playwright (scripts/)"
-    npm --prefix "$ROOT/scripts" install --no-audit --no-fund
+    npm --prefix "$ROOT/scripts" install --no-audit --no-fund --ignore-scripts
     npx --prefix "$ROOT/scripts" playwright install chromium
   fi
   node "$ROOT/scripts/hello-world-gate.mjs"
 fi
 
+RUN_STAGING=0
+if [[ "$STAGING" -eq 1 && "$SKIP_STAGING" -eq 0 ]]; then
+  RUN_STAGING=1
+fi
+
+if [[ "$RUN_STAGING" -eq 1 ]]; then
+  echo ""
+  bash "$ROOT/scripts/hello-world-gate-staging.sh"
+  if [[ "$FULL" -eq 1 ]]; then
+    echo ""
+    export STARDESK_WEB_URL="${STARDESK_STAGING_WEB_URL:-https://web-git-staging-kjaerby-1628s-projects.vercel.app}"
+    export STARDESK_API_URL="${STARDESK_STAGING_API_URL:-https://api-git-staging-kjaerby-1628s-projects.vercel.app}"
+    echo "==> Hello-world gate (UI) — staging Preview — $STARDESK_WEB_URL"
+    node "$ROOT/scripts/hello-world-gate.mjs"
+  fi
+fi
+
 echo ""
-echo "=============================================="
-echo " DELIVERABLE GATE PASSED"
+echo "$GATE_BANNER"
+if [[ "$RUN_STAGING" -eq 1 ]]; then
+  echo " DELIVERABLE GATE PASSED (local + staging hello-world)"
+else
+  echo " DELIVERABLE GATE PASSED (local hello-world)"
+  echo " Tip: after merge to staging, run with --staging for cloud Preview check."
+fi
 echo " Attach this output (+ screenshots if --full) to your PR/handoff."
-echo "=============================================="
+echo "$GATE_BANNER"

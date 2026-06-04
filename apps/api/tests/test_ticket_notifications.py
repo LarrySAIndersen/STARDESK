@@ -12,6 +12,8 @@ from star_itsm_api.services.ticket_notifications import (
     build_status_notification,
     notify_reporter_of_ticket_update,
 )
+from tests.support.tickets import make_test_ticket
+from tests.support.users import make_test_user
 
 
 def test_build_status_notification_danish() -> None:
@@ -26,7 +28,7 @@ def test_compose_email_includes_ticket_link(monkeypatch) -> None:
         "star_itsm_api.services.ticket_notifications.settings",
         SimpleNamespace(cors_origins=["https://app.example.dk"], frontend_url=""),
     )
-    ticket = SimpleNamespace(
+    ticket = make_test_ticket(
         id=uuid.uuid4(),
         ticket_number="INC-42",
         title="Printer virker ikke",
@@ -43,32 +45,25 @@ def test_compose_email_includes_ticket_link(monkeypatch) -> None:
 def test_reporter_may_receive_email_org_mismatch() -> None:
     org_a = uuid.uuid4()
     org_b = uuid.uuid4()
-    reporter = SimpleNamespace(
-        deleted_at=None,
-        is_active=True,
+    reporter = make_test_user(
         email="user@example.dk",
         organization_id=org_a,
     )
-    ticket = SimpleNamespace(organization_id=org_b)
+    ticket = make_test_ticket(organization_id=org_b)
     assert _reporter_may_receive_email(reporter, ticket) is False
 
 
 def test_reporter_may_receive_email_no_address() -> None:
-    reporter = SimpleNamespace(
-        deleted_at=None,
-        is_active=True,
-        email="   ",
-        organization_id=None,
-    )
-    ticket = SimpleNamespace(organization_id=None)
+    reporter = make_test_user(email="   ", organization_id=None)
+    ticket = make_test_ticket(organization_id=None)
     assert _reporter_may_receive_email(reporter, ticket) is False
 
 
 @pytest.mark.asyncio
 async def test_notify_skips_when_actor_is_reporter() -> None:
     reporter_id = uuid.uuid4()
-    ticket = SimpleNamespace(reporter_user_id=reporter_id, ticket_number="INC-1")
-    actor = SimpleNamespace(id=reporter_id)
+    ticket = make_test_ticket(reporter_user_id=reporter_id, ticket_number="INC-1")
+    actor = make_test_user(user_id=reporter_id)
     with patch(
         "star_itsm_api.services.ticket_notifications.send_escalation_email",
         new_callable=AsyncMock,

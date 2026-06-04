@@ -1,11 +1,13 @@
 "use client";
 
-import { type ReactNode, useLayoutEffect } from "react";
+import { type ReactNode } from "react";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
-import { SidebarRailExpand } from "@/components/sidebar-rail-expand";
+import { SidebarNavEdgeToggle } from "@/components/sidebar-nav-edge-toggle";
+import { ShellNavPanelProvider } from "@/components/shell-nav-panel-context";
 import { ShellResizeSeparator } from "@/components/ui/shell-resize-separator";
 import { useIsLgUp } from "@/hooks/use-media-query";
+import { useShellNavToggle, useSyncShellNavPanel } from "@/hooks/use-sync-shell-nav-panel";
 import {
   SHELL_NAV,
   SHELL_NAV_COLLAPSED_WIDTH,
@@ -45,16 +47,8 @@ export function AgentShellColumns({
 
   const initialLayout = defaultLayout ?? FALLBACK_LAYOUT;
 
-  useLayoutEffect(() => {
-    if (!isLgUp) return;
-    const panel = navPanelRef.current;
-    if (!panel) return;
-    if (collapsed) {
-      panel.collapse();
-    } else {
-      panel.expand();
-    }
-  }, [collapsed, navPanelRef, isLgUp]);
+  useSyncShellNavPanel(navPanelRef, collapsed, SHELL_NAV.default, isLgUp);
+  const toggleNav = useShellNavToggle(navPanelRef, collapsed, onToggle, SHELL_NAV.default);
 
   if (!isLgUp) {
     return (
@@ -65,34 +59,36 @@ export function AgentShellColumns({
   }
 
   return (
-    <Group
-      id={SHELL_WIDTHS_STORAGE_KEY}
-      orientation="horizontal"
-      className="agent-shell min-h-0 min-w-0 flex-1"
-      defaultLayout={initialLayout}
-      onLayoutChanged={onLayoutChanged}
-      resizeTargetMinimumSize={{ fine: 4, coarse: 28 }}
-    >
-      <Panel
-        id={SHELL_PANEL_NAV}
-        panelRef={navPanelRef}
-        defaultSize={SHELL_NAV.default}
-        minSize={SHELL_NAV.min}
-        maxSize={SHELL_NAV.max}
-        collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
-        collapsible
-        groupResizeBehavior="preserve-pixel-size"
-        className="min-h-0 min-w-0 overflow-hidden"
+    <ShellNavPanelProvider toggleNav={toggleNav}>
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <Group
+        id={SHELL_WIDTHS_STORAGE_KEY}
+        orientation="horizontal"
+        className="agent-shell min-h-0 min-w-0 flex-1"
+        defaultLayout={initialLayout}
+        onLayoutChanged={onLayoutChanged}
+        resizeTargetMinimumSize={{ fine: 4, coarse: 28 }}
       >
-        <div className="relative h-full min-h-0">
-          {sidebar}
-          {collapsed ? <SidebarRailExpand onExpand={onToggle} /> : null}
-        </div>
-      </Panel>
-      {collapsed ? null : <ShellResizeSeparator />}
-      <Panel id={SHELL_PANEL_MAIN} minSize={240} className={cn("flex min-h-0 min-w-0 flex-col")}>
-        {children}
-      </Panel>
-    </Group>
+        <Panel
+          id={SHELL_PANEL_NAV}
+          panelRef={navPanelRef}
+          defaultSize={SHELL_NAV.default}
+          minSize={SHELL_NAV.min}
+          maxSize={SHELL_NAV.max}
+          collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
+          collapsible
+          groupResizeBehavior="preserve-pixel-size"
+          className="min-h-0 min-w-0"
+        >
+          <div className="relative h-full min-h-0">{sidebar}</div>
+        </Panel>
+        <ShellResizeSeparator disabled={collapsed} hidden={collapsed} />
+        <Panel id={SHELL_PANEL_MAIN} minSize={240} className={cn("flex min-h-0 min-w-0 flex-col")}>
+          {children}
+        </Panel>
+      </Group>
+        {collapsed ? <SidebarNavEdgeToggle onToggle={toggleNav} /> : null}
+      </div>
+    </ShellNavPanelProvider>
   );
 }

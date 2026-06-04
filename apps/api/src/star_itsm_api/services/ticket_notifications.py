@@ -116,9 +116,7 @@ def _reporter_may_receive_email(reporter: User, ticket: Ticket) -> bool:
         return False
     ticket_org = ticket.organization_id
     reporter_org = get_user_organization_id(reporter)
-    if ticket_org is not None and reporter_org is not None and ticket_org != reporter_org:
-        return False
-    return True
+    return not (ticket_org is not None and reporter_org is not None and ticket_org != reporter_org)
 
 
 def _compose_email(

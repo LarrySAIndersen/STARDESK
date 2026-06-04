@@ -14,7 +14,7 @@ Focused guide for developers working in this monorepo (`apps/web` + `apps/api`).
 
 ```bash
 bash scripts/bootstrap-dev-database.sh              # uses DATABASE_URL from apps/api/.env
-bash scripts/bootstrap-dev-database.sh --local-postgres   # VM without Neon
+bash scripts/bootstrap-dev-database.sh --local-postgres   # VM without Neon (copy scripts/local-postgres.env.example → local-postgres.env first)
 ```
 
 See [AGENTS.md](./AGENTS.md) for Cloud Agent details.
@@ -65,6 +65,19 @@ bash scripts/run-deliverable-gate.sh --full   # + UI /tickets (ved web/auth ænd
 ```
 
 See [docs/deliverable-gate.md](./docs/deliverable-gate.md).
+
+### Pre-commit hooks (local)
+
+Optional but recommended before each commit:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files   # first time / after hook changes
+```
+
+Hooks: **ruff** + **ruff format** (`apps/api`), **eslint** + **tsc --noEmit** (`apps/web`).  
+Web hook uses `node scripts/pre-commit/web-quality.mjs` (works on Windows). API-only: `pre-commit run ruff --all-files`.
 
 ```powershell
 cd apps\web

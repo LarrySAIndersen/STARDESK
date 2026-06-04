@@ -103,7 +103,13 @@ export function ItilTicketTable({
                 ) : null}
                 {(ticket.child_count ?? 0) > 0 ? (
                   <Badge variant="outline" className="ml-1" aria-label="Har små sager">
-                    {ticket.child_count}
+                    <Link
+                      href={`/tickets?parent_id=${encodeURIComponent(ticket.id)}`}
+                      className="hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {ticket.child_count}
+                    </Link>
                   </Badge>
                 ) : null}
                 {ticket.is_security_ticket ? (

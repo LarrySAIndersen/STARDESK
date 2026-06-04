@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Ticket, X } from "lucide-react";
@@ -37,19 +39,21 @@ export function AssetTicketsPanel({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void apiGet<TicketType[]>("/api/v1/tickets?board=true&limit=500")
-      .then((rows) => {
-        if (cancelled) return;
-        setTickets(filterTicketsForAsset(rows, assetId, systems));
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Kunne ikke hente sager");
-        setTickets([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+    fireAndForget(
+      apiGet<TicketType[]>("/api/v1/tickets?board=true&limit=500")
+        .then((rows) => {
+          if (cancelled) return;
+          setTickets(filterTicketsForAsset(rows, assetId, systems));
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setError(err instanceof Error ? err.message : "Kunne ikke hente sager");
+          setTickets([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        }),
+    );
     return () => {
       cancelled = true;
     };

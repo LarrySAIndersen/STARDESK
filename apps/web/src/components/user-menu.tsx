@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { clearSession, getClientUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import type { User } from "@/types/user";
 
 export function UserMenu({ user: serverUser }: { user?: User | null }) {
@@ -22,7 +24,10 @@ export function UserMenu({ user: serverUser }: { user?: User | null }) {
   }
 
   return (
-    <section className="flex items-center">
+    <section className="flex items-center gap-1">
+      <Link href="/min-side" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+        Min side
+      </Link>
       <Button type="button" variant="ghost" size="sm" onClick={logout}>
         Log ud
       </Button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 
 import { apiGet, apiPut } from "@/lib/api";
@@ -32,12 +34,12 @@ export function useSidebarNavVisibility(enabled: boolean) {
   }, [enabled]);
 
   useEffect(() => {
-    void reload();
+    fireAndForget(reload());
   }, [reload]);
 
   useEffect(() => {
     const onChanged = () => {
-      void reload();
+      fireAndForget(reload());
     };
     window.addEventListener(NAV_VISIBILITY_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(NAV_VISIBILITY_CHANGED_EVENT, onChanged);

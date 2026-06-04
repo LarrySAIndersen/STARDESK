@@ -26,7 +26,7 @@ ORGS = [
 lines = [
     "-- 10 indmelder-organisationer, 30 agenter (3 per gruppe)",
     "-- Password for all: see star_itsm_api.core.demo PROTOTYPE_BOOTSTRAP_PASSWORD",
-    "-- Run docs/org-migration.sql first, then this file in Neon",
+    "-- Run apps/api/src/star_itsm_api/sql/migrations/02_org-migration.sql first, then this file in Neon",
     "",
 ]
 

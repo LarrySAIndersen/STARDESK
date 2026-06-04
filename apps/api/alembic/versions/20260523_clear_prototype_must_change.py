@@ -36,4 +36,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Irreversible must-change flag clear — intentionally empty.
     pass

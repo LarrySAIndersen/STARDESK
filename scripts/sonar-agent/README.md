@@ -29,7 +29,11 @@ From `scripts/`:
 ```bash
 npm run sonar:agent
 npm run sonar:agent:api
+npm run sonar:hotspots
+npm run sonar:hotspots:review -- --branch main
 ```
+
+`sonar:hotspots:review` posts `REVIEWED` (SAFE/FIXED) to SonarCloud via API — add `--dry-run` first. Avoid `http://` in review comments (CloudFront WAF).
 
 Where:
 
@@ -64,8 +68,25 @@ From `scripts/`:
 ```bash
 npm run sonar:codemod:fastapi          # S8409: drop redundant response_model in routers
 npm run sonar:codemod:readonly-props   # S6759: Readonly<> on type XProps aliases (web)
+npm run sonar:codemod:void-operator    # S3735: void promise → fireAndForget() (web)
 ```
 
 Repo root `sonar-project.properties` excludes seed SQL, docs, and helpdesk prototype HTML from analysis.
+
+## Coverage import (t-27)
+
+Generate API coverage before a SonarScanner run so SonarCloud picks up metrics:
+
+```bash
+cd apps/api
+uv sync --group dev
+uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
+cd ../.. && python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
+cd ../..
+# SONAR_TOKEN from SonarCloud — never commit
+sonar-scanner -Dsonar.host.url=https://sonarcloud.io -Dsonar.token="$SONAR_TOKEN"
+```
+
+CI: `.github/workflows/sonarcloud.yml` runs pytest coverage + SonarCloud scan on `staging`/`main` (secret `SONAR`). See [docs/test-coverage.md](../../docs/test-coverage.md).
 
 Rollback: revert branch or run `git checkout main -- <paths>` before re-applying codemods.

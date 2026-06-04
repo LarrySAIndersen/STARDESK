@@ -3,6 +3,20 @@ import { DEFAULT_TICKET_SORT, parseTicketSort } from "@/lib/ticket-sort";
 
 /** Build GET /api/v1/tickets query string from dashboard drill-down search params. */
 
+function pick(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0];
+  }
+  return value;
+}
+
+function pickTruthyFlag(
+  searchParams: Record<string, string | string[] | undefined>,
+  key: string,
+): boolean {
+  return pick(searchParams[key]) === "true";
+}
+
 export function buildTicketsApiQuery(
   searchParams: Record<string, string | string[] | undefined>,
 ): string {
@@ -13,7 +27,7 @@ export function buildTicketsApiQuery(
   if (scope) {
     params.set("scope", scope);
   }
-  if (pick(searchParams.open_only) === "true") {
+  if (pickTruthyFlag(searchParams, "open_only")) {
     params.set("open_only", "true");
   }
   const bucket = pick(searchParams.bucket);
@@ -24,7 +38,7 @@ export function buildTicketsApiQuery(
   if (sla) {
     params.set("sla", sla);
   }
-  if (pick(searchParams.major_open) === "true") {
+  if (pickTruthyFlag(searchParams, "major_open")) {
     params.set("major_open", "true");
   }
   const opened = pick(searchParams.opened_since_days);
@@ -35,9 +49,57 @@ export function buildTicketsApiQuery(
   if (closed) {
     params.set("closed_since_days", closed);
   }
+  const status = pick(searchParams.status);
+  if (status) {
+    params.set("status", status);
+  }
+  const priority = pick(searchParams.priority);
+  if (priority) {
+    params.set("priority", priority);
+  }
+  const createdOn = pick(searchParams.created_on);
+  if (createdOn) {
+    params.set("created_on", createdOn);
+  }
+  const closedOn = pick(searchParams.closed_on);
+  if (closedOn) {
+    params.set("closed_on", closedOn);
+  }
+  const ticketType = pick(searchParams.ticket_type);
+  if (ticketType) {
+    params.set("ticket_type", ticketType);
+  }
+  if (pickTruthyFlag(searchParams, "security_only")) {
+    params.set("security_only", "true");
+  }
+  if (pickTruthyFlag(searchParams, "is_store")) {
+    params.set("is_store", "true");
+  }
+  const parentId = pick(searchParams.parent_id);
+  if (parentId) {
+    params.set("parent_id", parentId);
+  }
+  const assignedTeamId = pick(searchParams.assigned_team_id);
+  if (assignedTeamId) {
+    params.set("assigned_team_id", assignedTeamId);
+  }
 
   const hasDashboardFilter =
-    scope || bucket || sla || opened || closed || pick(searchParams.major_open) === "true";
+    scope ||
+    bucket ||
+    sla ||
+    opened ||
+    closed ||
+    status ||
+    priority ||
+    createdOn ||
+    closedOn ||
+    ticketType ||
+    parentId ||
+    assignedTeamId ||
+    pickTruthyFlag(searchParams, "major_open") ||
+    pickTruthyFlag(searchParams, "security_only") ||
+    pickTruthyFlag(searchParams, "is_store");
 
   if (!hasDashboardFilter) {
     params.set("board", "true");
@@ -47,13 +109,6 @@ export function buildTicketsApiQuery(
   params.set("sort", parseTicketSort(pick(searchParams.sort)));
 
   return params.toString();
-}
-
-function pick(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-  return value;
 }
 
 export function dashboardFilterTitle(
@@ -72,15 +127,32 @@ export function dashboardFilterTitle(
   else if (bucket === "igangsat") parts.push("igangsat");
   else if (bucket === "lost") parts.push("løst");
   else if (bucket === "lukket") parts.push("lukket");
+  else if (bucket === "genaabnet") parts.push("genåbnet");
 
   const sla = pick(searchParams.sla);
   if (sla === "overdue") parts.push("SLA overskredet");
   else if (sla === "due_soon") parts.push("SLA inden forfald");
 
-  if (pick(searchParams.major_open) === "true") parts.push("store sager");
-  if (pick(searchParams.open_only) === "true" && !bucket && !sla) parts.push("åbne sager");
+  if (pickTruthyFlag(searchParams, "major_open")) parts.push("store sager");
+  if (pickTruthyFlag(searchParams, "open_only") && !bucket && !sla) parts.push("åbne sager");
   if (pick(searchParams.opened_since_days) === "7") parts.push("modtaget seneste 7 d");
   if (pick(searchParams.closed_since_days) === "7") parts.push("lukket seneste 7 d");
+  const status = pick(searchParams.status);
+  if (status) parts.push(`status: ${status}`);
+  const priority = pick(searchParams.priority);
+  if (priority) parts.push(`prioritet: ${priority}`);
+  const createdOn = pick(searchParams.created_on);
+  if (createdOn) parts.push(`oprettet ${createdOn}`);
+  const closedOn = pick(searchParams.closed_on);
+  if (closedOn) parts.push(`lukket ${closedOn}`);
+  const ticketType = pick(searchParams.ticket_type);
+  if (ticketType) parts.push(`type: ${ticketType}`);
+  if (pickTruthyFlag(searchParams, "security_only")) parts.push("sikkerhedssager");
+  if (pickTruthyFlag(searchParams, "is_store")) parts.push("store sager (liste)");
+  const parentId = pick(searchParams.parent_id);
+  if (parentId) parts.push("undersager");
+  const assignedTeamId = pick(searchParams.assigned_team_id);
+  if (assignedTeamId) parts.push("gruppe");
 
   const assetId = pick(searchParams.asset_id);
   if (assetId) {
@@ -99,8 +171,16 @@ const TICKETS_URL_FILTER_KEYS = [
   "major_open",
   "opened_since_days",
   "closed_since_days",
+  "created_on",
+  "closed_on",
   "asset_id",
   "status",
+  "priority",
+  "ticket_type",
+  "security_only",
+  "is_store",
+  "parent_id",
+  "assigned_team_id",
   "sort",
 ] as const;
 

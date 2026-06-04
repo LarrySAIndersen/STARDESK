@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
+import { CreateTicketOptionalSection } from "@/components/create-ticket-optional-section";
 import {
   PageLayoutFormField,
   PageLayoutGrid,
@@ -29,6 +30,7 @@ import {
   PendingImageAttachments,
   usePendingImageAttachments,
 } from "@/components/pending-image-attachments";
+import { dispatchBoardTicketsChanged } from "@/hooks/use-board-data-sync";
 import { apiGet, apiPost } from "@/lib/api";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Category } from "@/types/category";
@@ -268,6 +270,7 @@ export function CreateTicketForm({
       if (pendingAttachments.length > 0) {
         await uploadTicketAttachments(ticket.id, pendingAttachments);
       }
+      dispatchBoardTicketsChanged();
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
     } catch (err) {
@@ -283,40 +286,32 @@ export function CreateTicketForm({
         "wire-card border-t-[3px] border-t-star-red",
       )}
     >
-      <h1 id="create-ticket-heading" className="wire-card-title">
-        Ny sag
-      </h1>
-      <p className="text-muted-foreground mb-2 text-sm">
-        Opret en sag i STARdesk. Felter markeret med stjerne er påkrævet — kategori, tags og
-        personoplysninger er valgfrie.
-      </p>
-      <p className="text-muted-foreground mb-6 text-xs">
-        Valgfrit: brug AI-assistenten til et udkast, eller udfyld formularen direkte.
-      </p>
-      <div className="ticket-create-layout">
-        <TicketCreateLlmAssistant
-          onApplyDraft={applyIntakeDraft}
-          disabled={isSubmitting}
-        />
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="min-w-0"
-          aria-labelledby="create-ticket-heading"
-          noValidate
-        >
-        <PageLayoutGrid className="space-y-8">
+      <header className="mb-6">
+        <h1 id="create-ticket-heading" className="wire-card-title">
+          Ny sag
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Beskriv problemet med titel og beskrivelse — alt andet er valgfrit og kan udfyldes
+          bagefter.
+        </p>
+      </header>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="min-w-0"
+        aria-labelledby="create-ticket-heading"
+        noValidate
+      >
+        <PageLayoutGrid className="space-y-5">
           <PageLayoutSection
             fieldId="section-basics"
-            defaultLabel="Sagens indhold"
+            defaultLabel="Det vigtigste"
             defaultOrder={10}
+            contentClassName="ticket-create-primary space-y-5 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)]/40 p-5"
           >
-            <p className="text-muted-foreground text-xs">
-              Start med kort titel og beskrivelse — type og prioritet kan justeres bagefter.
-            </p>
-
             <PageLayoutFormField
               fieldId="field-title"
-              defaultLabel="Titel (påkrævet)"
+              defaultLabel="Titel"
               defaultOrder={11}
               htmlFor="title"
             >
@@ -326,37 +321,31 @@ export function CreateTicketForm({
                 required
                 aria-required="true"
                 aria-invalid={errors.title ? true : undefined}
-                aria-describedby={errors.title ? "title-error" : "title-hint"}
-                placeholder="Kort overskrift på sagen"
+                aria-describedby={errors.title ? "title-error" : undefined}
+                placeholder="Fx VPN virker ikke hjemmefra"
                 {...register("title")}
               />
               {errors.title ? (
                 <p id="title-error" className="text-destructive text-sm" role="alert">
                   {errors.title.message}
                 </p>
-              ) : (
-                <p id="title-hint" className="text-muted-foreground text-xs">
-                  Mindst 3 tegn — fx «VPN virker ikke hjemmefra».
-                </p>
-              )}
+              ) : null}
             </PageLayoutFormField>
 
             <PageLayoutFormField
               fieldId="field-description"
-              defaultLabel="Beskrivelse (påkrævet)"
+              defaultLabel="Beskrivelse"
               defaultOrder={12}
               htmlFor="description"
             >
               <Textarea
                 id="description"
-                rows={6}
+                rows={5}
                 className={textareaClassName}
                 required
                 aria-required="true"
                 aria-invalid={errors.description ? true : undefined}
-                aria-describedby={
-                  errors.description ? "description-error" : "description-hint"
-                }
+                aria-describedby={errors.description ? "description-error" : undefined}
                 placeholder="Hvad skete der, hvornår, og hvad har I allerede prøvet?"
                 {...register("description")}
                 onPaste={(event) => {
@@ -371,11 +360,7 @@ export function CreateTicketForm({
                 <p id="description-error" className="text-destructive text-sm" role="alert">
                   {errors.description.message}
                 </p>
-              ) : (
-                <p id="description-hint" className="text-muted-foreground text-xs">
-                  Mindst 10 tegn. Indsæt billeder med Ctrl+V — CPR må ikke stå her.
-                </p>
-              )}
+              ) : null}
             </PageLayoutFormField>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -389,16 +374,12 @@ export function CreateTicketForm({
                 <select
                   id="ticket_type"
                   className={selectClassName}
-                  aria-describedby="ticket-type-hint"
                   {...register("ticket_type")}
                 >
                   <option value="incident">Hændelse</option>
                   <option value="service_request">Serviceanmodning</option>
                   <option value="problem">Problem</option>
                 </select>
-                <p id="ticket-type-hint" className="text-muted-foreground text-xs">
-                  Hændelse ved uventet nedbrud; serviceanmodning ved bestilling/ændring.
-                </p>
               </PageLayoutFormField>
               <PageLayoutFormField
                 fieldId="field-priority"
@@ -419,55 +400,52 @@ export function CreateTicketForm({
                 </select>
               </PageLayoutFormField>
             </div>
-
-            {staffOnly ? (
-              <PageLayoutFormField
-                fieldId="field-source"
-                defaultLabel="Kilde"
-                defaultOrder={15}
-                htmlFor="ticket_source"
-              >
-                <select
-                  id="ticket_source"
-                  className={selectClassName}
-                  value={ticketSource}
-                  onChange={(e) =>
-                    setTicketSource(e.target.value as "portal" | "email" | "phone" | "chat")
-                  }
-                  disabled={isSubmitting}
-                >
-                  <option value="phone">Telefon</option>
-                  <option value="email">E-mail</option>
-                  <option value="chat">Chat</option>
-                  <option value="portal">Selvbetjening</option>
-                </select>
-                <p className="text-muted-foreground text-xs">
-                  Angiv hvordan sagen kom ind — synlig som &quot;Kilde&quot; på sagen.
-                </p>
-              </PageLayoutFormField>
-            ) : null}
-
-            <PageLayoutFormField
-              fieldId="field-intake"
-              defaultLabel="Hurtige afklaringer"
-              defaultOrder={16}
-            >
-              <TicketIntakeQuestions
-                title={watchedTitle}
-                description={watchedDescription}
-                categoryName={categoryNameDa}
-                answers={intakeAnswers}
-                onChange={setIntakeAnswers}
-                disabled={isSubmitting}
-              />
-            </PageLayoutFormField>
           </PageLayoutSection>
 
           <PageLayoutSection
-            fieldId="section-classify"
-            defaultLabel="Klassificering"
-            defaultOrder={20}
+            fieldId="section-submit"
+            defaultLabel="Opret sag"
+            defaultOrder={15}
+            hideHeading
+            pinOrder
+            contentClassName="space-y-3 py-1"
           >
+            {error ? (
+              <p className="text-destructive text-sm" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button
+                type="submit"
+                className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto sm:min-w-[10rem]"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? "Opretter sag…" : "Opret sag"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="wire-btn min-h-11 w-full sm:w-auto"
+                disabled={isSubmitting}
+                onClick={() => router.push("/tickets")}
+              >
+                Annuller
+              </Button>
+            </div>
+          </PageLayoutSection>
+
+          <PageLayoutSection
+            fieldId="section-optional"
+            defaultLabel="Valgfrit"
+            defaultOrder={20}
+            contentClassName="space-y-3"
+          >
+            <CreateTicketOptionalSection
+              title="Klassificering"
+              description="Kategori, underkategori, tags og underårsager"
+            >
             <div className="grid gap-4 sm:grid-cols-2">
               <PageLayoutFormField
                 fieldId="field-category"
@@ -548,97 +526,6 @@ export function CreateTicketForm({
             </PageLayoutFormField>
 
             <PageLayoutFormField
-              fieldId="field-major"
-              defaultLabel="Stor sag"
-              defaultOrder={24}
-            >
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" className="size-4 rounded border" {...register("is_major")} />
-                <span>Stor sag (vises i kolonner til højre på forsiden)</span>
-              </label>
-            </PageLayoutFormField>
-
-            {!isMajor && storeTickets.length > 0 ? (
-              <PageLayoutFormField
-                fieldId="field-parent"
-                defaultLabel="Tilknyt store sag (valgfrit)"
-                defaultOrder={25}
-                htmlFor="parent_ticket_id"
-              >
-                <select
-                  id="parent_ticket_id"
-                  className={selectClassName}
-                  value={parentTicketId}
-                  onChange={(e) => setParentTicketId(e.target.value)}
-                  disabled={isSubmitting}
-                >
-                  <option value="">Ingen</option>
-                  {storeTickets.map((store) => (
-                    <option key={store.id} value={store.id}>
-                      {store.ticket_number} — {store.title}
-                    </option>
-                  ))}
-                </select>
-              </PageLayoutFormField>
-            ) : null}
-
-            {staffOnly ? (
-              <PageLayoutFormField
-                fieldId="field-security"
-                defaultLabel="Sikkerhedssag"
-                defaultOrder={26}
-              >
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="size-4 rounded border"
-                    {...register("is_security_ticket")}
-                  />
-                  <span>Sikkerhedssag</span>
-                </label>
-              </PageLayoutFormField>
-            ) : null}
-
-            {staffOnly && teams.length > 0 ? (
-              <>
-                <PageLayoutFormField
-                  fieldId="field-affected-users"
-                  defaultLabel="Berørte brugere"
-                  defaultOrder={27}
-                >
-                  <UserMultiSelect
-                    teams={teams}
-                    selectedUserIds={affectedUserIds}
-                    onChange={setAffectedUserIds}
-                    placeholder="Søg bruger til berørte…"
-                    disabled={isSubmitting}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Personer der er direkte ramt af problemet — får ikke automatisk alle
-                    sagshændelser.
-                  </p>
-                </PageLayoutFormField>
-                <PageLayoutFormField
-                  fieldId="field-interested-users"
-                  defaultLabel="Interessenter"
-                  defaultOrder={28}
-                >
-                  <UserMultiSelect
-                    teams={teams}
-                    selectedUserIds={interestedUserIds}
-                    onChange={setInterestedUserIds}
-                    placeholder="Søg bruger til interessenter…"
-                    disabled={isSubmitting}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Kolleger der skal følge med i sagen uden at være berørt — fx leder eller
-                    projektgruppe.
-                  </p>
-                </PageLayoutFormField>
-              </>
-            ) : null}
-
-            <PageLayoutFormField
               fieldId="field-tags"
               defaultLabel="Tags og emoji"
               defaultOrder={29}
@@ -651,137 +538,237 @@ export function CreateTicketForm({
                 disabled={isSubmitting}
               />
             </PageLayoutFormField>
-          </PageLayoutSection>
+            </CreateTicketOptionalSection>
 
-          <PageLayoutSection
-            fieldId="section-privacy"
-            defaultLabel="Personoplysninger (valgfrit)"
-            defaultOrder={30}
-            contentClassName="rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-4"
-          >
-            <p className="text-muted-foreground text-xs">
-              Udfyld kun hvis sagen omhandler en konkret person. GDPR-samtykke kræves kun ved
-              CPR-nummer.
-            </p>
-
-            <PageLayoutFormField
-              fieldId="field-cpr"
-              defaultLabel="CPR-nummer"
-              defaultOrder={31}
-              htmlFor="subject_cpr"
+            <CreateTicketOptionalSection
+              title="Hurtige afklaringer"
+              description="Korte spørgsmål der hjælper med at prioritere sagen"
             >
-              <Input
-                id="subject_cpr"
-                className={inputClassName}
-                placeholder="DDMMYY-XXXX"
-                autoComplete="off"
-                {...register("subject_cpr")}
-              />
-              {errors.subject_cpr ? (
-                <p className="text-destructive text-sm">{errors.subject_cpr.message}</p>
-              ) : (
-                <p className="text-muted-foreground text-xs">
-                  CPR må kun angives her — ikke i titel eller beskrivelse.
-                </p>
-              )}
-            </PageLayoutFormField>
-
-            {cprFilled ? (
               <PageLayoutFormField
-                fieldId="field-gdpr"
-                defaultLabel="GDPR-samtykke"
-                defaultOrder={32}
+                fieldId="field-intake"
+                defaultLabel="Afklaringer"
+                defaultOrder={16}
               >
-                <label className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 size-4 rounded border"
-                    {...register("gdpr_consent")}
-                  />
-                  <span>
-                    Jeg giver samtykke til, at STAR behandler personoplysninger i denne sag i
-                    overensstemmelse med GDPR.{" "}
-                    <span className="text-destructive font-medium">
-                      Påkrævet når CPR er udfyldt.
-                    </span>
-                  </span>
-                </label>
-                {errors.gdpr_consent ? (
-                  <p className="text-destructive text-sm">{errors.gdpr_consent.message}</p>
-                ) : null}
+                <TicketIntakeQuestions
+                  title={watchedTitle}
+                  description={watchedDescription}
+                  categoryName={categoryNameDa}
+                  answers={intakeAnswers}
+                  onChange={setIntakeAnswers}
+                  disabled={isSubmitting}
+                />
               </PageLayoutFormField>
+            </CreateTicketOptionalSection>
+
+            {staffOnly ? (
+              <CreateTicketOptionalSection
+                title="Sagsadministration"
+                description="Kilde, berørte brugere, stor sag og sikkerhed"
+              >
+                <PageLayoutFormField
+                  fieldId="field-source"
+                  defaultLabel="Kilde"
+                  defaultOrder={15}
+                  htmlFor="ticket_source"
+                >
+                  <select
+                    id="ticket_source"
+                    className={selectClassName}
+                    value={ticketSource}
+                    onChange={(e) =>
+                      setTicketSource(e.target.value as "portal" | "email" | "phone" | "chat")
+                    }
+                    disabled={isSubmitting}
+                  >
+                    <option value="phone">Telefon</option>
+                    <option value="email">E-mail</option>
+                    <option value="chat">Chat</option>
+                    <option value="portal">Selvbetjening</option>
+                  </select>
+                </PageLayoutFormField>
+
+                <PageLayoutFormField
+                  fieldId="field-major"
+                  defaultLabel="Stor sag"
+                  defaultOrder={24}
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border"
+                      {...register("is_major")}
+                    />
+                    <span>Stor sag (vises i kolonner til højre på forsiden)</span>
+                  </label>
+                </PageLayoutFormField>
+
+                {!isMajor && storeTickets.length > 0 ? (
+                  <PageLayoutFormField
+                    fieldId="field-parent"
+                    defaultLabel="Tilknyt store sag (valgfrit)"
+                    defaultOrder={25}
+                    htmlFor="parent_ticket_id"
+                  >
+                    <select
+                      id="parent_ticket_id"
+                      className={selectClassName}
+                      value={parentTicketId}
+                      onChange={(e) => setParentTicketId(e.target.value)}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Ingen</option>
+                      {storeTickets.map((store) => (
+                        <option key={store.id} value={store.id}>
+                          {store.ticket_number} — {store.title}
+                        </option>
+                      ))}
+                    </select>
+                  </PageLayoutFormField>
+                ) : null}
+
+                <PageLayoutFormField
+                  fieldId="field-security"
+                  defaultLabel="Sikkerhedssag"
+                  defaultOrder={26}
+                >
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4 rounded border"
+                      {...register("is_security_ticket")}
+                    />
+                    <span>Sikkerhedssag</span>
+                  </label>
+                </PageLayoutFormField>
+
+                {teams.length > 0 ? (
+                  <>
+                    <PageLayoutFormField
+                      fieldId="field-affected-users"
+                      defaultLabel="Berørte brugere"
+                      defaultOrder={27}
+                    >
+                      <UserMultiSelect
+                        teams={teams}
+                        selectedUserIds={affectedUserIds}
+                        onChange={setAffectedUserIds}
+                        placeholder="Søg bruger til berørte…"
+                        disabled={isSubmitting}
+                      />
+                    </PageLayoutFormField>
+                    <PageLayoutFormField
+                      fieldId="field-interested-users"
+                      defaultLabel="Interessenter"
+                      defaultOrder={28}
+                    >
+                      <UserMultiSelect
+                        teams={teams}
+                        selectedUserIds={interestedUserIds}
+                        onChange={setInterestedUserIds}
+                        placeholder="Søg bruger til interessenter…"
+                        disabled={isSubmitting}
+                      />
+                    </PageLayoutFormField>
+                  </>
+                ) : null}
+              </CreateTicketOptionalSection>
             ) : null}
-          </PageLayoutSection>
 
-          <PageLayoutSection
-            fieldId="section-attachment"
-            defaultLabel="Vedhæftning"
-            defaultOrder={40}
-          >
-            <PageLayoutFormField
-              fieldId="field-attachment"
-              defaultLabel="Dokument (valgfrit)"
-              defaultOrder={41}
-              htmlFor="attachment"
+            <CreateTicketOptionalSection
+              title="Personoplysninger"
+              description="Kun hvis sagen omhandler en konkret person med CPR"
             >
-              <Input
-                id="attachment"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.doc,.docx,image/*"
-                multiple
-                onChange={(event) => {
-                  const chosen = event.target.files;
-                  if (chosen?.length) {
-                    addAttachments([...chosen]);
-                  }
-                  event.target.value = "";
-                }}
+              <PageLayoutFormField
+                fieldId="field-cpr"
+                defaultLabel="CPR-nummer"
+                defaultOrder={31}
+                htmlFor="subject_cpr"
+              >
+                <Input
+                  id="subject_cpr"
+                  className={inputClassName}
+                  placeholder="DDMMYY-XXXX"
+                  autoComplete="off"
+                  {...register("subject_cpr")}
+                />
+                {errors.subject_cpr ? (
+                  <p className="text-destructive text-sm">{errors.subject_cpr.message}</p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    CPR må kun angives her — ikke i titel eller beskrivelse.
+                  </p>
+                )}
+              </PageLayoutFormField>
+
+              {cprFilled ? (
+                <PageLayoutFormField
+                  fieldId="field-gdpr"
+                  defaultLabel="GDPR-samtykke"
+                  defaultOrder={32}
+                >
+                  <label className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      className="mt-1 size-4 rounded border"
+                      {...register("gdpr_consent")}
+                    />
+                    <span>
+                      Jeg giver samtykke til, at STAR behandler personoplysninger i denne sag i
+                      overensstemmelse med GDPR.{" "}
+                      <span className="text-destructive font-medium">
+                        Påkrævet når CPR er udfyldt.
+                      </span>
+                    </span>
+                  </label>
+                  {errors.gdpr_consent ? (
+                    <p className="text-destructive text-sm">{errors.gdpr_consent.message}</p>
+                  ) : null}
+                </PageLayoutFormField>
+              ) : null}
+            </CreateTicketOptionalSection>
+
+            <CreateTicketOptionalSection
+              title="Vedhæftninger"
+              description="Filer eller billeder — du kan også indsætte billeder med Ctrl+V i beskrivelsen"
+            >
+              <PageLayoutFormField
+                fieldId="field-attachment"
+                defaultLabel="Dokument"
+                defaultOrder={41}
+                htmlFor="attachment"
+              >
+                <Input
+                  id="attachment"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.doc,.docx,image/*"
+                  multiple
+                  onChange={(event) => {
+                    const chosen = event.target.files;
+                    if (chosen?.length) {
+                      addAttachments([...chosen]);
+                    }
+                    event.target.value = "";
+                  }}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Max 10 MB pr. fil. Filer virusscannes før sagsbehandlere kan åbne dem.
+                </p>
+              </PageLayoutFormField>
+            </CreateTicketOptionalSection>
+
+            <CreateTicketOptionalSection
+              title="AI-assistent"
+              description="Få hjælp til at udarbejde et udkast — valgfrit"
+            >
+              <TicketCreateLlmAssistant
+                onApplyDraft={applyIntakeDraft}
+                disabled={isSubmitting}
+                embedded
               />
-              <p className="text-muted-foreground text-xs">
-                Vælg filer eller indsæt billeder med Ctrl+V i beskrivelsen. Filer virusscannes
-                før sagsbehandlere kan åbne dem. Max 10 MB pr. fil.
-              </p>
-            </PageLayoutFormField>
-          </PageLayoutSection>
-
-          {error ? (
-            <p className="text-destructive text-sm" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <PageLayoutSection
-            fieldId="section-submit"
-            defaultLabel="Afslut"
-            defaultOrder={50}
-            contentClassName="border-t border-[var(--gray-border)] pt-6"
-          >
-            <p className="text-muted-foreground text-sm">
-              Tjek titel og beskrivelse før du opretter — du sendes til den nye sag bagefter.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button
-                type="submit"
-                className="wire-btn wire-btn-primary min-h-11 w-full sm:w-auto"
-                disabled={isSubmitting}
-                aria-busy={isSubmitting}
-              >
-                {isSubmitting ? "Opretter sag…" : "Opret sag"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="wire-btn min-h-11 w-full sm:w-auto"
-                disabled={isSubmitting}
-                onClick={() => router.push("/tickets")}
-              >
-                Annuller
-              </Button>
-            </div>
+            </CreateTicketOptionalSection>
           </PageLayoutSection>
         </PageLayoutGrid>
-        </form>
-      </div>
+      </form>
     </section>
   );
 }

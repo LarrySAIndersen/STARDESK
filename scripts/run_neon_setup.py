@@ -14,27 +14,12 @@ import psycopg
 
 ROOT = Path(__file__).resolve().parents[1]
 
-MIGRATIONS = [
-    "docs/auth-migration.sql",
-    "docs/org-migration.sql",
-    "docs/ticket-underaarsag-migration.sql",
-    "docs/gdpr-attachments-migration.sql",
-    "docs/ticket-activity-timestamps-migration.sql",
-    "docs/ticket-assignment-fields-migration.sql",
-    "docs/ticket-tags-emoji-migration.sql",
-    "docs/ticket-intelligence-migration.sql",
-    "docs/comment-reactions-migration.sql",
-    "docs/ticket-hierarchy-migration.sql",
-    "docs/ticket-shared-migration.sql",
-    "docs/ticket-security-flag-migration.sql",
-    "docs/ticket-routing-metadata-migration.sql",
-    "docs/knowledge-articles-migration.sql",
-    "docs/must-change-password-migration.sql",
-    "docs/user-avatar-url-migration.sql",
-    "docs/supporter-role-migration.sql",
-    "docs/user-ui-mode-migration.sql",
-    "docs/platform-settings-migration.sql",
-]
+# Single source of truth — same folder as db_schema_sync.py at API startup.
+MIGRATIONS_DIR = ROOT / "apps" / "api" / "src" / "star_itsm_api" / "sql" / "migrations"
+
+
+def migration_paths() -> list[Path]:
+    return sorted(MIGRATIONS_DIR.glob("*.sql"))
 
 SEEDS = [
     "docs/seed-mvp.sql",
@@ -128,11 +113,7 @@ def main() -> int:
             print("Schema already present — skipping init.sql")
 
         print("\nMigrations:")
-        for rel in MIGRATIONS:
-            path = ROOT / rel
-            if not path.exists():
-                print(f"  SKIP missing {rel}")
-                continue
+        for path in migration_paths():
             try:
                 run_sql_file(conn, path)
             except psycopg.Error as exc:

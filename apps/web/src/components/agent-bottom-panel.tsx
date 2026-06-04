@@ -1,13 +1,27 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { AssignmentDropDialog } from "@/components/assignment-drop-dialog";
-import { DRAG_TYPE } from "@/components/wireframe/wireframe-ticket-table";
 import { WireTags } from "@/components/wireframe/wire-tags";
 import { apiPatch } from "@/lib/api";
-import { routingConfidenceForAssign } from "@/lib/ticket-routing";
+import { mergeTicketAssignmentFromDetail } from "@/lib/ticket-assignment";
+import { readDraggedTicketId } from "@/lib/ticket-drag";
+import { TeamGroupDetailPane } from "@/components/dispatch/team-group-detail-pane";
+import { TeamGroupTicketList } from "@/components/dispatch/team-group-ticket-list";
+import { serviceDeskTeamIds, teamsForServiceDeskRail } from "@/lib/service-desk-queue";
+import {
+  buildOpenAssignedTicketsByTeamMap,
+  isTeamSelected,
+  resolveTeamTicketDisplay,
+  ticketDetailHref,
+  toggleSelectedTeamId,
+} from "@/lib/team-group-view";
+import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
+import { getTicketsForTeam } from "@/lib/tickets-by-team";
+import { sortTeamsForDisplay } from "@/lib/team-categories";
+import { routingConfidenceForTeamAssign } from "@/lib/ticket-routing";
 import {
   confidenceColor,
   confidenceVerdict,
@@ -15,103 +29,105 @@ import {
 } from "@/lib/wireframe-labels";
 import { RoutingReadinessBanner } from "@/components/routing-readiness-banner";
 import { cn } from "@/lib/utils";
-import type { Team, TeamMember } from "@/types/team";
-import type { Ticket } from "@/types/ticket";
+import type { Team } from "@/types/team";
+import type { Ticket, TicketDetail } from "@/types/ticket";
 
 type TabId = "teams" | "content" | "slack";
 
-type TechTarget = Readonly<{
-  key: string;
-  displayName: string;
-  role: string;
-  teamId: string;
-  teamName: string;
-  color: string;
-  loadPct: number;
-}>;
-
 type PendingAssign = Readonly<{
   ticket: Ticket;
-  target: TechTarget;
+  team: Team;
   confidence: number;
 }>;
 
-function memberInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function loadClass(pct: number): string {
-  if (pct >= 85) return "bg-star-red";
-  if (pct >= 55) return "bg-[#C87000]";
-  return "bg-[#1A7A44]";
-}
-
-function buildTechnicians(teams: Team[]): TechTarget[] {
-  const colors = ["#1B3A6B", "#2A6099", "#C8102E", "#1A7A44", "#555552"];
-  const out: TechTarget[] = [];
-  let i = 0;
-  for (const team of teams) {
-    for (const m of team.members) {
-      const hash = (m.user_id.charCodeAt(0) + m.display_name.length * 7) % 100;
-      out.push({
-        key: m.user_id,
-        displayName: m.display_name,
-        role: m.role_label || team.name,
-        teamId: team.id,
-        teamName: team.name,
-        color: colors[i % colors.length] ?? "#1B3A6B",
-        loadPct: 20 + (hash % 75),
-      });
-      i += 1;
-    }
-  }
-  return out;
-}
-
-function readTicketId(dt: DataTransfer): string {
-  return dt.getData(DRAG_TYPE) || dt.getData("text/plain");
-}
+const TEAM_TICKET_PREVIEW = 6;
+const PANEL_MAX_HEIGHT = 420;
 
 export function AgentBottomPanel({
   tickets,
   teams,
   slackTabRequest = 0,
   selectedTicket = null,
+  draggingTicket = null,
+  onTicketAssigned,
+  teamsTabLabel = "Grupper",
 }: {
   tickets: Ticket[];
   teams: Team[];
   slackTabRequest?: number;
   selectedTicket?: Ticket | null;
+  /** Active drag from Nye sager — drives AI ghost overlay and drop targets. */
+  draggingTicket?: Ticket | null;
+  onTicketAssigned?: (detail: TicketDetail) => void;
+  /** First tab label (e.g. Service Desk uses "Sagsdeling"). */
+  teamsTabLabel?: string;
 }) {
-  const router = useRouter();
   const panelRef = useRef<HTMLDivElement>(null);
+  const activeDragRef = useRef<Ticket | null>(null);
   const [height, setHeight] = useState(220);
   const [panelOpen, setPanelOpen] = useState(true);
   const [tab, setTab] = useState<TabId>("teams");
   const [selected, setSelected] = useState<Ticket | null>(selectedTicket);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [ghost, setGhost] = useState<{
     ticket: Ticket;
     x: number;
     y: number;
-    target: TechTarget | null;
+    team: Team | null;
     confidence: number;
   } | null>(null);
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [hoverTeamId, setHoverTeamId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAssign | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const dragTicketRef = useRef<Ticket | null>(null);
 
-  const technicians = useMemo(() => buildTechnicians(teams), [teams]);
+  const deskTeamIds = useMemo(() => serviceDeskTeamIds(teams), [teams]);
+  const railTeams = useMemo(
+    () => teamsForServiceDeskRail(sortTeamsForDisplay(teams), deskTeamIds),
+    [teams, deskTeamIds],
+  );
+  const ticketsByTeam = useMemo(
+    () => buildOpenAssignedTicketsByTeamMap(tickets),
+    [tickets],
+  );
+
+  const selectedTeam = useMemo(
+    () =>
+      selectedTeamId
+        ? (railTeams.find((t) => isTeamSelected(selectedTeamId, t.id)) ?? null)
+        : null,
+    [railTeams, selectedTeamId],
+  );
+
+  const selectedTeamTickets = useMemo(
+    () =>
+      selectedTeamId ? getTicketsForTeam(ticketsByTeam, selectedTeamId) : [],
+    [selectedTeamId, ticketsByTeam],
+  );
+
+  const handleSelectTeam = useCallback((teamId: string | null) => {
+    setSelectedTeamId(teamId);
+    if (teamId) {
+      setPanelOpen(true);
+      setHeight(PANEL_MAX_HEIGHT);
+      setTab("teams");
+    }
+  }, []);
   const ticketMap = useMemo(
     () => new Map(tickets.map((t) => [t.id, t])),
     [tickets],
+  );
+
+  const openTicketCard = useCallback(
+    (ticket: Ticket) => {
+      const full = ticketMap.get(ticket.id) ?? ticket;
+      setSelected(full);
+      setTab("content");
+      setPanelOpen(true);
+      setHeight(PANEL_MAX_HEIGHT);
+    },
+    [ticketMap],
   );
 
   useEffect(() => {
@@ -123,8 +139,20 @@ export function AgentBottomPanel({
   }, [slackTabRequest]);
 
   useEffect(() => {
-    setSelected(selectedTicket);
-  }, [selectedTicket]);
+    if (!selectedTicket) {
+      return;
+    }
+    openTicketCard(selectedTicket);
+  }, [selectedTicket, openTicketCard]);
+
+  useEffect(() => {
+    if (!draggingTicket) {
+      return;
+    }
+    setTab("teams");
+    setPanelOpen(true);
+    setHeight((h) => (h < 120 ? 220 : h));
+  }, [draggingTicket]);
 
   const togglePanel = () => {
     if (panelOpen) {
@@ -137,55 +165,84 @@ export function AgentBottomPanel({
   };
 
   useEffect(() => {
+    activeDragRef.current = draggingTicket;
+  }, [draggingTicket]);
+
+  useEffect(() => {
+    function onDragStart(event: DragEvent) {
+      if (!event.dataTransfer) {
+        return;
+      }
+      const id = readDraggedTicketId(event.dataTransfer);
+      if (!id) {
+        return;
+      }
+      const ticket = ticketMap.get(id);
+      if (ticket) {
+        activeDragRef.current = ticket;
+      }
+    }
+    function clearDrag() {
+      activeDragRef.current = null;
+      setGhost(null);
+      setHoverTeamId(null);
+    }
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("dragend", clearDrag);
+    document.addEventListener("drop", clearDrag);
+    return () => {
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("dragend", clearDrag);
+      document.removeEventListener("drop", clearDrag);
+    };
+  }, [ticketMap]);
+
+  useEffect(() => {
     function onDragOver(e: DragEvent) {
-      if (!dragTicketRef.current) return;
+      const ticket = activeDragRef.current ?? draggingTicket;
+      if (!ticket) return;
       e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = "move";
+      }
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      const card = el?.closest("[data-tech-key]") as HTMLElement | null;
-      const key = card?.dataset.techKey ?? null;
-      const target = key ? technicians.find((t) => t.key === key) ?? null : null;
-      const conf =
-        dragTicketRef.current && target
-          ? routingConfidenceForAssign(dragTicketRef.current, target.key, teams)
-          : 0;
-      setHoverKey(key);
+      const dropZone = el?.closest("[data-team-drop-id]") as HTMLElement | null;
+      const teamId = dropZone?.dataset.teamDropId ?? null;
+      const team = teamId ? railTeams.find((t) => t.id === teamId) ?? null : null;
+      const conf = team ? routingConfidenceForTeamAssign(ticket, team.id, teams) : 0;
+      setHoverTeamId(teamId);
       setGhost({
-        ticket: dragTicketRef.current,
+        ticket,
         x: e.clientX + 16,
         y: e.clientY - 30,
-        target,
+        team,
         confidence: conf,
       });
     }
-    function onDragEnd() {
-      dragTicketRef.current = null;
-      setGhost(null);
-      setHoverKey(null);
-    }
     window.addEventListener("dragover", onDragOver);
-    window.addEventListener("dragend", onDragEnd);
-    window.addEventListener("drop", onDragEnd);
     return () => {
       window.removeEventListener("dragover", onDragOver);
-      window.removeEventListener("dragend", onDragEnd);
-      window.removeEventListener("drop", onDragEnd);
     };
-  }, [technicians, teams]);
+  }, [draggingTicket, railTeams, teams]);
 
-  const handleTechDrop = useCallback(
-    (target: TechTarget) => (e: React.DragEvent) => {
+  const handleTeamDrop = useCallback(
+    (team: Team) => (e: React.DragEvent) => {
       e.preventDefault();
-      const id = readTicketId(e.dataTransfer);
-      const ticket = ticketMap.get(id) ?? dragTicketRef.current;
-      dragTicketRef.current = null;
+      e.stopPropagation();
+      const id = readDraggedTicketId(e.dataTransfer);
+      const ticket =
+        (id ? ticketMap.get(id) : null) ??
+        activeDragRef.current ??
+        draggingTicket ??
+        null;
       setGhost(null);
-      setHoverKey(null);
+      setHoverTeamId(null);
       if (!ticket) return;
-      const confidence = routingConfidenceForAssign(ticket, target.key, teams);
-      setPending({ ticket, target, confidence });
+      const confidence = routingConfidenceForTeamAssign(ticket, team.id, teams);
+      setPending({ ticket, team, confidence });
       setAssignOpen(true);
     },
-    [ticketMap, teams],
+    [ticketMap, teams, draggingTicket],
   );
 
   async function confirmAssignment(data: {
@@ -197,38 +254,30 @@ export function AgentBottomPanel({
     setSaving(true);
     setError(null);
     try {
-      await apiPatch(`/api/v1/tickets/${pending.ticket.id}/assignment`, {
-        assigned_team_id: data.teamId,
-        assigned_user_id: pending.target.key,
-        assignment_reason: data.reason,
-        fault_displayed: data.faultDisplayed,
-      });
+      const detail = await apiPatch<TicketDetail>(
+        `/api/v1/tickets/${pending.ticket.id}/assignment`,
+        {
+          assigned_team_id: data.teamId,
+          assigned_user_id: null,
+          assignment_reason: data.reason,
+          fault_displayed: data.faultDisplayed,
+        },
+      );
+      const merged = mergeTicketAssignmentFromDetail(pending.ticket, detail);
+      setSelected(merged);
+      setSelectedTeamId(data.teamId);
+      setTab("teams");
+      setPanelOpen(true);
+      onTicketAssigned?.(detail);
       setAssignOpen(false);
       setPending(null);
-      router.refresh();
+      activeDragRef.current = null;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke tildele sagen");
     } finally {
       setSaving(false);
     }
   }
-
-  const teamsByName = useMemo(() => {
-    const map = new Map<string, TeamMember[]>();
-    for (const t of technicians) {
-      const list = map.get(t.teamName) ?? [];
-      list.push({
-        user_id: t.key,
-        display_name: t.displayName,
-        email: "",
-        role: "",
-        role_label: t.role,
-        joined_at: "",
-      });
-      map.set(t.teamName, list);
-    }
-    return map;
-  }, [technicians]);
 
   return (
     <>
@@ -262,7 +311,7 @@ export function AgentBottomPanel({
         <div className="wire-bp-tabs">
           {(
             [
-              ["teams", "Teams", technicians.length],
+              ["teams", teamsTabLabel, railTeams.length],
               ["content", "Sagsindhold", selected?.ticket_number ?? "—"],
               ["slack", "Slack", null],
             ] as const
@@ -270,6 +319,7 @@ export function AgentBottomPanel({
             <button
               key={id}
               type="button"
+              data-tab={id}
               className={cn("wire-bp-tab", tab === id && "wire-bp-tab--active")}
               onClick={() => {
                 setTab(id);
@@ -295,76 +345,103 @@ export function AgentBottomPanel({
         </div>
 
         {panelOpen && tab === "teams" ? (
-          <div className="flex h-[calc(100%-37px)] overflow-x-auto p-3">
-            {Array.from(teamsByName.entries()).map(([teamName, members]) => (
-              <div key={teamName} className="mr-3 w-[185px] shrink-0">
-                <div className="mb-1.5 flex items-center justify-between rounded-[2px] bg-star-blue-light px-2 py-1.5 text-[11px] font-bold text-star-navy">
-                  {teamName}
-                  <span className="rounded-full bg-star-navy px-1.5 text-[9px] text-white">
-                    {members.length}
-                  </span>
+          <div className="flex h-[calc(100%-37px)] min-h-0 flex-col">
+            {selectedTeam ? (
+              <TeamGroupDetailPane
+                team={selectedTeam}
+                tickets={selectedTeamTickets}
+                onClose={() => setSelectedTeamId(null)}
+                onTicketClick={openTicketCard}
+              />
+            ) : null}
+            <div className="flex min-h-0 flex-1 overflow-x-auto p-3">
+            {railTeams.map((team) => {
+              const isSelected = isTeamSelected(selectedTeamId, team.id);
+              const isHover = hoverTeamId === team.id;
+              const conf =
+                ghost?.team?.id === team.id ? ghost.confidence : 0;
+              const dropOk = conf >= 50;
+              const display = resolveTeamTicketDisplay(
+                ticketsByTeam,
+                team.id,
+                selectedTeamId,
+                TEAM_TICKET_PREVIEW,
+              );
+              return (
+                <div
+                  key={team.id}
+                  className={cn(
+                    "mr-3 w-[200px] shrink-0 rounded-[2px] transition-all",
+                    isSelected && "ring-2 ring-star-navy/30",
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSelectTeam(toggleSelectedTeamId(selectedTeamId, team.id))
+                    }
+                    className={cn(
+                      "mb-1.5 flex w-full items-center justify-between rounded-[2px] px-2 py-1.5 text-left text-[11px] font-bold transition-colors",
+                      isSelected
+                        ? "bg-star-navy text-white"
+                        : "bg-star-blue-light text-star-navy hover:bg-star-blue-light/80",
+                    )}
+                    aria-pressed={isSelected}
+                  >
+                    <span className="truncate">{team.name}</span>
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-full px-1.5 text-[9px]",
+                        isSelected ? "bg-white/20 text-white" : "bg-star-navy text-white",
+                      )}
+                    >
+                      {display.total}
+                    </span>
+                  </button>
+
+                  <div
+                    data-team-drop-id={team.id}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={handleTeamDrop(team)}
+                    className={cn(
+                      "wire-bereder-streg relative mb-2 flex min-h-[2.25rem] items-center justify-center rounded-[2px] border-2 border-dashed px-2 py-1.5 text-center text-[10px] font-semibold transition-all",
+                      isHover
+                        ? dropOk
+                          ? "border-[#1A7A44] bg-[#E6F5EC] text-[#1A7A44] ring-2 ring-[#1A7A44]/25"
+                          : "border-star-red bg-star-red-light text-star-red ring-2 ring-star-red/20"
+                        : "border-[var(--gray-border)] bg-[var(--gray-bg)] text-[var(--gray-mid)]",
+                    )}
+                    aria-label={`Slip sag på ${team.name}`}
+                  >
+                    {isHover ? (
+                      <>
+                        {dropOk ? "✓" : "✗"} Slip her — {conf}% match
+                      </>
+                    ) : (
+                      "Træk sag hertil"
+                    )}
+                  </div>
+
+                  <TeamGroupTicketList
+                    tickets={display.visible}
+                    total={display.total}
+                    isSelected={isSelected}
+                    showingAll={display.showingAll}
+                    previewLimit={TEAM_TICKET_PREVIEW}
+                    onTicketClick={openTicketCard}
+                  />
+                  {isSelected ? (
+                    <p className="text-[10px] text-[var(--gray-mid)]">
+                      Eller vælg sag i listen ovenfor
+                    </p>
+                  ) : null}
+                  <p className="mt-1.5 text-[9px] text-[var(--gray-mid)]">
+                    {team.members.length} medlemmer
+                  </p>
                 </div>
-                {technicians
-                  .filter((t) => t.teamName === teamName)
-                  .map((tech) => {
-                    const isHover = hoverKey === tech.key;
-                    const conf =
-                      ghost?.target?.key === tech.key ? ghost.confidence : 0;
-                    const dropOk = conf >= 50;
-                    return (
-                      <div
-                        key={tech.key}
-                        data-tech-key={tech.key}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={handleTechDrop(tech)}
-                        className={cn(
-                          "relative mb-1 flex items-center gap-2 rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] p-2 transition-all",
-                          isHover &&
-                            (dropOk
-                              ? "border-[#1A7A44] bg-[#E6F5EC] ring-2 ring-[#1A7A44]/20"
-                              : "border-star-red bg-star-red-light ring-2 ring-star-red/20"),
-                        )}
-                      >
-                        {isHover ? (
-                          <span
-                            className={cn(
-                              "absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-[11px] font-bold text-white",
-                              dropOk ? "bg-[#1A7A44]" : "bg-star-red",
-                            )}
-                          >
-                            {dropOk ? "✓" : "✗"}
-                          </span>
-                        ) : null}
-                        <span
-                          className="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                          style={{ background: tech.color }}
-                        >
-                          {memberInitials(tech.displayName)}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[11px] font-bold text-star-navy">
-                            {tech.displayName}
-                          </p>
-                          <p className="truncate text-[10px] text-[var(--gray-mid)]">
-                            {tech.role}
-                          </p>
-                        </div>
-                        <div className="ml-auto shrink-0">
-                          <div className="h-1 w-8 overflow-hidden rounded-full bg-[#E0E0DC]">
-                            <div
-                              className={cn("h-full rounded-full", loadClass(tech.loadPct))}
-                              style={{ width: `${tech.loadPct}%` }}
-                            />
-                          </div>
-                          <p className="text-right text-[9px] text-[var(--gray-mid)]">
-                            {tech.loadPct}%
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            ))}
+              );
+            })}
+            </div>
           </div>
         ) : null}
 
@@ -372,14 +449,24 @@ export function AgentBottomPanel({
           <div className="flex h-[calc(100%-37px)] gap-3 overflow-x-auto p-3">
             {selected ? (
               <>
-                <div className="w-[220px] shrink-0">
+                <div className="w-[240px] shrink-0">
                   <div className="wire-card mb-0">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <WireStatusBadge status={selected.status} />
+                      <WirePriorityBadge priority={selected.priority} />
+                    </div>
                     <p className="text-[9px] font-bold tracking-widest text-[var(--gray-mid)] uppercase">
                       Sag {selected.ticket_number}
                     </p>
                     <p className="text-star-navy mt-1 text-[13px] font-bold">
                       {selected.title}
                     </p>
+                    <Link
+                      href={ticketDetailHref(selected.id)}
+                      className="text-star-blue mt-2 inline-block text-[11px] font-semibold hover:underline"
+                    >
+                      Åbn fuld sag →
+                    </Link>
                     <WireTags tags={selected.tags} />
                     {selected.routing && !selected.routing.routing_ready ? (
                       <div className="mt-2">
@@ -390,25 +477,32 @@ export function AgentBottomPanel({
                       {selected.assignment_reason?.slice(0, 300) ??
                         selected.title}
                     </p>
+                    {selected.assigned_team_name ? (
+                      <p className="mt-2 text-[11px]">
+                        <span className="text-[var(--gray-mid)]">Gruppe: </span>
+                        <strong>{selected.assigned_team_name}</strong>
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 <div className="min-w-[280px] flex-1">
                   <div className="rounded-[2px] border border-[#B0B4EC] border-l-4 border-l-[var(--ai-purple)] bg-[var(--ai-purple-bg)] p-3">
                     <p className="mb-2 text-[10px] font-bold tracking-wide text-[var(--ai-purple)] uppercase">
-                      AI-konfidens pr. tekniker
+                      AI-konfidens pr. gruppe
                     </p>
-                    {technicians.slice(0, 5).map((tech) => {
-                      const score = routingConfidenceForAssign(selected, tech.key, teams);
+                    {railTeams.slice(0, 8).map((team) => {
+                      const score = routingConfidenceForTeamAssign(
+                        selected,
+                        team.id,
+                        teams,
+                      );
                       return (
                         <div
-                          key={tech.key}
+                          key={team.id}
                           className="mb-1 flex items-center gap-2 text-[11px]"
                         >
-                          <span
-                            className="min-w-[55px] font-bold"
-                            style={{ color: tech.color }}
-                          >
-                            {tech.displayName.split(" ")[0]}
+                          <span className="text-star-navy min-w-[72px] truncate font-bold">
+                            {team.name}
                           </span>
                           <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E8E8E4]">
                             <div
@@ -446,7 +540,7 @@ export function AgentBottomPanel({
               </>
             ) : (
               <p className="w-full py-6 text-center text-xs text-[var(--gray-mid)]">
-                Klik på en sag i tabellen — eller træk til bundpanelet for at se indhold
+                Klik på en sag i tabellen eller under en gruppe — eller træk til en gruppe
               </p>
             )}
           </div>
@@ -477,7 +571,7 @@ export function AgentBottomPanel({
 
       {ghost ? (
         <div
-          className="pointer-events-none fixed z-[9999] min-w-[290px] rounded border-2 border-star-navy bg-white p-3 shadow-xl"
+          className="border-border bg-popover text-popover-foreground pointer-events-none fixed z-[9999] min-w-[290px] rounded border-2 p-3 shadow-xl"
           style={{
             left: ghost.x,
             top: ghost.y,
@@ -491,11 +585,11 @@ export function AgentBottomPanel({
               Foreslået: {ghost.ticket.routing.suggested_team_name}
             </p>
           ) : null}
-          {ghost.target ? (
+          {ghost.team ? (
             <div className="mt-2 flex items-center gap-2 border-t border-[var(--gray-border)] pt-2">
               <span className="wire-ai-pill text-[9px]">AI</span>
               <span className="text-[10px] font-bold text-[var(--gray-mid)]">
-                {ghost.target.displayName}
+                {ghost.team.name}
               </span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#E8E8E4]">
                 <div
@@ -526,17 +620,15 @@ export function AgentBottomPanel({
       {assignOpen && pending ? (
         <AssignmentDropDialog
           ticketTitle={pending.ticket.title}
-          teamName={pending.target.teamName}
-          teamId={pending.target.teamId}
+          teamName={pending.team.name}
+          teamId={pending.team.id}
           teams={teams}
           confidence={pending.confidence}
           routingReasonDa={pending.ticket.routing?.routing_reason_da}
-          technicianName={pending.target.displayName}
           onConfirm={confirmAssignment}
           onCancel={() => !saving && (setAssignOpen(false), setPending(null))}
         />
       ) : null}
-
     </>
   );
 }

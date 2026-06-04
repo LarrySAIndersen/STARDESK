@@ -1,11 +1,16 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 
 import { PortalCommentForm } from "@/components/portal/ticket/comment-form";
 import { CommentForm } from "@/components/comment-form";
 import { StatusTimeline } from "@/components/portal/ticket/status-timeline";
+import { TicketDetailsEditableSidebar } from "@/components/portal/ticket/ticket-details-editable-sidebar";
 import { TicketDetailsSidebar } from "@/components/portal/ticket/ticket-details-sidebar";
 import { TicketHeader } from "@/components/portal/ticket/ticket-header";
 import { TicketCaseMessagesPanel } from "@/components/ticket/ticket-case-messages-panel";
+import type { Category } from "@/types/category";
+import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
 
 export type TicketCaseLayoutProps = {
@@ -15,16 +20,31 @@ export type TicketCaseLayoutProps = {
   sidebarExtra?: ReactNode;
   below?: ReactNode;
   showCommentForm?: boolean;
+  /** Staff: editable Detaljer sidebar with Gem (requires teams + categories). */
+  editableDetails?: boolean;
+  teams?: Team[];
+  categories?: Category[];
 };
 
 export function TicketCaseLayout({
-  ticket,
+  ticket: initialTicket,
   staffView = false,
   breadcrumb,
   sidebarExtra,
   below,
   showCommentForm = true,
+  editableDetails = false,
+  teams = [],
+  categories = [],
 }: TicketCaseLayoutProps) {
+  const [ticket, setTicket] = useState(initialTicket);
+
+  useEffect(() => {
+    setTicket(initialTicket);
+  }, [initialTicket]);
+
+  const showEditableDetails =
+    editableDetails && staffView && teams.length > 0 && categories.length > 0;
   const commentAnchorId = staffView ? "ticket-comment-form" : "portal-comment-form";
 
   return (
@@ -35,9 +55,11 @@ export function TicketCaseLayout({
         commentFormId={commentAnchorId}
       />
 
-      <section className="portal-v2-card p-4 sm:p-5" aria-label="Statusforløb">
-        <StatusTimeline ticket={ticket} />
-      </section>
+      {!showEditableDetails ? (
+        <section className="portal-v2-card p-4 sm:p-5" aria-label="Statusforløb">
+          <StatusTimeline ticket={ticket} />
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -85,7 +107,16 @@ export function TicketCaseLayout({
         </div>
 
         <div className="space-y-4 lg:col-span-1">
-          <TicketDetailsSidebar ticket={ticket} />
+          {showEditableDetails ? (
+            <TicketDetailsEditableSidebar
+              ticket={ticket}
+              teams={teams}
+              categories={categories}
+              onTicketUpdated={setTicket}
+            />
+          ) : (
+            <TicketDetailsSidebar ticket={ticket} />
+          )}
           {sidebarExtra}
         </div>
       </div>

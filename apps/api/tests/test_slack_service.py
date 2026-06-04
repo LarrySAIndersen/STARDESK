@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from star_itsm_api.services.slack import SlackApiError, post_ticket_message
@@ -23,6 +25,7 @@ class _FakeAsyncClient:
         return False
 
     async def post(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        await asyncio.sleep(0)
         return self._response
 
 

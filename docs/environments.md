@@ -241,7 +241,7 @@ Udfyld efter I har oprettet test/klon-projekter:
 | Miljø | Web | API | Neon-gren |
 |-------|-----|-----|-----------|
 | Produktion | `https://web-seven-neon-6bvmcoel7n.vercel.app` | `https://api-gamma-amber.vercel.app` | `main` |
-| Test | `https://____________.vercel.app` | `https://____________.vercel.app` | `test` |
+| Test / **staging** (Preview) | `https://web-git-staging-kjaerby-1628s-projects.vercel.app` | `https://api-git-staging-kjaerby-1628s-projects.vercel.app` | `test` |
 | Prod-klon | `https://____________.vercel.app` | `https://____________.vercel.app` | `prod-clone` |
 
 ---

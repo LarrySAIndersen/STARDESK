@@ -1,16 +1,14 @@
 import uuid
-from collections.abc import AsyncIterator
+from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
-from httpx import ASGITransport, AsyncClient
+from fastapi import HTTPException, UploadFile
+from httpx import AsyncClient
 
 from star_itsm_api.core.config import settings
-from star_itsm_api.deps import require_db
-from star_itsm_api.main import app
 from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.services import attachments, file_storage
@@ -35,30 +33,6 @@ def clean_attachment(tmp_path: Path) -> Attachment:
         visible_to_submitter=False,
         created_at=__import__("datetime").datetime.now(__import__("datetime").UTC),
     )
-
-
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    session = AsyncMock()
-    session.commit = AsyncMock()
-    return session
-
-
-@pytest.fixture
-def override_db(mock_db: AsyncMock):
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    yield mock_db
-    app.dependency_overrides.pop(require_db, None)
-
-
-@pytest.fixture
-async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
 
 
 def test_is_blob_storage_key(tmp_path: Path) -> None:
@@ -280,7 +254,7 @@ async def test_download_ticket_attachment_happy_path_blob(
     )
     clean_attachment.storage_key = "blob:https://store.public.blob.vercel-storage.com/t.png"
 
-    async def _get(model, pk):
+    def _get(model, pk):
         if model is Ticket:
             return ticket
         if model is Attachment:
@@ -317,7 +291,7 @@ async def test_download_ticket_attachment_missing_file(
     )
     clean_attachment.storage_key = str(tmp_path / "uploads" / "missing.png")
 
-    async def _get(model, pk):
+    def _get(model, pk):
         if model is Ticket:
             return ticket
         if model is Attachment:
@@ -336,3 +310,113 @@ async def test_download_ticket_attachment_missing_file(
     )
     assert response.status_code == 404
     assert response.json()["detail"] == file_storage.FILE_NOT_FOUND_DETAIL_DA
+
+
+def test_attachment_to_read_pending_scan_not_downloadable(clean_attachment) -> None:
+    clean_attachment.scan_status = "pending"
+    staff = SimpleNamespace(role="admin")
+    read = attachments.attachment_to_read(clean_attachment, user=staff)
+    assert read.download_available is False
+    assert read.scan_status_label_da == "Afventer virusscan"
+
+
+def test_attachment_to_read_submitter_visible_when_clean(clean_attachment) -> None:
+    clean_attachment.scan_status = "clean"
+    clean_attachment.visible_to_submitter = True
+    submitter = SimpleNamespace(id=clean_attachment.uploader_user_id, role="end_user")
+    read = attachments.attachment_to_read(clean_attachment, user=submitter)
+    assert read.download_available is True
+
+
+def test_attachment_to_read_submitter_hidden_when_not_visible(clean_attachment) -> None:
+    clean_attachment.scan_status = "clean"
+    clean_attachment.visible_to_submitter = False
+    submitter = SimpleNamespace(id=clean_attachment.uploader_user_id, role="end_user")
+    read = attachments.attachment_to_read(clean_attachment, user=submitter)
+    assert read.download_available is False
+
+
+@pytest.mark.asyncio
+async def test_build_attachment_download_blocks_non_clean(clean_attachment) -> None:
+    clean_attachment.scan_status = "infected"
+    with pytest.raises(HTTPException) as exc:
+        await attachments.build_attachment_download_response(clean_attachment)
+    assert exc.value.status_code == 403
+    assert "scan" in exc.value.detail.lower()
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_attachments_denies_unrelated_user(mock_db: AsyncMock) -> None:
+    ticket_id = uuid.uuid4()
+    reporter_id = uuid.uuid4()
+    stranger = SimpleNamespace(id=uuid.uuid4(), role="submitter")
+    rows = await attachments.list_ticket_attachments_for_detail(
+        mock_db,
+        ticket_id,
+        stranger,
+        reporter_user_id=reporter_id,
+    )
+    assert rows == []
+
+
+@pytest.mark.asyncio
+async def test_delete_ticket_attachment_not_found(mock_db: AsyncMock) -> None:
+    mock_db.get = AsyncMock(return_value=None)
+    admin = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    with pytest.raises(HTTPException) as exc:
+        await attachments.delete_ticket_attachment(
+            mock_db,
+            ticket_id=uuid.uuid4(),
+            attachment_id=uuid.uuid4(),
+            user=admin,
+        )
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_ticket_attachment_forbidden(mock_db: AsyncMock, clean_attachment) -> None:
+    mock_db.get = AsyncMock(return_value=clean_attachment)
+    other = SimpleNamespace(id=uuid.uuid4(), role="agent")
+    with pytest.raises(HTTPException) as exc:
+        await attachments.delete_ticket_attachment(
+            mock_db,
+            ticket_id=clean_attachment.ticket_id,
+            attachment_id=clean_attachment.id,
+            user=other,
+        )
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_save_ticket_upload_rejects_empty_filename(mock_db: AsyncMock) -> None:
+    upload = UploadFile(filename="   ", file=MagicMock())
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    with pytest.raises(HTTPException) as exc:
+        await attachments.save_ticket_upload(
+            mock_db,
+            ticket_id=uuid.uuid4(),
+            ticket_number="INC-1",
+            user=user,
+            upload=upload,
+        )
+    assert exc.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_save_ticket_upload_rejects_disallowed_type(mock_db: AsyncMock) -> None:
+    upload = UploadFile(
+        filename="app.exe",
+        file=BytesIO(b"data"),
+        headers={"content-type": "application/x-msdownload"},
+    )
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    with pytest.raises(HTTPException) as exc:
+        await attachments.save_ticket_upload(
+            mock_db,
+            ticket_id=uuid.uuid4(),
+            ticket_number="INC-1",
+            user=user,
+            upload=upload,
+        )
+    assert exc.value.status_code == 400
+    assert "type" in exc.value.detail.lower()

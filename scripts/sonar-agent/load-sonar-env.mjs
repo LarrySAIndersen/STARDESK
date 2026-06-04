@@ -43,4 +43,14 @@ export function loadSonarEnv() {
     }
     process.env[key] = value;
   }
+  // GitHub Actions secret and some setups use SONAR instead of SONAR_TOKEN.
+  if (!process.env.SONAR_TOKEN && process.env.SONAR) {
+    process.env.SONAR_TOKEN = process.env.SONAR;
+  }
+  if (!process.env.SONAR_HOST_URL) {
+    process.env.SONAR_HOST_URL = "https://sonarcloud.io";
+  }
+  if (!process.env.SONAR_PROJECT_KEY) {
+    process.env.SONAR_PROJECT_KEY = "LarrySAIndersen_STARDESK";
+  }
 }

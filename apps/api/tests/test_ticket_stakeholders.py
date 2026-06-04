@@ -1,15 +1,13 @@
 """Unit tests for ticket stakeholder mention parsing and list filters."""
 
 import uuid
-from collections.abc import AsyncIterator
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER, ROLE_TOP_ADMIN, get_current_user
-from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.stakeholder import TicketStakeholderRead
@@ -54,32 +52,7 @@ async def test_resolve_mentioned_user_ids_by_email() -> None:
     assert ids == [user_id]
 
 
-@pytest.fixture
-def mock_db() -> AsyncMock:
-    session = AsyncMock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    return session
-
-
-@pytest.fixture
-def override_db(mock_db: AsyncMock):
-    async def _require_db() -> AsyncMock:
-        return mock_db
-
-    app.dependency_overrides[require_db] = _require_db
-    yield mock_db
-    app.dependency_overrides.pop(require_db, None)
-
-
-@pytest.fixture
-async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
-
-
-async def _fake_agent() -> SimpleNamespace:
+def _fake_agent() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="agent@example.dk",
@@ -92,7 +65,7 @@ async def _fake_agent() -> SimpleNamespace:
     )
 
 
-async def _fake_top_admin() -> SimpleNamespace:
+def _fake_top_admin() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="admin@example.dk",
@@ -144,7 +117,7 @@ async def test_list_tickets_involving_user_forbidden_for_agent(
     assert response.status_code == 403
 
 
-async def _fake_submitter() -> SimpleNamespace:
+def _fake_submitter() -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid.uuid4(),
         email="user@example.dk",

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { StickyNote, X } from "lucide-react";
@@ -165,7 +167,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   }, [canViewNotes, pathname]);
 
   useEffect(() => {
-    void loadNotes();
+    fireAndForget(loadNotes());
   }, [loadNotes]);
 
   useEffect(() => {
@@ -236,6 +238,18 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
           reviewMode && canPlaceNotes && "review-notes-layer--active",
         )}
         onClick={handleOverlayClick}
+        onKeyDown={(event) => {
+          if (!canPlaceNotes || !reviewMode || draft) return;
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          const rect = event.currentTarget.getBoundingClientRect();
+          setDraft({
+            x: rect.width / 2,
+            y: rect.height / 2,
+            comment: "",
+          });
+        }}
+        tabIndex={reviewMode && canPlaceNotes ? 0 : -1}
         aria-hidden={!reviewMode}
       >
         {notes.map((note) => (
@@ -243,7 +257,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             key={note.id}
             note={note}
             canEdit={staff || (reviewer && note.created_by_user_id === user?.id)}
-            onResolved={() => void loadNotes()}
+            onResolved={() => fireAndForget(loadNotes())}
           />
         ))}
         {draft ? (
@@ -252,7 +266,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             saving={saving}
             onChange={(comment) => setDraft({ ...draft, comment })}
             onCancel={() => setDraft(null)}
-            onSave={() => void saveDraft()}
+            onSave={() => fireAndForget(saveDraft())}
           />
         ) : null}
       </div>

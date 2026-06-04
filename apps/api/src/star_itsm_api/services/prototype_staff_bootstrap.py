@@ -74,11 +74,12 @@ async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
     if user.deleted_at is not None:
         user.deleted_at = None
         changed = True
-    if profile.prototype_password:
-        if not verify_password(profile.prototype_password, user.password_hash):
-            pepper = profile.password_pepper or "default"
-            user.password_hash = hash_prototype_password(profile.prototype_password, pepper=pepper)
-            changed = True
+    if profile.prototype_password and not verify_password(
+        profile.prototype_password, user.password_hash
+    ):
+        pepper = profile.password_pepper or "default"
+        user.password_hash = hash_prototype_password(profile.prototype_password, pepper=pepper)
+        changed = True
 
     if user.must_change_password:
         user.must_change_password = False

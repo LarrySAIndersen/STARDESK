@@ -1,6 +1,6 @@
 # Build from monorepo root:
 #   docker build -t stardesk-api -f apps/api/Dockerfile .
-FROM python:3.12-slim-bookworm
+FROM python:3.14.5-slim-bookworm
 
 WORKDIR /app
 
@@ -10,6 +10,12 @@ COPY apps/api/pyproject.toml apps/api/README.md ./
 COPY apps/api/src ./src
 
 RUN pip install --no-cache-dir .
+
+RUN groupadd --system --gid 1001 stardesk \
+  && useradd --system --uid 1001 --gid stardesk --home-dir /app stardesk \
+  && chown -R stardesk:stardesk /app
+
+USER stardesk
 
 ENV PORT=8000
 EXPOSE 8000

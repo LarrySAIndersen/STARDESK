@@ -1,12 +1,16 @@
 import Link from "next/link";
 
-import { TicketsListClient } from "@/components/tickets-list-client";
+import { ClickableMetric } from "@/components/dashboard/clickable-metric";
+import { BacklogTicketsListClient } from "@/components/backlog/backlog-tickets-list-client";
+import { buildTicketsFilterHref } from "@/lib/dashboard-ticket-links";
 import { apiGetServer } from "@/lib/api-server";
+import { getServerUser } from "@/lib/auth-server";
 import type { Ticket } from "@/types/ticket";
 
 export const dynamic = "force-dynamic";
 
 export default async function BacklogPage() {
+  const user = await getServerUser();
   let tickets: Ticket[] = [];
   let fetchError: string | null = null;
 
@@ -33,6 +37,18 @@ export default async function BacklogPage() {
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Sager i status ny eller tildelt, som afventer behandling i køen.
+            {!fetchError && tickets.length > 0 ? (
+              <>
+                {" "}
+                <ClickableMetric
+                  href={buildTicketsFilterHref({ scope: "all", bucket: "modtaget" })}
+                  inline
+                  ariaLabel={`${tickets.length} sager i backlog`}
+                >
+                  ({tickets.length} i listen)
+                </ClickableMetric>
+              </>
+            ) : null}
           </p>
         </header>
 
@@ -41,7 +57,7 @@ export default async function BacklogPage() {
             {fetchError}
           </p>
         ) : (
-          <TicketsListClient tickets={tickets} />
+          <BacklogTicketsListClient tickets={tickets} currentUserId={user?.id} />
         )}
       </div>
     </div>

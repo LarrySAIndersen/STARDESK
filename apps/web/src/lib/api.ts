@@ -22,17 +22,14 @@ function resolveClientUrl(path: string): string {
 }
 
 async function throwApiError(response: Response): Promise<never> {
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
-    if (response.status === 401) {
-      throw new ApiError(401, "Din session er udløbet. Log ind igen.");
-    }
-    throw new ApiError(
-      response.status,
-      "Uventet svar fra serveren. Prøv at logge ind igen.",
-    );
-  }
   const detail = await parseApiErrorDetail(response);
+  if (response.status === 401) {
+    const message =
+      detail.startsWith("API-fejl:") || detail.includes("Deployment-beskyttelse")
+        ? "Din session er udløbet. Log ind igen."
+        : apiErrorMessage(detail);
+    throw new ApiError(401, message);
+  }
   throw new ApiError(response.status, apiErrorMessage(detail));
 }
 

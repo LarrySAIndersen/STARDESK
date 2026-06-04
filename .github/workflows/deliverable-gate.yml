@@ -5,11 +5,29 @@ name: Deliverable gate
 on:
   pull_request:
     branches: [main, staging]
+  push:
+    branches: [staging]
   workflow_dispatch:
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      run_gate: ${{ steps.db_secret.outputs.run_gate }}
+    steps:
+      - id: db_secret
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            echo "run_gate=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_gate=false" >> "$GITHUB_OUTPUT"
+          fi
+
   hello-world-api:
-    if: ${{ secrets.DATABASE_URL != '' }}
+    needs: preflight
+    if: needs.preflight.outputs.run_gate == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -24,7 +42,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
           cache-dependency-glob: apps/api/uv.lock
@@ -62,7 +80,8 @@ jobs:
         run: kill "$(cat /tmp/stardesk-api.pid)" 2>/dev/null || true
 
   hello-world-api-skipped:
-    if: ${{ secrets.DATABASE_URL == '' }}
+    needs: preflight
+    if: needs.preflight.outputs.run_gate != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Skip notice
