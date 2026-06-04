@@ -62,7 +62,7 @@ ensure_uv() {
     return 0
   fi
   echo "Installing uv..."
-  curl -LsSf --proto-redir '=https' https://astral.sh/uv/install.sh | sh
+  curl -LsSf --proto '=https' --proto-redir '=https' https://astral.sh/uv/install.sh | sh
   export PATH="${HOME}/.local/bin:${PATH}"
 }
 
