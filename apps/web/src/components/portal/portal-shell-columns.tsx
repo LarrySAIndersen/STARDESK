@@ -112,7 +112,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
           collapsedSize={SHELL_NAV_COLLAPSED_WIDTH}
           collapsible
           groupResizeBehavior="preserve-pixel-size"
-          className="min-h-0 min-w-0 overflow-hidden"
+          className="min-h-0 min-w-0"
         >
           <div className="relative h-full min-h-0">
             <PortalSidebar collapsed={collapsed} onToggle={toggle} />
