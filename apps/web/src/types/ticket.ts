@@ -29,6 +29,9 @@ export interface Ticket {
   ticket_number: string;
   title: string;
   description?: string;
+  comment_count?: number;
+  internal_comment_count?: number;
+  attachment_count?: number;
   status: string;
   priority: string;
   ticket_type: string;

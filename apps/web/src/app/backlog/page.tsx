@@ -43,10 +43,7 @@ export default async function BacklogPage() {
             {fetchError}
           </p>
         ) : (
-          <BacklogTicketsListClient
-            tickets={tickets}
-            currentUserId={user?.id}
-          />
+          <BacklogTicketsListClient tickets={tickets} currentUserId={user?.id} />
         )}
       </div>
     </div>

@@ -34,6 +34,8 @@ export function DispatchTeamsRail({
   previewLimit,
   panelOpen = true,
   onTogglePanel,
+  /** When true, tickets are drag sources (kanban) — no drop target on groups. */
+  ticketSourceMode = false,
 }: {
   teams: Team[];
   ticketsByTeam: Map<string, Ticket[]>;
@@ -51,6 +53,7 @@ export function DispatchTeamsRail({
   /** When set with onTogglePanel, shows ▼/▲ to hide the whole rail (parent controls layout). */
   panelOpen?: boolean;
   onTogglePanel?: () => void;
+  ticketSourceMode?: boolean;
 }) {
   const limit = previewLimit ?? TEAM_RAIL_TICKET_PREVIEW;
   const listId = useId();
@@ -140,10 +143,16 @@ export function DispatchTeamsRail({
           <div
             key={team.id}
             role="group"
-            aria-label={`${team.name}, slip sag her`}
-            onDragOver={(event) => onDragOverTeam(team.id, event)}
-            onDragLeave={onDragLeaveTeam}
-            onDrop={(event) => onDropTeam(team, event)}
+            aria-label={
+              ticketSourceMode
+                ? `${team.name}, træk sager til kanban`
+                : `${team.name}, slip sag her`
+            }
+            onDragOver={
+              ticketSourceMode ? undefined : (event) => onDragOverTeam(team.id, event)
+            }
+            onDragLeave={ticketSourceMode ? undefined : onDragLeaveTeam}
+            onDrop={ticketSourceMode ? undefined : (event) => onDropTeam(team, event)}
             className={cn(
               "rounded-md border-2 border-dashed transition-colors",
               isExpanded ? "p-4" : "px-3 py-2",
@@ -212,16 +221,22 @@ export function DispatchTeamsRail({
             </div>
             {isExpanded ? (
               <div id={panelId} className="mt-3 border-t border-star-blue/15 pt-3">
-                <div
-                  className={cn(
-                    "wire-bereder-streg mb-3 flex min-h-[2rem] items-center justify-center rounded-[2px] border-2 border-dashed px-2 py-1.5 text-center text-[10px] font-semibold",
-                    isOver
-                      ? "border-[#1A7A44] bg-[#E6F5EC] text-[#1A7A44]"
-                      : "border-[var(--gray-border)] bg-[var(--gray-bg)] text-[var(--gray-mid)]",
-                  )}
-                >
-                  {isOver ? "Slip sag her" : "Træk sag hertil"}
-                </div>
+                {!ticketSourceMode ? (
+                  <div
+                    className={cn(
+                      "wire-bereder-streg mb-3 flex min-h-[2rem] items-center justify-center rounded-[2px] border-2 border-dashed px-2 py-1.5 text-center text-[10px] font-semibold",
+                      isOver
+                        ? "border-[#1A7A44] bg-[#E6F5EC] text-[#1A7A44]"
+                        : "border-[var(--gray-border)] bg-[var(--gray-bg)] text-[var(--gray-mid)]",
+                    )}
+                  >
+                    {isOver ? "Slip sag her" : "Træk sag hertil"}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground mb-2 text-[10px]">
+                    Træk en sag til en kolonne på boardet →
+                  </p>
+                )}
                 <TeamGroupTicketList
                   tickets={display.visible}
                   total={display.total}
@@ -231,6 +246,7 @@ export function DispatchTeamsRail({
                   onTicketClick={onTicketClick}
                   ticketHref={(ticketId) => `/tickets/${ticketId}`}
                   emptyLabel="Ingen tildelte sager"
+                  draggableTickets={ticketSourceMode}
                 />
               </div>
             ) : null}

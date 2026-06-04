@@ -72,7 +72,7 @@ write_dev_env_files() {
     cp "$ROOT/apps/api/.env.development.example" "$ROOT/apps/api/.env"
     if [[ "$LOCAL_POSTGRES" -eq 1 ]]; then
       load_local_postgres_env
-      uv run python "$ROOT/scripts/dev_local_postgres.py" write-env
+      uv run --no-build python "$ROOT/scripts/dev_local_postgres.py" write-env
     fi
     echo "Created apps/api/.env from .env.development.example"
   fi
@@ -127,7 +127,7 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
 fi
 
 SKIP_SQL=0
-if [[ "$FORCE_SQL" -ne 1 ]] && uv run python "$ROOT/scripts/db_bootstrap_status.py"; then
+if [[ "$FORCE_SQL" -ne 1 ]] && uv run --no-build python "$ROOT/scripts/db_bootstrap_status.py"; then
   echo "Database already has schema and users — skipping SQL migrations/seeds."
   echo "  (use --force-sql to re-run run_neon_setup.py)"
   SKIP_SQL=1
@@ -135,12 +135,12 @@ fi
 
 if [[ "$SKIP_SQL" -eq 0 ]]; then
   echo "Running SQL setup (run_neon_setup.py)..."
-  uv run python "$ROOT/scripts/run_neon_setup.py" "${NEON_ARGS[@]}"
+  uv run --no-build python "$ROOT/scripts/run_neon_setup.py" "${NEON_ARGS[@]}"
 fi
 
 if [[ "$WITH_ALEMBIC" -eq 1 ]]; then
   echo "Syncing Alembic revisions..."
-  uv run python "$ROOT/scripts/alembic_after_sql_setup.py"
+  uv run --no-build python "$ROOT/scripts/alembic_after_sql_setup.py"
 fi
 
 echo "Database bootstrap complete."

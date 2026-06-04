@@ -15,6 +15,7 @@ export function TeamGroupTicketList({
   ticketHref,
   onTicketClick,
   emptyLabel = "Ingen tildelte sager",
+  draggableTickets = false,
 }: {
   tickets: Ticket[];
   total: number;
@@ -25,6 +26,7 @@ export function TeamGroupTicketList({
   /** Opens inline sagens kort when set (takes precedence over navigation). */
   onTicketClick?: (ticket: Ticket) => void;
   emptyLabel?: string;
+  draggableTickets?: boolean;
 }) {
   if (tickets.length === 0) {
     return <p className="text-[10px] text-[var(--gray-mid)]">{emptyLabel}</p>;
@@ -52,6 +54,7 @@ export function TeamGroupTicketList({
               }
               href={onTicketClick ? undefined : ticketHref?.(ticket.id)}
               size="sm"
+              draggable={draggableTickets}
             />
           </li>
         ))}

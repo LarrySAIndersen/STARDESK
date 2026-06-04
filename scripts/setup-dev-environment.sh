@@ -94,5 +94,5 @@ echo "  API:  http://localhost:8000/health"
 if [[ "$SKIP_DB" -eq 0 ]]; then
   echo "  Prototype users (from database):"
   cd "$ROOT/apps/api"
-  uv run python "$ROOT/scripts/list_prototype_users.py" || true
+  uv run --no-build python "$ROOT/scripts/list_prototype_users.py" || true
 fi

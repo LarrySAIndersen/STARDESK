@@ -43,12 +43,12 @@ def _ticket_read(ticket_id: uuid.UUID | None = None) -> TicketRead:
 def _ticket_detail(ticket_id: uuid.UUID | None = None) -> TicketDetailRead:
     read = _ticket_read(ticket_id)
     now = read.created_at
+    base = read.model_dump()
+    base["description"] = "Printeren svarer ikke."
     return TicketDetailRead(
-        **read.model_dump(),
-        description="Printeren svarer ikke.",
+        **base,
         category_id=None,
         subcategory_id=None,
-        assigned_user_id=None,
         escalation_level=0,
         gdpr_consent=False,
         timestamps=TicketTimestampsRead(created_at=now),
