@@ -4,6 +4,7 @@ import { buildBackendUrl } from "@/lib/api-backend";
 import { ApiError } from "@/lib/api";
 import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { vercelProtectionBypassHeaders } from "@/lib/vercel-protection-bypass";
 
 /** Avoid infinite SSR Suspense when upstream is unreachable. */
 const SERVER_FETCH_TIMEOUT_MS = 25_000;
@@ -13,6 +14,7 @@ async function authHeaders(): Promise<HeadersInit> {
   return {
     Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...vercelProtectionBypassHeaders(),
   };
 }
 

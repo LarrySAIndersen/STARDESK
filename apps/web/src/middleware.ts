@@ -53,6 +53,8 @@ function isBasicAuthExcluded(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (isHealthApiPath(pathname)) return true;
   if (isAuthApiPath(pathname)) return true;
+  // JWT BFF proxy — Basic Auth on fetch breaks kanban/ticket mutations (HTML 401).
+  if (isProxyApiPath(pathname)) return true;
   return false;
 }
 
