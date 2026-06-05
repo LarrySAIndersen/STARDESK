@@ -169,3 +169,49 @@ async def test_reset_all_ticket_sla_applies_policy(
     apply_mock.assert_awaited_once()
     assert apply_mock.await_args.kwargs["start_at"] == created
     mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_count_active_tickets(mock_db: AsyncMock) -> None:
+    from star_itsm_api.services.sla_reset import count_active_tickets
+    from unittest.mock import MagicMock
+    mock_result = MagicMock()
+    mock_result.scalar_one.return_value = 5
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    count = await count_active_tickets(mock_db)
+    assert count == 5
+
+
+@pytest.mark.asyncio
+async def test_reset_all_ticket_sla_anchor_now(mock_db: AsyncMock) -> None:
+    from star_itsm_api.services.sla_reset import reset_all_ticket_sla
+
+    created = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+    ticket = SimpleNamespace(
+        id=uuid.uuid4(),
+        priority="high",
+        category_id=None,
+        subcategory_id=None,
+        created_at=created,
+        sla_policy_id=None,
+        response_due_at=None,
+        resolution_due_at=None,
+        escalation_level=2,
+        last_escalation_at=created,
+        updated_at=None,
+        deleted_at=None,
+    )
+    result = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [ticket]))
+    mock_db.execute = AsyncMock(return_value=result)
+
+    with patch(
+        "star_itsm_api.services.sla_reset.apply_sla_to_ticket",
+        new_callable=AsyncMock,
+    ) as apply_mock:
+        result = await reset_all_ticket_sla(mock_db, anchor="now", dry_run=False)
+
+    assert result.ticket_count == 1
+    assert result.updated_count == 1
+    apply_mock.assert_awaited_once()
+    assert abs((apply_mock.await_args.kwargs["start_at"] - datetime.now(UTC)).total_seconds()) < 5

@@ -16,6 +16,17 @@ def test_nav_id_for_path_longest_prefix_wins() -> None:
     assert nav_id_for_path("/nope") is None
 
 
+def test_nav_id_for_path_shorter_prefix_ignored() -> None:
+    from star_itsm_api.services.nav_visibility_paths import NAV_PATH_BY_ID
+    NAV_PATH_BY_ID["temp-long"] = "/temp/long"
+    NAV_PATH_BY_ID["temp-short"] = "/temp"
+    try:
+        assert nav_id_for_path("/temp/long") == "temp-long"
+    finally:
+        del NAV_PATH_BY_ID["temp-long"]
+        del NAV_PATH_BY_ID["temp-short"]
+
+
 def test_normalize_ids_filters_invalid() -> None:
     raw = ["tickets", "bogus", "tickets", 42, "portal"]
     assert nav_visibility._normalize_ids(raw) == ["tickets", "portal"]
