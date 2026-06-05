@@ -123,8 +123,8 @@ def test_is_end_user() -> None:
 
 
 def test_is_stardesk_reviewer() -> None:
-    from star_itsm_api.services.permissions import is_stardesk_reviewer
     from star_itsm_api.core.security import ROLE_STARDESK_REVIEWER
+    from star_itsm_api.services.permissions import is_stardesk_reviewer
     user_rev = MagicMock(role=ROLE_STARDESK_REVIEWER)
     user_agent = MagicMock(role=ROLE_AGENT)
     assert is_stardesk_reviewer(user_rev) is True
@@ -141,7 +141,7 @@ def test_can_assign_tickets() -> None:
 
 
 def test_roles_tuples() -> None:
-    from star_itsm_api.services.permissions import staff_roles_tuple, admin_roles_tuple
+    from star_itsm_api.services.permissions import admin_roles_tuple, staff_roles_tuple
     staff = staff_roles_tuple()
     admin = admin_roles_tuple()
     assert isinstance(staff, tuple)

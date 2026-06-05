@@ -24,7 +24,7 @@ def test_build_status_notification_danish() -> None:
 
 
 def test_labels_fallbacks() -> None:
-    from star_itsm_api.services.ticket_notifications import _status_label, _priority_label
+    from star_itsm_api.services.ticket_notifications import _priority_label, _status_label
     assert _status_label(None) == "—"
     assert _status_label("") == "—"
     assert _status_label("unknown_status") == "unknown_status"
@@ -43,7 +43,10 @@ def test_build_priority_notification() -> None:
 
 
 def test_build_assignment_and_comment_notifications() -> None:
-    from star_itsm_api.services.ticket_notifications import build_assignment_notification, build_comment_notification
+    from star_itsm_api.services.ticket_notifications import (
+        build_assignment_notification,
+        build_comment_notification,
+    )
     note_assign = build_assignment_notification()
     assert "tildelt eller omfordelt" in note_assign.summary_da
     
@@ -71,7 +74,7 @@ def test_ticket_portal_url_variations(monkeypatch) -> None:
 
 
 def test_reporter_may_receive_email_inactive_or_deleted() -> None:
-    from datetime import datetime, UTC
+    from datetime import UTC, datetime
     reporter_inactive = make_test_user(email="user@example.dk")
     reporter_inactive.is_active = False
     ticket = make_test_ticket()

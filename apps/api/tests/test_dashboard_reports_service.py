@@ -216,7 +216,7 @@ async def test_build_dashboard_with_scope_filtering() -> None:
 
 @pytest.mark.asyncio
 async def test_build_dashboard_tickets_to_read_list_exception() -> None:
-    now = datetime.now(UTC)
+    datetime.now(UTC)
     ticket = _ticket(status="new")
     
     tickets_result = MagicMock()

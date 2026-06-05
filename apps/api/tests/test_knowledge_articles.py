@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock
 
-import pytest
-
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
 from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_STATUS_DRAFT,

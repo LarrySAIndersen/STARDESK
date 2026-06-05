@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import uuid
@@ -5,16 +6,15 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, delete, update, and_, or_
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.security import get_user_by_email
 from star_itsm_api.db import get_db
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
-from star_itsm_api.core.security import get_user_by_email
-
 from star_itsm_api.routers.mcp import (
     get_ticket_categories,
     get_user_tickets,
@@ -42,6 +42,9 @@ class ChatRequest(BaseModel):
     custom_router_model: str | None = None
     custom_router_header_type: str | None = "Bearer"
     session_id: str | None = None
+    openai_key: str | None = None
+    anthropic_key: str | None = None
+    google_key: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -228,10 +231,8 @@ async def log_chatbot_message(
         
         session_id = None
         if session_str:
-            try:
+            with contextlib.suppress(ValueError):
                 session_id = uuid.UUID(session_str)
-            except ValueError:
-                pass
         if not session_id:
             session_id = uuid.uuid4()
 
@@ -371,8 +372,103 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
                 mock_resp = await get_smart_mock_response(request)
                 return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til din tilpassede udbyder ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
 
+    # 2. Check if we should call OpenAI API (gpt-4o)
+    if request.model_override == "gpt-4o":
+        openai_key = request.openai_key or os.getenv("OPENAI_API_KEY")
+        if not openai_key:
+            logger.warning("OPENAI_API_KEY not found in environment or request. Falling back to mock responses.")
+            mock_resp = await get_smart_mock_response(request)
+            return await make_response(mock_resp)
+
+        system_text = (
+            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "Svar altid venligt, professionelt og på dansk."
+        )
+
+        openai_messages = [{"role": "system", "content": system_text}]
+        for msg in request.messages:
+            role_map = {"user": "user", "assistant": "assistant", "system": "system", "model": "assistant"}
+            openai_messages.append({"role": role_map.get(msg.role, "user"), "content": msg.content})
+
+        headers = {
+            "Authorization": f"Bearer {openai_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o",
+            "messages": openai_messages,
+            "temperature": 0.3
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                choices = res_data.get("choices", [])
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "")
+                    return await make_response(text)
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra OpenAI-modellen.")
+            except Exception as e:
+                logger.error(f"Error calling OpenAI API: {str(e)}. Falling back to smart mock response.")
+                mock_resp = await get_smart_mock_response(request)
+                return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til OpenAI-tjenesten ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
+
+    # 3. Check if we should call Anthropic API (claude-3-5-sonnet-20241022)
+    if request.model_override == "claude-3-5-sonnet-20241022":
+        anthropic_key = request.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
+        if not anthropic_key:
+            logger.warning("ANTHROPIC_API_KEY not found in environment or request. Falling back to mock responses.")
+            mock_resp = await get_smart_mock_response(request)
+            return await make_response(mock_resp)
+
+        system_text = (
+            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "Svar altid venligt, professionelt og på dansk."
+        )
+
+        anthropic_messages = []
+        for msg in request.messages:
+            role = "user" if msg.role == "user" else "assistant"
+            anthropic_messages.append({"role": role, "content": msg.content})
+
+        headers = {
+            "x-api-key": anthropic_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        payload = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 1024,
+            "messages": anthropic_messages,
+            "system": system_text,
+            "temperature": 0.3
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                content_parts = res_data.get("content", [])
+                if content_parts:
+                    text = content_parts[0].get("text", "")
+                    return await make_response(text)
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra Anthropic-modellen.")
+            except Exception as e:
+                logger.error(f"Error calling Anthropic API: {str(e)}. Falling back to smart mock response.")
+                mock_resp = await get_smart_mock_response(request)
+                return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til Anthropic-tjenesten ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
+
     # Retrieve the Google Gemini API key from the environment
-    api_key = os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
+    api_key = request.google_key or os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         # Fallback to mock behavior if no API key is set
         logger.warning(
@@ -554,13 +650,13 @@ async def get_messages(
         conditions.append(ChatbotMessage.user_id == user_id)
     elif user_email:
         # If user is not found, filter by None to return empty
-        conditions.append(ChatbotMessage.user_id == None)
+        conditions.append(ChatbotMessage.user_id is None)
 
     if category and category != "Alle":
         conditions.append(ChatbotMessage.category == category)
 
     if only_bookmarked:
-        conditions.append(ChatbotMessage.is_bookmarked == True)
+        conditions.append(ChatbotMessage.is_bookmarked)
 
     if q:
         q_lower = f"%{q.lower()}%"

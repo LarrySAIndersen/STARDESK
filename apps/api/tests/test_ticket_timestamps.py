@@ -39,8 +39,9 @@ def test_first_response_only_external_staff() -> None:
 
 
 def test_maybe_set_assigned_at() -> None:
-    from star_itsm_api.services.ticket_timestamps import maybe_set_assigned_at
     import uuid
+
+    from star_itsm_api.services.ticket_timestamps import maybe_set_assigned_at
     
     # 1. No team and no user assigned -> should not set assigned_at
     ticket = make_test_ticket(assigned_at=None, assigned_team_id=None, assigned_user_id=None)

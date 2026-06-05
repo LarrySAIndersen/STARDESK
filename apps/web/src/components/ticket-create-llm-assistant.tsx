@@ -74,7 +74,16 @@ async function fetchDraftFromApi(messages: ChatMessage[]): Promise<IntakeAssistD
 }
 
 function newId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  if (typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  const arr = new Uint32Array(1);
+  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(arr);
+  } else {
+    arr[0] = Date.now();
+  }
+  return `${Date.now()}-${arr[0].toString(36)}`;
 }
 
 export function TicketCreateLlmAssistant({
