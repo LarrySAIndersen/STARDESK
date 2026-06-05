@@ -7,6 +7,7 @@ import { isStaff } from "@/lib/auth";
 import { apiPost } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { UserAvatar } from "@/components/agent/user-avatar";
 import type { User } from "@/types/user";
 
 type ChatMessage = {
@@ -135,19 +136,34 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     : "Spørg om dine sager, systemer og vejledninger";
   const fabLabel = staff ? "Help-a-bot" : "Spørg om sager";
 
+  const [useName, setUseName] = useState(true);
+  const [useAvatar, setUseAvatar] = useState(true);
+  const [useIcon, setUseIcon] = useState(true);
+  const [activeModel, setActiveModel] = useState("gemini-2.5-flash");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUseName(localStorage.getItem("stardesk-chatbot-use-name") !== "false");
+      setUseAvatar(localStorage.getItem("stardesk-chatbot-use-avatar") !== "false");
+      setUseIcon(localStorage.getItem("stardesk-chatbot-use-icon") !== "false");
+      setActiveModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-2.5-flash");
+    }
+  }, [open]);
+
   useEffect(() => {
     if (open && messages.length === 0) {
+      const namePart = useName && user?.display_name ? ` ${user.display_name}` : "";
       setMessages([
         {
           id: "welcome",
           role: "assistant",
           body: staff 
-            ? "Hej! Jeg er Help-a-bot. Jeg kan hjælpe dig med at søge i vidensartikler, hente sagskategorier eller tjekke sager. Hvad kan jeg gøre for dig?"
-            : "Hej! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger."
+            ? `Hej${namePart}! Jeg er Help-a-bot. Jeg kan hjælpe dig med at søge i vidensartikler, hente sagskategorier eller tjekke sager. Hvad kan jeg gøre for dig?`
+            : `Hej${namePart}! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger.`
         }
       ]);
     }
-  }, [open, messages.length, staff]);
+  }, [open, messages.length, staff, useName, user?.display_name]);
 
   useEffect(() => {
     if (open) {
@@ -178,7 +194,9 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
       const res = await apiPost<{ response: string }>("/api/v1/chat", {
         messages: chatHistory,
-        user_email: user?.email || null
+        user_email: user?.email || null,
+        user_name: useName ? (user?.display_name || null) : null,
+        model_override: activeModel
       });
 
       setMessages((prev) => [
@@ -202,7 +220,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     } finally {
       setLoading(false);
     }
-  }, [draft, loading, messages, user]);
+  }, [draft, loading, messages, user, useName, activeModel]);
 
   return (
     <>
@@ -258,24 +276,71 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
           {/* Chat messages list */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  "flex flex-col max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
-                  m.role === "user"
-                    ? "ml-auto bg-star-blue text-white rounded-br-none"
-                    : "mr-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-bl-none text-slate-800 dark:text-slate-100"
-                )}
-              >
-                <div className="whitespace-pre-wrap leading-relaxed">{m.body}</div>
-              </div>
-            ))}
+            {messages.map((m) => {
+              const isUser = m.role === "user";
+              const showUserAvatar = isUser && useAvatar;
+              const showBotIcon = !isUser && useIcon;
+              return (
+                <div
+                  key={m.id}
+                  className={cn(
+                    "flex items-start gap-2.5",
+                    isUser ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {/* Bot Avatar (Only for Assistant messages) */}
+                  {showBotIcon && (
+                    <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                      {staff ? (
+                        <div className="size-10 scale-90 translate-y-0.5">
+                          <HelpABotIcon />
+                        </div>
+                      ) : (
+                        <Bot className="size-4 text-star-navy dark:text-star-blue" />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Message Bubble */}
+                  <div
+                    className={cn(
+                      "flex flex-col max-w-[75%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
+                      isUser
+                        ? "bg-star-blue text-white rounded-br-none"
+                        : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-bl-none text-slate-800 dark:text-slate-100"
+                    )}
+                  >
+                    <div className="whitespace-pre-wrap leading-relaxed">{m.body}</div>
+                  </div>
+
+                  {/* User Avatar (Only for User messages) */}
+                  {showUserAvatar && (
+                    <div className="size-8 shrink-0 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-800">
+                      <UserAvatar user={user} size="sm" className="size-8 text-[10px]" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            
             {loading && (
-              <div className="mr-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm shadow-sm flex items-center gap-1.5 text-slate-500">
-                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              <div className="flex items-start gap-2.5 justify-start">
+                {useIcon && (
+                  <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
+                    {staff ? (
+                      <div className="size-10 scale-90 translate-y-0.5">
+                        <HelpABotIcon />
+                      </div>
+                    ) : (
+                      <Bot className="size-4 text-star-navy dark:text-star-blue" />
+                    )}
+                  </div>
+                )}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm shadow-sm flex items-center gap-1.5 text-slate-500">
+                  <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
               </div>
             )}
             <div ref={endRef} />
