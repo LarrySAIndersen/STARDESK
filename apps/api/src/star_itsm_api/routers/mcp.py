@@ -5,10 +5,14 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.sse import SseServerTransport
 from sqlalchemy import or_, select
 
+from star_itsm_api.core.security import is_staff
 from star_itsm_api.db import async_session_factory
 from star_itsm_api.models.category import Category, Subcategory
+from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.ticket import Ticket
+from star_itsm_api.models.ticket_event import TicketEvent
 from star_itsm_api.models.user import User
+from star_itsm_api.services.ticket_timestamps import apply_status_milestone_timestamps
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +348,175 @@ async def create_ticket(
             f"**Type:** {ticket.ticket_type}\n"
             f"**Prioritet:** {ticket.priority}\n"
             f"**Status:** {ticket.status}"
+        )
+
+
+@mcp.tool()
+async def get_ticket_by_number(ticket_number: str) -> str:
+    """Hent detaljer om en specifik supportsag via sagsnummer (fx INC-2026-00118).
+
+    Bruges af medarbejdere til at slå en sag op og se status, prioritet og titel.
+
+    Args:
+        ticket_number: Sagsnummeret (fx "INC-2026-00118").
+    """
+    if not async_session_factory:
+        return "Database er ikke konfigureret."
+
+    normalized = ticket_number.strip().upper()
+    if not normalized:
+        return "Fejl: Angiv et gyldigt sagsnummer."
+
+    async with async_session_factory() as db:
+        stmt = select(Ticket).where(
+            Ticket.ticket_number.ilike(normalized),
+            Ticket.deleted_at.is_(None),
+        )
+        result = await db.execute(stmt)
+        ticket = result.scalar_one_or_none()
+
+        if not ticket:
+            return f"Ingen sag fundet med sagsnummer '{normalized}'."
+
+        reporter_stmt = select(User).where(User.id == ticket.reporter_user_id)
+        reporter_result = await db.execute(reporter_stmt)
+        reporter = reporter_result.scalar_one_or_none()
+        reporter_label = (
+            f"{reporter.display_name} ({reporter.email})"
+            if reporter
+            else "Ukendt"
+        )
+        created_str = (
+            ticket.created_at.strftime("%Y-%m-%d %H:%M")
+            if ticket.created_at
+            else "ukendt"
+        )
+        updated_str = (
+            ticket.updated_at.strftime("%Y-%m-%d %H:%M")
+            if ticket.updated_at
+            else "ukendt"
+        )
+
+        return (
+            f"**{ticket.title}** (Sagsnr: {ticket.ticket_number})\n"
+            f"- **Status:** {ticket.status}\n"
+            f"- **Prioritet:** {ticket.priority}\n"
+            f"- **Type:** {ticket.ticket_type}\n"
+            f"- **Indmelder:** {reporter_label}\n"
+            f"- **Oprettet:** {created_str}\n"
+            f"- **Sidst opdateret:** {updated_str}\n"
+            f"- **Beskrivelse:** {ticket.description[:500]}{'…' if len(ticket.description) > 500 else ''}"
+        )
+
+
+ALLOWED_STATUSES = frozenset({
+    "new",
+    "assigned",
+    "in_progress",
+    "pending",
+    "resolved",
+    "closed",
+    "cancelled",
+})
+
+
+@mcp.tool()
+async def update_ticket_status(
+    ticket_number: str,
+    status: str,
+    actor_email: str,
+    note: str | None = None,
+) -> str:
+    """Opdater status på en supportsag (fx luk, løs eller sæt i gang).
+
+    Kun tilgængelig for medarbejdere (agenter). Bekræft altid handlingen med brugeren før opdatering.
+
+    Args:
+        ticket_number: Sagsnummeret (fx "INC-2026-00118").
+        status: Ny status ("new", "assigned", "in_progress", "pending", "resolved", "closed", "cancelled").
+        actor_email: Medarbejderens e-mailadresse der udfører handlingen.
+        note: Valgfri kommentar der gemmes på sagen (fx lukningsnote).
+    """
+    if not async_session_factory:
+        return "Database er ikke konfigureret."
+
+    normalized_number = ticket_number.strip().upper()
+    normalized_status = status.strip().lower()
+
+    if normalized_status not in ALLOWED_STATUSES:
+        allowed = ", ".join(sorted(ALLOWED_STATUSES))
+        return f"Fejl: Ugyldig status '{status}'. Tilladte værdier: {allowed}."
+
+    async with async_session_factory() as db:
+        actor_stmt = select(User).where(
+            User.email.ilike(actor_email.strip()),
+            User.deleted_at.is_(None),
+        )
+        actor_result = await db.execute(actor_stmt)
+        actor = actor_result.scalar_one_or_none()
+
+        if not actor or not is_staff(actor):
+            return (
+                "Fejl: Kun medarbejdere kan opdatere sagsstatus via Help-a-bot. "
+                "Log ind som agent for at udføre denne handling."
+            )
+
+        ticket_stmt = select(Ticket).where(
+            Ticket.ticket_number.ilike(normalized_number),
+            Ticket.deleted_at.is_(None),
+        )
+        ticket_result = await db.execute(ticket_stmt)
+        ticket = ticket_result.scalar_one_or_none()
+
+        if not ticket:
+            return f"Ingen sag fundet med sagsnummer '{normalized_number}'."
+
+        import uuid
+        from datetime import UTC, datetime
+
+        previous_status = ticket.status
+        now = datetime.now(UTC)
+        ticket.status = normalized_status
+        apply_status_milestone_timestamps(ticket, normalized_status, now=now)
+        ticket.updated_at = now
+
+        db.add(
+            TicketEvent(
+                id=uuid.uuid4(),
+                ticket_id=ticket.id,
+                actor_user_id=actor.id,
+                event_type="ticket.status_changed",
+                payload={
+                    "status": normalized_status,
+                    "previous_status": previous_status,
+                    "source": "help-a-bot",
+                },
+                created_at=now,
+            )
+        )
+
+        if note and note.strip():
+            db.add(
+                TicketComment(
+                    id=uuid.uuid4(),
+                    ticket_id=ticket.id,
+                    author_user_id=actor.id,
+                    body=note.strip(),
+                    is_internal=True,
+                    created_at=now,
+                )
+            )
+
+        await db.commit()
+        await db.refresh(ticket)
+
+        note_line = f"\n- **Note:** {note.strip()}" if note and note.strip() else ""
+        return (
+            f"Sagsstatus opdateret!\n\n"
+            f"**Sagsnummer:** {ticket.ticket_number}\n"
+            f"**Titel:** {ticket.title}\n"
+            f"**Tidligere status:** {previous_status}\n"
+            f"**Ny status:** {ticket.status}{note_line}"
         )
 
 
