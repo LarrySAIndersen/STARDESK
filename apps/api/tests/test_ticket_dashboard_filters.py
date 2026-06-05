@@ -93,5 +93,35 @@ def test_filter_tickets_by_sla_overdue() -> None:
         status="in_progress",
         resolution_due_at=now + timedelta(hours=5),
     )
-    result = filter_tickets_by_sla([overdue, ok], sla="overdue", now=now)
+    closed = _ticket(
+        status="closed",
+        resolution_due_at=now - timedelta(hours=2),
+    )
+    result = filter_tickets_by_sla([overdue, ok, closed], sla="overdue", now=now)
     assert result == [overdue]
+
+
+def test_filter_tickets_by_sla_due_soon() -> None:
+    now = datetime(2026, 6, 10, 12, 0, tzinfo=UTC)
+    due_soon = _ticket(
+        status="in_progress",
+        resolution_due_at=now + timedelta(minutes=30),  # Less than 1 hour is due soon
+    )
+    ok = _ticket(
+        status="in_progress",
+        resolution_due_at=now + timedelta(hours=24),
+    )
+    result = filter_tickets_by_sla([due_soon, ok], sla="due_soon", now=now)
+    assert result == [due_soon]
+
+
+def test_filter_tickets_closed_since_no_closed_at() -> None:
+    now = datetime(2026, 6, 10, 12, 0, tzinfo=UTC)
+    closed_no_date = _ticket(
+        status="closed",
+        closed_at=None,
+        resolved_at=None,
+        updated_at=None,
+    )
+    result = filter_tickets_closed_since([closed_no_date], days=7, now=now)
+    assert result == []
