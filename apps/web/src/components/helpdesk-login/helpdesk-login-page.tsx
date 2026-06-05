@@ -68,13 +68,12 @@ export function HelpdeskLoginPage() {
     if (activeView === "starbot") {
       const chatWindow = root.querySelector("#view-starbot .chat-window");
       if (chatWindow) {
-        const librechatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL || "http://localhost:3080";
+        // Render our native-looking, fully integrated web chat instead of an iframe!
         chatWindow.innerHTML = `
-          <iframe
-            src="${librechatUrl}/?embed=true"
-            style="width: 100%; height: 550px; border: none; border-radius: 12px; background: white; box-shadow: var(--shadow-sm);"
-            title="STAR-bot"
-          ></iframe>
+          <div style="padding: 24px; text-align: center; color: var(--star-muted);">
+            <p>STAR-bot er nu fuldt integreret direkte i din portal!</p>
+            <p style="margin-top: 12px; font-size: 13px;">Log ind på portalen for at chatte med <strong>Help-a-bot</strong> eller <strong>Sag-assistent</strong> med fuld adgang til dine sager og vidensartikler.</p>
+          </div>
         `;
       }
     }
