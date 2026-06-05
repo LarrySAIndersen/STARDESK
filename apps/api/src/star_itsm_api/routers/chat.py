@@ -17,10 +17,12 @@ from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
 from star_itsm_api.routers.mcp import (
     create_ticket,
+    get_ticket_by_number,
     get_ticket_categories,
     get_user_tickets,
     search_historical_solutions,
     search_knowledge_articles,
+    update_ticket_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -141,6 +143,46 @@ GEMINI_TOOLS = [
                     "required": ["user_email", "title", "description"],
                 },
             },
+            {
+                "name": "get_ticket_by_number",
+                "description": "Hent detaljer om en specifik supportsag via sagsnummer. Bruges af medarbejdere til at slå en sag op.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "ticket_number": {
+                            "type": "STRING",
+                            "description": "Sagsnummeret (fx 'INC-2026-00118').",
+                        }
+                    },
+                    "required": ["ticket_number"],
+                },
+            },
+            {
+                "name": "update_ticket_status",
+                "description": "Opdater status på en supportsag (fx luk, løs eller sæt i gang). Kun for medarbejdere — bekræft altid med brugeren før opdatering.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "ticket_number": {
+                            "type": "STRING",
+                            "description": "Sagsnummeret (fx 'INC-2026-00118').",
+                        },
+                        "status": {
+                            "type": "STRING",
+                            "description": "Ny status: 'new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed', 'cancelled'.",
+                        },
+                        "actor_email": {
+                            "type": "STRING",
+                            "description": "Medarbejderens e-mailadresse der udfører handlingen.",
+                        },
+                        "note": {
+                            "type": "STRING",
+                            "description": "Valgfri intern kommentar (fx lukningsnote).",
+                        },
+                    },
+                    "required": ["ticket_number", "status", "actor_email"],
+                },
+            },
         ]
     }
 ]
@@ -176,6 +218,20 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
                 subcategory_id=subcategory_id,
                 priority=priority,
                 ticket_type=ticket_type,
+            )
+        if name == "get_ticket_by_number":
+            ticket_number = args.get("ticket_number", "")
+            return await get_ticket_by_number(ticket_number)
+        if name == "update_ticket_status":
+            ticket_number = args.get("ticket_number", "")
+            status = args.get("status", "")
+            actor_email = args.get("actor_email", "")
+            note = args.get("note")
+            return await update_ticket_status(
+                ticket_number=ticket_number,
+                status=status,
+                actor_email=actor_email,
+                note=note,
             )
         return f"Fejl: Værktøjet '{name}' findes ikke."
     except Exception as e:
@@ -414,6 +470,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
             "Svar altid venligt, professionelt og på dansk."
         )
         
@@ -465,6 +522,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
             "Svar altid venligt, professionelt og på dansk."
         )
 
@@ -511,6 +569,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
             "Svar altid venligt, professionelt og på dansk."
         )
 
@@ -574,6 +633,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
                     f"Den aktuelle bruger, du taler med, hedder: {user_display_name}. "
                     f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({user_display_name}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
                     "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+                    "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
                     "Svar altid venligt, professionelt og på dansk. "
                     "Du har adgang til værktøjer til at søge i vidensartikler, hente kategorier og finde sager. Brug dem aktivt, når det er relevant! "
                     f"Hvis du leder efter sager for den aktuelle bruger, kan du bruge deres e-mail: {request.user_email or 'ikke angivet'}."
@@ -738,7 +798,7 @@ async def get_messages(
         conditions.append(ChatbotMessage.user_id == user_id)
     elif user_email:
         # If user is not found, filter by None to return empty
-        conditions.append(ChatbotMessage.user_id is None)
+        conditions.append(ChatbotMessage.user_id.is_(None))
 
     if category and category != "Alle":
         conditions.append(ChatbotMessage.category == category)

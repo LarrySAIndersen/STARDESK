@@ -9,7 +9,12 @@ import {
   Star, 
   Trash2, 
   Clock, 
-  RefreshCw 
+  RefreshCw,
+  Mic,
+  MicOff,
+  Maximize2,
+  Minimize2,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
@@ -36,6 +41,42 @@ type ChatMessage = {
   role: "user" | "assistant";
   body: string;
 };
+
+type PanelSizePreset = "compact" | "normal" | "expanded";
+
+const PANEL_SIZE_PRESETS: Record<PanelSizePreset, { width: number; height: number }> = {
+  compact: { width: 340, height: 420 },
+  normal: { width: 400, height: 550 },
+  expanded: { width: 620, height: 720 },
+};
+
+const PANEL_POS_STORAGE_KEY = "stardesk-helpabot-pos";
+const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
+const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
+
+const STAFF_QUICK_ACTIONS = [
+  "Vis mine seneste sager",
+  "Slå en sag op via sagsnummer",
+  "Luk en sag med lukningsnote",
+  "Opret ny sag for en borger",
+] as const;
+
+function clampPanelSize(width: number, height: number) {
+  if (typeof window === "undefined") {
+    return { width, height };
+  }
+  return {
+    width: Math.min(Math.max(width, 300), Math.floor(window.innerWidth * 0.92)),
+    height: Math.min(Math.max(height, 360), Math.floor(window.innerHeight * 0.88)),
+  };
+}
+
+function getExpandedHeight() {
+  if (typeof window === "undefined") {
+    return PANEL_SIZE_PRESETS.expanded.height;
+  }
+  return Math.min(PANEL_SIZE_PRESETS.expanded.height, Math.floor(window.innerHeight * 0.85));
+}
 
 function HelpABotIcon() {
   return (
@@ -172,6 +213,15 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
+  const [panelPreset, setPanelPreset] = useState<PanelSizePreset>("normal");
+  const [panelSize, setPanelSize] = useState(() => PANEL_SIZE_PRESETS.normal);
+  const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null);
+  const [listening, setListening] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const resizeStateRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
+
   const fetchArchive = useCallback(async () => {
     if (!user?.email) return;
     setLoadingArchive(true);
@@ -198,10 +248,192 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   }, [user?.email, searchQuery, filterCategory, onlyBookmarked]);
 
   useEffect(() => {
-    if (activeTab === "archive" && open) {
-      fetchArchive();
+    if (typeof window === "undefined") return;
+    try {
+      const storedPos = localStorage.getItem(PANEL_POS_STORAGE_KEY);
+      const storedSize = localStorage.getItem(PANEL_SIZE_STORAGE_KEY);
+      if (storedPos) {
+        const parsed = JSON.parse(storedPos) as { x: number; y: number };
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          setPanelPos(parsed);
+        }
+      }
+      if (storedSize) {
+        const parsed = JSON.parse(storedSize) as {
+          preset?: PanelSizePreset;
+          width?: number;
+          height?: number;
+        };
+        if (parsed.preset && PANEL_SIZE_PRESETS[parsed.preset]) {
+          setPanelPreset(parsed.preset);
+          const preset = PANEL_SIZE_PRESETS[parsed.preset];
+          const height = parsed.preset === "expanded" ? getExpandedHeight() : preset.height;
+          setPanelSize(clampPanelSize(parsed.width ?? preset.width, parsed.height ?? height));
+        }
+      }
+    } catch {
+      // ignore corrupt storage
     }
-  }, [activeTab, open, fetchArchive]);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(
+      PANEL_SIZE_STORAGE_KEY,
+      JSON.stringify({ preset: panelPreset, width: panelSize.width, height: panelSize.height }),
+    );
+  }, [panelPreset, panelSize]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !panelPos) return;
+    localStorage.setItem(PANEL_POS_STORAGE_KEY, JSON.stringify(panelPos));
+  }, [panelPos]);
+
+  const applyPreset = useCallback((preset: PanelSizePreset) => {
+    const base = PANEL_SIZE_PRESETS[preset];
+    const height = preset === "expanded" ? getExpandedHeight() : base.height;
+    setPanelPreset(preset);
+    setPanelSize(clampPanelSize(base.width, height));
+  }, []);
+
+  const getDefaultPanelPos = useCallback(() => {
+    if (typeof window === "undefined") {
+      return { x: 20, y: 80 };
+    }
+    return {
+      x: Math.max(16, window.innerWidth - panelSize.width - 20),
+      y: Math.max(16, window.innerHeight - panelSize.height - 84),
+    };
+  }, [panelSize.height, panelSize.width]);
+
+  const resolvedPanelPos = panelPos ?? getDefaultPanelPos();
+
+  const handlePanelDragStart = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const origin = panelPos ?? getDefaultPanelPos();
+      dragStateRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        originX: origin.x,
+        originY: origin.y,
+      };
+
+      function onMove(ev: MouseEvent) {
+        const drag = dragStateRef.current;
+        if (!drag) return;
+        const nextX = drag.originX + (ev.clientX - drag.startX);
+        const nextY = drag.originY + (ev.clientY - drag.startY);
+        const maxX = Math.max(0, window.innerWidth - panelSize.width);
+        const maxY = Math.max(0, window.innerHeight - panelSize.height);
+        setPanelPos({
+          x: Math.min(Math.max(0, nextX), maxX),
+          y: Math.min(Math.max(0, nextY), maxY),
+        });
+      }
+
+      function onUp() {
+        dragStateRef.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      }
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [getDefaultPanelPos, panelPos, panelSize.height, panelSize.width],
+  );
+
+  const handlePanelResizeStart = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resizeStateRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        startW: panelSize.width,
+        startH: panelSize.height,
+      };
+
+      function onMove(ev: MouseEvent) {
+        const resize = resizeStateRef.current;
+        if (!resize) return;
+        const next = clampPanelSize(
+          resize.startW + (ev.clientX - resize.startX),
+          resize.startH + (ev.clientY - resize.startY),
+        );
+        setPanelSize(next);
+        setPanelPreset("normal");
+      }
+
+      function onUp() {
+        resizeStateRef.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      }
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [panelSize.height, panelSize.width],
+  );
+
+  const handleToggleSpeech = useCallback(() => {
+    if (loading) return;
+
+    const SpeechRecognitionCtor =
+      typeof window !== "undefined"
+        ? window.SpeechRecognition ?? window.webkitSpeechRecognition
+        : undefined;
+
+    if (!SpeechRecognitionCtor) {
+      setDraft((prev) =>
+        prev.trim()
+          ? `${prev.trim()} ${MOCK_SPEECH_SAMPLE}`
+          : `Tale til tekst: ${MOCK_SPEECH_SAMPLE}`,
+      );
+      return;
+    }
+
+    if (listening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.lang = "da-DK";
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        transcript += event.results[i]?.[0]?.transcript ?? "";
+      }
+      const trimmed = transcript.trim();
+      if (trimmed) {
+        setDraft((prev) => (prev.trim() ? `${prev.trim()} ${trimmed}` : trimmed));
+      }
+    };
+    recognition.onerror = () => {
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    setListening(true);
+    recognition.start();
+  }, [listening, loading]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
 
   const handleToggleBookmark = async (id: string) => {
     try {
@@ -252,6 +484,12 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   }, [open, chatSessionId]);
 
   useEffect(() => {
+    if (activeTab === "archive" && open) {
+      fetchArchive();
+    }
+  }, [activeTab, open, fetchArchive]);
+
+  useEffect(() => {
     if (open && messages.length === 0) {
       const namePart = useName && user?.display_name ? ` ${user.display_name}` : "";
       setMessages([
@@ -259,8 +497,8 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
           id: "welcome",
           role: "assistant",
           body: staff 
-            ? `Hej${namePart}! Jeg er Help-a-bot. Jeg kan hjælpe dig med at søge i vidensartikler, hente sagskategorier eller tjekke sager. Hvad kan jeg gøre for dig?`
-            : `Hej${namePart}! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger.`
+            ? `Hej${namePart}! Jeg er Help-a-bot — dit centrale arbejdsvindue. Jeg kan slå sager op, opdatere status, lukke sager, søge i vidensartikler og oprette nye sager. Skriv eller brug mikrofonen. Hvad kan jeg hjælpe med?`
+            : `Hej${namePart}! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger. Du kan også bruge mikrofonen til at tale din besked.`
         }
       ]);
     }
@@ -366,31 +604,72 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
       {open ? (
         <div
-          className="case-assistant-panel flex flex-col h-[550px] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
+          ref={panelRef}
+          className="case-assistant-panel case-assistant-panel--floating flex flex-col overflow-hidden"
+          style={{
+            left: resolvedPanelPos.x,
+            top: resolvedPanelPos.y,
+            width: panelSize.width,
+            height: panelSize.height,
+          }}
           role="dialog"
           aria-label={botName}
         >
-          <header className={cn(
-            staff
-              ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-4 py-3.5 pr-10 text-slate-100 border-b border-slate-700"
-              : "case-assistant-panel-header"
-          )}>
-            <div>
-              <p className={cn(staff ? "text-sm font-bold tracking-tight text-slate-100" : "case-assistant-panel-title")}>
-                {botName}
-              </p>
-              <p className={cn(staff ? "mt-0.5 text-[11px] text-slate-400" : "case-assistant-panel-sub")}>
-                {botSub}
-              </p>
+          {staff && useIcon ? (
+            <div className="case-assistant-panel-robot" aria-hidden="true">
+              <div className="size-16 drop-shadow-lg">
+                <HelpABotIcon />
+              </div>
             </div>
-            <button
-              type="button"
-              className="case-assistant-panel-close"
-              onClick={() => setOpen(false)}
-              aria-label="Luk"
-            >
-              <X className="size-4" />
-            </button>
+          ) : null}
+
+          <header
+            className={cn(
+              staff
+                ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-4 py-3 pr-24 text-slate-100 border-b border-slate-700 case-assistant-panel-drag-handle shrink-0"
+                : "case-assistant-panel-header case-assistant-panel-drag-handle shrink-0",
+            )}
+            onMouseDown={handlePanelDragStart}
+          >
+            <div className="flex items-start gap-2">
+              <GripVertical className={cn("size-4 shrink-0 mt-0.5 opacity-50", staff ? "text-slate-400" : "text-white/60")} aria-hidden />
+              <div className="min-w-0">
+                <p className={cn(staff ? "text-sm font-bold tracking-tight text-slate-100" : "case-assistant-panel-title")}>
+                  {botName}
+                </p>
+                <p className={cn(staff ? "mt-0.5 text-[11px] text-slate-400" : "case-assistant-panel-sub")}>
+                  {botSub}
+                </p>
+              </div>
+            </div>
+            <div className="absolute top-2 right-2 flex items-center gap-0.5">
+              <button
+                type="button"
+                className={cn(
+                  "rounded p-1 transition-colors",
+                  staff ? "text-slate-300 hover:bg-white/10 hover:text-white" : "text-white/80 hover:bg-white/10 hover:text-white",
+                )}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => applyPreset(panelPreset === "expanded" ? "compact" : "expanded")}
+                aria-label={panelPreset === "expanded" ? "Gør vinduet mindre" : "Udvid vinduet"}
+                title={panelPreset === "expanded" ? "Gør mindre" : "Udvid"}
+              >
+                {panelPreset === "expanded" ? (
+                  <Minimize2 className="size-3.5" />
+                ) : (
+                  <Maximize2 className="size-3.5" />
+                )}
+              </button>
+              <button
+                type="button"
+                className="case-assistant-panel-close static"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => setOpen(false)}
+                aria-label="Luk"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
           </header>
 
           {/* Tabs Selector */}
@@ -496,30 +775,65 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
               </div>
 
               {/* Input footer */}
-              <footer className="p-3 border-t border-border bg-white dark:bg-slate-900 flex gap-2 items-end">
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Skriv din besked her..."
-                  rows={1}
-                  className="min-h-0 flex-1 resize-none py-2 px-3 text-sm rounded-lg border border-input focus-visible:ring-1 focus-visible:ring-star-blue max-h-24"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSend();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  className="bg-star-blue hover:bg-star-navy text-white shrink-0 size-9 rounded-lg"
-                  disabled={!draft.trim() || loading}
-                  onClick={handleSend}
-                  aria-label="Send"
-                >
-                  <Send className="size-4" />
-                </Button>
+              <footer className="p-3 border-t border-border bg-white dark:bg-slate-900 shrink-0">
+                {staff && activeTab === "chat" ? (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {STAFF_QUICK_ACTIONS.map((action) => (
+                      <button
+                        key={action}
+                        type="button"
+                        className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 transition-colors hover:border-star-blue hover:bg-star-blue-light hover:text-star-navy"
+                        onClick={() => setDraft(action)}
+                      >
+                        {action}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="flex gap-2 items-end">
+                  <Textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={listening ? "Lytter… tal nu" : "Skriv din besked her…"}
+                    rows={panelPreset === "expanded" ? 2 : 1}
+                    className={cn(
+                      "min-h-0 flex-1 resize-none py-2 px-3 text-sm rounded-lg border border-input focus-visible:ring-1 focus-visible:ring-star-blue",
+                      panelPreset === "expanded" ? "max-h-32" : "max-h-24",
+                      listening && "border-star-blue ring-1 ring-star-blue/40",
+                    )}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className={cn(
+                      "shrink-0 size-9 rounded-lg",
+                      listening && "border-star-blue bg-star-blue-light text-star-navy",
+                    )}
+                    disabled={loading}
+                    onClick={handleToggleSpeech}
+                    aria-label={listening ? "Stop tale til tekst" : "Start tale til tekst"}
+                    title={listening ? "Stop optagelse" : "Tal ind"}
+                  >
+                    {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="bg-star-blue hover:bg-star-navy text-white shrink-0 size-9 rounded-lg"
+                    disabled={!draft.trim() || loading}
+                    onClick={handleSend}
+                    aria-label="Send"
+                  >
+                    <Send className="size-4" />
+                  </Button>
+                </div>
               </footer>
             </>
           ) : (
@@ -675,6 +989,12 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
               </div>
             </div>
           )}
+          <div
+            className="case-assistant-panel-resize-handle"
+            role="separator"
+            aria-label="Træk for at ændre størrelse"
+            onMouseDown={handlePanelResizeStart}
+          />
         </div>
       ) : null}
     </>
