@@ -235,6 +235,3 @@ async def test_execute_tool_search_historical_solutions() -> None:
         assert "Test Solution" in res
         assert "Nulstil VPN" in res
         mock_search.assert_called_once_with("vpn")
-
-
-

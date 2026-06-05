@@ -19,12 +19,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/agent/user-avatar";
 import type { User } from "@/types/user";
 
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  body: string;
-};
-
 type ArchivedMessage = {
   id: string;
   session_id: string;
@@ -35,6 +29,12 @@ type ArchivedMessage = {
   ticket_ref?: string;
   is_bookmarked: boolean;
   created_at: string;
+};
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  body: string;
 };
 
 function HelpABotIcon() {
@@ -187,7 +187,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
       if (onlyBookmarked) {
         url += `&only_bookmarked=true`;
       }
-      const data = await apiGet<any[]>(url);
+      const data = await apiGet<ArchivedMessage[]>(url);
       setArchivedMessages(data);
     } catch (err) {
       console.error("Error fetching chatbot message archive:", err);
