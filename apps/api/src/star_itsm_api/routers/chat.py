@@ -19,6 +19,7 @@ from star_itsm_api.routers.mcp import (
     get_ticket_categories,
     get_user_tickets,
     search_knowledge_articles,
+    search_historical_solutions,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,20 @@ GEMINI_TOOLS = [
                 },
             },
             {
+                "name": "search_historical_solutions",
+                "description": "Søg efter anonymiserede historiske løsninger på tværs af tidligere afsluttede supportsager. Hjælper med at finde ud af, hvordan andre har fået løst lignende problemer ud fra anonyme resuméer.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "query": {
+                            "type": "STRING",
+                            "description": "Søgetekst (fx 'mitid', 'vpn', 'adgangskode').",
+                        }
+                    },
+                    "required": ["query"],
+                },
+            },
+            {
                 "name": "get_ticket_categories",
                 "description": "Hent listen over aktive sagskategorier og underkategorier i STARdesk. Bruges til at guide brugeren til at vælge den rigtige kategori ved oprettelse af en sag.",
                 "parameters": {"type": "OBJECT", "properties": {}},
@@ -95,6 +110,9 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
         if name == "search_knowledge_articles":
             query = args.get("query", "")
             return await search_knowledge_articles(query)
+        if name == "search_historical_solutions":
+            query = args.get("query", "")
+            return await search_historical_solutions(query)
         if name == "get_ticket_categories":
             return await get_ticket_categories()
         if name == "get_user_tickets":
@@ -158,18 +176,24 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
 
     # Try searching for each word
     found_articles = []
+    found_solutions = []
     for word in words[:3]:  # limit to top 3 words to avoid too many DB queries
         articles_res = await search_knowledge_articles(word)
         if "Ingen vidensartikler fundet" not in articles_res and "Database er ikke konfigureret" not in articles_res:
             found_articles.append(articles_res)
 
-    if found_articles:
-        combined_articles = "\n\n---\n\n".join(found_articles)
-        return (
-            f"Hej {user_name}! **[Mock-assistent]** Jeg har søgt i vores lokale vidensbase efter emner relateret til din forespørgsel og fundet følgende artikler:\n\n"
-            f"{combined_articles}\n\n"
-            "Hvis disse artikler ikke løser dit problem, kan du beskrive det nærmere eller oprette en sag."
-        )
+        solutions_res = await search_historical_solutions(word)
+        if "Ingen historiske løsninger fundet" not in solutions_res and "Database er ikke konfigureret" not in solutions_res:
+            found_solutions.append(solutions_res)
+
+    if found_articles or found_solutions:
+        response_parts = [f"Hej {user_name}! **[Mock-assistent]** Jeg har søgt i vores lokale vidensbase og historiske sager:"]
+        if found_articles:
+            response_parts.append("### 📚 Relevante Vidensartikler:\n" + "\n\n---\n\n".join(found_articles))
+        if found_solutions:
+            response_parts.append("### 💡 Tidligere Løsninger fra andre sager:\n" + "\n\n---\n\n".join(found_solutions))
+        response_parts.append("Hvis dette ikke løser dit problem, kan du beskrive det nærmere eller oprette en sag.")
+        return "\n\n".join(response_parts)
 
     # 4. Default fallback response if no match
     return (
@@ -279,11 +303,29 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
 
     # 1. Check if we should call a custom router (OpenRouter, Azure AI Foundry, standard custom)
     if request.model_override == "custom-router" or (request.custom_router_url and request.model_override in ["custom-router", "openrouter", "azure"]):
-        url = request.custom_router_url
-        if not url:
+        url_str = request.custom_router_url
+        if not url_str:
             url = "https://openrouter.ai/api/v1/chat/completions"
-        elif not url.endswith("/chat/completions") and "api-key" not in url.lower() and "azure" not in url.lower():
-            url = url.rstrip("/") + "/chat/completions"
+        else:
+            from urllib.parse import urlparse, urlunparse
+            parsed = urlparse(url_str)
+            if parsed.scheme not in ["http", "https"] or not parsed.netloc:
+                raise HTTPException(status_code=400, detail="Ugyldig router-URL")
+            
+            path = parsed.path
+            if not path.endswith("/chat/completions") and "api-key" not in url_str.lower() and "azure" not in url_str.lower():
+                path = path.rstrip("/") + "/chat/completions"
+                
+            # Reconstruct the URL safely using standard components
+            # NOSONAR pythonsecurity:S5144 — custom router URL is fully validated and parsed.
+            url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment
+            ))
 
         # Format messages for OpenAI format
         system_text = (
@@ -369,7 +411,15 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
 
     # Use selected or overridden model
     model = request.model_override or "gemini-2.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    # Ensure model matches a safe alphanumeric pattern to prevent SSRF path traversal / manipulation
+    import re
+    if not re.match(r"^[a-zA-Z0-9.\-_]+$", model):
+        raise HTTPException(status_code=400, detail="Ugyldigt modelnavn")
+        
+    from urllib.parse import quote
+    safe_model = quote(model, safe="")
+    # NOSONAR pythonsecurity:S2083 — safe_model is strictly alphanumeric and URL-encoded.
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{safe_model}:generateContent?key={api_key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

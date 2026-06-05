@@ -6,14 +6,10 @@ import {
   Bot, 
   Send, 
   Search, 
-  Bookmark, 
   Star, 
   Trash2, 
   Clock, 
-  SlidersHorizontal, 
-  RefreshCw, 
-  Sparkles,
-  HelpCircle 
+  RefreshCw 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
@@ -27,6 +23,18 @@ type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   body: string;
+};
+
+type ArchivedMessage = {
+  id: string;
+  session_id: string;
+  sender: "user" | "bot";
+  sender_name: string;
+  body: string;
+  category?: string;
+  ticket_ref?: string;
+  is_bookmarked: boolean;
+  created_at: string;
 };
 
 function HelpABotIcon() {
@@ -160,7 +168,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("Alle");
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
-  const [archivedMessages, setArchivedMessages] = useState<any[]>([]);
+  const [archivedMessages, setArchivedMessages] = useState<ArchivedMessage[]>([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
