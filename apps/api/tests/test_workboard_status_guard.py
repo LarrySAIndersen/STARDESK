@@ -1,46 +1,47 @@
-import pytest
-
 from star_itsm_api.services.workboard_status_guard import (
+    column_index,
     is_allowed_workflow_status_change,
     resolve_persisted_status,
 )
 
 
-@pytest.mark.parametrize(
-    ("from_status", "to_status", "allowed"),
-    [
-        ("In Progress", "Review", True),
-        ("Review", "Human Review", True),
-        ("Human Review", "Done", True),
-        ("Done", "Archived", True),
-        ("Human Review", "In Progress", True),
-        ("Human Review", "Review", False),
-        ("Review", "Backlog", False),
-        ("Done", "In Progress", False),
-        ("Ready", "Review", False),
-    ],
-)
-def test_workflow_status_change_rules(
-    from_status: str,
-    to_status: str,
-    allowed: bool,
-) -> None:
-    assert is_allowed_workflow_status_change(from_status, to_status) is allowed
+def test_column_index() -> None:
+    assert column_index("Bobler") == 0
+    assert column_index("Done") == 7
+    assert column_index("InvalidStatus") is None
 
 
-def test_resolve_persisted_status_blocks_regression() -> None:
-    resolved, preserved = resolve_persisted_status("Human Review", "Review")
-    assert preserved is True
-    assert resolved == "Human Review"
+def test_is_allowed_workflow_status_change() -> None:
+    # Same status
+    assert is_allowed_workflow_status_change("Backlog", "Backlog") is True
+
+    # Special transition
+    assert is_allowed_workflow_status_change("Human Review", "In Progress") is True
+
+    # Invalid status
+    assert is_allowed_workflow_status_change("InvalidStatus", "Backlog") is False
+    assert is_allowed_workflow_status_change("Backlog", "InvalidStatus") is False
+
+    # Forward one column
+    assert is_allowed_workflow_status_change("Bobler", "Backlog") is True
+    assert is_allowed_workflow_status_change("Backlog", "Refinement") is True
+
+    # Forward more than one column
+    assert is_allowed_workflow_status_change("Bobler", "Refinement") is False
+
+    # Backward transition (not special)
+    assert is_allowed_workflow_status_change("Backlog", "Bobler") is False
 
 
-def test_resolve_persisted_status_allows_forward() -> None:
-    resolved, preserved = resolve_persisted_status("In Progress", "Review")
-    assert preserved is False
-    assert resolved == "Review"
+def test_resolve_persisted_status() -> None:
+    # No existing status
+    assert resolve_persisted_status(None, "Backlog") == ("Backlog", False)
 
+    # Same status
+    assert resolve_persisted_status("Backlog", "Backlog") == ("Backlog", False)
 
-def test_resolve_persisted_status_new_task() -> None:
-    resolved, preserved = resolve_persisted_status(None, "Backlog")
-    assert preserved is False
-    assert resolved == "Backlog"
+    # Allowed change
+    assert resolve_persisted_status("Bobler", "Backlog") == ("Backlog", False)
+
+    # Disallowed change (should preserve existing)
+    assert resolve_persisted_status("Backlog", "Bobler") == ("Backlog", True)

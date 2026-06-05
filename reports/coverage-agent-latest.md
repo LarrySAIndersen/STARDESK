@@ -2,27 +2,37 @@
 
 ## Oversigt
 
-- **Linjedækning:** **67.9%** (7172 / 10565 statements) — en stigning på **+4.1%** i forhold til forrige scan (63.8%).
-- **Branchdækning:** **44.8%** (1277 / 2850 branches) — en stigning på **+5.9%** i forhold til baseline (38.9%).
-- **Test status:** **544 tests passed** (alle unit tests grønne).
+- **Linjedækning:** **68.3%** (7232 / 10589 statements) — en stigning på **+0.4%** i forhold til forrige scan (67.9%).
+- **Branchdækning:** **46.8%** (1341 / 2868 branches) — en stigning på **+2.0%** i forhold til forrige scan (44.8%).
+- **Test status:** **653 tests passed** (alle unit tests grønne).
 
-## Gennemførte Forbedringer (Batch 5)
+## Gennemførte Forbedringer (Batch 7: Flere Lavthængende Frugter)
 
-Vi har fokuseret på at lukke hullerne i et af de mest komplekse og kritiske moduler i systemet:
+Vi har bragt 8 mindre moduler og hjælpefunktioner til **100% testdækning**:
 
-1. **`sf_chat.py` (Services):**
-   - Før: **13.3%** dækning
-   - Nu: **100%** dækning (432 statements, 0 missed)
-   - Ændring: Tilføjet 21 nye robuste unit tests i `tests/test_sf_chat.py` der dækker alle database- og asynkrone operationer, herunder agent-presence, session reconciliation, load balancing, inbox opbygning, bot-assistant aktivering, og oprettelse af sager ud fra chat-transkripter med fuld dækning af alle fejl- og succes-grene.
+1. **`ticket_numbers.py` (100%):** Dækket fejlhåndtering og fallback ved ugyldige sagsnumre.
+2. **`db_resilience.py` (100%):** Dækket savepoint rollback-fejl og asynkrone context manager fallbacks.
+3. **`slack_mock.py` (100%):** Dækket opslag af mock Slack-kanaler (både fundne og ikke-fundne).
+4. **`sole_top_admin.py` (100%):** Dækket automatisk demotion af uautoriserede top_admins og promotion af ejeren ved login.
+5. **`ticket_classification.py` (100%):** Dækket validering af kategorier, underkategorier og kilder (herunder inaktive elementer).
+6. **`cmdb_catalog.py` (100%):** Dækket oprettelse og opdatering af CMDB-kataloget i PostgreSQL.
+7. **`sla_calendar.py` (100%):** Dækket tidsberegning over weekender og asynkrone tidszoner.
+8. **`workboard_status_guard.py` (100%):** Dækket status- transitionsregler på Kanban-tavlen.
 
 ## Bekræftelse & Deliverable Gate
 
 - **Deliverable Gate:** **PASSED** (lokal hello-world test fuldført med succes via `pwsh scripts/run-deliverable-gate.ps1`).
-- Alle 544 unit tests kørte og bestod uden fejl.
+- Alle 653 unit tests kørte og bestod uden fejl.
 
-## Næste Batch Prioriteringer
+## Næste Batch Prioriteringer (Batch 8: Næste Lavthængende Frugter)
 
-Følgende moduler er de næste vigtige mål for at øge dækningen yderligere:
+Følgende moduler er de næste oplagte mål for at øge dækningen yderligere:
 
-1. `sf_chat_bot.py` (77.0% dækning, 59 statements)
-2. `tickets_router.py` (Fortsæt forbedring)
+1. `permissions.py` (79% dækning, 28 statements)
+2. `ticket_tags.py` (83% dækning, 32 statements)
+3. `ticket_timestamps.py` (90% dækning, 23 statements)
+4. `cpr.py` (84% dækning, 37 statements)
+5. `kanban_defaults.py` (83% dækning, 46 statements)
+6. `sla_status.py` (72% dækning, 27 statements)
+7. `ticket_sort.py` (72% dækning, 26 statements)
+8. `ticket_intake_assist.py` (71% dækning, 48 statements)
