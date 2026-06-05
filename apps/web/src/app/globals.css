@@ -1523,7 +1523,24 @@
   }
 
   .case-assistant-panel {
-    @apply border-star-blue fixed right-5 bottom-[5.25rem] z-[401] flex w-[min(100vw-2rem,400px)] flex-col overflow-hidden rounded-[2px] border border-[var(--gray-border)] border-t-[3px] bg-card shadow-2xl;
+    @apply border-star-blue fixed z-[401] flex flex-col overflow-visible rounded-[2px] border border-[var(--gray-border)] border-t-[3px] bg-card shadow-2xl;
+  }
+
+  .case-assistant-panel--floating {
+    @apply touch-none select-none;
+  }
+
+  .case-assistant-panel-robot {
+    @apply pointer-events-none absolute left-1/2 top-0 z-[402] -translate-x-1/2 -translate-y-[55%];
+  }
+
+  .case-assistant-panel-drag-handle {
+    @apply cursor-grab active:cursor-grabbing;
+  }
+
+  .case-assistant-panel-resize-handle {
+    @apply absolute right-0 bottom-0 z-10 size-5 cursor-nwse-resize touch-none;
+    background: linear-gradient(135deg, transparent 50%, rgb(59 130 246 / 0.35) 50%);
   }
 
   .case-assistant-panel-header {
