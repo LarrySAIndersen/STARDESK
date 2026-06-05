@@ -1,20 +1,18 @@
-from datetime import datetime, UTC, timedelta
 import uuid
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from star_itsm_api.services.ticket_routing import (
     ROUTING_READY_THRESHOLD,
-    _TeamRef,
-    _routing_metadata,
     _match_team_by_names,
-    intake_answers_from_ticket,
-    intake_metadata_from_answers,
-    merge_intake_answers,
+    _routing_metadata,
+    _TeamRef,
     build_ticket_routing,
     compute_completeness,
     compute_suggested_priority,
+    intake_answers_from_ticket,
+    intake_metadata_from_answers,
+    merge_intake_answers,
     suggest_team,
 )
 

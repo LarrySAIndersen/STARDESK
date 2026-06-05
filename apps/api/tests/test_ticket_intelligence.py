@@ -1,22 +1,21 @@
-from datetime import UTC, datetime, timedelta
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from star_itsm_api.services.ticket_intelligence import (
+    _hours_between,
+    build_llm_context_batch,
+    build_prompt_snippet,
+    build_semantic_bundle,
+    build_ticket_llm_context,
     compute_heuristic_scores,
+    default_handling_hints,
     extract_semantic_topics,
     intelligence_from_ticket,
-    score_label_da,
-    default_handling_hints,
-    build_heuristic_summary,
-    _hours_between,
-    build_semantic_bundle,
-    build_prompt_snippet,
     load_ticket_context_names,
-    build_ticket_llm_context,
-    build_llm_context_batch,
+    score_label_da,
 )
 
 

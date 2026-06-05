@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient, Response
-import star_itsm_api.routers.chat
 
 
 @pytest.mark.asyncio

@@ -15,16 +15,12 @@ from star_itsm_api.models.sf_chat_session import (
     SESSION_WAITING,
     SfChatSession,
 )
-from star_itsm_api.models.team import Team
-from star_itsm_api.models.team_member import TeamMember
-from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sf_chat import SfChatMessageRead
 from star_itsm_api.services import sf_chat
 from star_itsm_api.services.sf_chat import (
     MSG_CHAT_CLOSED,
     MSG_QUEUE_REJECTED,
-    MSG_SYS_AGENT_LEFT_CUSTOMER,
     _estimated_wait_minutes,
     format_sf_chat_transcript_da,
 )
@@ -1728,7 +1724,7 @@ async def test_add_message_sf_agent_waiting_assigns_with_presence() -> None:
     mock_db.commit = AsyncMock()
     mock_db.refresh = AsyncMock()
 
-    msg = await sf_chat.add_message(mock_db, session_id, sender, "Hello")
+    await sf_chat.add_message(mock_db, session_id, sender, "Hello")
     assert session.assigned_agent_id == sender.id
     assert session.status == SESSION_ACTIVE
     assert presence.active_session_id == session.id

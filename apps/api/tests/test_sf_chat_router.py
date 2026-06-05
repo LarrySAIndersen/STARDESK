@@ -1,23 +1,23 @@
 import uuid
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, patch, MagicMock
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from httpx import AsyncClient
-from fastapi import HTTPException
 
+from star_itsm_api.models.sf_chat_session import (
+    SESSION_ACTIVE,
+    SESSION_CLOSED,
+    SESSION_REJECTED_QUEUE,
+)
 from star_itsm_api.schemas.sf_chat import (
-    SfChatStatusRead,
-    SfChatPresenceRead,
-    SfChatLogoutCheckRead,
-    SfChatMessageRead,
-    SfChatSessionRead,
-    SfChatSessionCreateResponse,
     SfChatAgentInboxRead,
-    SfChatPollRead,
-    SfChatAgentInboxItem,
+    SfChatLogoutCheckRead,
+    SfChatPresenceRead,
+    SfChatSessionRead,
+    SfChatStatusRead,
 )
 from star_itsm_api.schemas.ticket import TicketRead
-from star_itsm_api.models.sf_chat_session import SESSION_CLOSED, SESSION_REJECTED_QUEUE, SESSION_ACTIVE
 
 
 @pytest.fixture

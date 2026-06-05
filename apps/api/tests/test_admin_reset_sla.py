@@ -173,8 +173,9 @@ async def test_reset_all_ticket_sla_applies_policy(
 
 @pytest.mark.asyncio
 async def test_count_active_tickets(mock_db: AsyncMock) -> None:
-    from star_itsm_api.services.sla_reset import count_active_tickets
     from unittest.mock import MagicMock
+
+    from star_itsm_api.services.sla_reset import count_active_tickets
     mock_result = MagicMock()
     mock_result.scalar_one.return_value = 5
     mock_db.execute = AsyncMock(return_value=mock_result)
