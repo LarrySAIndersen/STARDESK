@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Bot, 
   Cpu, 
   Key, 
   Sliders, 
@@ -15,7 +14,6 @@ import {
   Play, 
   Activity, 
   ShieldAlert,
-  HelpCircle,
   Clock,
   Coins
 } from "lucide-react";

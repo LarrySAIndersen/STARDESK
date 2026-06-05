@@ -6,14 +6,10 @@ import {
   Bot, 
   Send, 
   Search, 
-  Bookmark, 
   Star, 
   Trash2, 
   Clock, 
-  SlidersHorizontal, 
   RefreshCw, 
-  Sparkles,
-  HelpCircle 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
@@ -22,6 +18,18 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/agent/user-avatar";
 import type { User } from "@/types/user";
+
+type ArchivedMessage = {
+  id: string;
+  session_id: string;
+  sender: "user" | "bot";
+  sender_name: string;
+  body: string;
+  category?: string;
+  ticket_ref?: string;
+  is_bookmarked: boolean;
+  created_at: string;
+};
 
 type ChatMessage = {
   id: string;
@@ -160,7 +168,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("Alle");
   const [onlyBookmarked, setOnlyBookmarked] = useState(false);
-  const [archivedMessages, setArchivedMessages] = useState<any[]>([]);
+  const [archivedMessages, setArchivedMessages] = useState<ArchivedMessage[]>([]);
   const [loadingArchive, setLoadingArchive] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
@@ -179,7 +187,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
       if (onlyBookmarked) {
         url += `&only_bookmarked=true`;
       }
-      const data = await apiGet<any[]>(url);
+      const data = await apiGet<ArchivedMessage[]>(url);
       setArchivedMessages(data);
     } catch (err) {
       console.error("Error fetching chatbot message archive:", err);
