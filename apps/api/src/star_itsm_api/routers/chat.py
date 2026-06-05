@@ -1,10 +1,19 @@
 import logging
 import os
+import uuid
+from datetime import datetime
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from sqlalchemy import select, delete, update, and_, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from star_itsm_api.db import get_db
+from star_itsm_api.deps import require_db
+from star_itsm_api.models.chatbot_message import ChatbotMessage
+from star_itsm_api.core.security import get_user_by_email
 
 from star_itsm_api.routers.mcp import (
     get_ticket_categories,
@@ -27,6 +36,11 @@ class ChatRequest(BaseModel):
     user_email: str | None = None
     user_name: str | None = None
     model_override: str | None = None
+    custom_router_url: str | None = None
+    custom_router_key: str | None = None
+    custom_router_model: str | None = None
+    custom_router_header_type: str | None = "Bearer"
+    session_id: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -169,8 +183,152 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
     )
 
 
+async def log_chatbot_message(
+    db: AsyncSession | None,
+    session_str: str | None,
+    user_email: str | None,
+    sender: str,
+    sender_name: str,
+    body: str,
+    category: str | None = None,
+    ticket_ref: str | None = None,
+):
+    if db is None:
+        return
+    try:
+        user_id = None
+        if user_email:
+            user = await get_user_by_email(db, user_email)
+            if user:
+                user_id = user.id
+        
+        session_id = None
+        if session_str:
+            try:
+                session_id = uuid.UUID(session_str)
+            except ValueError:
+                pass
+        if not session_id:
+            session_id = uuid.uuid4()
+
+        msg = ChatbotMessage(
+            session_id=session_id,
+            user_id=user_id,
+            sender=sender,
+            sender_name=sender_name,
+            body=body,
+            category=category,
+            ticket_ref=ticket_ref,
+            is_bookmarked=False,
+            created_at=datetime.utcnow()
+        )
+        db.add(msg)
+        await db.commit()
+    except Exception as e:
+        logger.error(f"Error logging chatbot message: {str(e)}")
+
+
 @router.post("", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(get_db)):
+    # Extract last user message for logging
+    last_user_msg = None
+    for msg in reversed(request.messages):
+        if msg.role == "user":
+            last_user_msg = msg.content
+            break
+
+    # Helper to return response AND log it in the database
+    async def make_response(final_response: str) -> ChatResponse:
+        if last_user_msg:
+            await log_chatbot_message(
+                db=db,
+                session_str=request.session_id,
+                user_email=request.user_email,
+                sender="user",
+                sender_name=request.user_name or "Bruger",
+                body=last_user_msg,
+            )
+        # Determine category based on content keywords
+        category = "Generelt"
+        body_lower = final_response.lower()
+        if "vpn" in body_lower or (last_user_msg and "vpn" in last_user_msg.lower()):
+            category = "VPN"
+        elif "mitid" in body_lower or (last_user_msg and "mitid" in last_user_msg.lower()):
+            category = "MitID"
+        elif "sla" in body_lower or (last_user_msg and "sla" in last_user_msg.lower()):
+            category = "SLA"
+        elif "adgangskode" in body_lower or "password" in body_lower or (last_user_msg and ("adgangskode" in last_user_msg.lower() or "password" in last_user_msg.lower())):
+            category = "Adgangskode"
+
+        # Look for ticket ref like SAG-123
+        import re
+        ticket_match = re.search(r"SAG-\d+", body_lower)
+        ticket_ref = ticket_match.group(0).upper() if ticket_match else None
+
+        await log_chatbot_message(
+            db=db,
+            session_str=request.session_id,
+            user_email=request.user_email,
+            sender="bot",
+            sender_name="Help-a-bot" if "staff" in (request.user_email or "") else "Sag-assistent",
+            body=final_response,
+            category=category,
+            ticket_ref=ticket_ref
+        )
+        return ChatResponse(response=final_response)
+
+    # 1. Check if we should call a custom router (OpenRouter, Azure AI Foundry, standard custom)
+    if request.model_override == "custom-router" or (request.custom_router_url and request.model_override in ["custom-router", "openrouter", "azure"]):
+        url = request.custom_router_url
+        if not url:
+            url = "https://openrouter.ai/api/v1/chat/completions"
+        elif not url.endswith("/chat/completions") and "api-key" not in url.lower() and "azure" not in url.lower():
+            url = url.rstrip("/") + "/chat/completions"
+
+        # Format messages for OpenAI format
+        system_text = (
+            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "Svar altid venligt, professionelt og på dansk."
+        )
+        
+        openai_messages = [{"role": "system", "content": system_text}]
+        for msg in request.messages:
+            role_map = {"user": "user", "assistant": "assistant", "system": "system", "model": "assistant"}
+            openai_messages.append({"role": role_map.get(msg.role, "user"), "content": msg.content})
+
+        headers = {}
+        key = request.custom_router_key
+        if key:
+            if request.custom_router_header_type == "api-key" or "api-key" in url.lower() or "azure" in url.lower():
+                headers["api-key"] = key
+            else:
+                headers["Authorization"] = f"Bearer {key}"
+
+        model_name = request.custom_router_model or "meta-llama/llama-3-70b-instruct"
+        payload = {
+            "model": model_name,
+            "messages": openai_messages,
+            "temperature": 0.3
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post(url, json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                choices = res_data.get("choices", [])
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "")
+                    return await make_response(text)
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra den tilpassede sprogmodel.")
+            except Exception as e:
+                logger.error(f"Error calling custom router API: {str(e)}. Falling back to smart mock response.")
+                mock_resp = await get_smart_mock_response(request)
+                return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til din tilpassede udbyder ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
+
     # Retrieve the Google Gemini API key from the environment
     api_key = os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -179,7 +337,7 @@ async def chat_endpoint(request: ChatRequest):
             "GOOGLE_KEY or GEMINI_API_KEY not found in environment. Falling back to mock responses."
         )
         mock_resp = await get_smart_mock_response(request)
-        return ChatResponse(response=mock_resp)
+        return await make_response(mock_resp)
 
     # Format the messages history for Gemini API
     # Gemini uses "user" and "model" roles (instead of "assistant")
@@ -238,20 +396,18 @@ async def chat_endpoint(request: ChatRequest):
                 "Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg",
                 "Da Google Gemini-tjenesten er midlertidigt utilgængelig, kører jeg"
             )
-            return ChatResponse(response=f"{user_friendly_error}{clean_mock_resp}")
+            return await make_response(f"{user_friendly_error}{clean_mock_resp}")
 
         # Check if the model wants to call a function
         try:
             candidates = res_data.get("candidates", [])
             if not candidates:
-                return ChatResponse(
-                    response="Undskyld, jeg modtog ikke et gyldigt svar fra min sprogmodel."
-                )
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra min sprogmodel.")
 
             content = candidates[0].get("content", {})
             parts = content.get("parts", [])
             if not parts:
-                return ChatResponse(response="Undskyld, jeg modtog et tomt svar.")
+                return await make_response("Undskyld, jeg modtog et tomt svar.")
 
             # Look for a functionCall in the parts
             function_call = None
@@ -304,12 +460,125 @@ async def chat_endpoint(request: ChatRequest):
                     second_content = second_candidates[0].get("content", {})
                     second_parts = second_content.get("parts", [])
                     final_text = "".join([p.get("text", "") for p in second_parts if "text" in p])
-                    return ChatResponse(response=final_text)
+                    return await make_response(final_text)
 
-            return ChatResponse(response=text_response)
+            return await make_response(text_response)
 
         except Exception as e:
             logger.exception("Error parsing Gemini API response")
             raise HTTPException(
                 status_code=500, detail=f"Fejl under behandling af svar fra sprogmodel: {str(e)}"
             )
+
+
+class MessageReadSchema(BaseModel):
+    id: str
+    session_id: str
+    sender: str
+    sender_name: str
+    body: str
+    category: str | None
+    ticket_ref: str | None
+    is_bookmarked: bool
+    created_at: str
+
+
+@router.get("/messages", response_model=list[MessageReadSchema])
+async def get_messages(
+    q: str | None = None,
+    category: str | None = None,
+    only_bookmarked: bool = False,
+    user_email: str | None = None,
+    db: AsyncSession = Depends(require_db)
+):
+    user_id = None
+    if user_email:
+        user = await get_user_by_email(db, user_email)
+        if user:
+            user_id = user.id
+
+    query = select(ChatbotMessage)
+    conditions = []
+    
+    if user_id:
+        conditions.append(ChatbotMessage.user_id == user_id)
+    elif user_email:
+        # If user is not found, filter by None to return empty
+        conditions.append(ChatbotMessage.user_id == None)
+
+    if category and category != "Alle":
+        conditions.append(ChatbotMessage.category == category)
+
+    if only_bookmarked:
+        conditions.append(ChatbotMessage.is_bookmarked == True)
+
+    if q:
+        q_lower = f"%{q.lower()}%"
+        conditions.append(
+            or_(
+                ChatbotMessage.body.ilike(q_lower),
+                ChatbotMessage.sender_name.ilike(q_lower),
+                ChatbotMessage.ticket_ref.ilike(q_lower)
+            )
+        )
+
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    query = query.order_by(ChatbotMessage.created_at.desc())
+    result = await db.execute(query)
+    messages = result.scalars().all()
+
+    return [
+        MessageReadSchema(
+            id=str(m.id),
+            session_id=str(m.session_id),
+            sender=m.sender,
+            sender_name=m.sender_name,
+            body=m.body,
+            category=m.category,
+            ticket_ref=m.ticket_ref,
+            is_bookmarked=m.is_bookmarked,
+            created_at=m.created_at.isoformat()
+        )
+        for m in messages
+    ]
+
+
+@router.post("/messages/{msg_id}/bookmark")
+async def toggle_bookmark(
+    msg_id: str,
+    db: AsyncSession = Depends(require_db)
+):
+    try:
+        msg_uuid = uuid.UUID(msg_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldigt besked-ID")
+
+    query = select(ChatbotMessage).where(ChatbotMessage.id == msg_uuid)
+    result = await db.execute(query)
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Besked ikke fundet")
+
+    msg.is_bookmarked = not msg.is_bookmarked
+    await db.commit()
+    await db.refresh(msg)
+    return {"is_bookmarked": msg.is_bookmarked}
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session(
+    session_id: str,
+    db: AsyncSession = Depends(require_db)
+):
+    try:
+        session_uuid = uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldigt session-ID")
+
+    stmt = delete(ChatbotMessage).where(ChatbotMessage.session_id == session_uuid)
+    await db.execute(stmt)
+    await db.commit()
+    return {"success": True}
+
