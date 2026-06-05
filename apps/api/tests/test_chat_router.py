@@ -130,3 +130,37 @@ async def test_chat_gemini_api_call_success(client: AsyncClient) -> None:
             assert response.status_code == 200
             data = response.json()
             assert data["response"] == "Hej! Jeg er din assistent. Hvad kan jeg hjælpe med?"
+
+
+@pytest.mark.asyncio
+async def test_chat_gemini_api_call_rate_limited(client: AsyncClient) -> None:
+    # Test that a 429 rate limit from Gemini falls back to the smart mock instead of throwing a 502
+    with patch.dict("os.environ", {"GOOGLE_KEY": "fake-google-key"}):
+        payload = {
+            "messages": [
+                {"role": "user", "content": "vis mine sager"}
+            ],
+            "user_email": "sf01@example.dk"
+        }
+
+        original_post = AsyncClient.post
+
+        async def mock_post_fn(self, url, *args, **kwargs):
+            if "generativelanguage.googleapis.com" in str(url):
+                import httpx as httpx_mod
+                req = httpx_mod.Request("POST", url)
+                return Response(429, text="Too Many Requests", request=req)
+            return await original_post(self, url, *args, **kwargs)
+
+        with patch("httpx.AsyncClient.post", mock_post_fn):
+            with patch(
+                "star_itsm_api.routers.chat.get_user_tickets",
+                AsyncMock(return_value="Sagsnr: 12345 (Aktiv)")
+            ) as mock_tickets:
+                response = await client.post("/api/v1/chat", json=payload)
+                assert response.status_code == 200
+                data = response.json()
+                assert "Sprogmodellen er midlertidigt overbelastet" in data["response"]
+                assert "12345" in data["response"]
+                mock_tickets.assert_called_once_with("sf01@example.dk")
+
