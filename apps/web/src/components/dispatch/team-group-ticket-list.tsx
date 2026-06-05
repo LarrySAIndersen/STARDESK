@@ -10,7 +10,6 @@ export function TeamGroupTicketList({
   tickets,
   total,
   isSelected,
-  showingAll: _showingAll,
   previewLimit = TEAM_GROUP_PREVIEW_LIMIT,
   ticketHref,
   onTicketClick,

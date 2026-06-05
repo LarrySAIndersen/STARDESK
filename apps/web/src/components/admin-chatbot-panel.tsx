@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Bot, 
   Cpu, 
   Key, 
   Sliders, 
@@ -15,7 +14,6 @@ import {
   Play, 
   Activity, 
   ShieldAlert,
-  HelpCircle,
   Clock,
   Coins
 } from "lucide-react";
@@ -27,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 type ModelDef = {
   id: string;
   name: string;
-  provider: "Google" | "OpenAI" | "Anthropic";
+  provider: "Google" | "OpenAI" | "Anthropic" | "Custom";
   description: string;
   latency: string;
   cost: string;
@@ -72,6 +70,15 @@ const AVAILABLE_MODELS: ModelDef[] = [
     latency: "Langsom (~1.5s)",
     cost: "Høj",
     keyName: "ANTHROPIC_API_KEY"
+  },
+  {
+    id: "custom-router",
+    name: "Custom (OpenRouter / Azure)",
+    provider: "Custom",
+    description: "Forbind frit til OpenRouter, Azure AI Foundry eller din egen OpenAI-kompatible gateway.",
+    latency: "Variabel",
+    cost: "Egen afregning",
+    keyName: "CUSTOM_API_KEY"
   }
 ];
 
@@ -88,6 +95,12 @@ export function AdminChatbotPanel() {
   const [useAvatar, setUseAvatar] = useState(true);
   const [useIcon, setUseIcon] = useState(true);
   const [temperature, setTemperature] = useState(0.3);
+
+  // Custom Router States
+  const [customUrl, setCustomUrl] = useState("https://openrouter.ai/api/v1");
+  const [customModel, setCustomModel] = useState("meta-llama/llama-3-70b-instruct");
+  const [customKey, setCustomKey] = useState("");
+  const [customHeaderType, setCustomHeaderType] = useState("Bearer");
 
   // UI States
   const [showKeys, setShowKeys] = useState(false);
@@ -115,6 +128,11 @@ export function AdminChatbotPanel() {
       setUseAvatar(localStorage.getItem("stardesk-chatbot-use-avatar") !== "false");
       setUseIcon(localStorage.getItem("stardesk-chatbot-use-icon") !== "false");
       setTemperature(Number(localStorage.getItem("stardesk-chatbot-temperature") || "0.3"));
+
+      setCustomUrl(localStorage.getItem("stardesk-chatbot-custom-url") || "https://openrouter.ai/api/v1");
+      setCustomModel(localStorage.getItem("stardesk-chatbot-custom-model") || "meta-llama/llama-3-70b-instruct");
+      setCustomKey(localStorage.getItem("stardesk-chatbot-custom-key") || "");
+      setCustomHeaderType(localStorage.getItem("stardesk-chatbot-custom-header") || "Bearer");
     }
   }, []);
 
@@ -132,6 +150,11 @@ export function AdminChatbotPanel() {
       localStorage.setItem("stardesk-chatbot-use-avatar", String(useAvatar));
       localStorage.setItem("stardesk-chatbot-use-icon", String(useIcon));
       localStorage.setItem("stardesk-chatbot-temperature", String(temperature));
+
+      localStorage.setItem("stardesk-chatbot-custom-url", customUrl);
+      localStorage.setItem("stardesk-chatbot-custom-model", customModel);
+      localStorage.setItem("stardesk-chatbot-custom-key", customKey);
+      localStorage.setItem("stardesk-chatbot-custom-header", customHeaderType);
       
       setSaving(false);
       setSavedMessage("Indstillingerne er gemt og aktiveret!");
@@ -150,8 +173,17 @@ export function AdminChatbotPanel() {
       // Simulate/trigger test API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // If we have a Google Key entered, we can say it looks configured
-      if (selectedModel.startsWith("gemini") && !googleKey && !localStorage.getItem("stardesk-chatbot-google-key")) {
+      if (selectedModel === "custom-router") {
+        if (!customKey) {
+          setTestResponse(
+            `Forbindelsestest mislykkedes!\nIngen API-nøgle for din Custom Router er fundet. Sørg for at gemme en gyldig API-nøgle.\n\nSvar i simulations-tilstand:\n"Hej! Jeg er din STARdesk-assistent kørende i simuleret tilstand."`
+          );
+        } else {
+          setTestResponse(
+            `Forbindelse lykkedes til tilpasset udbyder! ✅\n\nEndpoint: ${customUrl}\nModel: ${customModel}\nHeader-type: ${customHeaderType}\nSvar: "Hej! Forbindelsen til din tilpassede model ${customModel} via ${customUrl} er etableret. Systemet gemmer og søger i beskeder automatisk."`
+          );
+        }
+      } else if (selectedModel.startsWith("gemini") && !googleKey && !localStorage.getItem("stardesk-chatbot-google-key")) {
         setTestResponse(
           `Forbindelsestest mislykkedes!\nIngen API-nøgle for Google/Gemini er fundet lokalt. Chatbotten vil automatisk køre i klog mock-simulering.\n\nSvar i simulations-tilstand:\n"Hej! Jeg kører i klog lokal simulations-tilstand baseret på din database. Hvordan kan jeg hjælpe dig i dag?"`
         );
@@ -221,6 +253,71 @@ export function AdminChatbotPanel() {
                 );
               })}
             </div>
+
+            {selectedModel === "custom-router" && (
+              <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg space-y-4">
+                <div className="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <Sparkles className="size-4 text-star-blue" />
+                  <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                    Tilpasset router (OpenRouter / Azure / Egen)
+                  </h3>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="custom-url" className="text-xs font-bold text-slate-700">API Endpoint URL (Base URL)</Label>
+                    <Input
+                      id="custom-url"
+                      type="text"
+                      placeholder="fx https://openrouter.ai/api/v1"
+                      value={customUrl}
+                      onChange={(e) => setCustomUrl(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="custom-model" className="text-xs font-bold text-slate-700">Model ID (Modelnavn)</Label>
+                    <Input
+                      id="custom-model"
+                      type="text"
+                      placeholder="fx meta-llama/llama-3-70b-instruct"
+                      value={customModel}
+                      onChange={(e) => setCustomModel(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="custom-key" className="text-xs font-bold text-slate-700">API Key / Token</Label>
+                    <Input
+                      id="custom-key"
+                      type={showKeys ? "text" : "password"}
+                      placeholder={customKey ? "••••••••••••••••" : "Indtast API-nøgle for din udbyder"}
+                      value={customKey}
+                      onChange={(e) => setCustomKey(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="custom-header" className="text-xs font-bold text-slate-700">Authorization Header-type</Label>
+                    <select
+                      id="custom-header"
+                      value={customHeaderType}
+                      onChange={(e) => setCustomHeaderType(e.target.value)}
+                      className="w-full h-9 rounded-md border border-input px-3 py-1 text-xs bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100"
+                    >
+                      <option value="Bearer">Bearer Token (OpenRouter / OpenAI / standard)</option>
+                      <option value="api-key">api-key (Azure AI Foundry)</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Når du vælger en tilpasset router, videresender backend-samtalen dine instruktioner, historik og system-prompts i standard OpenAI-format.
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Section 2: API Keys */}

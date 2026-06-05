@@ -2,13 +2,18 @@
 
 NAV_PATH_BY_ID: dict[str, str] = {
     "dashboard": "/",
+    "min-side": "/min-side",
     "service-desk": "/service-desk",
+    "kanban": "/kanban",
+    "backlog": "/backlog",
     "classic-ui": "/classic",
     "tickets": "/tickets",
     "tickets-new": "/tickets/new",
     "assets": "/aktiver",
     "knowledge": "/knowledge",
     "groups": "/groups",
+    "forbedringer": "/forbedringer",
+    "saglayout-2": "/forbedringer/saglayout-2",
     "users": "/users",
     "reports": "/reports",
     "admin-dashboard": "/admin/dashboard",

@@ -161,3 +161,93 @@ async def test_build_dashboard_counts_open_and_closed() -> None:
     assert dashboard.closed_count == 1
     assert dashboard.opened_last_7_days >= 1
     assert len(dashboard.daily_created) == 14
+
+
+@pytest.mark.asyncio
+async def test_build_dashboard_with_scope_filtering() -> None:
+    now = datetime.now(UTC)
+    ticket1 = _ticket(status="new", is_major=True, resolution_due_at=now - timedelta(hours=1))
+    ticket2 = _ticket(status="closed", is_major=False)
+    
+    tickets_result = MagicMock()
+    tickets_result.scalars.return_value.all.return_value = [ticket1, ticket2]
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=tickets_result)
+    
+    user = SimpleNamespace(id=uuid.uuid4(), role="agent", organization_id=None)
+    
+    # Test scope filtering, major open count, and SLA overdue count
+    with (
+        patch(
+            "star_itsm_api.services.dashboard._ticket_scope_stmt",
+            AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "star_itsm_api.services.dashboard.get_user_team_ids",
+            AsyncMock(return_value=[uuid.uuid4()]),
+        ) as mock_get_teams,
+        patch(
+            "star_itsm_api.services.dashboard.filter_tickets_by_scope",
+            return_value=[ticket1],  # Filtered down to just ticket1
+        ) as mock_filter,
+        patch(
+            "star_itsm_api.services.dashboard.tickets_to_read_list",
+            AsyncMock(return_value=[SimpleNamespace(
+                assigned_team_name="Team A",
+                assigned_user_name="User A",
+                resolution_due_at=now - timedelta(hours=1),
+                sla_remaining_seconds=-3600,
+                sla_breached=True,
+            )]),
+        ),
+    ):
+        dashboard = await dashboard_service.build_dashboard(
+            mock_db,
+            user,
+            scope=DashboardScope.mine,
+        )
+        
+    assert dashboard.open_count == 1
+    assert dashboard.major_open_count == 1
+    assert dashboard.sla_overdue_count == 1
+    mock_get_teams.assert_called_once()
+    mock_filter.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_build_dashboard_tickets_to_read_list_exception() -> None:
+    now = datetime.now(UTC)
+    ticket = _ticket(status="new")
+    
+    tickets_result = MagicMock()
+    tickets_result.scalars.return_value.all.return_value = [ticket]
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=tickets_result)
+    
+    user = SimpleNamespace(id=uuid.uuid4(), role="agent", organization_id=None)
+    
+    with (
+        patch(
+            "star_itsm_api.services.dashboard._ticket_scope_stmt",
+            AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "star_itsm_api.services.dashboard.get_user_team_ids",
+            AsyncMock(return_value=[]),
+        ),
+        patch(
+            "star_itsm_api.services.dashboard.tickets_to_read_list",
+            AsyncMock(side_effect=Exception("DB Error")),
+        ),
+    ):
+        dashboard = await dashboard_service.build_dashboard(
+            mock_db,
+            user,
+            scope=DashboardScope.all,
+        )
+        
+    assert dashboard.open_count == 1
+    assert dashboard.longest_open is not None
+    assert dashboard.longest_open.assigned_team_name is None
+    assert dashboard.longest_open.assigned_user_name is None
+

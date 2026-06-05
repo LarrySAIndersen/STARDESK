@@ -164,3 +164,56 @@ async def test_chat_gemini_api_call_rate_limited(client: AsyncClient) -> None:
                 assert "12345" in data["response"]
                 mock_tickets.assert_called_once_with("sf01@example.dk")
 
+
+@pytest.mark.asyncio
+async def test_chat_router_custom_url_invalid(client: AsyncClient) -> None:
+    payload = {
+        "messages": [{"role": "user", "content": "Hej"}],
+        "model_override": "custom-router",
+        "custom_router_url": "ftp://malicious.com/api"
+    }
+    response = await client.post("/api/v1/chat", json=payload)
+    assert response.status_code == 400
+    assert "Ugyldig router-URL" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_chat_router_model_override_invalid(client: AsyncClient) -> None:
+    with patch.dict("os.environ", {"GOOGLE_KEY": "fake-google-key"}):
+        payload = {
+            "messages": [{"role": "user", "content": "Hej"}],
+            "model_override": "../../../../malicious/model"
+        }
+        response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == 400
+        assert "Ugyldigt modelnavn" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_chat_router_custom_url_reconstruction_success(client: AsyncClient) -> None:
+    payload = {
+        "messages": [{"role": "user", "content": "Hej"}],
+        "model_override": "custom-router",
+        "custom_router_url": "https://openrouter.ai/api/v1/chat/completions"
+    }
+    # Mock post response
+    mock_res_json = {
+        "choices": [
+            {"message": {"content": "Svar fra custom router"}}
+        ]
+    }
+    original_post = AsyncClient.post
+
+    async def mock_post_fn(self, url, *args, **kwargs):
+        if "openrouter.ai" in str(url):
+            import httpx as httpx_mod
+            req = httpx_mod.Request("POST", url)
+            return Response(200, json=mock_res_json, request=req)
+        return await original_post(self, url, *args, **kwargs)
+
+    with patch("httpx.AsyncClient.post", mock_post_fn):
+        response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == 200
+        assert response.json()["response"] == "Svar fra custom router"
+
+

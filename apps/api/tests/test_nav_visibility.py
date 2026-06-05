@@ -28,8 +28,8 @@ def test_nav_id_for_path_shorter_prefix_ignored() -> None:
 
 
 def test_normalize_ids_filters_invalid() -> None:
-    raw = ["tickets", "bogus", "tickets", 42, "portal"]
-    assert nav_visibility._normalize_ids(raw) == ["tickets", "portal"]
+    raw = ["tickets", "bogus", "tickets", 42, "portal", "dependency-track", "kanban", "backlog", "min-side", "forbedringer", "saglayout-2"]
+    assert nav_visibility._normalize_ids(raw) == ["tickets", "portal", "dependency-track", "kanban", "backlog", "min-side", "forbedringer", "saglayout-2"]
     assert nav_visibility._normalize_ids("not-a-list") == []
 
 
