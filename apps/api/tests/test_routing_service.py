@@ -86,3 +86,123 @@ async def test_apply_routing_falls_back_when_no_rules() -> None:
 
     assert result.assigned_team_id is None
     assert result.assigned_user_id is None
+
+
+@pytest.mark.asyncio
+async def test_apply_routing_type_mismatch() -> None:
+    # Rule specifies "incident", but we route a "service_request"
+    rule = MagicMock(
+        ticket_type="incident",
+        category_id=None,
+        subcategory_id=None,
+        min_priority=None,
+        assign_team_id=uuid.uuid4(),
+        assign_user_id=None,
+        set_priority=None,
+    )
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [rule]))
+    )
+
+    result = await routing.apply_routing(
+        mock_db,
+        ticket_type="service_request",
+        category_id=None,
+        subcategory_id=None,
+        priority="medium",
+    )
+
+    assert result.assigned_team_id is None
+
+
+@pytest.mark.asyncio
+async def test_apply_routing_category_mismatch() -> None:
+    # Rule specifies category A, but we route category B
+    cat_a = uuid.uuid4()
+    cat_b = uuid.uuid4()
+    rule = MagicMock(
+        ticket_type=None,
+        category_id=cat_a,
+        subcategory_id=None,
+        min_priority=None,
+        assign_team_id=uuid.uuid4(),
+        assign_user_id=None,
+        set_priority=None,
+    )
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [rule]))
+    )
+
+    result = await routing.apply_routing(
+        mock_db,
+        ticket_type="incident",
+        category_id=cat_b,
+        subcategory_id=None,
+        priority="medium",
+    )
+
+    assert result.assigned_team_id is None
+
+
+@pytest.mark.asyncio
+async def test_apply_routing_subcategory_mismatch() -> None:
+    # Rule specifies subcategory A, but we route subcategory B
+    sub_a = uuid.uuid4()
+    sub_b = uuid.uuid4()
+    rule = MagicMock(
+        ticket_type=None,
+        category_id=None,
+        subcategory_id=sub_a,
+        min_priority=None,
+        assign_team_id=uuid.uuid4(),
+        assign_user_id=None,
+        set_priority=None,
+    )
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [rule]))
+    )
+
+    result = await routing.apply_routing(
+        mock_db,
+        ticket_type="incident",
+        category_id=None,
+        subcategory_id=sub_b,
+        priority="medium",
+    )
+
+    assert result.assigned_team_id is None
+
+
+@pytest.mark.asyncio
+async def test_apply_routing_rule_priority_not_set() -> None:
+    # Rule matches, but set_priority is None, so it should retain the original priority
+    rule = MagicMock(
+        ticket_type=None,
+        category_id=None,
+        subcategory_id=None,
+        min_priority=None,
+        assign_team_id=uuid.uuid4(),
+        assign_user_id=None,
+        set_priority=None,
+    )
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [rule]))
+    )
+
+    result = await routing.apply_routing(
+        mock_db,
+        ticket_type="incident",
+        category_id=None,
+        subcategory_id=None,
+        priority="high",
+    )
+
+    assert result.priority == "high"

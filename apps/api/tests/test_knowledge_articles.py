@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+import pytest
+
 from star_itsm_api.core.security import ROLE_AGENT, ROLE_SUBMITTER
 from star_itsm_api.services.knowledge_articles import (
     KNOWLEDGE_STATUS_DRAFT,
@@ -72,3 +74,51 @@ async def test_list_knowledge_articles_without_database_returns_503(
 ) -> None:
     response = await client.get("/api/v1/knowledge-articles?portal=true")
     assert response.status_code == 503
+
+
+def test_get_knowledge_sections_empty_or_invalid_meta() -> None:
+    ticket = MagicMock()
+    ticket.routing_metadata = None
+    sections = get_knowledge_sections(ticket)
+    assert sections == {
+        "summary": "",
+        "symptoms": "",
+        "solution": "",
+        "related_topics": "",
+    }
+
+    # routing_metadata is a dict but "knowledge" key is missing or not a dict
+    ticket.routing_metadata = {"knowledge": "not-a-dict"}
+    sections = get_knowledge_sections(ticket)
+    assert sections == {
+        "summary": "",
+        "symptoms": "",
+        "solution": "",
+        "related_topics": "",
+    }
+
+
+def test_build_knowledge_description_empty_sections() -> None:
+    # Some sections are empty
+    sections = {
+        "summary": "   ",
+        "symptoms": "Symptom",
+        "solution": "",
+        "related_topics": None,
+    }
+    desc = build_knowledge_description(sections)
+    assert "Resumé" not in desc
+    assert "Symptomer" in desc
+    assert "Løsning" not in desc
+
+
+def test_sections_have_min_content() -> None:
+    from star_itsm_api.services.knowledge_content import sections_have_min_content
+    sections = {
+        "summary": "Short",
+        "symptoms": "",
+        "solution": "",
+        "related_topics": "",
+    }
+    assert sections_have_min_content(sections, min_chars=10) is False
+    assert sections_have_min_content(sections, min_chars=5) is True

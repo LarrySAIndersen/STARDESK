@@ -47,3 +47,13 @@ def test_write_bytes_under_root_creates_file(tmp_path: Path) -> None:
     )
     assert written.read_bytes() == b"hello"
     assert written.is_relative_to(root.resolve())
+
+
+def test_resolve_path_under_root_not_relative(tmp_path: Path) -> None:
+    from unittest.mock import patch
+    root = tmp_path / "storage"
+    root.mkdir()
+    with patch.object(Path, "is_relative_to", return_value=False):
+        with pytest.raises(HTTPException) as exc:
+            resolve_path_under_root(root=root, basename="abcd1234.txt", pattern=_OBJECT_RE)
+        assert exc.value.status_code == 400

@@ -72,3 +72,81 @@ def test_sla_fields_for_ticket_open_and_closed() -> None:
     closed_fields = sla_fields_for_ticket(closed_ticket)
     assert closed_fields["sla_remaining_seconds"] is None
     assert closed_fields["sla_breached"] is False
+
+
+def test_get_sla_rule_fallback() -> None:
+    from star_itsm_api.services.sla_config import get_sla_rule
+    rule = get_sla_rule("invalid-priority")
+    assert rule.priority == "medium"
+
+
+def test_effective_due_dates_with_none_and_naive_created_at() -> None:
+    from star_itsm_api.services.sla_enrichment import (
+        effective_resolution_due_at,
+        effective_response_due_at,
+    )
+    ticket = make_test_ticket(
+        resolution_due_at=None,
+        response_due_at=None,
+        status="in_progress",
+        priority="medium",
+        created_at=datetime(2026, 5, 15, 10, 0),  # naive datetime
+    )
+    res_due = effective_resolution_due_at(ticket)
+    resp_due = effective_response_due_at(ticket)
+    assert res_due is not None
+    assert res_due.tzinfo == UTC
+    assert resp_due is not None
+    assert resp_due.tzinfo == UTC
+
+    # Now test with timezone-aware created_at to cover the False branch of tzinfo is None
+    ticket_aware = make_test_ticket(
+        resolution_due_at=None,
+        response_due_at=None,
+        status="in_progress",
+        priority="medium",
+        created_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
+    )
+    assert effective_resolution_due_at(ticket_aware) is not None
+    assert effective_response_due_at(ticket_aware) is not None
+
+
+def test_effective_due_dates_closed_ticket_with_none() -> None:
+    from star_itsm_api.services.sla_enrichment import (
+        effective_resolution_due_at,
+        effective_response_due_at,
+    )
+    ticket = make_test_ticket(
+        resolution_due_at=None,
+        response_due_at=None,
+        status="closed",
+        priority="medium",
+        created_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
+    )
+    assert effective_resolution_due_at(ticket) is None
+    assert effective_response_due_at(ticket) is None
+
+
+def test_sla_fields_when_clock_should_not_run() -> None:
+    import uuid
+    from star_itsm_api.services.sla_settings_store import SlaRuntimeSettings
+    custom_settings = SlaRuntimeSettings(
+        pause_on_hold=True,
+        pause_statuses=frozenset({"on_hold"}),
+        trigger_team_ids=frozenset({uuid.uuid4()}),  # non-empty
+        sla_starts_on_team_assignment=False,
+        due_soon_minutes=60,
+    )
+    ticket = make_test_ticket(
+        resolution_due_at=None,
+        response_due_at=None,
+        status="in_progress",
+        priority="medium",
+        created_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
+        assigned_team_id=None,  # triggers clock not to run
+    )
+    fields = sla_fields_for_ticket(ticket, settings=custom_settings)
+    assert fields["response_due_at"] is None
+    assert fields["resolution_due_at"] is None
+    assert fields["sla_remaining_seconds"] is None
+    assert fields["sla_breached"] is False
