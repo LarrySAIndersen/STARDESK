@@ -1,37 +1,44 @@
-# Coverage Agent Rapport — 2026-06-04
+# Coverage Agent Rapport — 2026-06-05
 
 ## Oversigt
 
-- **Linjedækning:** **57.0%** (6439 / 10278 statements) — en stigning på **+11.8%** i forhold til baseline (45.2%).
-- **Branchdækning:** **23.2%** (615 / 2772 branches).
-- **Test status:** **470 tests passed** (alle unit tests grønne).
+- **Linjedækning:** **62.9%** (6580 / 10467 statements) — en stigning på **+0.3%** i forhold til forrige scan (62.6%).
+- **Branchdækning:** **37.1%** (1049 / 2828 branches) — en stigning på **+0.6%** i forhold til baseline (36.5%).
+- **Test status:** **494 tests passed** (alle unit tests grønne).
 
-## Gennemførte Forbedringer (Batch 1)
+## Gennemførte Forbedringer (Batch 3)
 
-Vi har fokuseret på to vigtige administrative service-moduler med store huller i dækningen:
+Vi har fokuseret på at lukke hullerne fuldstændigt i fire mindre, men vigtige services:
 
-1. **`user_admin.py` (Services):**
-   - Før: **28%** dækning (115 statements, 78 missed)
-   - Nu: **100%** dækning (115 statements, 0 missed)
-   - Ændring: Tilføjet 20 nye testtilfælde i `tests/test_user_admin_service.py` der dækker alle tænkelige scenarier (oprettelse, opdatering, sletning, adgangskodepolitik, fejlhåndtering, team-synkronisering).
+1. **`comment_reactions.py` (Services):**
+   - Før: **94%** dækning
+   - Nu: **100%** dækning (42 statements, 0 missed)
+   - Ændring: Tilføjet tests for at ændre sentiment og for `None` sentiment uden eksisterende reaktion, samt dækket den implicitte `else` gren for neutrale reaktioner.
 
-2. **`category_admin.py` (Services):**
-   - Før: **27%** dækning (101 statements, 67 missed)
-   - Nu: **100%** dækning (101 statements, 0 missed)
-   - Ændring: Tilføjet 14 nye testtilfælde i `tests/test_category_admin_service.py` der dækker oprettelse, opdatering, clash-detektion, underkategorier og idempotent synkronisering af standardkategorier.
+2. **`sub_causes.py` (Services):**
+   - Før: **57%** dækning
+   - Nu: **100%** dækning (36 statements, 0 missed)
+   - Ændring: Tilføjet tests for `list_sub_causes`, `get_sub_causes_by_ticket_ids` med data, `validate_sub_cause_ids` succes-scenarier (både med og uden kategori), og `replace_ticket_sub_causes`.
 
-3. **`test_analytics_service.py`:**
-   - Rettet en `NameError` (manglende import af `timedelta` fra `datetime`), så test-suiten nu er 100% grøn.
+3. **`nav_visibility.py` (Services):**
+   - Før: **82%** dækning
+   - Nu: **100%** dækning (40 statements, 0 missed)
+   - Ændring: Tilføjet tests for `get_hidden_nav_ids` med ikke-liste værdier og DB-fejl, `set_hidden_nav_ids` opdatering af eksisterende række, og `is_nav_path_hidden_for_user` med ugyldige stier eller tomme gemte lister.
+
+4. **`virus_scan.py` (Services):**
+   - Før: **93%** dækning
+   - Nu: **100%** dækning (60 statements, 0 missed)
+   - Ændring: Tilføjet test for `OSError` under scanning for at dække fejlhåndteringsblokken fuldstændigt.
 
 ## Bekræftelse & Deliverable Gate
 
 - **Deliverable Gate:** **PASSED** (lokal hello-world test fuldført med succes via `pwsh scripts/run-deliverable-gate.ps1`).
-- Alle 470 unit tests kørte og bestod uden fejl.
+- Alle 494 unit tests kørte og bestod uden fejl.
 
 ## Næste Batch Prioriteringer
 
 Følgende moduler er de næste vigtige mål for at øge dækningen yderligere:
 
-1. `kanban_service.py` (8.5% dækning, 397 statements)
-2. `workboard_service.py` (11.4% dækning, 172 statements)
-3. `sf_chat.py` (13.3% dækning, 433 statements)
+1. `workboard_service.py` (11.4% dækning, 172 statements)
+2. `sf_chat.py` (13.3% dækning, 433 statements)
+3. `ticket_dashboard_filters.py` (17.5% dækning, 41 statements)

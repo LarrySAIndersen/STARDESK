@@ -145,3 +145,25 @@ async def test_scan_pending_attachments_blob_path(
     assert count == 1
     assert attachment.scan_status == "clean"
     file_storage.read_blob_bytes.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_run_virus_scan_os_error(tmp_path: Path) -> None:
+    scan_file = tmp_path / "error.png"
+    scan_file.write_bytes(b"some data")
+    attachment = _attachment(storage_key=str(scan_file))
+    db = AsyncMock()
+
+    # Mock read_bytes to raise OSError
+    original_read_bytes = Path.read_bytes
+    try:
+        def mock_read_bytes(self):
+            raise OSError("Read failed")
+        Path.read_bytes = mock_read_bytes
+
+        await virus_scan.run_virus_scan(db, attachment, scan_file)
+    finally:
+        Path.read_bytes = original_read_bytes
+
+    assert attachment.scan_status == "failed"
+    assert "Read failed" in (attachment.scan_detail or "")
