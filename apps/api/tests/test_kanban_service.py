@@ -7,8 +7,8 @@ import pytest
 from star_itsm_api.models.kanban import (
     KanbanBoard,
     KanbanBoardMember,
-    KanbanColumn,
     KanbanBoardTicket,
+    KanbanColumn,
 )
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
@@ -232,8 +232,8 @@ async def test_require_edit_access_success() -> None:
     user = User(id=uuid.uuid4())
     
     with patch("star_itsm_api.services.kanban_service._require_board_access", new_callable=AsyncMock) as mock_req, \
-         patch("star_itsm_api.services.kanban_service.resolve_member_role", return_value="owner") as mock_resolve, \
-         patch("star_itsm_api.services.kanban_service.user_can_edit_board", return_value=True) as mock_can:
+         patch("star_itsm_api.services.kanban_service.resolve_member_role", return_value="owner"), \
+         patch("star_itsm_api.services.kanban_service.user_can_edit_board", return_value=True):
         
         mock_req.return_value = ({}, [])
         mock_db = AsyncMock()
@@ -248,8 +248,8 @@ async def test_require_edit_access_forbidden() -> None:
     user = User(id=uuid.uuid4())
     
     with patch("star_itsm_api.services.kanban_service._require_board_access", new_callable=AsyncMock) as mock_req, \
-         patch("star_itsm_api.services.kanban_service.resolve_member_role", return_value="viewer") as mock_resolve, \
-         patch("star_itsm_api.services.kanban_service.user_can_edit_board", return_value=False) as mock_can:
+         patch("star_itsm_api.services.kanban_service.resolve_member_role", return_value="viewer"), \
+         patch("star_itsm_api.services.kanban_service.user_can_edit_board", return_value=False):
         
         mock_req.return_value = ({}, [])
         mock_db = AsyncMock()
@@ -387,7 +387,7 @@ async def test_require_board_access_success() -> None:
     
     mock_db = AsyncMock()
     with patch("star_itsm_api.services.kanban_service._load_member_maps", new_callable=AsyncMock) as mock_load, \
-         patch("star_itsm_api.services.kanban_service.user_can_view_board", return_value=True) as mock_can:
+         patch("star_itsm_api.services.kanban_service.user_can_view_board", return_value=True):
         
         mock_load.return_value = ({board.id: {user.id: "editor"}}, {board.id: [member]})
         roles, members = await kanban_service._require_board_access(mock_db, board, user)
@@ -402,7 +402,7 @@ async def test_require_board_access_forbidden() -> None:
     
     mock_db = AsyncMock()
     with patch("star_itsm_api.services.kanban_service._load_member_maps", new_callable=AsyncMock) as mock_load, \
-         patch("star_itsm_api.services.kanban_service.user_can_view_board", return_value=False) as mock_can:
+         patch("star_itsm_api.services.kanban_service.user_can_view_board", return_value=False):
         
         mock_load.return_value = ({board.id: {}}, {board.id: []})
         with pytest.raises(PermissionError, match="board_forbidden"):
@@ -1151,7 +1151,7 @@ async def test_update_column_success_shift_left() -> None:
          patch("star_itsm_api.services.kanban_service._require_edit_access", new_callable=AsyncMock), \
          patch("star_itsm_api.services.kanban_service._list_board_columns", new_callable=AsyncMock, return_value=[col0, col1, column]):
         
-        res = await kanban_service.update_column(mock_db, User(id=uuid.uuid4()), board.id, column.id, payload)
+        await kanban_service.update_column(mock_db, User(id=uuid.uuid4()), board.id, column.id, payload)
         assert column.position == 0
         assert col0.position == 1  # shifted right
         assert col1.position == 2  # shifted right

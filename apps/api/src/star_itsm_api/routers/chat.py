@@ -16,10 +16,11 @@ from star_itsm_api.db import get_db
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
 from star_itsm_api.routers.mcp import (
+    create_ticket,
     get_ticket_categories,
     get_user_tickets,
-    search_knowledge_articles,
     search_historical_solutions,
+    search_knowledge_articles,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,44 @@ GEMINI_TOOLS = [
                     "required": ["user_email"],
                 },
             },
+            {
+                "name": "create_ticket",
+                "description": "Opret en ny supportsag (ticket) i STARdesk på vegne af en bruger, når de beder om det. Spørg først efter titel og detaljeret beskrivelse, og bekræft før oprettelse.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "user_email": {
+                            "type": "STRING",
+                            "description": "Brugerens e-mailadresse (fx 'sf01@example.dk').",
+                        },
+                        "title": {
+                            "type": "STRING",
+                            "description": "Sagens kortfattede titel (fx 'MitID virker ikke'). Mindst 3 tegn.",
+                        },
+                        "description": {
+                            "type": "STRING",
+                            "description": "Detaljeret beskrivelse af problemet. Mindst 10 tegn.",
+                        },
+                        "category_id": {
+                            "type": "STRING",
+                            "description": "Valgfrit UUID på sagens kategori.",
+                        },
+                        "subcategory_id": {
+                            "type": "STRING",
+                            "description": "Valgfrit UUID på sagens underkategori.",
+                        },
+                        "priority": {
+                            "type": "STRING",
+                            "description": "Sagens prioritet ('critical', 'high', 'medium', 'low'). Standard er 'medium'.",
+                        },
+                        "ticket_type": {
+                            "type": "STRING",
+                            "description": "Sags-type ('incident', 'service_request', 'problem'). Standard er 'incident'.",
+                        }
+                    },
+                    "required": ["user_email", "title", "description"],
+                },
+            },
         ]
     }
 ]
@@ -121,6 +160,23 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
         if name == "get_user_tickets":
             email = args.get("user_email", "")
             return await get_user_tickets(email)
+        if name == "create_ticket":
+            user_email = args.get("user_email", "")
+            title = args.get("title", "")
+            description = args.get("description", "")
+            category_id = args.get("category_id")
+            subcategory_id = args.get("subcategory_id")
+            priority = args.get("priority", "medium")
+            ticket_type = args.get("ticket_type", "incident")
+            return await create_ticket(
+                user_email=user_email,
+                title=title,
+                description=description,
+                category_id=category_id,
+                subcategory_id=subcategory_id,
+                priority=priority,
+                ticket_type=ticket_type,
+            )
         return f"Fejl: Værktøjet '{name}' findes ikke."
     except Exception as e:
         logger.exception(f"Error executing tool {name}")
@@ -147,7 +203,31 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
 
     user_msg_lower = user_msg.lower()
 
-    # 1. Check for ticket/status/sager queries
+    # 1. Check for explicit request to create a ticket in mock mode
+    create_keywords = ["opret sag", "opret billet", "lav en sag", "opret incident"]
+    if any(k in user_msg_lower for k in create_keywords):
+        if ":" in user_msg:
+            try:
+                parts = user_msg.split(":", 1)[1].split("-", 1)
+                title = parts[0].strip()
+                desc = parts[1].strip() if len(parts) > 1 else "Oprettet via STARdesk-assistenten."
+                if len(title) >= 3 and len(desc) >= 10:
+                    res = await create_ticket(
+                        user_email=user_email,
+                        title=title,
+                        description=desc,
+                    )
+                    return f"**[Mock-assistent]** {res}"
+            except Exception:
+                pass
+        return (
+            f"Hej {user_name}! **[Mock-assistent]** Jeg kan hjælpe dig med at oprette en sag direkte fra chatten!\n\n"
+            f"Siden der ikke er nogen aktiv `GOOGLE_KEY` i miljøet, kører jeg i en **smart simulations-tilstand**. Du kan oprette en sag ved at skrive i følgende format:\n"
+            f"`opret sag: [Titel] - [Beskrivelse]`\n\n"
+            f"F.eks.: `opret sag: Problemer med printeren - Jeg kan ikke printe mine dokumenter, den melder fejl 404.`"
+        )
+
+    # 1b. Check for ticket/status/sager queries
     ticket_keywords = ["sag", "sager", "status", "billet", "ticket", "mine", "mine sager"]
     if any(k in user_msg_lower for k in ticket_keywords):
         tickets_res = await get_user_tickets(user_email)

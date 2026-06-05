@@ -99,6 +99,32 @@ async def test_chat_smart_mock_fallback_generic(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_chat_smart_mock_fallback_create_ticket(client: AsyncClient) -> None:
+    with patch.dict("os.environ", {}, clear=True):
+        payload = {
+            "messages": [
+                {"role": "user", "content": "opret sag: Min computer er i brand - Den ryger meget og lugter grimt"}
+            ],
+            "user_email": "sf01@example.dk"
+        }
+
+        with patch(
+            "star_itsm_api.routers.chat.create_ticket",
+            AsyncMock(return_value="Sagen blev oprettet med succes!\n\n**Sagsnummer:** INC-2026-00001")
+        ) as mock_create:
+            response = await client.post("/api/v1/chat", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            assert "Sagen blev oprettet med succes" in data["response"]
+            mock_create.assert_called_once_with(
+                user_email="sf01@example.dk",
+                title="Min computer er i brand",
+                description="Den ryger meget og lugter grimt",
+            )
+
+
+
+@pytest.mark.asyncio
 async def test_chat_gemini_api_call_success(client: AsyncClient) -> None:
     # Test with GOOGLE_KEY present
     with patch.dict("os.environ", {"GOOGLE_KEY": "fake-google-key"}):
@@ -235,6 +261,35 @@ async def test_execute_tool_search_historical_solutions() -> None:
         assert "Test Solution" in res
         assert "Nulstil VPN" in res
         mock_search.assert_called_once_with("vpn")
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_create_ticket() -> None:
+    from star_itsm_api.routers.chat import execute_tool
+    with patch(
+        "star_itsm_api.routers.chat.create_ticket",
+        AsyncMock(return_value="Sagen blev oprettet med succes!\n\n**Sagsnummer:** INC-2026-00001")
+    ) as mock_create:
+        res = await execute_tool(
+            "create_ticket",
+            {
+                "user_email": "sf01@example.dk",
+                "title": "Test sag",
+                "description": "Dette er en test beskrivelse",
+            }
+        )
+        assert "Sagen blev oprettet med succes" in res
+        assert "INC-2026-00001" in res
+        mock_create.assert_called_once_with(
+            user_email="sf01@example.dk",
+            title="Test sag",
+            description="Dette er en test beskrivelse",
+            category_id=None,
+            subcategory_id=None,
+            priority="medium",
+            ticket_type="incident"
+        )
+
 
 
 @pytest.mark.asyncio
