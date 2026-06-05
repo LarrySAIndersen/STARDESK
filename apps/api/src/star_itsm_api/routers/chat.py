@@ -1,30 +1,35 @@
 import logging
 import os
+from typing import Any
+
 import httpx
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 
 from star_itsm_api.routers.mcp import (
-    search_knowledge_articles,
     get_ticket_categories,
-    get_user_tickets
+    get_user_tickets,
+    search_knowledge_articles,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
+
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant" or "system"
     content: str
 
+
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage]
-    user_email: Optional[str] = None
+    messages: list[ChatMessage]
+    user_email: str | None = None
+
 
 class ChatResponse(BaseModel):
     response: str
+
 
 # Define the tools schema in Gemini's format
 GEMINI_TOOLS = [
@@ -38,19 +43,16 @@ GEMINI_TOOLS = [
                     "properties": {
                         "query": {
                             "type": "STRING",
-                            "description": "Søgetekst (fx 'mitid', 'vpn', 'adgangskode')."
+                            "description": "Søgetekst (fx 'mitid', 'vpn', 'adgangskode').",
                         }
                     },
-                    "required": ["query"]
-                }
+                    "required": ["query"],
+                },
             },
             {
                 "name": "get_ticket_categories",
                 "description": "Hent listen over aktive sagskategorier og underkategorier i STARdesk. Bruges til at guide brugeren til at vælge den rigtige kategori ved oprettelse af en sag.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {}
-                }
+                "parameters": {"type": "OBJECT", "properties": {}},
             },
             {
                 "name": "get_user_tickets",
@@ -60,32 +62,33 @@ GEMINI_TOOLS = [
                     "properties": {
                         "user_email": {
                             "type": "STRING",
-                            "description": "Brugerens e-mailadresse (fx 'jan.hansen@star.dk')."
+                            "description": "Brugerens e-mailadresse (fx 'jan.hansen@star.dk').",
                         }
                     },
-                    "required": ["user_email"]
-                }
-            }
+                    "required": ["user_email"],
+                },
+            },
         ]
     }
 ]
 
-async def execute_tool(name: str, args: Dict[str, Any]) -> str:
+
+async def execute_tool(name: str, args: dict[str, Any]) -> str:
     """Execute the local python function matching the Gemini function call."""
     try:
         if name == "search_knowledge_articles":
             query = args.get("query", "")
             return await search_knowledge_articles(query)
-        elif name == "get_ticket_categories":
+        if name == "get_ticket_categories":
             return await get_ticket_categories()
-        elif name == "get_user_tickets":
+        if name == "get_user_tickets":
             email = args.get("user_email", "")
             return await get_user_tickets(email)
-        else:
-            return f"Fejl: Værktøjet '{name}' findes ikke."
+        return f"Fejl: Værktøjet '{name}' findes ikke."
     except Exception as e:
         logger.exception(f"Error executing tool {name}")
         return f"Fejl under kørsel af værktøj: {str(e)}"
+
 
 @router.post("", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
@@ -93,18 +96,19 @@ async def chat_endpoint(request: ChatRequest):
     api_key = os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         # Fallback to mock behavior if no API key is set
-        logger.warning("GOOGLE_KEY or GEMINI_API_KEY not found in environment. Falling back to mock responses.")
-        return ChatResponse(response="Hej! Jeg er din STARdesk-assistent. For at kunne svare rigtigt på dine spørgsmål via Gemini, skal administratoren konfigurere `GOOGLE_KEY` i miljøet. Hvordan kan jeg hjælpe dig i dag?")
+        logger.warning(
+            "GOOGLE_KEY or GEMINI_API_KEY not found in environment. Falling back to mock responses."
+        )
+        return ChatResponse(
+            response="Hej! Jeg er din STARdesk-assistent. For at kunne svare rigtigt på dine spørgsmål via Gemini, skal administratoren konfigurere `GOOGLE_KEY` i miljøet. Hvordan kan jeg hjælpe dig i dag?"
+        )
 
     # Format the messages history for Gemini API
     # Gemini uses "user" and "model" roles (instead of "assistant")
     contents = []
     for msg in request.messages:
         role = "user" if msg.role == "user" else "model"
-        contents.append({
-            "role": role,
-            "parts": [{"text": msg.content}]
-        })
+        contents.append({"role": role, "parts": [{"text": msg.content}]})
 
     # System instruction to define the bot's identity and behavior
     system_instruction = {
@@ -122,11 +126,7 @@ async def chat_endpoint(request: ChatRequest):
     }
 
     # Prepare the payload for Gemini API
-    payload = {
-        "contents": contents,
-        "systemInstruction": system_instruction,
-        "tools": GEMINI_TOOLS
-    }
+    payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
     # We use gemini-1.5-flash as the fast, free-tier model
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
@@ -144,7 +144,9 @@ async def chat_endpoint(request: ChatRequest):
         try:
             candidates = res_data.get("candidates", [])
             if not candidates:
-                return ChatResponse(response="Undskyld, jeg modtog ikke et gyldigt svar fra min sprogmodel.")
+                return ChatResponse(
+                    response="Undskyld, jeg modtog ikke et gyldigt svar fra min sprogmodel."
+                )
 
             content = candidates[0].get("content", {})
             parts = content.get("parts", [])
@@ -171,29 +173,28 @@ async def chat_endpoint(request: ChatRequest):
 
                 # Send the tool execution result back to Gemini for the final answer
                 # To do this, we append the model's functionCall part and then the tool response part
-                contents.append({
-                    "role": "model",
-                    "parts": [{"functionCall": function_call}]
-                })
-                contents.append({
-                    "role": "user",
-                    "parts": [
-                        {
-                            "functionResponse": {
-                                "name": tool_name,
-                                "response": {"output": tool_result}
+                contents.append({"role": "model", "parts": [{"functionCall": function_call}]})
+                contents.append(
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "functionResponse": {
+                                    "name": tool_name,
+                                    "response": {"output": tool_result},
+                                }
                             }
-                        }
-                    ]
-                })
+                        ],
+                    }
+                )
 
                 # Call Gemini again with the tool result included in the history
                 second_payload = {
                     "contents": contents,
                     "systemInstruction": system_instruction,
-                    "tools": GEMINI_TOOLS
+                    "tools": GEMINI_TOOLS,
                 }
-                
+
                 second_res = await client.post(url, json=second_payload)
                 second_res.raise_for_status()
                 second_data = second_res.json()
@@ -209,4 +210,6 @@ async def chat_endpoint(request: ChatRequest):
 
         except Exception as e:
             logger.exception("Error parsing Gemini API response")
-            raise HTTPException(status_code=500, detail=f"Fejl under behandling af svar fra sprogmodel: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Fejl under behandling af svar fra sprogmodel: {str(e)}"
+            )
