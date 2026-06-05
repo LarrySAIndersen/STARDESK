@@ -35,20 +35,38 @@ type ModelDef = {
 
 const AVAILABLE_MODELS: ModelDef[] = [
   {
+    id: "gemini-1.5-flash",
+    name: "Gemini 1.5 Flash",
+    provider: "Google",
+    description: "Hurtig, yderst stabil standardmodel. Fremragende til hurtig hjælp og kategorianalyse.",
+    latency: "Hurtig (~0.3s)",
+    cost: "Gratis tier / Ekstremt billig",
+    keyName: "GOOGLE_KEY",
+    recommended: true
+  },
+  {
+    id: "gemini-1.5-pro",
+    name: "Gemini 1.5 Pro",
+    provider: "Google",
+    description: "Mellemklasse, ræsonnerende og meget præcis model. God til dybdegående vejledning.",
+    latency: "Moderat (~0.9s)",
+    cost: "Standard",
+    keyName: "GOOGLE_KEY"
+  },
+  {
     id: "gemini-2.5-flash",
     name: "Gemini 2.5 Flash",
     provider: "Google",
-    description: "Hurtig, letvægtsmodel. Fremragende til hurtig hjælp og kategorianalyse.",
+    description: "Nyeste Flash-model med indbygget tænke-proces (kræver understøttelse på API-nøglen).",
     latency: "Hurtig (~0.4s)",
-    cost: "Ekstremt billig / Gratis tier",
-    keyName: "GOOGLE_KEY",
-    recommended: true
+    cost: "Billig",
+    keyName: "GOOGLE_KEY"
   },
   {
     id: "gemini-2.5-pro",
     name: "Gemini 2.5 Pro",
     provider: "Google",
-    description: "Avanceret ræsonnering. Bedst til komplekse fagsystemer og procedurer.",
+    description: "Avanceret ræsonnering og tænkning. Bedst til komplekse fagsystemer.",
     latency: "Moderat (~1.2s)",
     cost: "Standard",
     keyName: "GOOGLE_KEY"
@@ -84,7 +102,7 @@ const AVAILABLE_MODELS: ModelDef[] = [
 
 export function AdminChatbotPanel() {
   // Config States
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
   const [googleKey, setGoogleKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
@@ -116,7 +134,7 @@ export function AdminChatbotPanel() {
   // Load configuration from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setSelectedModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-2.5-flash");
+      setSelectedModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-1.5-flash");
       setGoogleKey(localStorage.getItem("stardesk-chatbot-google-key") || "");
       setOpenaiKey(localStorage.getItem("stardesk-chatbot-openai-key") || "");
       setAnthropicKey(localStorage.getItem("stardesk-chatbot-anthropic-key") || "");

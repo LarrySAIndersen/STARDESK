@@ -506,7 +506,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
     # Use selected or overridden model
-    model = request.model_override or "gemini-2.5-flash"
+    model = request.model_override or "gemini-1.5-flash"
     # Ensure model matches a safe alphanumeric pattern to prevent SSRF path traversal / manipulation
     import re
     if not re.match(r"^[a-zA-Z0-9.\-_]+$", model):
@@ -520,6 +520,14 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             response = await client.post(url, json=payload)
+            # Check for 404 specifically to support seamless fallback from newer to 1.5 stable models
+            if response.status_code == 404 and model in ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]:
+                fallback_model = "gemini-1.5-pro" if "pro" in model else "gemini-1.5-flash"
+                logger.warning(f"Model {model} returned 404. Retrying with fallback model {fallback_model}...")
+                model = fallback_model
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                response = await client.post(url, json=payload)
+
             response.raise_for_status()
             res_data = response.json()
         except Exception as e:
