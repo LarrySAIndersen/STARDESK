@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { X, Bot } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Bot, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
+import { apiPost } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import type { User } from "@/types/user";
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  body: string;
+};
 
 function HelpABotIcon() {
   return (
@@ -114,15 +123,86 @@ function HelpABotIcon() {
 
 export function CaseAssistantChat({ user }: { user: User | null }) {
   const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const librechatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL || "http://localhost:3080";
   const staff = isStaff(user);
-
   const botName = staff ? "Help-a-bot" : "Sag-assistent";
   const botSub = staff 
     ? "Spørg om systemer, fagsager og procedurer" 
     : "Spørg om dine sager, systemer og vejledninger";
   const fabLabel = staff ? "Help-a-bot" : "Spørg om sager";
+
+  useEffect(() => {
+    if (open && messages.length === 0) {
+      setMessages([
+        {
+          id: "welcome",
+          role: "assistant",
+          body: staff 
+            ? "Hej! Jeg er Help-a-bot. Jeg kan hjælpe dig med at søge i vidensartikler, hente sagskategorier eller tjekke sager. Hvad kan jeg gøre for dig?"
+            : "Hej! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger."
+        }
+      ]);
+    }
+  }, [open, messages.length, staff]);
+
+  useEffect(() => {
+    if (open) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, open]);
+
+  const handleSend = useCallback(async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || loading) return;
+
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}-user`,
+      role: "user",
+      body: trimmed
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setDraft("");
+    setLoading(true);
+
+    try {
+      // Call our FastAPI backend chat endpoint
+      const chatHistory = messages.concat(userMsg).map((m) => ({
+        role: m.role,
+        content: m.body
+      }));
+
+      const res = await apiPost<{ response: string }>("/api/v1/chat", {
+        messages: chatHistory,
+        user_email: user?.email || null
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-assistant`,
+          role: "assistant",
+          body: res.response
+        }
+      ]);
+    } catch (err) {
+      console.error("Chat error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-${Date.now()}-error`,
+          role: "assistant",
+          body: "Der opstod desværre en fejl under kommunikationen med sprogmodellen. Prøv igen om lidt."
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }, [draft, loading, messages, user]);
 
   return (
     <>
@@ -149,7 +229,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
       {open ? (
         <div
-          className="case-assistant-panel"
+          className="case-assistant-panel flex flex-col h-[550px] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
           role="dialog"
           aria-label={botName}
         >
@@ -176,13 +256,57 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
             </button>
           </header>
 
-          <div className="w-full h-[450px] overflow-hidden bg-white">
-            <iframe
-              src={`${librechatUrl}/?embed=true`}
-              className="w-full h-full border-none"
-              title={botName}
-            />
+          {/* Chat messages list */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={cn(
+                  "flex flex-col max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
+                  m.role === "user"
+                    ? "ml-auto bg-star-blue text-white rounded-br-none"
+                    : "mr-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-bl-none text-slate-800 dark:text-slate-100"
+                )}
+              >
+                <div className="whitespace-pre-wrap leading-relaxed">{m.body}</div>
+              </div>
+            ))}
+            {loading && (
+              <div className="mr-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl rounded-bl-none px-4 py-3 text-sm shadow-sm flex items-center gap-1.5 text-slate-500">
+                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="size-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            )}
+            <div ref={endRef} />
           </div>
+
+          {/* Input footer */}
+          <footer className="p-3 border-t border-border bg-white dark:bg-slate-900 flex gap-2 items-end">
+            <Textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="Skriv din besked her..."
+              rows={1}
+              className="min-h-0 flex-1 resize-none py-2 px-3 text-sm rounded-lg border border-input focus-visible:ring-1 focus-visible:ring-star-blue max-h-24"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              size="icon"
+              className="bg-star-blue hover:bg-star-navy text-white shrink-0 size-9 rounded-lg"
+              disabled={!draft.trim() || loading}
+              onClick={handleSend}
+              aria-label="Send"
+            >
+              <Send className="size-4" />
+            </Button>
+          </footer>
         </div>
       ) : null}
     </>
