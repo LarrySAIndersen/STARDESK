@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import os
 import uuid
@@ -5,16 +6,15 @@ from datetime import datetime
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, delete, update, and_, or_
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.security import get_user_by_email
 from star_itsm_api.db import get_db
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
-from star_itsm_api.core.security import get_user_by_email
-
 from star_itsm_api.routers.mcp import (
     get_ticket_categories,
     get_user_tickets,
@@ -204,10 +204,8 @@ async def log_chatbot_message(
         
         session_id = None
         if session_str:
-            try:
+            with contextlib.suppress(ValueError):
                 session_id = uuid.UUID(session_str)
-            except ValueError:
-                pass
         if not session_id:
             session_id = uuid.uuid4()
 
@@ -530,13 +528,13 @@ async def get_messages(
         conditions.append(ChatbotMessage.user_id == user_id)
     elif user_email:
         # If user is not found, filter by None to return empty
-        conditions.append(ChatbotMessage.user_id == None)
+        conditions.append(ChatbotMessage.user_id is None)
 
     if category and category != "Alle":
         conditions.append(ChatbotMessage.category == category)
 
     if only_bookmarked:
-        conditions.append(ChatbotMessage.is_bookmarked == True)
+        conditions.append(ChatbotMessage.is_bookmarked)
 
     if q:
         q_lower = f"%{q.lower()}%"

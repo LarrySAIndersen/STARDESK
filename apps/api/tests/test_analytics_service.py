@@ -123,7 +123,7 @@ async def test_build_analytics_edge_cases() -> None:
     # 2. Closed ticket without resolved_at (fallback compliance)
     # 3. Overdue open ticket (remaining_seconds <= 0)
     # 4. Different risk levels based on compliance pct
-    now = datetime.now(UTC)
+    datetime.now(UTC)
     
     # Ticket 1: Naive datetimes, open, overdue (remaining <= 0) -> risk_score = 100.0
     t1 = Ticket(

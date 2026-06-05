@@ -4,11 +4,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from star_itsm_api.models.kanban import KanbanColumn, KanbanBoard, KanbanBoardMember, KanbanBoardTicket
-from star_itsm_api.models.user import User
+from star_itsm_api.models.kanban import (
+    KanbanBoard,
+    KanbanBoardMember,
+    KanbanColumn,
+)
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
-from star_itsm_api.schemas.kanban import KanbanBoardCreate, KanbanBoardUpdate
+from star_itsm_api.models.user import User
+from star_itsm_api.schemas.kanban import KanbanBoardCreate
 from star_itsm_api.services import kanban_service
 
 

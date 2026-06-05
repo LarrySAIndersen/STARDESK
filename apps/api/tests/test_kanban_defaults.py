@@ -1,13 +1,14 @@
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 
 from star_itsm_api.services.kanban_defaults import (
-    default_column_specs,
+    all_board_statuses,
     build_columns_for_board,
     build_default_columns,
     column_for_ticket_status,
-    all_board_statuses,
+    default_column_specs,
 )
 
 

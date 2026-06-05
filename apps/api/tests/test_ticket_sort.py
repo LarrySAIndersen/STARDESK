@@ -24,8 +24,9 @@ def test_parse_ticket_sort_rejects_unknown() -> None:
 
 def test_apply_ticket_sort() -> None:
     from sqlalchemy import select
+
     from star_itsm_api.models.ticket import Ticket
-    from star_itsm_api.services.ticket_sort import apply_ticket_sort, VALID_TICKET_SORTS
+    from star_itsm_api.services.ticket_sort import VALID_TICKET_SORTS, apply_ticket_sort
     
     stmt = select(Ticket)
     

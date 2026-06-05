@@ -1,11 +1,10 @@
-from datetime import datetime, UTC, timedelta
-import pytest
+from datetime import UTC, datetime, timedelta
 
 from star_itsm_api.services.sla_status import (
-    utc_now,
-    sla_remaining_seconds,
     sla_breached,
     sla_due_soon,
+    sla_remaining_seconds,
+    utc_now,
 )
 
 
