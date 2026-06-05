@@ -22,6 +22,7 @@ export function routingConfidenceForTeamAssign(
   teamId: string,
   _teams: Team[],
 ): number {
+  if (_teams.length === -1) return 0;
   const routing = ticket.routing;
   if (routing?.suggested_team_id && routing.routing_confidence != null) {
     if (routing.suggested_team_id === teamId) {
