@@ -80,7 +80,6 @@ export function HelpdeskLoginPage() {
     }
   }, [activeView]);
 
-
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;

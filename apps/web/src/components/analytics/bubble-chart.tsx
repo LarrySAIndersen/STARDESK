@@ -143,7 +143,8 @@ export function BubbleChart({ hotspots }: BubbleChartProps) {
                 x={padding.left - 10}
                 y={getY(tick) + 4}
                 textAnchor="end"
-                className="fill-slate-400 text-[10px] font-medium"
+                className="fill-slate-400 font-medium"
+                fontSize="10"
               >
                 {tick}%
               </text>
@@ -164,7 +165,8 @@ export function BubbleChart({ hotspots }: BubbleChartProps) {
                 x={getX(tick)}
                 y={height - padding.bottom + 16}
                 textAnchor="middle"
-                className="fill-slate-400 text-[10px] font-medium"
+                className="fill-slate-400 font-medium"
+                fontSize="10"
               >
                 {tick}.0
               </text>
@@ -194,7 +196,8 @@ export function BubbleChart({ hotspots }: BubbleChartProps) {
             x={(width - padding.left - padding.right) / 2 + padding.left}
             y={height - 12}
             textAnchor="middle"
-            className="fill-star-navy text-xs font-semibold"
+            className="fill-star-navy font-semibold"
+            fontSize="12"
           >
             Gennemsnitlig kompleksitet (1 = Simpel, 5 = Kompleks)
           </text>
@@ -204,7 +207,8 @@ export function BubbleChart({ hotspots }: BubbleChartProps) {
             x={15}
             y={(height - padding.top - padding.bottom) / 2 + padding.top}
             textAnchor="middle"
-            className="fill-star-navy text-xs font-semibold"
+            className="fill-star-navy font-semibold"
+            fontSize="12"
           >
             SLA-overholdelse (%)
           </text>
