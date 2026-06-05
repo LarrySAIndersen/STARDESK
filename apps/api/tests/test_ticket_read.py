@@ -535,7 +535,8 @@ async def test_load_active_teams_caching() -> None:
     assert teams2 == teams
     mock_db.execute.assert_not_called()
 
-    tr_mod._active_teams_cache = (0.0, teams)
+    import time
+    tr_mod._active_teams_cache = (time.monotonic() - 1000.0, teams)
     mock_db.execute.reset_mock()
     teams3 = await tr_mod._load_active_teams(mock_db)
     assert len(teams3) == 1
