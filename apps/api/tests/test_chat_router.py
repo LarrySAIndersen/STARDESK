@@ -99,6 +99,32 @@ async def test_chat_smart_mock_fallback_generic(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_chat_smart_mock_fallback_create_ticket(client: AsyncClient) -> None:
+    with patch.dict("os.environ", {}, clear=True):
+        payload = {
+            "messages": [
+                {"role": "user", "content": "opret sag: Min computer er i brand - Den ryger meget og lugter grimt"}
+            ],
+            "user_email": "sf01@example.dk"
+        }
+
+        with patch(
+            "star_itsm_api.routers.chat.create_ticket",
+            AsyncMock(return_value="Sagen blev oprettet med succes!\n\n**Sagsnummer:** INC-2026-00001")
+        ) as mock_create:
+            response = await client.post("/api/v1/chat", json=payload)
+            assert response.status_code == 200
+            data = response.json()
+            assert "Sagen blev oprettet med succes" in data["response"]
+            mock_create.assert_called_once_with(
+                user_email="sf01@example.dk",
+                title="Min computer er i brand",
+                description="Den ryger meget og lugter grimt",
+            )
+
+
+
+@pytest.mark.asyncio
 async def test_chat_gemini_api_call_success(client: AsyncClient) -> None:
     # Test with GOOGLE_KEY present
     with patch.dict("os.environ", {"GOOGLE_KEY": "fake-google-key"}):
@@ -235,3 +261,124 @@ async def test_execute_tool_search_historical_solutions() -> None:
         assert "Test Solution" in res
         assert "Nulstil VPN" in res
         mock_search.assert_called_once_with("vpn")
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_create_ticket() -> None:
+    from star_itsm_api.routers.chat import execute_tool
+    with patch(
+        "star_itsm_api.routers.chat.create_ticket",
+        AsyncMock(return_value="Sagen blev oprettet med succes!\n\n**Sagsnummer:** INC-2026-00001")
+    ) as mock_create:
+        res = await execute_tool(
+            "create_ticket",
+            {
+                "user_email": "sf01@example.dk",
+                "title": "Test sag",
+                "description": "Dette er en test beskrivelse",
+            }
+        )
+        assert "Sagen blev oprettet med succes" in res
+        assert "INC-2026-00001" in res
+        mock_create.assert_called_once_with(
+            user_email="sf01@example.dk",
+            title="Test sag",
+            description="Dette er en test beskrivelse",
+            category_id=None,
+            subcategory_id=None,
+            priority="medium",
+            ticket_type="incident"
+        )
+
+
+
+@pytest.mark.asyncio
+async def test_chat_router_openai_success(client: AsyncClient) -> None:
+    payload = {
+        "messages": [{"role": "user", "content": "Hej"}],
+        "model_override": "gpt-4o",
+        "openai_key": "fake-openai-key"
+    }
+    mock_res_json = {
+        "choices": [
+            {"message": {"content": "Svar fra OpenAI"}}
+        ]
+    }
+    original_post = AsyncClient.post
+
+    async def mock_post_fn(self, url, *args, **kwargs):
+        if "api.openai.com" in str(url):
+            import httpx as httpx_mod
+            req = httpx_mod.Request("POST", url)
+            return Response(200, json=mock_res_json, request=req)
+        return await original_post(self, url, *args, **kwargs)
+
+    with patch("httpx.AsyncClient.post", mock_post_fn):
+        response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == 200
+        assert response.json()["response"] == "Svar fra OpenAI"
+
+
+@pytest.mark.asyncio
+async def test_chat_router_openai_fallback_no_key(client: AsyncClient) -> None:
+    with patch.dict("os.environ", {}, clear=True):
+        payload = {
+            "messages": [{"role": "user", "content": "hjælp med vpn"}],
+            "model_override": "gpt-4o"
+        }
+        with patch(
+            "star_itsm_api.routers.chat.search_knowledge_articles",
+            AsyncMock(return_value="### VPN Guide\nBeskrivelse: Forbind til VPN")
+        ), patch(
+            "star_itsm_api.routers.chat.search_historical_solutions",
+            AsyncMock(return_value="Ingen historiske løsninger fundet")
+        ):
+            response = await client.post("/api/v1/chat", json=payload)
+            assert response.status_code == 200
+            assert "VPN" in response.json()["response"]
+
+
+@pytest.mark.asyncio
+async def test_chat_router_anthropic_success(client: AsyncClient) -> None:
+    payload = {
+        "messages": [{"role": "user", "content": "Hej"}],
+        "model_override": "claude-3-5-sonnet-20241022",
+        "anthropic_key": "fake-anthropic-key"
+    }
+    mock_res_json = {
+        "content": [
+            {"text": "Svar fra Anthropic"}
+        ]
+    }
+    original_post = AsyncClient.post
+
+    async def mock_post_fn(self, url, *args, **kwargs):
+        if "api.anthropic.com" in str(url):
+            import httpx as httpx_mod
+            req = httpx_mod.Request("POST", url)
+            return Response(200, json=mock_res_json, request=req)
+        return await original_post(self, url, *args, **kwargs)
+
+    with patch("httpx.AsyncClient.post", mock_post_fn):
+        response = await client.post("/api/v1/chat", json=payload)
+        assert response.status_code == 200
+        assert response.json()["response"] == "Svar fra Anthropic"
+
+
+@pytest.mark.asyncio
+async def test_chat_router_anthropic_fallback_no_key(client: AsyncClient) -> None:
+    with patch.dict("os.environ", {}, clear=True):
+        payload = {
+            "messages": [{"role": "user", "content": "hjælp med vpn"}],
+            "model_override": "claude-3-5-sonnet-20241022"
+        }
+        with patch(
+            "star_itsm_api.routers.chat.search_knowledge_articles",
+            AsyncMock(return_value="### VPN Guide\nBeskrivelse: Forbind til VPN")
+        ), patch(
+            "star_itsm_api.routers.chat.search_historical_solutions",
+            AsyncMock(return_value="Ingen historiske løsninger fundet")
+        ):
+            response = await client.post("/api/v1/chat", json=payload)
+            assert response.status_code == 200
+            assert "VPN" in response.json()["response"]

@@ -1,17 +1,18 @@
-from datetime import UTC, datetime
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from star_itsm_api.models.sla import SlaAssignment, SlaPolicy
 from star_itsm_api.services.sla import (
-    compute_sla_due_dates_sync,
-    compute_sla_due_dates_for_rule,
-    compute_sla_due_dates,
     apply_sla_to_ticket,
+    compute_sla_due_dates,
+    compute_sla_due_dates_for_rule,
+    compute_sla_due_dates_sync,
 )
-from star_itsm_api.services.sla_config import SlaRule
 from star_itsm_api.services.sla_calendar import add_business_days, add_calendar_hours
+from star_itsm_api.services.sla_config import SlaRule
 from star_itsm_api.services.sla_enrichment import sla_fields_for_ticket
 from star_itsm_api.services.sla_status import sla_breached, sla_remaining_seconds
 from tests.support.tickets import make_test_ticket

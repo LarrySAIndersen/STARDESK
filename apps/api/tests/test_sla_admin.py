@@ -1,17 +1,18 @@
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from fastapi import HTTPException
 
 from star_itsm_api.models.sla import SlaPolicy
-from star_itsm_api.models.team import Team
 from star_itsm_api.models.sla_settings import SlaSettings
+from star_itsm_api.models.team import Team
 from star_itsm_api.schemas.sla_admin import SlaPolicyUpdate, SlaSettingsUpdate
 from star_itsm_api.services.sla_admin import (
+    get_sla_settings_admin,
     list_sla_policies,
     list_standard_sla_rules,
     update_sla_policy,
-    get_sla_settings_admin,
     update_sla_settings_admin,
 )
 

@@ -106,3 +106,13 @@ async def api_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as http_client:
         yield http_client
+
+
+@pytest.fixture(autouse=True)
+def _reset_active_teams_cache() -> None:
+    """Reset the active teams cache in ticket_read service before and after every test."""
+    try:
+        from star_itsm_api.services.ticket_read import clear_active_teams_cache
+        clear_active_teams_cache()
+    except ImportError:
+        pass
