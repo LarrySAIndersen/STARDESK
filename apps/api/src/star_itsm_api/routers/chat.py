@@ -203,8 +203,8 @@ async def chat_endpoint(request: ChatRequest):
     # Prepare the payload for Gemini API
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
-    # We use gemini-1.5-flash as the fast, free-tier model
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # We use gemini-2.5-flash as the fast, free-tier model
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
