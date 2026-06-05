@@ -1,4 +1,4 @@
-from star_itsm_api.services.slack_mock import MOCK_SLACK_CHANNELS, get_mock_channel
+from star_itsm_api.services.slack_mock import get_mock_channel
 
 
 def test_get_mock_channel_found() -> None:

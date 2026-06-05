@@ -129,6 +129,7 @@ def test_effective_due_dates_closed_ticket_with_none() -> None:
 
 def test_sla_fields_when_clock_should_not_run() -> None:
     import uuid
+
     from star_itsm_api.services.sla_settings_store import SlaRuntimeSettings
     custom_settings = SlaRuntimeSettings(
         pause_on_hold=True,
