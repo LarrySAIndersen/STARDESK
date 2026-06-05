@@ -28,10 +28,11 @@ async def test_load_reaction_summaries_counts_and_user_sentiment() -> None:
     positive = MagicMock(comment_id=comment_id, user_id=uuid.uuid4(), sentiment="positive")
     negative = MagicMock(comment_id=comment_id, user_id=user_id, sentiment="negative")
     other = MagicMock(comment_id=other_comment, user_id=uuid.uuid4(), sentiment="positive")
+    neutral = MagicMock(comment_id=other_comment, user_id=uuid.uuid4(), sentiment="neutral")
 
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(
-        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [positive, negative, other]))
+        return_value=MagicMock(scalars=lambda: MagicMock(all=lambda: [positive, negative, other, neutral]))
     )
 
     summaries = await comment_reactions.load_reaction_summaries(
@@ -149,3 +150,53 @@ async def test_set_comment_reaction_adds_new() -> None:
 
     mock_db.add.assert_called_once()
     assert summary.negative_count == 1
+
+
+@pytest.mark.asyncio
+async def test_set_comment_reaction_changes_sentiment() -> None:
+    comment_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    existing = MagicMock(sentiment="positive")
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalar_one_or_none=lambda: existing),
+            MagicMock(scalars=lambda: MagicMock(all=lambda: [])),
+        ]
+    )
+    mock_db.flush = AsyncMock()
+
+    await comment_reactions.set_comment_reaction(
+        mock_db,
+        comment_id=comment_id,
+        user_id=user_id,
+        sentiment="negative",
+    )
+
+    assert existing.sentiment == "negative"
+
+
+@pytest.mark.asyncio
+async def test_set_comment_reaction_none_sentiment_and_no_existing() -> None:
+    comment_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalar_one_or_none=lambda: None),
+            MagicMock(scalars=lambda: MagicMock(all=lambda: [])),
+        ]
+    )
+    mock_db.delete = AsyncMock()
+    mock_db.flush = AsyncMock()
+
+    await comment_reactions.set_comment_reaction(
+        mock_db,
+        comment_id=comment_id,
+        user_id=user_id,
+        sentiment=None,
+    )
+
+    mock_db.delete.assert_not_awaited()

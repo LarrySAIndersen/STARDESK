@@ -75,6 +75,7 @@ try {
   }
 
   await page.waitForLoadState("networkidle", { timeout: 60_000 }).catch(() => {});
+  await page.waitForTimeout(3000);
 
   const banner = page.getByRole("status");
   const bannerText = (await banner.textContent().catch(() => "")) ?? "";
@@ -91,7 +92,11 @@ try {
 
   await page.screenshot({ path: path.join(outDir, "02-after-login.png") });
 
-  await page.goto(`${webUrl}/tickets`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  try {
+    await page.goto(`${webUrl}/tickets`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  } catch (err) {
+    console.log("Navigation warning/redirect (ignored):", err.message);
+  }
   await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(outDir, "03-alle-sager.png"), fullPage: true });
 

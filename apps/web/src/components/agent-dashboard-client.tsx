@@ -73,7 +73,7 @@ export function AgentDashboardClient({
     const main = document.getElementById("main-content");
     if (!main) return;
     const obs = new MutationObserver(() => {
-      const req = main.getAttribute("data-slack-tab-request");
+      const req = main.dataset.slackTabRequest;
       if (req) setSlackTabRequest(Number(req));
     });
     obs.observe(main, { attributes: true, attributeFilter: ["data-slack-tab-request"] });
