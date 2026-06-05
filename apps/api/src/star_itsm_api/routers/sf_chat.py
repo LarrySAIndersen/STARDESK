@@ -41,14 +41,14 @@ async def start_session(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> SfChatSessionCreateResponse:
-    session, messages, status, queue_msg = await chat_svc.get_or_create_customer_session(
+    session, messages, chat_status, queue_msg = await chat_svc.get_or_create_customer_session(
         db, current_user
     )
     agent_name = None
     if session.assigned_agent_id:
         agent_name = await chat_svc._user_display(db, session.assigned_agent_id)
 
-    if session.status == SESSION_CLOSED and not status.open:
+    if session.status == SESSION_CLOSED and not chat_status.open:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=chat_svc.MSG_CHAT_CLOSED,
