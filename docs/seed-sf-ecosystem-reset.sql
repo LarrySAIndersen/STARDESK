@@ -94,6 +94,19 @@ ON CONFLICT (email) DO UPDATE SET
     must_change_password = TRUE,
     deleted_at = NULL;
 
+-- Slutbrugere (Self-service)
+INSERT INTO users (email, display_name, role, is_active, password_hash, organization_id, must_change_password, password_policy_exempt) VALUES
+    ('submitter@example.dk', 'Anders Submitter', 'end_user', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', NULL, FALSE, TRUE)
+ON CONFLICT (email) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    role = 'end_user',
+    organization_id = NULL,
+    password_hash = EXCLUDED.password_hash,
+    is_active = TRUE,
+    must_change_password = FALSE,
+    password_policy_exempt = TRUE,
+    deleted_at = NULL;
+
 -- Virksomheds-agenter (ikke admin)
 INSERT INTO users (email, display_name, role, is_active, password_hash, organization_id) VALUES
     ('estrifft01@example.dk', 'Virksomhed Agent 1', 'agent', TRUE, '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC', (SELECT id FROM organizations WHERE name = 'Virksomhed')),
