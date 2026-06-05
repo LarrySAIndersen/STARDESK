@@ -90,6 +90,82 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
         return f"Fejl under kørsel af værktøj: {str(e)}"
 
 
+async def get_smart_mock_response(request: ChatRequest) -> str:
+    """Generate a highly helpful mock response based on actual database contents."""
+    user_email = request.user_email or "sf01@example.dk"
+
+    # Extract last user message
+    user_msg = ""
+    for msg in reversed(request.messages):
+        if msg.role == "user":
+            user_msg = msg.content
+            break
+
+    if not user_msg:
+        return (
+            "Hej! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
+            "Jeg kører i lokal simulations-tilstand. Hvordan kan jeg hjælpe dig i dag?"
+        )
+
+    user_msg_lower = user_msg.lower()
+
+    # 1. Check for ticket/status/sager queries
+    ticket_keywords = ["sag", "sager", "status", "billet", "ticket", "mine", "mine sager"]
+    if any(k in user_msg_lower for k in ticket_keywords):
+        tickets_res = await get_user_tickets(user_email)
+        return (
+            f"**[Mock-assistent]** Her er status på dine seneste sager i systemet (for e-mail: `{user_email}`):\n\n"
+            f"{tickets_res}\n\n"
+            "Hvis du har brug for at oprette en ny sag, kan du gøre det via 'Opret ny sag'-knappen."
+        )
+
+    # 2. Check for categories queries
+    cat_keywords = ["kategori", "kategorier", "hvilken kategori", "oprette sag", "opret"]
+    if any(k in user_msg_lower for k in cat_keywords):
+        cats_res = await get_ticket_categories()
+        return (
+            f"**[Mock-assistent]** Når du opretter en sag, er det vigtigt at vælge den rigtige kategori. Her er de tilgængelige kategorier og underkategorier:\n\n"
+            f"{cats_res}\n\n"
+            "Du kan vælge den kategori, der passer bedst til din situation, når du opretter sagen."
+        )
+
+    # 3. Clean message and search knowledge articles
+    clean_msg = "".join(c if c.isalnum() or c.isspace() else " " for c in user_msg_lower)
+    # Stop words to filter out
+    stop_words = {
+        "jeg", "har", "med", "det", "den", "der", "her", "mig", "kan", "ikke", "en", "et", "til",
+        "af", "at", "og", "om", "for", "på", "som", "de", "vi", "du", "hjælp", "hjælpe", "mig",
+        "emd", "ost", "hej", "goddag", "davs"
+    }
+    words = [w for w in clean_msg.split() if len(w) >= 3 and w not in stop_words]
+
+    # Try searching for each word
+    found_articles = []
+    for word in words[:3]:  # limit to top 3 words to avoid too many DB queries
+        articles_res = await search_knowledge_articles(word)
+        if "Ingen vidensartikler fundet" not in articles_res and "Database er ikke konfigureret" not in articles_res:
+            found_articles.append(articles_res)
+
+    if found_articles:
+        combined_articles = "\n\n---\n\n".join(found_articles)
+        return (
+            f"**[Mock-assistent]** Jeg har søgt i vores lokale vidensbase efter emner relateret til din forespørgsel og fundet følgende artikler:\n\n"
+            f"{combined_articles}\n\n"
+            "Hvis disse artikler ikke løser dit problem, kan du beskrive det nærmere eller oprette en sag."
+        )
+
+    # 4. Default fallback response if no match
+    return (
+        f"Hej! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
+        f"Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg i en **smart simulations-tilstand** ved hjælp af direkte database-opslag.\n\n"
+        f"Jeg forstod ikke helt din besked: *\"{user_msg}\"*\n\n"
+        f"Prøv at spørge mig om:\n"
+        f"- **Vidensartikler**: Skriv f.eks. 'vpn', 'mitid', 'adgangskode' eller lignende.\n"
+        f"- **Dine sager**: Skriv f.eks. 'mine sager' eller 'status' (viser sager tilknyttet `{user_email}`).\n"
+        f"- **Kategorier**: Skriv f.eks. 'kategorier' eller 'opret' for at se tilgængelige sagskategorier."
+    )
+
+
 @router.post("", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     # Retrieve the Google Gemini API key from the environment
@@ -99,9 +175,8 @@ async def chat_endpoint(request: ChatRequest):
         logger.warning(
             "GOOGLE_KEY or GEMINI_API_KEY not found in environment. Falling back to mock responses."
         )
-        return ChatResponse(
-            response="Hej! Jeg er din STARdesk-assistent. For at kunne svare rigtigt på dine spørgsmål via Gemini, skal administratoren konfigurere `GOOGLE_KEY` i miljøet. Hvordan kan jeg hjælpe dig i dag?"
-        )
+        mock_resp = await get_smart_mock_response(request)
+        return ChatResponse(response=mock_resp)
 
     # Format the messages history for Gemini API
     # Gemini uses "user" and "model" roles (instead of "assistant")
