@@ -19,11 +19,12 @@ function showCaseAssistantOnPath(pathname: string): boolean {
 export function CaseAssistantHost({ user }: { user: User | null }) {
   const pathname = usePathname();
 
-  if (!user || isStaff(user)) {
+  if (!user) {
     return null;
   }
 
-  if (!showCaseAssistantOnPath(pathname)) {
+  // If user is staff, show on all pages. If not staff, only show on allowed paths.
+  if (!isStaff(user) && !showCaseAssistantOnPath(pathname)) {
     return null;
   }
 

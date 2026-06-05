@@ -69,6 +69,7 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
         >
           {children}
         </AgentShell>
+        <CaseAssistantShellClient user={currentUser} />
         {isStaff(currentUser) ? <SfChatShellClient user={currentUser} /> : null}
       </div>
     );
