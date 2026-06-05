@@ -13,6 +13,7 @@ from star_itsm_api.routers import (
     assets,
     auth,
     categories,
+    chat,
     cron,
     gmail,
     health,
@@ -104,3 +105,4 @@ app.include_router(platform.router, prefix=API_V1_PREFIX)
 app.include_router(admin.router, prefix=API_V1_PREFIX)
 app.include_router(sf_chat.router, prefix=API_V1_PREFIX)
 app.include_router(mcp.router, prefix=API_V1_PREFIX)
+app.include_router(chat.router, prefix=API_V1_PREFIX)
