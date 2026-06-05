@@ -512,10 +512,8 @@ async def test_ticket_to_read_mapping() -> None:
 
 @pytest.mark.asyncio
 async def test_load_active_teams_caching() -> None:
-    import sys
-    for name, module in list(sys.modules.items()):
-        if name.endswith("ticket_read"):
-            module._active_teams_cache = None
+    import star_itsm_api.services.ticket_read as tr_mod
+    tr_mod._active_teams_cache = None
 
     team = Team()
     team.id = uuid.uuid4()
@@ -527,21 +525,19 @@ async def test_load_active_teams_caching() -> None:
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(return_value=result)
 
-    teams = await ticket_read._load_active_teams(mock_db)
+    teams = await tr_mod._load_active_teams(mock_db)
     assert len(teams) == 1
     assert teams[0].name == "My Team"
     mock_db.execute.assert_called_once()
 
     mock_db.execute.reset_mock()
-    teams2 = await ticket_read._load_active_teams(mock_db)
+    teams2 = await tr_mod._load_active_teams(mock_db)
     assert teams2 == teams
     mock_db.execute.assert_not_called()
 
-    for name, module in list(sys.modules.items()):
-        if name.endswith("ticket_read"):
-            module._active_teams_cache = (0.0, teams)
+    tr_mod._active_teams_cache = (0.0, teams)
     mock_db.execute.reset_mock()
-    teams3 = await ticket_read._load_active_teams(mock_db)
+    teams3 = await tr_mod._load_active_teams(mock_db)
     assert len(teams3) == 1
     mock_db.execute.assert_called_once()
 
