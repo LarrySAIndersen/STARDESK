@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import { ExternalLink, X } from "lucide-react";
+import { useCallback, useId, useMemo, useState } from "react";
+import { ExternalLink, Plus, X } from "lucide-react";
 
 import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { PersonalKanban } from "@/types/personal";
@@ -28,6 +36,8 @@ export function PersonalKanbanBoard({
   const [kanban, setKanban] = useState(initialKanban);
   const [dragTicketId, setDragTicketId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogColumn, setCreateDialogColumn] = useState<string | null>(null);
 
   const cardsByColumn = useMemo(() => {
     const map = new Map<string, typeof kanban.cards>();
@@ -149,7 +159,22 @@ export function PersonalKanbanBoard({
               if (ticketId) void moveTicket(ticketId, column);
             }}
           >
-            <h3 className="mb-3 text-sm font-semibold">{column}</h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{column}</h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label={`Opret sag i ${column}`}
+                onClick={() => {
+                  setCreateDialogColumn(column);
+                  setCreateDialogOpen(true);
+                }}
+              >
+                <Plus className="size-4" aria-hidden />
+              </Button>
+            </div>
             <ul className="flex flex-1 flex-col gap-2">
               {(cardsByColumn.get(column) ?? []).map((card) => {
                 const ticket = ticketById(kanban.tickets, card.ticket_id);
@@ -195,6 +220,18 @@ export function PersonalKanbanBoard({
           </div>
         ))}
       </div>
+
+      <PersonalKanbanCreateDialog
+        open={createDialogOpen}
+        columnName={createDialogColumn}
+        onClose={() => {
+          setCreateDialogOpen(false);
+          setCreateDialogColumn(null);
+        }}
+        onCreated={() => {
+          void refreshKanban();
+        }}
+      />
     </section>
   );
 }
@@ -270,5 +307,112 @@ function TicketGroup({
         </Link>
       ) : null}
     </div>
+  );
+}
+
+function PersonalKanbanCreateDialog({
+  open,
+  columnName,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  columnName: string | null;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const titleId = useId();
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const trapRef = useFocusTrap(open);
+
+  if (!open || !columnName) {
+    return null;
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmedTitle = title.trim();
+    const trimmedDesc = description.trim();
+    if (trimmedTitle.length < 3) {
+      setError("Titel skal være mindst 3 tegn.");
+      return;
+    }
+    if (trimmedDesc.length < 10) {
+      setError("Beskrivelse skal være mindst 10 tegn.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const createdTicket = await apiPost<Ticket>("/api/v1/tickets", {
+        title: trimmedTitle,
+        description: trimmedDesc,
+        ticket_type: "incident",
+        priority: "medium",
+      });
+      await apiPost("/api/v1/personal/kanban/cards", {
+        ticket_id: createdTicket.id,
+        column_name: columnName,
+      });
+      setTitle("");
+      setDescription("");
+      onCreated();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Kunne ikke oprette sag.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <AccessibleModalBackdrop onClose={onClose}>
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={onClose}
+        className="bg-card w-full max-w-md space-y-4 rounded-lg border p-5 shadow-lg"
+      >
+        <form onSubmit={handleSubmit} autoComplete="off">
+          <h2 id={titleId} className="text-lg font-semibold">
+            Opret ny sag i {columnName}
+          </h2>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="pk-quick-title">Titel</Label>
+            <Input
+              id="pk-quick-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Kort beskrivelse af problemet (mindst 3 tegn)"
+              autoFocus
+              autoComplete="off"
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="pk-quick-desc">Beskrivelse</Label>
+            <Textarea
+              id="pk-quick-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              placeholder="Uddyb hvad der skal løses (mindst 10 tegn)"
+              autoComplete="off"
+            />
+          </div>
+          {error ? <p className="text-destructive mt-3 text-sm">{error}</p> : null}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+              Annuller
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Opretter…" : "Opret sag"}
+            </Button>
+          </div>
+        </form>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }
