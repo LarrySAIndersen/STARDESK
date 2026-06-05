@@ -77,12 +77,21 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void createNote();
+        }}
+        autoComplete="off"
+        className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+      >
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Titel — fx ring til leverandør"
           aria-label="Note-titel"
+          autoComplete="off"
+          name="note-title-input"
         />
         <Textarea
           value={content}
@@ -91,12 +100,14 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
           rows={1}
           className="min-h-9 resize-none"
           aria-label="Note-indhold"
+          autoComplete="off"
+          name="note-content-input"
         />
-        <Button type="button" onClick={() => void createNote()} disabled={busy || !title.trim()}>
+        <Button type="submit" disabled={busy || !title.trim()}>
           <Plus className="size-4" aria-hidden />
           Tilføj
         </Button>
-      </div>
+      </form>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
       {sortedNotes.length === 0 ? (
