@@ -20,3 +20,21 @@ def test_parse_ticket_sort_allowlist() -> None:
 def test_parse_ticket_sort_rejects_unknown() -> None:
     with pytest.raises(ValueError):
         parse_ticket_sort("drop table")
+
+
+def test_apply_ticket_sort() -> None:
+    from sqlalchemy import select
+    from star_itsm_api.models.ticket import Ticket
+    from star_itsm_api.services.ticket_sort import apply_ticket_sort, VALID_TICKET_SORTS
+    
+    stmt = select(Ticket)
+    
+    # Test all valid sort options
+    for sort in VALID_TICKET_SORTS:
+        res = apply_ticket_sort(stmt, sort)
+        assert res is not None
+        
+    # Test default/fallback sort option
+    res_default = apply_ticket_sort(stmt, "invalid_sort_but_passed_somehow")
+    assert res_default is not None
+

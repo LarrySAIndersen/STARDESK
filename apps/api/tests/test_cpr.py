@@ -34,3 +34,18 @@ def test_assert_no_cpr_in_title() -> None:
 
 def test_mask_cpr() -> None:
     assert mask_cpr("010190-1234") == "010190-****"
+    assert mask_cpr(None) is None
+    assert mask_cpr("") is None
+    assert mask_cpr("1234") == "******-****"
+
+
+def test_normalize_cpr_invalid_length() -> None:
+    from star_itsm_api.services.cpr import normalize_cpr
+    with pytest.raises(ValueError, match="CPR-nummer skal have 10 cifre"):
+        normalize_cpr("1234")
+
+
+def test_validate_cpr_invalid_length() -> None:
+    with pytest.raises(ValueError, match="Ugyldigt CPR-nummer"):
+        validate_cpr("1234")
+

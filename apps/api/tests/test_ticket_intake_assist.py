@@ -26,6 +26,33 @@ def test_build_draft_urgency() -> None:
     assert draft.suggested_priority in ("critical", "high")
 
 
+def test_mock_reply_fallback() -> None:
+    reply = mock_assistant_reply("noget med ost")
+    assert "noteret beskrivelsen" in reply
+
+
+def test_build_draft_fallback() -> None:
+    draft = build_intake_assist_draft(
+        [IntakeAssistMessage(role="user", content="noget med ost")]
+    )
+    assert draft.title == "noget med ost"
+    assert draft.suggested_priority == "medium"
+    assert "generel" in draft.tags
+
+
+def test_fallback_title_variations() -> None:
+    from star_itsm_api.services.ticket_intake_assist import _fallback_title
+    
+    # Empty / whitespace
+    assert _fallback_title("   ") == "IT-support henvendelse"
+    
+    # Long title truncation
+    long_text = "Dette er en meget lang tekst der helt sikkert vil overstige firs tegn og derfor skal trunkeres pænt med tre prikker til sidst"
+    truncated = _fallback_title(long_text)
+    assert len(truncated) == 78  # 77 chars + 1 char for '…'
+    assert truncated.endswith("…")
+
+
 async def test_intake_assist_endpoint(client) -> None:
     response = await client.post(
         "/api/v1/tickets/intake-assist",

@@ -25,3 +25,27 @@ def test_validate_emoji_allowed() -> None:
 def test_validate_emoji_rejects_unknown() -> None:
     with pytest.raises(ValueError):
         validate_emoji("🎉")
+
+
+def test_normalize_tags_empty_and_none() -> None:
+    assert normalize_tags([]) == []
+    assert normalize_tags(None) == []
+
+
+def test_normalize_tags_invalid() -> None:
+    with pytest.raises(ValueError, match="Ugyldigt tag"):
+        normalize_tags(["invalid tag with spaces"])
+
+
+def test_normalize_tags_max_limit() -> None:
+    tags = [f"tag{i}" for i in range(15)]
+    normalized = normalize_tags(tags)
+    assert len(normalized) == 10
+    assert normalized == [f"tag{i}" for i in range(10)]
+
+
+def test_parse_tags_string_empty_and_none() -> None:
+    assert parse_tags_string(None) == []
+    assert parse_tags_string("") == []
+    assert parse_tags_string("   ") == []
+
