@@ -9,7 +9,7 @@ import {
   Star, 
   Trash2, 
   Clock, 
-  RefreshCw, 
+  RefreshCw 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
@@ -160,7 +160,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const [useName, setUseName] = useState(true);
   const [useAvatar, setUseAvatar] = useState(true);
   const [useIcon, setUseIcon] = useState(true);
-  const [activeModel, setActiveModel] = useState("gemini-2.5-flash");
+  const [activeModel, setActiveModel] = useState("gemini-1.5-flash");
   const [chatSessionId, setChatSessionId] = useState("");
 
   // Archive & Search States
@@ -231,7 +231,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
       setUseName(localStorage.getItem("stardesk-chatbot-use-name") !== "false");
       setUseAvatar(localStorage.getItem("stardesk-chatbot-use-avatar") !== "false");
       setUseIcon(localStorage.getItem("stardesk-chatbot-use-icon") !== "false");
-      setActiveModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-2.5-flash");
+      setActiveModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-1.5-flash");
     }
     if (open && !chatSessionId) {
       if (typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function") {

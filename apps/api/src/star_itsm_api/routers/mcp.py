@@ -183,3 +183,167 @@ async def get_user_tickets(user_email: str) -> str:
                 f"  - **Oprettet:** {created_str}\n"
             )
         return "\n".join(output)
+
+
+@mcp.tool()
+async def search_historical_solutions(query: str) -> str:
+    """Søg efter anonymiserede historiske løsninger på tværs af tidligere afsluttede supportsager.
+    
+    Hjælper med at finde ud af, hvordan andre har fået løst lignende problemer ud fra anonyme resuméer.
+    
+    Args:
+        query: Søgetekst (fx "vpn", "print", "adgangskode").
+    """
+    if not async_session_factory:
+        return "Database er ikke konfigureret."
+        
+    async with async_session_factory() as db:
+        stmt = (
+            select(Ticket)
+            .where(
+                Ticket.is_knowledge_article.is_(False),
+                Ticket.is_security_ticket.is_(False),
+                Ticket.status.in_(["resolved", "closed"]),
+                Ticket.llm_summary.isnot(None),
+                Ticket.deleted_at.is_(None),
+                or_(
+                    Ticket.title.ilike(f"%{query}%"),
+                    Ticket.llm_summary.ilike(f"%{query}%")
+                )
+            )
+            .limit(5)
+        )
+        result = await db.execute(stmt)
+        tickets = result.scalars().all()
+        
+        if not tickets:
+            return f"Ingen historiske løsninger fundet for søgningen '{query}'."
+            
+        output = []
+        for t in tickets:
+            output.append(
+                f"### {t.title} (Sagsnr: {t.ticket_number})\n"
+                f"**Løsningsresumé:** {t.llm_summary}\n"
+                f"**Emner:** {', '.join(t.semantic_topics) if t.semantic_topics else 'ingen'}\n"
+            )
+        return "\n\n".join(output)
+
+
+@mcp.tool()
+async def create_ticket(
+    user_email: str,
+    title: str,
+    description: str,
+    category_id: str | None = None,
+    subcategory_id: str | None = None,
+    priority: str = "medium",
+    ticket_type: str = "incident"
+) -> str:
+    """Opret en ny supportsag (ticket) i STARdesk på vegne af en bruger.
+    
+    Hjælper med at oprette sagen direkte i systemet, når brugeren beder om det.
+    
+    Args:
+        user_email: Brugerens e-mailadresse (fx "sf01@example.dk").
+        title: Sagens kortfattede titel (mindst 3 tegn).
+        description: Detaljeret beskrivelse af problemet (mindst 10 tegn).
+        category_id: Valgfrit UUID-streng for sagens kategori.
+        subcategory_id: Valgfrit UUID-streng for sagens underkategori.
+        priority: Sagens prioritet ("critical", "high", "medium", "low"). Standard er "medium".
+        ticket_type: Sags-type ("incident", "service_request", "problem"). Standard er "incident".
+    """
+    if not async_session_factory:
+        return "Database er ikke konfigureret."
+        
+    if len(title.strip()) < 3:
+        return "Fejl: Titlen skal være mindst 3 tegn lang."
+        
+    if len(description.strip()) < 10:
+        return "Fejl: Beskrivelsen skal være mindst 10 tegn lang."
+
+    # Validate priority and ticket_type values
+    if priority not in ["critical", "high", "medium", "low"]:
+        priority = "medium"
+    if ticket_type not in ["incident", "service_request", "problem"]:
+        ticket_type = "incident"
+
+    import uuid
+    from datetime import UTC, datetime
+
+    from star_itsm_api.services.org_access import get_user_organization_id
+    from star_itsm_api.services.routing import apply_routing
+    from star_itsm_api.services.ticket_numbers import generate_ticket_number
+    from star_itsm_api.services.ticket_security import resolve_create_security_flag
+
+    async with async_session_factory() as db:
+        # Find user by email
+        user_stmt = select(User).where(User.email.ilike(user_email), User.deleted_at.is_(None))
+        user_result = await db.execute(user_stmt)
+        user = user_result.scalar_one_or_none()
+        
+        if not user:
+            return f"Fejl: Brugeren med e-mail '{user_email}' blev ikke fundet i systemet."
+
+        cat_uuid = None
+        subcat_uuid = None
+        if category_id:
+            try:
+                cat_uuid = uuid.UUID(category_id)
+            except ValueError:
+                return f"Fejl: Ugyldigt kategori UUID-format: '{category_id}'"
+        if subcategory_id:
+            try:
+                subcat_uuid = uuid.UUID(subcategory_id)
+            except ValueError:
+                return f"Fejl: Ugyldigt underkategori UUID-format: '{subcategory_id}'"
+
+        routing = await apply_routing(
+            db,
+            ticket_type=ticket_type,
+            category_id=cat_uuid,
+            subcategory_id=subcat_uuid,
+            priority=priority,
+        )
+
+        is_security_ticket = resolve_create_security_flag(user, False)
+        ticket_number = await generate_ticket_number(db, ticket_type)
+        now = datetime.now(UTC)
+
+        ticket = Ticket(
+            id=uuid.uuid4(),
+            ticket_number=ticket_number,
+            ticket_type=ticket_type,
+            title=title.strip(),
+            description=description.strip(),
+            status="new",
+            priority=routing.priority,
+            reporter_user_id=user.id,
+            organization_id=get_user_organization_id(user),
+            assigned_team_id=routing.assigned_team_id,
+            assigned_user_id=routing.assigned_user_id,
+            category_id=cat_uuid,
+            subcategory_id=subcat_uuid,
+            source="chat",
+            escalation_level=0,
+            gdpr_consent=True, # Chat consent is implied/collected during conversation
+            gdpr_consent_at=now,
+            is_major=False,
+            is_security_ticket=is_security_ticket,
+            created_at=now,
+            updated_at=now,
+        )
+
+        db.add(ticket)
+        await db.commit()
+        await db.refresh(ticket)
+
+        return (
+            f"Sagen blev oprettet med succes!\n\n"
+            f"**Sagsnummer:** {ticket.ticket_number}\n"
+            f"**Titel:** {ticket.title}\n"
+            f"**Type:** {ticket.ticket_type}\n"
+            f"**Prioritet:** {ticket.priority}\n"
+            f"**Status:** {ticket.status}"
+        )
+
+

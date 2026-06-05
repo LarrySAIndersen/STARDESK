@@ -7,15 +7,15 @@ from star_itsm_api.models.kanban import (
     KANBAN_ROLE_OWNER,
 )
 from star_itsm_api.services.kanban_access import (
-    sees_all_boards,
-    user_created_board,
     resolve_member_role,
-    user_can_view_board,
+    sees_all_boards,
+    user_can_delete_board,
+    user_can_delete_tickets,
     user_can_edit_board,
     user_can_move_cards,
     user_can_remove_cards,
-    user_can_delete_board,
-    user_can_delete_tickets,
+    user_can_view_board,
+    user_created_board,
 )
 
 
