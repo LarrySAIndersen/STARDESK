@@ -45,7 +45,7 @@ function readDraggedNavId(dataTransfer: DataTransfer): string {
 }
 
 function isValidNavHref(href: string): boolean {
-  return href.startsWith("/") && href !== "/#";
+  return (href.startsWith("/") || href.startsWith("http://") || href.startsWith("https://")) && href !== "/#";
 }
 
 function NavRow({
@@ -137,13 +137,21 @@ function NavRow({
     return null;
   }
 
+  const isExternal = href.startsWith("http://") || href.startsWith("https://");
+
   return (
     <a
       href={href}
       className={className}
       title={collapsed ? item.label : undefined}
       aria-label={collapsed ? item.label : undefined}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
       onClick={(event) => {
+        if (isExternal) {
+          onNavigate?.();
+          return;
+        }
         event.preventDefault();
         onNavigate?.();
         router.push(href);

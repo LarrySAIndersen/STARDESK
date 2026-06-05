@@ -1,4 +1,9 @@
+import json
+from pathlib import Path
+
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS
@@ -9,10 +14,6 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.platform import SidebarNavVisibilityRead, SidebarNavVisibilityUpdate
 from star_itsm_api.services.nav_visibility import get_hidden_nav_ids, set_hidden_nav_ids
 from star_itsm_api.services.permissions import is_staff_role
-
-import json
-from pathlib import Path
-from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/platform", tags=["platform"])
 
@@ -29,8 +30,9 @@ async def get_sbom() -> JSONResponse:
             detail="SBOM ikke fundet. Den genereres under udrulning (deployment).",
         )
     try:
-        with open(sbom_path, encoding="utf-8") as f:
-            data = json.load(f)
+        async with await anyio.open_file(sbom_path, encoding="utf-8") as f:
+            content = await f.read()
+        data = json.loads(content)
         return JSONResponse(content=data)
     except Exception as e:
         raise HTTPException(
