@@ -27,6 +27,27 @@ async def test_get_hidden_nav_ids_filters_invalid_entries() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_hidden_nav_ids_non_list_value() -> None:
+    row = MagicMock(value="not-a-list")
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=row)
+
+    hidden = await nav_visibility.get_hidden_nav_ids(mock_db)
+
+    assert hidden == []
+
+
+@pytest.mark.asyncio
+async def test_get_hidden_nav_ids_db_exception() -> None:
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(side_effect=Exception("DB error"))
+
+    hidden = await nav_visibility.get_hidden_nav_ids(mock_db)
+
+    assert hidden == []
+
+
+@pytest.mark.asyncio
 async def test_set_hidden_nav_ids_persists_normalized() -> None:
     mock_db = AsyncMock()
     mock_db.get = AsyncMock(return_value=None)
@@ -40,6 +61,25 @@ async def test_set_hidden_nav_ids_persists_normalized() -> None:
 
     assert result == ["portal"]
     mock_db.add.assert_called_once()
+    mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_set_hidden_nav_ids_updates_existing() -> None:
+    existing_row = MagicMock(value=["reports"])
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=existing_row)
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+
+    result = await nav_visibility.set_hidden_nav_ids(
+        mock_db,
+        ["portal"],
+    )
+
+    assert result == ["portal"]
+    assert existing_row.value == ["portal"]
+    mock_db.add.assert_not_called()
     mock_db.commit.assert_awaited_once()
 
 
@@ -69,6 +109,34 @@ async def test_is_nav_path_hidden_for_regular_user() -> None:
     )
 
     assert hidden is True
+
+
+@pytest.mark.asyncio
+async def test_is_nav_path_hidden_no_hidden_ids() -> None:
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=None)
+
+    hidden = await nav_visibility.is_nav_path_hidden_for_user(
+        mock_db,
+        path="/reports",
+        is_top_admin=False,
+    )
+
+    assert hidden is False
+
+
+@pytest.mark.asyncio
+async def test_is_nav_path_hidden_invalid_path() -> None:
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=MagicMock(value=["reports"]))
+
+    hidden = await nav_visibility.is_nav_path_hidden_for_user(
+        mock_db,
+        path="/not-a-valid-path",
+        is_top_admin=False,
+    )
+
+    assert hidden is False
 
 
 def test_nav_id_for_path_dashboard() -> None:
