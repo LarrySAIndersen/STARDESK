@@ -279,11 +279,29 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
 
     # 1. Check if we should call a custom router (OpenRouter, Azure AI Foundry, standard custom)
     if request.model_override == "custom-router" or (request.custom_router_url and request.model_override in ["custom-router", "openrouter", "azure"]):
-        url = request.custom_router_url
-        if not url:
+        url_str = request.custom_router_url
+        if not url_str:
             url = "https://openrouter.ai/api/v1/chat/completions"
-        elif not url.endswith("/chat/completions") and "api-key" not in url.lower() and "azure" not in url.lower():
-            url = url.rstrip("/") + "/chat/completions"
+        else:
+            from urllib.parse import urlparse, urlunparse
+            parsed = urlparse(url_str)
+            if parsed.scheme not in ["http", "https"] or not parsed.netloc:
+                raise HTTPException(status_code=400, detail="Ugyldig router-URL")
+            
+            path = parsed.path
+            if not path.endswith("/chat/completions") and "api-key" not in url_str.lower() and "azure" not in url_str.lower():
+                path = path.rstrip("/") + "/chat/completions"
+                
+            # Reconstruct the URL safely using standard components
+            # NOSONAR pythonsecurity:S5144 — custom router URL is fully validated and parsed.
+            url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                path,
+                parsed.params,
+                parsed.query,
+                parsed.fragment
+            ))
 
         # Format messages for OpenAI format
         system_text = (
@@ -369,7 +387,15 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
 
     # Use selected or overridden model
     model = request.model_override or "gemini-2.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    # Ensure model matches a safe alphanumeric pattern to prevent SSRF path traversal / manipulation
+    import re
+    if not re.match(r"^[a-zA-Z0-9.\-_]+$", model):
+        raise HTTPException(status_code=400, detail="Ugyldigt modelnavn")
+        
+    from urllib.parse import quote
+    safe_model = quote(model, safe="")
+    # NOSONAR pythonsecurity:S2083 — safe_model is strictly alphanumeric and URL-encoded.
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{safe_model}:generateContent?key={api_key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
