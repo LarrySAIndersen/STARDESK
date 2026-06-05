@@ -183,3 +183,48 @@ async def get_user_tickets(user_email: str) -> str:
                 f"  - **Oprettet:** {created_str}\n"
             )
         return "\n".join(output)
+
+
+@mcp.tool()
+async def search_historical_solutions(query: str) -> str:
+    """Søg efter anonymiserede historiske løsninger på tværs af tidligere afsluttede supportsager.
+    
+    Hjælper med at finde ud af, hvordan andre har fået løst lignende problemer ud fra anonyme resuméer.
+    
+    Args:
+        query: Søgetekst (fx "vpn", "print", "adgangskode").
+    """
+    if not async_session_factory:
+        return "Database er ikke konfigureret."
+        
+    async with async_session_factory() as db:
+        stmt = (
+            select(Ticket)
+            .where(
+                Ticket.is_knowledge_article.is_(False),
+                Ticket.is_security_ticket.is_(False),
+                Ticket.status.in_(["resolved", "closed"]),
+                Ticket.llm_summary.isnot(None),
+                Ticket.deleted_at.is_(None),
+                or_(
+                    Ticket.title.ilike(f"%{query}%"),
+                    Ticket.llm_summary.ilike(f"%{query}%")
+                )
+            )
+            .limit(5)
+        )
+        result = await db.execute(stmt)
+        tickets = result.scalars().all()
+        
+        if not tickets:
+            return f"Ingen historiske løsninger fundet for søgningen '{query}'."
+            
+        output = []
+        for t in tickets:
+            output.append(
+                f"### {t.title} (Sagsnr: {t.ticket_number})\n"
+                f"**Løsningsresumé:** {t.llm_summary}\n"
+                f"**Emner:** {', '.join(t.semantic_topics) if t.semantic_topics else 'ingen'}\n"
+            )
+        return "\n\n".join(output)
+

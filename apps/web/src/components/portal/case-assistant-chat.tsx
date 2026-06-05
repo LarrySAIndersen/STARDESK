@@ -9,7 +9,7 @@ import {
   Star, 
   Trash2, 
   Clock, 
-  RefreshCw, 
+  RefreshCw 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isStaff } from "@/lib/auth";
