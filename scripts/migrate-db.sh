@@ -7,13 +7,13 @@ export PATH="${HOME}/.local/bin:${PATH}"
 source "$ROOT/scripts/lib/api-venv.sh"
 API_DIR="$ROOT/apps/api"
 cd "$API_DIR"
-if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
+if [[ -z "${DATABASE_URL:-}" ]] && [[ -f .env ]]; then
   set -a
   # shellcheck disable=SC1091
   source .env
   set +a
 fi
-if [ -z "${DATABASE_URL:-}" ]; then
+if [[ -z "${DATABASE_URL:-}" ]]; then
   echo "DATABASE_URL is not set (export it or use apps/api/.env)" >&2
   exit 1
 fi

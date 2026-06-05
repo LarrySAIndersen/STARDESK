@@ -19,6 +19,7 @@ from star_itsm_api.routers import (
     integrations,
     kanban,
     knowledge_articles,
+    mcp,
     personal,
     platform,
     reports,
@@ -102,3 +103,4 @@ app.include_router(users.router, prefix=API_V1_PREFIX)
 app.include_router(platform.router, prefix=API_V1_PREFIX)
 app.include_router(admin.router, prefix=API_V1_PREFIX)
 app.include_router(sf_chat.router, prefix=API_V1_PREFIX)
+app.include_router(mcp.router, prefix=API_V1_PREFIX)
