@@ -203,8 +203,8 @@ async def chat_endpoint(request: ChatRequest):
     # Prepare the payload for Gemini API
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
-    # We use gemini-1.5-flash as the fast, free-tier model
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # We use gemini-2.5-flash as the fast, free-tier model
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -212,8 +212,26 @@ async def chat_endpoint(request: ChatRequest):
             response.raise_for_status()
             res_data = response.json()
         except Exception as e:
-            logger.error(f"Error calling Gemini API: {str(e)}")
-            raise HTTPException(status_code=502, detail=f"Kunne ikke kontakte Gemini API: {str(e)}")
+            logger.error(f"Error calling Gemini API: {str(e)}. Falling back to smart mock response.")
+            mock_resp = await get_smart_mock_response(request)
+            
+            error_msg = str(e)
+            if "429" in error_msg:
+                user_friendly_error = (
+                    "⚠️ **Bemærk**: Sprogmodellen er midlertidigt overbelastet (Googles rate-limit/kvote for denne gratis-nøgle er overskredet).\n\n"
+                    "For at undgå afbrydelser har jeg slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
+                )
+            else:
+                user_friendly_error = (
+                    f"⚠️ **Bemærk**: Der opstod en midlertidig fejl under kommunikationen med Google Gemini-tjenesten ({error_msg}).\n\n"
+                    "Jeg har derfor slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
+                )
+            
+            clean_mock_resp = mock_resp.replace(
+                "Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg",
+                "Da Google Gemini-tjenesten er midlertidigt utilgængelig, kører jeg"
+            )
+            return ChatResponse(response=f"{user_friendly_error}{clean_mock_resp}")
 
         # Check if the model wants to call a function
         try:
