@@ -7,13 +7,11 @@ import pytest
 
 from star_itsm_api.core.constants import SYSTEM_USER_ID
 from star_itsm_api.models.category import Category, Subcategory
-from star_itsm_api.models.comment import TicketComment
-from star_itsm_api.models.attachment import Attachment
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.sub_cause import SubCauseRead
-from star_itsm_api.schemas.ticket import TicketDetailRead, TicketRead, TicketSummaryRead
+from star_itsm_api.schemas.ticket import TicketRead, TicketSummaryRead
 from star_itsm_api.services import ticket_read
 
 
@@ -514,7 +512,8 @@ async def test_ticket_to_read_mapping() -> None:
 
 @pytest.mark.asyncio
 async def test_load_active_teams_caching() -> None:
-    ticket_read._active_teams_cache = None
+    import star_itsm_api.services.ticket_read as tr_mod
+    tr_mod._active_teams_cache = None
 
     team = Team()
     team.id = uuid.uuid4()
@@ -526,19 +525,20 @@ async def test_load_active_teams_caching() -> None:
     mock_db = AsyncMock()
     mock_db.execute = AsyncMock(return_value=result)
 
-    teams = await ticket_read._load_active_teams(mock_db)
+    teams = await tr_mod._load_active_teams(mock_db)
     assert len(teams) == 1
     assert teams[0].name == "My Team"
     mock_db.execute.assert_called_once()
 
     mock_db.execute.reset_mock()
-    teams2 = await ticket_read._load_active_teams(mock_db)
+    teams2 = await tr_mod._load_active_teams(mock_db)
     assert teams2 == teams
     mock_db.execute.assert_not_called()
 
-    ticket_read._active_teams_cache = (0.0, teams)
+    import time
+    tr_mod._active_teams_cache = (time.monotonic() - 1000.0, teams)
     mock_db.execute.reset_mock()
-    teams3 = await ticket_read._load_active_teams(mock_db)
+    teams3 = await tr_mod._load_active_teams(mock_db)
     assert len(teams3) == 1
     mock_db.execute.assert_called_once()
 

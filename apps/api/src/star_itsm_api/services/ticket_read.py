@@ -36,6 +36,12 @@ _ACTIVE_TEAMS_TTL_SECONDS = 300.0
 _active_teams_cache: tuple[float, list[_TeamRef]] | None = None
 
 
+def clear_active_teams_cache() -> None:
+    """Clear the active teams cache (primarily used for testing)."""
+    global _active_teams_cache
+    _active_teams_cache = None
+
+
 async def load_user_display_names(
     db: AsyncSession,
     user_ids: set[uuid.UUID],

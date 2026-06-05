@@ -160,7 +160,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const [useName, setUseName] = useState(true);
   const [useAvatar, setUseAvatar] = useState(true);
   const [useIcon, setUseIcon] = useState(true);
-  const [activeModel, setActiveModel] = useState("gemini-2.5-flash");
+  const [activeModel, setActiveModel] = useState("gemini-1.5-flash");
   const [chatSessionId, setChatSessionId] = useState("");
 
   // Archive & Search States
@@ -231,13 +231,23 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
       setUseName(localStorage.getItem("stardesk-chatbot-use-name") !== "false");
       setUseAvatar(localStorage.getItem("stardesk-chatbot-use-avatar") !== "false");
       setUseIcon(localStorage.getItem("stardesk-chatbot-use-icon") !== "false");
-      setActiveModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-2.5-flash");
+      setActiveModel(localStorage.getItem("stardesk-chatbot-model") || "gemini-1.5-flash");
     }
     if (open && !chatSessionId) {
-      setChatSessionId('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      }));
+      if (typeof window !== "undefined" && typeof window.crypto?.randomUUID === "function") {
+        setChatSessionId(window.crypto.randomUUID());
+      } else {
+        // Fallback using crypto.getRandomValues if randomUUID is not available
+        const arr = new Uint8Array(16);
+        if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+          window.crypto.getRandomValues(arr);
+        }
+        arr[6] = (arr[6] & 0x0f) | 0x40; // version 4
+        arr[8] = (arr[8] & 0x3f) | 0x80; // variant RFC4122
+        const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+        const uuid = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+        setChatSessionId(uuid);
+      }
     }
   }, [open, chatSessionId]);
 
@@ -289,6 +299,10 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
       const customKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-key") : null;
       const customHeader = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-header") : null;
 
+      const openaiKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-openai-key") : null;
+      const anthropicKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-anthropic-key") : null;
+      const googleKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-google-key") : null;
+
       const res = await apiPost<{ response: string }>("/api/v1/chat", {
         messages: chatHistory,
         user_email: user?.email || null,
@@ -298,7 +312,10 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
         custom_router_key: customKey,
         custom_router_model: customModel,
         custom_router_header_type: customHeader,
-        session_id: chatSessionId || null
+        session_id: chatSessionId || null,
+        openai_key: openaiKey,
+        anthropic_key: anthropicKey,
+        google_key: googleKey
       });
 
       setMessages((prev) => [

@@ -16,10 +16,11 @@ from star_itsm_api.db import get_db
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
 from star_itsm_api.routers.mcp import (
+    create_ticket,
     get_ticket_categories,
     get_user_tickets,
-    search_knowledge_articles,
     search_historical_solutions,
+    search_knowledge_articles,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,9 @@ class ChatRequest(BaseModel):
     custom_router_model: str | None = None
     custom_router_header_type: str | None = "Bearer"
     session_id: str | None = None
+    openai_key: str | None = None
+    anthropic_key: str | None = None
+    google_key: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -99,6 +103,44 @@ GEMINI_TOOLS = [
                     "required": ["user_email"],
                 },
             },
+            {
+                "name": "create_ticket",
+                "description": "Opret en ny supportsag (ticket) i STARdesk på vegne af en bruger, når de beder om det. Spørg først efter titel og detaljeret beskrivelse, og bekræft før oprettelse.",
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "user_email": {
+                            "type": "STRING",
+                            "description": "Brugerens e-mailadresse (fx 'sf01@example.dk').",
+                        },
+                        "title": {
+                            "type": "STRING",
+                            "description": "Sagens kortfattede titel (fx 'MitID virker ikke'). Mindst 3 tegn.",
+                        },
+                        "description": {
+                            "type": "STRING",
+                            "description": "Detaljeret beskrivelse af problemet. Mindst 10 tegn.",
+                        },
+                        "category_id": {
+                            "type": "STRING",
+                            "description": "Valgfrit UUID på sagens kategori.",
+                        },
+                        "subcategory_id": {
+                            "type": "STRING",
+                            "description": "Valgfrit UUID på sagens underkategori.",
+                        },
+                        "priority": {
+                            "type": "STRING",
+                            "description": "Sagens prioritet ('critical', 'high', 'medium', 'low'). Standard er 'medium'.",
+                        },
+                        "ticket_type": {
+                            "type": "STRING",
+                            "description": "Sags-type ('incident', 'service_request', 'problem'). Standard er 'incident'.",
+                        }
+                    },
+                    "required": ["user_email", "title", "description"],
+                },
+            },
         ]
     }
 ]
@@ -118,6 +160,23 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
         if name == "get_user_tickets":
             email = args.get("user_email", "")
             return await get_user_tickets(email)
+        if name == "create_ticket":
+            user_email = args.get("user_email", "")
+            title = args.get("title", "")
+            description = args.get("description", "")
+            category_id = args.get("category_id")
+            subcategory_id = args.get("subcategory_id")
+            priority = args.get("priority", "medium")
+            ticket_type = args.get("ticket_type", "incident")
+            return await create_ticket(
+                user_email=user_email,
+                title=title,
+                description=description,
+                category_id=category_id,
+                subcategory_id=subcategory_id,
+                priority=priority,
+                ticket_type=ticket_type,
+            )
         return f"Fejl: Værktøjet '{name}' findes ikke."
     except Exception as e:
         logger.exception(f"Error executing tool {name}")
@@ -144,7 +203,31 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
 
     user_msg_lower = user_msg.lower()
 
-    # 1. Check for ticket/status/sager queries
+    # 1. Check for explicit request to create a ticket in mock mode
+    create_keywords = ["opret sag", "opret billet", "lav en sag", "opret incident"]
+    if any(k in user_msg_lower for k in create_keywords):
+        if ":" in user_msg:
+            try:
+                parts = user_msg.split(":", 1)[1].split("-", 1)
+                title = parts[0].strip()
+                desc = parts[1].strip() if len(parts) > 1 else "Oprettet via STARdesk-assistenten."
+                if len(title) >= 3 and len(desc) >= 10:
+                    res = await create_ticket(
+                        user_email=user_email,
+                        title=title,
+                        description=desc,
+                    )
+                    return f"**[Mock-assistent]** {res}"
+            except Exception:
+                pass
+        return (
+            f"Hej {user_name}! **[Mock-assistent]** Jeg kan hjælpe dig med at oprette en sag direkte fra chatten!\n\n"
+            f"Siden der ikke er nogen aktiv `GOOGLE_KEY` i miljøet, kører jeg i en **smart simulations-tilstand**. Du kan oprette en sag ved at skrive i følgende format:\n"
+            f"`opret sag: [Titel] - [Beskrivelse]`\n\n"
+            f"F.eks.: `opret sag: Problemer med printeren - Jeg kan ikke printe mine dokumenter, den melder fejl 404.`"
+        )
+
+    # 1b. Check for ticket/status/sager queries
     ticket_keywords = ["sag", "sager", "status", "billet", "ticket", "mine", "mine sager"]
     if any(k in user_msg_lower for k in ticket_keywords):
         tickets_res = await get_user_tickets(user_email)
@@ -369,8 +452,103 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
                 mock_resp = await get_smart_mock_response(request)
                 return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til din tilpassede udbyder ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
 
+    # 2. Check if we should call OpenAI API (gpt-4o)
+    if request.model_override == "gpt-4o":
+        openai_key = request.openai_key or os.getenv("OPENAI_API_KEY")
+        if not openai_key:
+            logger.warning("OPENAI_API_KEY not found in environment or request. Falling back to mock responses.")
+            mock_resp = await get_smart_mock_response(request)
+            return await make_response(mock_resp)
+
+        system_text = (
+            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "Svar altid venligt, professionelt og på dansk."
+        )
+
+        openai_messages = [{"role": "system", "content": system_text}]
+        for msg in request.messages:
+            role_map = {"user": "user", "assistant": "assistant", "system": "system", "model": "assistant"}
+            openai_messages.append({"role": role_map.get(msg.role, "user"), "content": msg.content})
+
+        headers = {
+            "Authorization": f"Bearer {openai_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o",
+            "messages": openai_messages,
+            "temperature": 0.3
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post("https://api.openai.com/v1/chat/completions", json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                choices = res_data.get("choices", [])
+                if choices:
+                    text = choices[0].get("message", {}).get("content", "")
+                    return await make_response(text)
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra OpenAI-modellen.")
+            except Exception as e:
+                logger.error(f"Error calling OpenAI API: {str(e)}. Falling back to smart mock response.")
+                mock_resp = await get_smart_mock_response(request)
+                return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til OpenAI-tjenesten ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
+
+    # 3. Check if we should call Anthropic API (claude-3-5-sonnet-20241022)
+    if request.model_override == "claude-3-5-sonnet-20241022":
+        anthropic_key = request.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
+        if not anthropic_key:
+            logger.warning("ANTHROPIC_API_KEY not found in environment or request. Falling back to mock responses.")
+            mock_resp = await get_smart_mock_response(request)
+            return await make_response(mock_resp)
+
+        system_text = (
+            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+            "Svar altid venligt, professionelt og på dansk."
+        )
+
+        anthropic_messages = []
+        for msg in request.messages:
+            role = "user" if msg.role == "user" else "assistant"
+            anthropic_messages.append({"role": role, "content": msg.content})
+
+        headers = {
+            "x-api-key": anthropic_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json"
+        }
+        payload = {
+            "model": "claude-3-5-sonnet-20241022",
+            "max_tokens": 1024,
+            "messages": anthropic_messages,
+            "system": system_text,
+            "temperature": 0.3
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post("https://api.anthropic.com/v1/messages", json=payload, headers=headers)
+                response.raise_for_status()
+                res_data = response.json()
+                content_parts = res_data.get("content", [])
+                if content_parts:
+                    text = content_parts[0].get("text", "")
+                    return await make_response(text)
+                return await make_response("Undskyld, jeg modtog ikke et gyldigt svar fra Anthropic-modellen.")
+            except Exception as e:
+                logger.error(f"Error calling Anthropic API: {str(e)}. Falling back to smart mock response.")
+                mock_resp = await get_smart_mock_response(request)
+                return await make_response(f"⚠️ **Bemærk**: Kunne ikke forbinde til Anthropic-tjenesten ({str(e)}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}")
+
     # Retrieve the Google Gemini API key from the environment
-    api_key = os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
+    api_key = request.google_key or os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
         # Fallback to mock behavior if no API key is set
         logger.warning(
@@ -408,7 +586,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
     # Use selected or overridden model
-    model = request.model_override or "gemini-2.5-flash"
+    model = request.model_override or "gemini-1.5-flash"
     # Ensure model matches a safe alphanumeric pattern to prevent SSRF path traversal / manipulation
     import re
     if not re.match(r"^[a-zA-Z0-9.\-_]+$", model):
@@ -422,6 +600,14 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             response = await client.post(url, json=payload)
+            # Check for 404 specifically to support seamless fallback from newer to 1.5 stable models
+            if response.status_code == 404 and model in ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"]:
+                fallback_model = "gemini-1.5-pro" if "pro" in model else "gemini-1.5-flash"
+                logger.warning(f"Model {model} returned 404. Retrying with fallback model {fallback_model}...")
+                model = fallback_model
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                response = await client.post(url, json=payload)
+
             response.raise_for_status()
             res_data = response.json()
         except Exception as e:
