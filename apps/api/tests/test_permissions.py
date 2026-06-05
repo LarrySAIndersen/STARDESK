@@ -99,3 +99,53 @@ async def test_end_user_denied_other_org_private_ticket() -> None:
 def test_agent_can_export() -> None:
     user = MagicMock(role=ROLE_AGENT)
     assert can_export_tickets(user)
+
+
+def test_is_top_admin() -> None:
+    from star_itsm_api.services.permissions import is_top_admin
+    user_top = MagicMock(role=ROLE_TOP_ADMIN)
+    user_agent = MagicMock(role=ROLE_AGENT)
+    assert is_top_admin(user_top) is True
+    assert is_top_admin(user_agent) is False
+
+
+def test_is_end_user() -> None:
+    from star_itsm_api.services.permissions import is_end_user
+    user_end = MagicMock(role=ROLE_SUBMITTER)
+    user_agent = MagicMock(role=ROLE_AGENT)
+    
+    # User with both ROLE_SUBMITTER and ROLE_AGENT (not a pure end user)
+    user_both = MagicMock(role=ROLE_SUBMITTER, _roles_cache=frozenset({ROLE_SUBMITTER, ROLE_AGENT}))
+    
+    assert is_end_user(user_end) is True
+    assert is_end_user(user_agent) is False
+    assert is_end_user(user_both) is False
+
+
+def test_is_stardesk_reviewer() -> None:
+    from star_itsm_api.services.permissions import is_stardesk_reviewer
+    from star_itsm_api.core.security import ROLE_STARDESK_REVIEWER
+    user_rev = MagicMock(role=ROLE_STARDESK_REVIEWER)
+    user_agent = MagicMock(role=ROLE_AGENT)
+    assert is_stardesk_reviewer(user_rev) is True
+    assert is_stardesk_reviewer(user_agent) is False
+
+
+def test_can_assign_tickets() -> None:
+    from star_itsm_api.services.permissions import can_assign_tickets
+    for role in [ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT, ROLE_SUPPORTER]:
+        user = MagicMock(role=role)
+        assert can_assign_tickets(user) is True
+    user_end = MagicMock(role=ROLE_SUBMITTER)
+    assert can_assign_tickets(user_end) is False
+
+
+def test_roles_tuples() -> None:
+    from star_itsm_api.services.permissions import staff_roles_tuple, admin_roles_tuple
+    staff = staff_roles_tuple()
+    admin = admin_roles_tuple()
+    assert isinstance(staff, tuple)
+    assert isinstance(admin, tuple)
+    assert ROLE_ADMIN in admin
+    assert ROLE_AGENT in staff
+
