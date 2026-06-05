@@ -3,7 +3,7 @@
 import { fireAndForget } from "@/lib/fire-and-forget";
 
 import Link from "next/link";
-import { FileUp, LayoutDashboard, Shield, Ticket, UserCog } from "lucide-react";
+import { Bot, FileUp, LayoutDashboard, Shield, Ticket, UserCog } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminTicketImportDialog } from "@/components/admin-ticket-import-dialog";
@@ -14,6 +14,7 @@ import type { UserRole } from "@/types/user";
 
 const ADMIN_LINKS = [
   { href: "/users", label: "Brugere", icon: UserCog, description: "Konti og rettigheder" },
+  { href: "/admin/chatbot", label: "Chatbot", icon: Bot, description: "Modeller, adgang og opsætning" },
   { href: "/admin/sla", label: "SLA-indstillinger", icon: Shield, description: "Politikker og frister" },
   {
     href: "/admin/categories",

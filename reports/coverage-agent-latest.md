@@ -2,37 +2,33 @@
 
 ## Oversigt
 
-- **Linjedækning:** **68.3%** (7232 / 10589 statements) — en stigning på **+0.4%** i forhold til forrige scan (67.9%).
-- **Branchdækning:** **46.8%** (1341 / 2868 branches) — en stigning på **+2.0%** i forhold til forrige scan (44.8%).
-- **Test status:** **653 tests passed** (alle unit tests grønne).
+- **Linjedækning:** **69.6%** (7375 / 10600 statements) — en stigning på **+1.3%** i forhold til forrige scan (68.3%).
+- **Test status:** **703 tests passed** (alle unit tests grønne).
 
-## Gennemførte Forbedringer (Batch 7: Flere Lavthængende Frugter)
+## Gennemførte Forbedringer (Batch 8: Næste Lavthængende Frugter)
 
-Vi har bragt 8 mindre moduler og hjælpefunktioner til **100% testdækning**:
+Vi har bragt yderligere 8 moduler og hjælpefunktioner til **100% testdækning**:
 
-1. **`ticket_numbers.py` (100%):** Dækket fejlhåndtering og fallback ved ugyldige sagsnumre.
-2. **`db_resilience.py` (100%):** Dækket savepoint rollback-fejl og asynkrone context manager fallbacks.
-3. **`slack_mock.py` (100%):** Dækket opslag af mock Slack-kanaler (både fundne og ikke-fundne).
-4. **`sole_top_admin.py` (100%):** Dækket automatisk demotion af uautoriserede top_admins og promotion af ejeren ved login.
-5. **`ticket_classification.py` (100%):** Dækket validering af kategorier, underkategorier og kilder (herunder inaktive elementer).
-6. **`cmdb_catalog.py` (100%):** Dækket oprettelse og opdatering af CMDB-kataloget i PostgreSQL.
-7. **`sla_calendar.py` (100%):** Dækket tidsberegning over weekender og asynkrone tidszoner.
-8. **`workboard_status_guard.py` (100%):** Dækket status- transitionsregler på Kanban-tavlen.
+1. **`permissions.py` (100%):** Dækket `is_top_admin`, `is_end_user` (herunder brugere med blandede roller), `is_stardesk_reviewer`, `can_assign_tickets` samt rolle-tuples.
+2. **`ticket_tags.py` (100%):** Dækket fejlhåndtering ved ugyldige tags, tomme lister, overskridelse af max-grænsen på 10 tags samt whitespace-parsing.
+3. **`ticket_timestamps.py` (100%):** Dækket `maybe_set_assigned_at` for både team- og brugertildeling samt standard tidsstempling.
+4. **`cpr.py` (100%):** Dækket validering af CPR-numre med ugyldig længde samt maskering af tomme eller ufuldstændige værdier.
+5. **`kanban_defaults.py` (100%):** Oprettet en helt ny testfil `test_kanban_defaults.py` og dækket alle board-skabeloner (`simple`, `delivery`, `blank`, `custom` med fejlhåndtering) samt status-til-kolonne mapping.
+6. **`sla_status.py` (100%):** Oprettet en helt ny testfil `test_sla_status.py` og dækket beregning af resterende sekunder (herunder naive/aware datetimes), overskridelsesstatus (`sla_breached`) og advarsler om snarlig udløb (`sla_due_soon`).
+7. **`ticket_sort.py` (100%):** Dækket sorteringsvalg på tværs af alle tilladte felter (`created_asc`, `priority_desc`, `sla_asc`, `ticket_number_asc`, `title_asc`) samt standard fallback.
+8. **`ticket_intake_assist.py` (100%):** Dækket fallback-svar ved manglende regel-match, generering af standardudkast samt kortere/længere titler.
 
 ## Bekræftelse & Deliverable Gate
 
 - **Deliverable Gate:** **PASSED** (lokal hello-world test fuldført med succes via `pwsh scripts/run-deliverable-gate.ps1`).
-- Alle 653 unit tests kørte og bestod uden fejl.
+- Alle 703 unit tests kørte og bestod uden fejl.
 
-## Næste Batch Prioriteringer (Batch 8: Næste Lavthængende Frugter)
+## Næste Batch Prioriteringer (Batch 9)
 
-Følgende moduler er de næste oplagte mål for at øge dækningen yderligere:
+Følgende moduler er oplagte mål for næste batch:
 
-1. `permissions.py` (79% dækning, 28 statements)
-2. `ticket_tags.py` (83% dækning, 32 statements)
-3. `ticket_timestamps.py` (90% dækning, 23 statements)
-4. `cpr.py` (84% dækning, 37 statements)
-5. `kanban_defaults.py` (83% dækning, 46 statements)
-6. `sla_status.py` (72% dækning, 27 statements)
-7. `ticket_sort.py` (72% dækning, 26 statements)
-8. `ticket_intake_assist.py` (71% dækning, 48 statements)
+1. `user_roles.py` (74% dækning, 65 statements)
+2. `ticket_notifications.py` (68% dækning, 82 statements)
+3. `file_storage.py` (72% dækning, 107 statements)
+4. `dashboard.py` (88% dækning, 108 statements)
+5. `analytics.py` (84% dækning, 85 statements)

@@ -25,6 +25,8 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
     user_email: str | None = None
+    user_name: str | None = None
+    model_override: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -93,6 +95,7 @@ async def execute_tool(name: str, args: dict[str, Any]) -> str:
 async def get_smart_mock_response(request: ChatRequest) -> str:
     """Generate a highly helpful mock response based on actual database contents."""
     user_email = request.user_email or "sf01@example.dk"
+    user_name = request.user_name or "Bruger"
 
     # Extract last user message
     user_msg = ""
@@ -103,7 +106,7 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
 
     if not user_msg:
         return (
-            "Hej! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
+            f"Hej {user_name}! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
             "Jeg kører i lokal simulations-tilstand. Hvordan kan jeg hjælpe dig i dag?"
         )
 
@@ -114,7 +117,7 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
     if any(k in user_msg_lower for k in ticket_keywords):
         tickets_res = await get_user_tickets(user_email)
         return (
-            f"**[Mock-assistent]** Her er status på dine seneste sager i systemet (for e-mail: `{user_email}`):\n\n"
+            f"Hej {user_name}! **[Mock-assistent]** Her er status på dine seneste sager i systemet (for e-mail: `{user_email}`):\n\n"
             f"{tickets_res}\n\n"
             "Hvis du har brug for at oprette en ny sag, kan du gøre det via 'Opret ny sag'-knappen."
         )
@@ -124,7 +127,7 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
     if any(k in user_msg_lower for k in cat_keywords):
         cats_res = await get_ticket_categories()
         return (
-            f"**[Mock-assistent]** Når du opretter en sag, er det vigtigt at vælge den rigtige kategori. Her er de tilgængelige kategorier og underkategorier:\n\n"
+            f"Hej {user_name}! **[Mock-assistent]** Når du opretter en sag, er det vigtigt at vælge den rigtige kategori. Her er de tilgængelige kategorier og underkategorier:\n\n"
             f"{cats_res}\n\n"
             "Du kan vælge den kategori, der passer bedst til din situation, når du opretter sagen."
         )
@@ -149,14 +152,14 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
     if found_articles:
         combined_articles = "\n\n---\n\n".join(found_articles)
         return (
-            f"**[Mock-assistent]** Jeg har søgt i vores lokale vidensbase efter emner relateret til din forespørgsel og fundet følgende artikler:\n\n"
+            f"Hej {user_name}! **[Mock-assistent]** Jeg har søgt i vores lokale vidensbase efter emner relateret til din forespørgsel og fundet følgende artikler:\n\n"
             f"{combined_articles}\n\n"
             "Hvis disse artikler ikke løser dit problem, kan du beskrive det nærmere eller oprette en sag."
         )
 
     # 4. Default fallback response if no match
     return (
-        f"Hej! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
+        f"Hej {user_name}! Jeg er din STARdesk-assistent (Help-a-bot).\n\n"
         f"Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg i en **smart simulations-tilstand** ved hjælp af direkte database-opslag.\n\n"
         f"Jeg forstod ikke helt din besked: *\"{user_msg}\"*\n\n"
         f"Prøv at spørge mig om:\n"
@@ -186,11 +189,14 @@ async def chat_endpoint(request: ChatRequest):
         contents.append({"role": role, "parts": [{"text": msg.content}]})
 
     # System instruction to define the bot's identity and behavior
+    user_display_name = request.user_name or "Bruger"
     system_instruction = {
         "parts": [
             {
                 "text": (
                     "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+                    f"Den aktuelle bruger, du taler med, hedder: {user_display_name}. "
+                    f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({user_display_name}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
                     "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
                     "Svar altid venligt, professionelt og på dansk. "
                     "Du har adgang til værktøjer til at søge i vidensartikler, hente kategorier og finde sager. Brug dem aktivt, når det er relevant! "
@@ -203,8 +209,9 @@ async def chat_endpoint(request: ChatRequest):
     # Prepare the payload for Gemini API
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
 
-    # We use gemini-2.5-flash as the fast, free-tier model
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    # Use selected or overridden model
+    model = request.model_override or "gemini-2.5-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

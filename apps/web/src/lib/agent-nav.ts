@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Bot,
   Columns3,
   Headset,
   Inbox,
@@ -94,6 +95,13 @@ export function buildAgentNavItems(options: {
             href: "/admin/dashboard",
             label: "Admin dashboard",
             icon: Settings2,
+            section: "Administration",
+          },
+          {
+            id: "admin-chatbot",
+            href: "/admin/chatbot",
+            label: "Chatbot",
+            icon: Bot,
             section: "Administration",
           },
           {
