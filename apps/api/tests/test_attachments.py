@@ -420,3 +420,165 @@ async def test_save_ticket_upload_rejects_disallowed_type(mock_db: AsyncMock) ->
         )
     assert exc.value.status_code == 400
     assert "type" in exc.value.detail.lower()
+
+
+def test_upload_root_creates_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path / "uploads"))
+    root = attachments.upload_root()
+    assert root.exists()
+    assert root.is_dir()
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_attachments_for_detail_staff(mock_db: AsyncMock, clean_attachment) -> None:
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [clean_attachment]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    staff = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    rows = await attachments.list_ticket_attachments_for_detail(
+        mock_db,
+        clean_attachment.ticket_id,
+        staff,
+        reporter_user_id=uuid.uuid4(),
+    )
+    assert len(rows) == 1
+    assert rows[0].id == clean_attachment.id
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_attachments_for_detail_reporter(mock_db: AsyncMock, clean_attachment) -> None:
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [clean_attachment]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    reporter_id = uuid.uuid4()
+    reporter = SimpleNamespace(id=reporter_id, role="submitter")
+    rows = await attachments.list_ticket_attachments_for_detail(
+        mock_db,
+        clean_attachment.ticket_id,
+        reporter,
+        reporter_user_id=reporter_id,
+    )
+    assert len(rows) == 1
+    assert rows[0].download_available is False
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_attachments_swallows_db_errors(mock_db: AsyncMock) -> None:
+    mock_db.execute = AsyncMock(side_effect=RuntimeError("db down"))
+    mock_db.rollback = AsyncMock()
+    staff = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    rows = await attachments.list_ticket_attachments_for_detail(
+        mock_db,
+        uuid.uuid4(),
+        staff,
+        reporter_user_id=uuid.uuid4(),
+    )
+    assert rows == []
+    mock_db.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_ticket_attachment_success(mock_db: AsyncMock, clean_attachment) -> None:
+    mock_db.get = AsyncMock(return_value=clean_attachment)
+    mock_db.delete = AsyncMock()
+    mock_db.flush = AsyncMock()
+    admin = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    read = await attachments.delete_ticket_attachment(
+        mock_db,
+        ticket_id=clean_attachment.ticket_id,
+        attachment_id=clean_attachment.id,
+        user=admin,
+    )
+    assert read.id == clean_attachment.id
+    mock_db.delete.assert_awaited_once_with(clean_attachment)
+
+
+@pytest.mark.asyncio
+async def test_save_ticket_upload_rejects_oversized_file(mock_db: AsyncMock) -> None:
+    upload = UploadFile(
+        filename="big.pdf",
+        file=BytesIO(b"x" * (attachments.MAX_UPLOAD_BYTES + 1)),
+        headers={"content-type": "application/pdf"},
+    )
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    with pytest.raises(HTTPException) as exc:
+        await attachments.save_ticket_upload(
+            mock_db,
+            ticket_id=uuid.uuid4(),
+            ticket_number="INC-1",
+            user=user,
+            upload=upload,
+        )
+    assert exc.value.status_code == 400
+    assert "10 MB" in exc.value.detail
+
+
+@pytest.mark.asyncio
+async def test_save_ticket_upload_local_disk(
+    mock_db: AsyncMock,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "upload_dir", str(tmp_path / "uploads"))
+    monkeypatch.setattr(file_storage, "blob_storage_enabled", lambda: False)
+    monkeypatch.setattr(
+        "star_itsm_api.services.attachments.run_virus_scan",
+        AsyncMock(),
+    )
+    upload = UploadFile(
+        filename="note.txt",
+        file=BytesIO(b"hello"),
+        headers={"content-type": "text/plain"},
+    )
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    read = await attachments.save_ticket_upload(
+        mock_db,
+        ticket_id=uuid.uuid4(),
+        ticket_number="INC-2026-00001",
+        user=user,
+        upload=upload,
+    )
+    assert read.scan_status == "pending"
+    mock_db.add.assert_called_once()
+    mock_db.flush.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_save_ticket_upload_blob_storage(
+    mock_db: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(file_storage, "blob_storage_enabled", lambda: True)
+    monkeypatch.setattr(
+        file_storage,
+        "persist_to_blob",
+        AsyncMock(return_value="blob:https://store.private.blob.vercel-storage.com/x.png"),
+    )
+    monkeypatch.setattr(
+        "star_itsm_api.services.attachments.run_virus_scan",
+        AsyncMock(),
+    )
+    upload = UploadFile(
+        filename="photo.png",
+        file=BytesIO(b"png"),
+        headers={"content-type": "image/png"},
+    )
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    read = await attachments.save_ticket_upload(
+        mock_db,
+        ticket_id=uuid.uuid4(),
+        ticket_number="INC-2026-00001",
+        user=user,
+        upload=upload,
+    )
+    assert read.scan_status == "pending"
+    assert read.content_type == "image/png"
+
+
+@pytest.mark.asyncio
+async def test_build_attachment_download_attachment_disposition(
+    clean_attachment,
+) -> None:
+    clean_attachment.content_type = "text/plain"
+    response = await attachments.build_attachment_download_response(clean_attachment)
+    assert "attachment" in response.headers["content-disposition"]
