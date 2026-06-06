@@ -1530,10 +1530,6 @@
     @apply touch-none select-none;
   }
 
-  .case-assistant-panel-robot {
-    @apply pointer-events-none absolute left-1/2 top-0 z-[402] -translate-x-1/2 -translate-y-[55%];
-  }
-
   .case-assistant-panel-drag-handle {
     @apply cursor-grab active:cursor-grabbing;
   }
