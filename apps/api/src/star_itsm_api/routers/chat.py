@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import os
+import re
 import uuid
 from datetime import datetime
 from typing import Any
@@ -28,6 +29,75 @@ from star_itsm_api.routers.mcp import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+TICKET_NUMBER_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
+TICKET_REF_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
+
+
+async def try_short_command(
+    user_msg: str,
+    user_email: str | None,
+    _user_name: str | None,
+) -> str | None:
+    """Handle ultra-short Danish commands without calling the LLM."""
+    msg = user_msg.strip()
+    if not msg:
+        return None
+
+    lower = msg.lower()
+    email = user_email or "sf01@example.dk"
+    ticket_match = TICKET_NUMBER_RE.search(msg)
+    ticket_number = ticket_match.group(0).upper() if ticket_match else None
+
+    if ticket_number:
+        for prefix in ("luk sag ", "luk ", "close "):
+            if lower.startswith(prefix):
+                remainder = msg[len(prefix):].strip()
+                note = remainder[len(ticket_number):].strip() if remainder.upper().startswith(ticket_number) else remainder
+                note = note.lstrip("-:").strip() or None
+                return await update_ticket_status(
+                    ticket_number=ticket_number,
+                    status="closed",
+                    actor_email=email,
+                    note=note,
+                )
+
+        for prefix in ("løs ", "los ", "resolve "):
+            if lower.startswith(prefix):
+                return await update_ticket_status(
+                    ticket_number=ticket_number,
+                    status="resolved",
+                    actor_email=email,
+                    note=None,
+                )
+
+        word_count = len(msg.split())
+        if word_count <= 2 or any(k in lower for k in ("find", "sag", "vis", "status", "sla")):
+            return await get_ticket_by_number(ticket_number)
+
+    if lower in {"mine sager", "sager", "mine", "status"} or lower.startswith("mine sager"):
+        tickets_res = await get_user_tickets(email)
+        return f"Her er dine seneste sager:\n\n{tickets_res}"
+
+    if lower.startswith("opret") or lower.startswith("ny sag"):
+        payload = msg.split(":", 1)[1].strip() if ":" in msg else msg.split(" ", 1)[1].strip() if " " in msg else ""
+        if payload:
+            if " - " in payload:
+                title, description = payload.split(" - ", 1)
+            elif "-" in payload and not TICKET_NUMBER_RE.search(payload):
+                title, description = payload.split("-", 1)
+            else:
+                title, description = payload, f"Oprettet via Help-a-bot: {payload}"
+            title = title.strip()
+            description = description.strip()
+            if len(title) >= 3 and len(description) >= 10:
+                return await create_ticket(
+                    user_email=email,
+                    title=title,
+                    description=description,
+                )
+
+    return None
 
 
 class ChatMessage(BaseModel):
@@ -259,6 +329,11 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
 
     user_msg_lower = user_msg.lower()
 
+    short = await try_short_command(user_msg, user_email, user_name)
+    if short:
+        prefix = f"Hej {user_name}! **[Mock-assistent]**\n\n" if not short.startswith("Hej") else ""
+        return f"{prefix}{short}" if prefix else short
+
     # 1. Check for explicit request to create a ticket in mock mode
     create_keywords = ["opret sag", "opret billet", "lav en sag", "opret incident"]
     if any(k in user_msg_lower for k in create_keywords):
@@ -340,9 +415,11 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
         f"Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg i en **smart simulations-tilstand** ved hjælp af direkte database-opslag.\n\n"
         f"Jeg forstod ikke helt din besked: *\"{user_msg}\"*\n\n"
         f"Prøv at spørge mig om:\n"
-        f"- **Vidensartikler**: Skriv f.eks. 'vpn', 'mitid', 'adgangskode' eller lignende.\n"
-        f"- **Dine sager**: Skriv f.eks. 'mine sager' eller 'status' (viser sager tilknyttet `{user_email}`).\n"
-        f"- **Kategorier**: Skriv f.eks. 'kategorier' eller 'opret' for at se tilgængelige sagskategorier."
+        f"- **Find sag**: Skriv bare sagsnummeret, fx `INC-2026-00118`\n"
+        f"- **Luk sag**: `luk INC-2026-00118` eller med note: `luk INC-2026-00118 printer virker`\n"
+        f"- **Opret sag**: `opret Printer fejl - Kan ikke printe`\n"
+        f"- **Dine sager**: Skriv `mine sager`\n"
+        f"- **Vidensartikler**: Skriv fx `vpn`, `mitid`, `adgangskode`."
     )
 
 
@@ -421,10 +498,12 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
         elif "adgangskode" in body_lower or "password" in body_lower or (last_user_msg and ("adgangskode" in last_user_msg.lower() or "password" in last_user_msg.lower())):
             category = "Adgangskode"
 
-        # Look for ticket ref like SAG-123
-        import re
-        ticket_match = re.search(r"SAG-\d+", body_lower)
+        # Look for ticket ref like INC-2026-00118
+        ticket_match = TICKET_REF_RE.search(final_response)
         ticket_ref = ticket_match.group(0).upper() if ticket_match else None
+        if not ticket_ref and last_user_msg:
+            user_ticket_match = TICKET_REF_RE.search(last_user_msg)
+            ticket_ref = user_ticket_match.group(0).upper() if user_ticket_match else None
 
         await log_chatbot_message(
             db=db,
@@ -437,6 +516,15 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             ticket_ref=ticket_ref
         )
         return ChatResponse(response=final_response)
+
+    if last_user_msg:
+        short_response = await try_short_command(
+            last_user_msg,
+            request.user_email,
+            request.user_name,
+        )
+        if short_response:
+            return await make_response(short_response)
 
     # 1. Check if we should call a custom router (OpenRouter, Azure AI Foundry, standard custom)
     if request.model_override == "custom-router" or (request.custom_router_url and request.model_override in ["custom-router", "openrouter", "azure"]):
@@ -471,6 +559,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
             "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
+            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
             "Svar altid venligt, professionelt og på dansk."
         )
         
@@ -523,6 +612,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
             "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
+            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
             "Svar altid venligt, professionelt og på dansk."
         )
 
@@ -570,6 +660,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
             "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
             "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
+            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
             "Svar altid venligt, professionelt og på dansk."
         )
 
@@ -634,6 +725,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
                     f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({user_display_name}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
                     "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
                     "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
+                    "Korte kommandoer virker direkte: bare sagsnummer, 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
                     "Svar altid venligt, professionelt og på dansk. "
                     "Du har adgang til værktøjer til at søge i vidensartikler, hente kategorier og finde sager. Brug dem aktivt, når det er relevant! "
                     f"Hvis du leder efter sager for den aktuelle bruger, kan du bruge deres e-mail: {request.user_email or 'ikke angivet'}."
@@ -859,6 +951,27 @@ async def toggle_bookmark(
     await db.commit()
     await db.refresh(msg)
     return {"is_bookmarked": msg.is_bookmarked}
+
+
+@router.delete("/messages/{msg_id}")
+async def delete_message(
+    msg_id: str,
+    db: AsyncSession = Depends(require_db),
+):
+    try:
+        msg_uuid = uuid.UUID(msg_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldigt besked-ID")
+
+    query = select(ChatbotMessage).where(ChatbotMessage.id == msg_uuid)
+    result = await db.execute(query)
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Besked ikke fundet")
+
+    await db.delete(msg)
+    await db.commit()
+    return {"success": True}
 
 
 @router.delete("/sessions/{session_id}")

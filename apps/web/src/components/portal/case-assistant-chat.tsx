@@ -55,10 +55,10 @@ const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
 const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
 
 const STAFF_QUICK_ACTIONS = [
-  "Vis mine seneste sager",
-  "Slå en sag op via sagsnummer",
-  "Luk en sag med lukningsnote",
-  "Opret ny sag for en borger",
+  "mine sager",
+  "INC-2026-00118",
+  "luk INC-2026-00118",
+  "opret Printer fejl - Kan ikke printe",
 ] as const;
 
 function clampPanelSize(width: number, height: number) {
@@ -78,9 +78,9 @@ function getExpandedHeight() {
   return Math.min(PANEL_SIZE_PRESETS.expanded.height, Math.floor(window.innerHeight * 0.85));
 }
 
-function HelpABotIcon() {
+function HelpABotIcon({ className = "size-12" }: { className?: string }) {
   return (
-    <div className="relative size-12 flex items-center justify-center animate-hover-bob">
+    <div className={cn("relative flex items-center justify-center animate-hover-bob", className)}>
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes hover-bob {
           0%, 100% { transform: translateY(0px); }
@@ -448,13 +448,13 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     }
   };
 
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm("Er du sikker på, at du vil slette denne samtales historik?")) return;
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!confirm("Slet denne ene besked fra historikken?")) return;
     try {
-      await apiDelete(`/api/v1/chat/sessions/${sessionId}`);
-      setArchivedMessages((prev) => prev.filter((msg) => msg.session_id !== sessionId));
+      await apiDelete(`/api/v1/chat/messages/${messageId}`);
+      setArchivedMessages((prev) => prev.filter((msg) => msg.id !== messageId));
     } catch (err) {
-      console.error("Error deleting session:", err);
+      console.error("Error deleting message:", err);
     }
   };
 
@@ -497,8 +497,8 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
           id: "welcome",
           role: "assistant",
           body: staff 
-            ? `Hej${namePart}! Jeg er Help-a-bot — dit centrale arbejdsvindue. Jeg kan slå sager op, opdatere status, lukke sager, søge i vidensartikler og oprette nye sager. Skriv eller brug mikrofonen. Hvad kan jeg hjælpe med?`
-            : `Hej${namePart}! Jeg er din personlige Sag-assistent. Spørg mig om dine sager, vores systemer eller vejledninger. Du kan også bruge mikrofonen til at tale din besked.`
+            ? `Hej${namePart}! Jeg er Help-a-bot. Korte kommandoer virker med det samme:\n• \`INC-2026-00118\` — find sag\n• \`luk INC-…\` — luk sag\n• \`mine sager\` — dine sager\n• \`opret Titel - Beskrivelse\` — ny sag\n\nSkriv eller brug mikrofonen.`
+            : `Hej${namePart}! Skriv kort: \`mine sager\`, sagsnummer, eller \`opret Titel - Beskrivelse\`. Mikrofonen virker også.`
         }
       ]);
     }
@@ -593,7 +593,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
         aria-label={botName}
       >
         {staff ? (
-          <HelpABotIcon />
+          <HelpABotIcon className="size-12" />
         ) : (
           <Bot className="size-5 shrink-0" aria-hidden />
         )}
@@ -615,24 +615,21 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
           role="dialog"
           aria-label={botName}
         >
-          {staff && useIcon ? (
-            <div className="case-assistant-panel-robot" aria-hidden="true">
-              <div className="size-16 drop-shadow-lg">
-                <HelpABotIcon />
-              </div>
-            </div>
-          ) : null}
-
           <header
             className={cn(
               staff
-                ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-4 py-3 pr-24 text-slate-100 border-b border-slate-700 case-assistant-panel-drag-handle shrink-0"
+                ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-3 py-2.5 pr-24 text-slate-100 border-b border-slate-700 case-assistant-panel-drag-handle shrink-0"
                 : "case-assistant-panel-header case-assistant-panel-drag-handle shrink-0",
             )}
             onMouseDown={handlePanelDragStart}
           >
-            <div className="flex items-start gap-2">
-              <GripVertical className={cn("size-4 shrink-0 mt-0.5 opacity-50", staff ? "text-slate-400" : "text-white/60")} aria-hidden />
+            <div className="flex items-center gap-2 min-w-0">
+              <GripVertical className={cn("size-4 shrink-0 opacity-50", staff ? "text-slate-400" : "text-white/60")} aria-hidden />
+              {staff && useIcon ? (
+                <div className="size-9 shrink-0 -my-1" aria-hidden="true">
+                  <HelpABotIcon className="size-9" />
+                </div>
+              ) : null}
               <div className="min-w-0">
                 <p className={cn(staff ? "text-sm font-bold tracking-tight text-slate-100" : "case-assistant-panel-title")}>
                   {botName}
@@ -794,7 +791,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
                   <Textarea
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder={listening ? "Lytter… tal nu" : "Skriv din besked her…"}
+                    placeholder={listening ? "Lytter… tal nu" : "Fx mine sager · INC-2026-00118 · luk INC-… · opret Titel - Beskrivelse"}
                     rows={panelPreset === "expanded" ? 2 : 1}
                     className={cn(
                       "min-h-0 flex-1 resize-none py-2 px-3 text-sm rounded-lg border border-input focus-visible:ring-1 focus-visible:ring-star-blue",
@@ -966,9 +963,9 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteSession(msg.session_id)}
+                              onClick={() => handleDeleteMessage(msg.id)}
                               className="p-1 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 transition-colors"
-                              title="Slet hele samtalen"
+                              title="Slet denne besked"
                             >
                               <Trash2 className="size-3.5" />
                             </button>
