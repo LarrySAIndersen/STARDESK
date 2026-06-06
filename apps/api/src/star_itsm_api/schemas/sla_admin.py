@@ -23,6 +23,7 @@ class SlaPolicyUpdate(BaseModel):
 
 class SlaStandardRuleRead(BaseModel):
     priority: str
+    ticket_type: str
     label_da: str
     policy_name: str
     response_kind: str

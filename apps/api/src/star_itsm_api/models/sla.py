@@ -24,5 +24,6 @@ class SlaAssignment(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     sla_policy_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     priority: Mapped[str] = mapped_column(String(16), nullable=False)
+    ticket_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     subcategory_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

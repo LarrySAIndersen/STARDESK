@@ -26,6 +26,7 @@ import {
   filterSourcesForSearch,
   filterStatusesForSearch,
   filterSubcategoriesForSearch,
+  filterTicketTypesForSearch,
 } from "@/lib/metadata-search";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
 import {
@@ -34,7 +35,7 @@ import {
   ticketToDetailDraft,
   type TicketDetailDraft,
 } from "@/lib/ticket-detail-draft-save";
-import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
@@ -91,6 +92,7 @@ export function TicketDetailsEditableSidebar({
   const [categoryQuery, setCategoryQuery] = useState("");
   const [subcategoryQuery, setSubcategoryQuery] = useState("");
   const [priorityQuery, setPriorityQuery] = useState("");
+  const [typeQuery, setTypeQuery] = useState("");
   const [sourceQuery, setSourceQuery] = useState("");
   const [teamQuery, setTeamQuery] = useState("");
   const [userQuery, setUserQuery] = useState("");
@@ -132,6 +134,7 @@ export function TicketDetailsEditableSidebar({
     () => filterPrioritiesForSearch(priorityQuery),
     [priorityQuery],
   );
+  const typeOptions = useMemo(() => filterTicketTypesForSearch(typeQuery), [typeQuery]);
   const sourceOptions = useMemo(
     () => filterSourcesForSearch(sourceQuery),
     [sourceQuery],
@@ -389,6 +392,27 @@ export function TicketDetailsEditableSidebar({
             />
           </EditableRow>
         </PageLayoutField>
+        <PageLayoutField fieldId="ticket_type" defaultLabel="Sagstype" defaultOrder={55}>
+          <EditableRow
+            label={getField("ticket_type", { label: "Sagstype", order: 55 }).label}
+          >
+            <SearchableSelect
+              valueId={draft.ticket_type}
+              displayValue={ticketTypeLabel(draft.ticket_type)}
+              options={typeOptions}
+              placeholder="Søg sagstype…"
+              emptyLabel="—"
+              allowClear={false}
+              disabled={isSaving}
+              onQueryChange={setTypeQuery}
+              onSelect={(option) => {
+                if (!isUnassignedOption(option.id)) {
+                  setDraft((prev) => ({ ...prev, ticket_type: option.id }));
+                }
+              }}
+            />
+          </EditableRow>
+        </PageLayoutField>
         <PageLayoutField fieldId="source" defaultLabel="Kilde" defaultOrder={60}>
           <EditableRow label={getField("source", { label: "Kilde", order: 60 }).label}>
             <SearchableSelect
@@ -445,7 +469,8 @@ export function TicketDetailsEditableSidebar({
       </Button>
       {hasChanges && !isSaving ? (
         <p className="text-muted-foreground mt-2 text-center text-[11px]">
-          Tildeling af team eller sagsbehandler kan flytte sagen til status Tildelt.
+          Ændring af sagstype eller prioritet genberegner SLA. Tildeling af team eller sagsbehandler
+          kan flytte sagen til status Tildelt.
         </p>
       ) : null}
     </aside>

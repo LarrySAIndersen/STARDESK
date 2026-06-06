@@ -29,6 +29,9 @@ export function KanbanQuickCreateDialog({
   const titleId = useId();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [ticketType, setTicketType] = useState<
+    "incident" | "service_request" | "problem"
+  >("incident");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const trapRef = useFocusTrap(open);
@@ -57,12 +60,13 @@ export function KanbanQuickCreateDialog({
         ticket: {
           title: trimmedTitle,
           description: trimmedDesc,
-          ticket_type: "incident",
+          ticket_type: ticketType,
           priority: "medium",
         },
       });
       setTitle("");
       setDescription("");
+      setTicketType("incident");
       onCreated();
       onClose();
     } catch (err) {
@@ -93,6 +97,23 @@ export function KanbanQuickCreateDialog({
               placeholder="Kort beskrivelse af problemet"
               autoFocus
             />
+          </div>
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="kanban-quick-type">Sagstype</Label>
+            <select
+              id="kanban-quick-type"
+              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+              value={ticketType}
+              onChange={(event) =>
+                setTicketType(
+                  event.target.value as "incident" | "service_request" | "problem",
+                )
+              }
+            >
+              <option value="incident">Hændelse (INC)</option>
+              <option value="service_request">Serviceanmodning (SR)</option>
+              <option value="problem">Problem (PRB)</option>
+            </select>
           </div>
           <div className="mt-4 space-y-2">
             <Label htmlFor="kanban-quick-desc">Beskrivelse</Label>

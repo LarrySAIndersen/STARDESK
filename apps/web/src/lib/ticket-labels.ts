@@ -24,7 +24,7 @@ export function priorityLabel(priority: string): string {
 }
 
 const TICKET_TYPE_LABELS: Record<string, string> = {
-  incident: "Incident",
+  incident: "Hændelse",
   service_request: "Serviceanmodning",
   problem: "Problem",
 };
