@@ -18,12 +18,7 @@ class SlaDueDates:
     resolution_due_at: datetime | None
 
 
-def compute_sla_due_dates_sync(
-    priority: str,
-    start_at: datetime,
-) -> tuple[datetime, datetime]:
-    """Compute response and resolution due from priority and anchor time."""
-    rule = get_sla_rule(priority)
+def _due_dates_from_rule(rule: SlaRule, start_at: datetime) -> tuple[datetime, datetime]:
     if start_at.tzinfo is None:
         start_at = start_at.replace(tzinfo=UTC)
     response_due = add_sla_duration(
@@ -39,8 +34,18 @@ def compute_sla_due_dates_sync(
     return response_due, resolution_due
 
 
+def compute_sla_due_dates_sync(
+    priority: str,
+    start_at: datetime,
+    ticket_type: str | None = None,
+) -> tuple[datetime, datetime]:
+    """Compute response and resolution due from priority, type, and anchor time."""
+    rule = get_sla_rule(priority, ticket_type)
+    return _due_dates_from_rule(rule, start_at)
+
+
 def compute_sla_due_dates_for_rule(rule: SlaRule, start_at: datetime) -> SlaDueDates:
-    response_due, resolution_due = compute_sla_due_dates_sync(rule.priority, start_at)
+    response_due, resolution_due = _due_dates_from_rule(rule, start_at)
     return SlaDueDates(
         sla_policy_id=None,
         response_due_at=response_due,
@@ -53,6 +58,7 @@ async def _resolve_policy(
     priority: str,
     category_id: uuid.UUID | None,
     subcategory_id: uuid.UUID | None,
+    ticket_type: str | None = None,
 ) -> SlaPolicy | None:
     assignments = (
         await db.execute(
@@ -68,7 +74,11 @@ async def _resolve_policy(
     best: SlaPolicy | None = None
     best_score = -1
     for assignment, policy in assignments:
+        if assignment.ticket_type and assignment.ticket_type != ticket_type:
+            continue
         score = 0
+        if assignment.ticket_type:
+            score += 8
         if assignment.subcategory_id:
             if assignment.subcategory_id != subcategory_id:
                 continue
@@ -84,7 +94,7 @@ async def _resolve_policy(
     if best is not None:
         return best
 
-    rule = get_sla_rule(priority)
+    rule = get_sla_rule(priority, ticket_type)
     fallback = await db.execute(
         select(SlaPolicy)
         .where(SlaPolicy.name == rule.policy_name, SlaPolicy.is_active.is_(True))
@@ -99,13 +109,20 @@ async def compute_sla_due_dates(
     priority: str,
     category_id: uuid.UUID | None,
     subcategory_id: uuid.UUID | None,
+    ticket_type: str | None = None,
     start_at: datetime | None = None,
 ) -> SlaDueDates:
-    policy = await _resolve_policy(db, priority, category_id, subcategory_id)
+    policy = await _resolve_policy(
+        db,
+        priority,
+        category_id,
+        subcategory_id,
+        ticket_type,
+    )
     anchor = start_at or datetime.now(UTC)
     if anchor.tzinfo is None:
         anchor = anchor.replace(tzinfo=UTC)
-    response_due, resolution_due = compute_sla_due_dates_sync(priority, anchor)
+    response_due, resolution_due = compute_sla_due_dates_sync(priority, anchor, ticket_type)
     return SlaDueDates(
         sla_policy_id=policy.id if policy else None,
         response_due_at=response_due,
@@ -121,7 +138,7 @@ async def apply_sla_to_ticket(
     start_at: datetime | None = None,
     force: bool = False,
 ) -> None:
-    """Set SLA fields on a ticket model (create or priority change)."""
+    """Set SLA fields on a ticket model (create or priority/type change)."""
     if not force:
         runtime = await get_sla_runtime_settings(db)
         if (
@@ -135,12 +152,14 @@ async def apply_sla_to_ticket(
     effective_priority = priority or getattr(ticket, "priority", "medium")
     category_id = getattr(ticket, "category_id", None)
     subcategory_id = getattr(ticket, "subcategory_id", None)
+    ticket_type = getattr(ticket, "ticket_type", None)
     anchor = start_at or getattr(ticket, "created_at", None) or datetime.now(UTC)
     sla = await compute_sla_due_dates(
         db,
         priority=effective_priority,
         category_id=category_id,
         subcategory_id=subcategory_id,
+        ticket_type=ticket_type,
         start_at=anchor,
     )
     ticket.sla_policy_id = sla.sla_policy_id  # type: ignore[attr-defined]

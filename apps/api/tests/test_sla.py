@@ -91,6 +91,26 @@ def test_get_sla_rule_fallback() -> None:
     assert rule.priority == "medium"
 
 
+def test_get_sla_rule_differs_by_ticket_type() -> None:
+    from star_itsm_api.services.sla_config import get_sla_rule
+
+    incident = get_sla_rule("medium", "incident")
+    service_request = get_sla_rule("medium", "service_request")
+    problem = get_sla_rule("medium", "problem")
+
+    assert incident.resolution_amount == 3
+    assert service_request.resolution_amount == 5
+    assert problem.resolution_amount == 10
+    assert incident.response_amount == service_request.response_amount
+
+
+def test_compute_sla_due_dates_sync_service_request() -> None:
+    start = datetime(2026, 5, 12, 12, 0, tzinfo=UTC)
+    _, incident_resolution = compute_sla_due_dates_sync("medium", start, "incident")
+    _, sr_resolution = compute_sla_due_dates_sync("medium", start, "service_request")
+    assert sr_resolution > incident_resolution
+
+
 def test_effective_due_dates_with_none_and_naive_created_at() -> None:
     from star_itsm_api.services.sla_enrichment import (
         effective_resolution_due_at,
@@ -257,7 +277,18 @@ async def test_compute_sla_due_dates_with_assignments_scoring() -> None:
     assignment_none = SlaAssignment(priority="critical", category_id=uuid.uuid4(), subcategory_id=uuid.uuid4())
     assignment_subcat = SlaAssignment(priority="critical", category_id=None, subcategory_id=subcat_id)
     assignment_cat = SlaAssignment(priority="critical", category_id=cat_id, subcategory_id=None)
-    assignment_both = SlaAssignment(priority="critical", category_id=cat_id, subcategory_id=subcat_id)
+    assignment_both = SlaAssignment(
+        priority="critical",
+        category_id=cat_id,
+        subcategory_id=subcat_id,
+    )
+    assignment_type_sr = SlaAssignment(
+        priority="critical",
+        category_id=None,
+        subcategory_id=None,
+        ticket_type="service_request",
+    )
+    policy_type_sr = SlaPolicy(id=uuid.uuid4(), name="SR Policy", is_active=True)
     
     mock_assignments_result = MagicMock()
     mock_assignments_result.all.return_value = [
@@ -310,6 +341,21 @@ async def test_compute_sla_due_dates_with_assignments_scoring() -> None:
         start_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
     )
     assert res4.sla_policy_id == policy_cat.id
+
+    mock_assignments_result.all.return_value = [
+        (assignment_both, policy_both),
+        (assignment_type_sr, policy_type_sr),
+    ]
+    db.execute = AsyncMock(return_value=mock_assignments_result)
+    res5 = await compute_sla_due_dates(
+        db,
+        priority="critical",
+        category_id=cat_id,
+        subcategory_id=subcat_id,
+        ticket_type="service_request",
+        start_at=datetime(2026, 5, 15, 10, 0, tzinfo=UTC),
+    )
+    assert res5.sla_policy_id == policy_type_sr.id
 
 
 @pytest.mark.asyncio

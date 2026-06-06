@@ -8,7 +8,7 @@ import {
 } from "@/components/page-layout/page-layout-edit-saga-indicator";
 import { usePageLayoutEdit } from "@/components/page-layout/page-layout-edit-provider";
 import { SlaCountdown } from "@/components/sla-countdown";
-import { priorityLabel } from "@/lib/ticket-labels";
+import { priorityLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -67,6 +67,12 @@ export function TicketDetailsSidebar({ ticket }: { ticket: TicketDetail }) {
           <DetailRow
             label={getField("priority", { label: "Prioritet", order: 50 }).label}
             value={priorityLabel(ticket.priority)}
+          />
+        </PageLayoutField>
+        <PageLayoutField fieldId="ticket_type" defaultLabel="Sagstype" defaultOrder={55}>
+          <DetailRow
+            label={getField("ticket_type", { label: "Sagstype", order: 55 }).label}
+            value={ticketTypeLabel(ticket.ticket_type)}
           />
         </PageLayoutField>
         <PageLayoutField fieldId="source" defaultLabel="Kilde" defaultOrder={60}>

@@ -15,7 +15,7 @@ from star_itsm_api.schemas.sla_admin import (
     SlaStandardRuleRead,
     SlaTeamOptionRead,
 )
-from star_itsm_api.services.sla_config import STANDARD_SLA_RULES
+from star_itsm_api.services.sla_config import STANDARD_SLA_RULES, TICKET_TYPES_FOR_SLA, get_sla_rule
 from star_itsm_api.services.sla_settings_store import get_sla_settings_row
 
 
@@ -36,18 +36,23 @@ async def list_sla_policies(db: AsyncSession) -> list[SlaPolicyRead]:
 
 
 def list_standard_sla_rules() -> list[SlaStandardRuleRead]:
-    return [
-        SlaStandardRuleRead(
-            priority=rule.priority,
-            label_da=rule.label_da,
-            policy_name=rule.policy_name,
-            response_kind=rule.response_kind,
-            response_amount=rule.response_amount,
-            resolution_kind=rule.resolution_kind,
-            resolution_amount=rule.resolution_amount,
-        )
-        for rule in STANDARD_SLA_RULES.values()
-    ]
+    rows: list[SlaStandardRuleRead] = []
+    for ticket_type in TICKET_TYPES_FOR_SLA:
+        for priority, _base in STANDARD_SLA_RULES.items():
+            rule = get_sla_rule(priority, ticket_type)
+            rows.append(
+                SlaStandardRuleRead(
+                    priority=rule.priority,
+                    ticket_type=ticket_type,
+                    label_da=rule.label_da,
+                    policy_name=rule.policy_name,
+                    response_kind=rule.response_kind,
+                    response_amount=rule.response_amount,
+                    resolution_kind=rule.resolution_kind,
+                    resolution_amount=rule.resolution_amount,
+                )
+            )
+    return rows
 
 
 async def update_sla_policy(
