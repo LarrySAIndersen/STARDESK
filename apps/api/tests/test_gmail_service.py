@@ -1,9 +1,8 @@
-from datetime import UTC, datetime
 import asyncio
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import jwt
 import pytest
 from cryptography.fernet import Fernet
 
