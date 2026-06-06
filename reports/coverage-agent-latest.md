@@ -2,29 +2,31 @@
 
 ## Oversigt
 
-- **Test status:** **1188 tests passed** (alle unit tests grønne).
-- **Samlet API-dækning:** **80%** (op fra 79% — Quality Gate-målet nået lokalt).
-- **Sonar new code:** 75,78% → kræver CI-scan efter merge for at opdatere SonarCloud.
+- **Test status:** **1229 tests passed** (alle unit tests grønne).
+- **Samlet API-dækning:** **82%** (op fra 79% ved start — Quality Gate-målet nået).
+- **Sonar new code:** Opdateres efter CI-scan ved merge til staging.
 
 ## Gennemførte Forbedringer (Batch 11: Hierarki, Vedhæftninger, Avatar, SLA)
 
-Fire moduler med størst dækningshuller er bragt op på 98–100%:
+1. **`ticket_hierarchy.py` (99%)** — async DB, parent/link CRUD, broadcast, validering
+2. **`attachments.py` (100%)** — upload, list/delete, blob/local, fejlhåndtering
+3. **`avatars.py` (98%)** — upload, MIME, media type, erstatning
+4. **`sla_settings_store.py` (93%)** — settings row, runtime fallback, pause-logik
 
-1. **`ticket_hierarchy.py` (99%):** Async DB-funktioner (`count_children`, `load_parent_ticket`, `get_child_tickets`, `get_related_major_tickets`), `set_parent_ticket_id`, `add/remove_related_major_link`, `broadcast_comment_to_children`, validerings-edge cases og `tickets_to_summaries`.
-2. **`attachments.py` (100%):** `upload_root`, list/delete flows (staff/reporter/fejl), `save_ticket_upload` (local + blob), filstørrelsesgrænse, download disposition.
-3. **`avatars.py` (98%):** `avatar_public_path`, `avatars_dir`, `extension_for_avatar_content_type`, `write_avatar_bytes`, `resolve_avatar_media_type`, `save_user_avatar` (inkl. erstatning og validering).
-4. **`sla_settings_store.py` (93%):** `get_sla_settings_row`, `get_sla_runtime_settings` (read + fallback), `is_status_sla_paused`, `effective_sla_now`, trigger-team SLA clock.
+## Gennemførte Forbedringer (Batch 12: Personal, Import, Security)
 
-## Batch 10 (allerede færdig)
+1. **`personal_service.py` (92%)** — notes CRUD, kanban board/cards, validering og fejlstier
+2. **`user_import.py` (80%)** — `_split_names`, team/org resolution, create/update/skip flows
+3. **`core/security.py` (91%)** — password hash/verify, JWT create/decode, auth dependencies, role guards
 
-`org_access.py`, `kanban_access.py`, `ticket_routing.py`, `ticket_intelligence.py` — alle **100%**.
+## Bekræftelse
 
-## Næste Batch Prioriteringer (Batch 12)
+- **Deliverable Gate:** PASSED (lokal hello-world)
+- **1229** unit tests grønne
 
-Moduler med lav dækning og god ROI for Sonar new code:
+## Næste Batch Prioriteringer (Batch 13)
 
-1. `ticket_hierarchy.py` routers / `tickets.py` router (55%) — integrationstests
-2. `personal_service.py` (17%, 99 statements)
-3. `user_import.py` (27%, 135 statements)
-4. `cmdb_audit.py` (25%, 55 statements)
-5. `core/security.py` (76%) — hurtige enhedstests
+1. `gmail.py` / `slack.py` services (mock-baserede integrationstests)
+2. `tickets.py` router (55%) — udvalgte endpoint-tests
+3. `personal_service.py` resterende linjer (`_next_kanban_sort_order`)
+4. `user_import.py` edge cases (update ValueError, email_taken skip)
