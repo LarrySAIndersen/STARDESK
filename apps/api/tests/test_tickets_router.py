@@ -903,3 +903,144 @@ async def test_get_ticket_runs_detail_pipeline(
 
     assert response.status_code == 200
     assert response.json()["description"] == "Printeren svarer ikke."
+
+
+@pytest.mark.asyncio
+async def test_update_ticket_status_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    ticket_id = uuid.uuid4()
+    ticket = _ticket_row(ticket_id, status="new")
+    override_db.get = AsyncMock(return_value=ticket)
+    read = _ticket_read(ticket_id)
+
+    with (
+        patch(
+            "star_itsm_api.routers.tickets.user_can_access_ticket",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.get_sla_runtime_settings",
+            new_callable=AsyncMock,
+            return_value=MagicMock(),
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.notify_reporter_of_ticket_update",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.ticket_to_read",
+            new_callable=AsyncMock,
+            return_value=read,
+        ),
+    ):
+        response = await api_client.patch(
+            f"/api/v1/tickets/{ticket_id}",
+            json={"status": "in_progress"},
+        )
+
+    assert response.status_code == 200
+    assert ticket.status == "in_progress"
+
+
+@pytest.mark.asyncio
+async def test_update_ticket_parent_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    ticket_id = uuid.uuid4()
+    parent_id = uuid.uuid4()
+    ticket = _ticket_row(ticket_id)
+    override_db.get = AsyncMock(return_value=ticket)
+    detail = _ticket_detail(ticket_id)
+
+    with (
+        patch(
+            "star_itsm_api.routers.tickets.user_can_access_ticket",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.set_parent_ticket_id",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.get_ticket",
+            new_callable=AsyncMock,
+            return_value=detail,
+        ),
+    ):
+        response = await api_client.patch(
+            f"/api/v1/tickets/{ticket_id}/parent",
+            json={"parent_ticket_id": str(parent_id)},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_delete_related_major_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    ticket_id = uuid.uuid4()
+    related_id = uuid.uuid4()
+    ticket = _ticket_row(ticket_id, is_major=True)
+    override_db.get = AsyncMock(return_value=ticket)
+
+    with (
+        patch(
+            "star_itsm_api.routers.tickets.user_can_access_ticket",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.remove_related_major_link",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+    ):
+        response = await api_client.delete(
+            f"/api/v1/tickets/{ticket_id}/related-majors/{related_id}",
+        )
+
+    assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_email_reply_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    ticket_id = uuid.uuid4()
+    ticket = _ticket_row(ticket_id)
+    override_db.get = AsyncMock(return_value=ticket)
+    email_row = MagicMock()
+    email_row.id = uuid.uuid4()
+    detail = _ticket_detail(ticket_id)
+
+    with (
+        patch(
+            "star_itsm_api.routers.tickets.user_can_access_ticket",
+            new_callable=AsyncMock,
+            return_value=True,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.send_ticket_email_reply",
+            new_callable=AsyncMock,
+            return_value=email_row,
+        ),
+        patch(
+            "star_itsm_api.routers.tickets.get_ticket",
+            new_callable=AsyncMock,
+            return_value=detail,
+        ),
+    ):
+        response = await api_client.post(
+            f"/api/v1/tickets/{ticket_id}/email-reply",
+            json={"body": "Vi arbejder på sagen."},
+        )
+
+    assert response.status_code == 200

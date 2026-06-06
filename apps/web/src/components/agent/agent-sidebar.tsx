@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNo
 
 import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-section";
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
+import { PinnedNotesSidebar } from "@/components/personal/pinned-notes-sidebar";
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
 import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
@@ -479,6 +480,8 @@ export function AgentSidebar({
             })
           : null}
       </nav>
+
+      <PinnedNotesSidebar collapsed={collapsed} />
 
       {!collapsed && showAdmin ? (
         <footer className="wire-sidebar-footer border-t border-[var(--gray-border)] px-3 py-2">

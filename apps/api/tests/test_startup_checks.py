@@ -19,3 +19,27 @@ def test_production_accepts_strong_config(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(settings, "cron_secret", "cron-secret")
     monkeypatch.setattr(settings, "webhook_secret", "webhook-secret")
     validate_production_settings()
+
+
+def test_production_rejects_missing_cron_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "jwt_secret", "x" * 32)
+    monkeypatch.setattr(settings, "cron_secret", None)
+    monkeypatch.setattr(settings, "webhook_secret", "webhook-secret")
+    with pytest.raises(RuntimeError, match="CRON_SECRET"):
+        validate_production_settings()
+
+
+def test_production_rejects_missing_webhook_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "production")
+    monkeypatch.setattr(settings, "jwt_secret", "x" * 32)
+    monkeypatch.setattr(settings, "cron_secret", "cron-secret")
+    monkeypatch.setattr(settings, "webhook_secret", None)
+    with pytest.raises(RuntimeError, match="WEBHOOK_SECRET"):
+        validate_production_settings()
+
+
+def test_non_production_skips_validation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "app_env", "development")
+    monkeypatch.setattr(settings, "jwt_secret", "change-me")
+    validate_production_settings()
