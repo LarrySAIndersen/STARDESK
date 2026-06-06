@@ -321,6 +321,73 @@ async def test_move_kanban_card_invalid_column() -> None:
 
 
 @pytest.mark.asyncio
+async def test_update_note_only_pinned() -> None:
+    user = _user()
+    note = _note(user_id=user.id)
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=note)
+
+    read = await personal_service.update_note(
+        mock_db,
+        user,
+        note.id,
+        PersonalNoteUpdate(is_pinned=True),
+    )
+    assert read.is_pinned is True
+    assert note.title == "Note"
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_uses_default_column_and_sort_order() -> None:
+    user = _user()
+    ticket_id = uuid.uuid4()
+    ticket = Ticket(
+        id=ticket_id,
+        ticket_number="INC-3",
+        ticket_type="incident",
+        title="Sag",
+        description="Beskrivelse lang nok til test",
+        status="new",
+        priority="medium",
+        reporter_user_id=uuid.uuid4(),
+        source="portal",
+        created_at=datetime.now(UTC),
+    )
+    mock_db = AsyncMock()
+
+    def _get(model, pk):  # noqa: ANN001
+        if model is Ticket:
+            return ticket
+        return None
+
+    mock_db.get = AsyncMock(side_effect=_get)
+
+    with patch.object(
+        personal_service,
+        "_next_kanban_sort_order",
+        new_callable=AsyncMock,
+        return_value=4,
+    ):
+        read = await personal_service.add_kanban_card(mock_db, user, ticket_id)
+
+    assert read.column_name == DEFAULT_KANBAN_COLUMNS[0]
+    assert read.sort_order == 4
+
+
+@pytest.mark.asyncio
+async def test_move_kanban_card_not_found() -> None:
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=None)
+    with pytest.raises(LookupError, match="card_not_found"):
+        await personal_service.move_kanban_card(
+            mock_db,
+            _user(),
+            uuid.uuid4(),
+            PersonalKanbanColumnUpdate(column_name=DEFAULT_KANBAN_COLUMNS[0]),
+        )
+
+
+@pytest.mark.asyncio
 async def test_update_note_rejects_deleted() -> None:
     user = _user()
     note = _note(user_id=user.id)
@@ -333,16 +400,6 @@ async def test_update_note_rejects_deleted() -> None:
             user,
             note.id,
             PersonalNoteUpdate(title="X"),
-        )
-
-    mock_db = AsyncMock()
-    mock_db.get = AsyncMock(return_value=None)
-    with pytest.raises(LookupError, match="card_not_found"):
-        await personal_service.move_kanban_card(
-            mock_db,
-            _user(),
-            uuid.uuid4(),
-            PersonalKanbanColumnUpdate(column_name=DEFAULT_KANBAN_COLUMNS[0]),
         )
 
 
