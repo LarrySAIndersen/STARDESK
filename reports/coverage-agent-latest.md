@@ -2,31 +2,32 @@
 
 ## Oversigt
 
-- **Test status:** **1229 tests passed** (alle unit tests grønne).
-- **Samlet API-dækning:** **82%** (op fra 79% ved start — Quality Gate-målet nået).
-- **Sonar new code:** Opdateres efter CI-scan ved merge til staging.
+- **Test status:** **1276 tests passed**
+- **Samlet API-dækning:** **~83%** (Batch 14 gmail push)
+- **Prod:** Batch 11+12 released via #212; Batch 13 på PR #215 (staging)
 
-## Gennemførte Forbedringer (Batch 11: Hierarki, Vedhæftninger, Avatar, SLA)
+## Gennemførte Forbedringer (Batch 14: Gmail, Slack errors, user_import)
 
-1. **`ticket_hierarchy.py` (99%)** — async DB, parent/link CRUD, broadcast, validering
-2. **`attachments.py` (100%)** — upload, list/delete, blob/local, fejlhåndtering
-3. **`avatars.py` (98%)** — upload, MIME, media type, erstatning
-4. **`sla_settings_store.py` (93%)** — settings row, runtime fallback, pause-logik
+1. **`gmail.py` (51%)** — OAuth state roundtrip, authorize URL, token encrypt/decrypt, parse HTML, integration CRUD, disconnect, history 404
+2. **`slack.py` (90%)** — disconnect noop, JWT missing, HTTP errors på exchange/channels/post
+3. **`user_import.py` (97%)** — email_taken race skip, unknown error code, org resolution on import
 
-## Gennemførte Forbedringer (Batch 12: Personal, Import, Security)
+## Batch 13 (merged til PR #215 commit 1)
 
-1. **`personal_service.py` (92%)** — notes CRUD, kanban board/cards, validering og fejlstier
-2. **`user_import.py` (80%)** — `_split_names`, team/org resolution, create/update/skip flows
-3. **`core/security.py` (91%)** — password hash/verify, JWT create/decode, auth dependencies, role guards
+1. **`slack.py` (85%)** — OAuth state, authorize URL, token exchange, kanaler, integration CRUD, post message
+2. **`cmdb_audit.py` (97%)** — search text, summary, append entry, byte-budget pagination
+3. **`personal_service.py` (97%)** — partial update, default kanban column + sort order
+4. **`user_import.py` (86%)** — email_taken skip, update ValueError paths
+5. **`core/security.py` (95%)** — token without sub, inactive user rejection
 
-## Bekræftelse
+## Tidligere batches
 
-- **Deliverable Gate:** PASSED (lokal hello-world)
-- **1229** unit tests grønne
+- **Batch 11:** ticket_hierarchy, attachments, avatars, sla_settings_store
+- **Batch 12:** personal_service, user_import, security (initial)
 
-## Næste Batch Prioriteringer (Batch 13)
+## Næste Batch Prioriteringer (Batch 15)
 
-1. `gmail.py` / `slack.py` services (mock-baserede integrationstests)
-2. `tickets.py` router (55%) — udvalgte endpoint-tests
-3. `personal_service.py` resterende linjer (`_next_kanban_sort_order`)
-4. `user_import.py` edge cases (update ValueError, email_taken skip)
+1. `gmail.py` service (51% → 70%+) — webhook/sync flows, outbound send
+2. `tickets.py` router (55%) — udvalgte endpoints
+3. `slack.py` resterende branches (90% → 95%)
+4. `gmail.py` inbound ticket creation path

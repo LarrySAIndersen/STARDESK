@@ -122,6 +122,20 @@ async def test_get_current_user_session_loads_active_user(jwt_secret: None) -> N
 
 
 @pytest.mark.asyncio
+async def test_get_current_user_session_rejects_token_without_sub(jwt_secret: None) -> None:
+    token = jwt.encode(
+        {"role": ROLE_ADMIN, "email": "no-sub@example.dk"},
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user_session(creds, AsyncMock())
+    assert exc.value.status_code == 401
+    assert exc.value.detail == "Invalid token"
+
+
+@pytest.mark.asyncio
 async def test_get_current_user_session_rejects_missing_user(jwt_secret: None) -> None:
     token = create_access_token(
         user_id=uuid.uuid4(),
@@ -131,6 +145,24 @@ async def test_get_current_user_session_rejects_missing_user(jwt_secret: None) -
     creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     mock_db = AsyncMock()
     mock_db.get = AsyncMock(return_value=None)
+
+    with pytest.raises(HTTPException) as exc:
+        await get_current_user_session(creds, mock_db)
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_get_current_user_session_rejects_inactive_user(jwt_secret: None) -> None:
+    user_id = uuid.uuid4()
+    token = create_access_token(
+        user_id=user_id,
+        role=ROLE_ADMIN,
+        email="inactive@example.dk",
+    )
+    creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    user = SimpleNamespace(id=user_id, is_active=False, deleted_at=None)
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=user)
 
     with pytest.raises(HTTPException) as exc:
         await get_current_user_session(creds, mock_db)
