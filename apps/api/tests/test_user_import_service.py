@@ -220,6 +220,10 @@ async def test_import_users_admin_handles_create_email_taken_with_update() -> No
         )
         result = await user_import.import_users_admin(mock_db, payload=payload, _actor_role="admin")
 
+    assert result.updated == 1
+    assert existing.display_name == "Updated"
+
+
 @pytest.mark.asyncio
 async def test_import_users_admin_handles_invalid_team_on_create() -> None:
     mock_db = AsyncMock()
