@@ -37,7 +37,7 @@ TICKET_REF_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 async def try_short_command(
     user_msg: str,
     user_email: str | None,
-    user_name: str | None,
+    _user_name: str | None,
 ) -> str | None:
     """Handle ultra-short Danish commands without calling the LLM."""
     msg = user_msg.strip()
@@ -55,23 +55,21 @@ async def try_short_command(
                 remainder = msg[len(prefix):].strip()
                 note = remainder[len(ticket_number):].strip() if remainder.upper().startswith(ticket_number) else remainder
                 note = note.lstrip("-:").strip() or None
-                result = await update_ticket_status(
+                return await update_ticket_status(
                     ticket_number=ticket_number,
                     status="closed",
                     actor_email=email,
                     note=note,
                 )
-                return result
 
         for prefix in ("løs ", "los ", "resolve "):
             if lower.startswith(prefix):
-                result = await update_ticket_status(
+                return await update_ticket_status(
                     ticket_number=ticket_number,
                     status="resolved",
                     actor_email=email,
                     note=None,
                 )
-                return result
 
         word_count = len(msg.split())
         if word_count <= 2 or any(k in lower for k in ("find", "sag", "vis", "status", "sla")):
@@ -93,12 +91,11 @@ async def try_short_command(
             title = title.strip()
             description = description.strip()
             if len(title) >= 3 and len(description) >= 10:
-                result = await create_ticket(
+                return await create_ticket(
                     user_email=email,
                     title=title,
                     description=description,
                 )
-                return result
 
     return None
 
