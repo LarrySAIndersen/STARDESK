@@ -427,3 +427,122 @@ async def test_list_ticket_emails_orders_results() -> None:
 
     assert len(listed) == 2
     assert listed[0].received_at < listed[1].received_at
+
+
+@pytest.mark.asyncio
+async def test_send_ticket_email_reply_real_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "gmail_mock", False)
+    monkeypatch.setattr(settings, "gmail_allow_plaintext_tokens", True)
+    org_id = uuid.uuid4()
+    ticket = Ticket(
+        id=uuid.uuid4(),
+        ticket_number="INC-2026-00042",
+        title="Printer fejl",
+        organization_id=org_id,
+    )
+    actor = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="agent@example.dk",
+        role="admin",
+        organization_id=org_id,
+    )
+    integration = EmailIntegration(
+        organization_id=org_id,
+        provider="gmail",
+        refresh_token_encrypted="plain:token",
+        connected_email="desk@example.dk",
+    )
+    latest = TicketEmail(
+        ticket_id=ticket.id,
+        gmail_thread_id="thread-1",
+        from_email="kunde@example.com",
+        subject="Printer fejl",
+        internet_message_id="<prior@example.com>",
+    )
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=_execute_result(latest))
+
+    with (
+        patch(
+            "star_itsm_api.services.gmail.get_user_organization_id",
+            return_value=org_id,
+        ),
+        patch(
+            "star_itsm_api.services.gmail.get_email_integration",
+            new_callable=AsyncMock,
+            return_value=integration,
+        ),
+        patch(
+            "star_itsm_api.services.gmail.refresh_access_token",
+            new_callable=AsyncMock,
+            return_value="access-token",
+        ),
+        patch(
+            "star_itsm_api.services.gmail._gmail_post_json",
+            new_callable=AsyncMock,
+            return_value={"id": "sent-1", "threadId": "thread-1"},
+        ),
+    ):
+        row = await send_ticket_email_reply(
+            mock_db,
+            ticket=ticket,
+            actor=actor,
+            body="Vi har løst problemet.",
+        )
+
+    assert row.gmail_message_id == "sent-1"
+    assert row.direction == "outbound"
+    mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_send_ticket_email_reply_mock_not_connected(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "gmail_mock", False)
+    ticket = Ticket(
+        id=uuid.uuid4(),
+        ticket_number="INC-2026-00042",
+        title="Printer fejl",
+        organization_id=uuid.uuid4(),
+    )
+    actor = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="agent@example.dk",
+        role="admin",
+        organization_id=ticket.organization_id,
+    )
+    mock_db = AsyncMock()
+
+    with (
+        patch(
+            "star_itsm_api.services.gmail.get_user_organization_id",
+            return_value=ticket.organization_id,
+        ),
+        patch(
+            "star_itsm_api.services.gmail.get_email_integration",
+            new_callable=AsyncMock,
+            return_value=None,
+        ),
+        pytest.raises(GmailApiError, match="ikke forbundet"),
+    ):
+        await send_ticket_email_reply(
+            mock_db,
+            ticket=ticket,
+            actor=actor,
+            body="Hej",
+        )
+
+
+@pytest.mark.asyncio
+async def test_store_ticket_email_normalizes_comma_recipients() -> None:
+    from star_itsm_api.services.gmail import _store_ticket_email
+
+    mock_db = AsyncMock()
+    message = _inbound(to_email="a@example.dk, b@example.dk , ")
+    row = _store_ticket_email(
+        mock_db,
+        organization_id=uuid.uuid4(),
+        ticket_id=uuid.uuid4(),
+        message=message,
+        direction="inbound",
+    )
+    assert row.to_email == "a@example.dk, b@example.dk"

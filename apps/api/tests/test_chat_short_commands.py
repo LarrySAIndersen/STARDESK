@@ -300,3 +300,83 @@ async def test_get_smart_mock_response_categories() -> None:
     ):
         response = await get_smart_mock_response(request)
     assert "IT" in response
+
+
+@pytest.mark.asyncio
+async def test_try_short_command_close_prefix() -> None:
+    with patch(
+        "star_itsm_api.routers.chat.update_ticket_status",
+        new_callable=AsyncMock,
+        return_value="Lukket",
+    ) as mock_update:
+        result = await try_short_command(
+            "close INC-2026-00001",
+            "agent@example.dk",
+            None,
+        )
+    assert result == "Lukket"
+    mock_update.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_get_ticket_by_number() -> None:
+    with patch(
+        "star_itsm_api.routers.chat.get_ticket_by_number",
+        new_callable=AsyncMock,
+        return_value="INC-2026-00001: Printer",
+    ) as mock_get:
+        result = await execute_tool("get_ticket_by_number", {"ticket_number": "INC-2026-00001"})
+    assert "INC-2026-00001" in result
+    mock_get.assert_awaited_once_with("INC-2026-00001")
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_update_ticket_status() -> None:
+    with patch(
+        "star_itsm_api.routers.chat.update_ticket_status",
+        new_callable=AsyncMock,
+        return_value="Status opdateret",
+    ) as mock_update:
+        result = await execute_tool(
+            "update_ticket_status",
+            {
+                "ticket_number": "INC-2026-00001",
+                "status": "resolved",
+                "actor_email": "agent@example.dk",
+            },
+        )
+    assert result == "Status opdateret"
+    mock_update.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_chat_toggle_bookmark_not_found(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    msg_id = uuid.uuid4()
+    override_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
+    response = await api_client.post(f"/api/v1/chat/messages/{msg_id}/bookmark")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_chat_messages_only_bookmarked_filter(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    scalars = MagicMock()
+    scalars.all.return_value = []
+    override_db.execute = AsyncMock(return_value=MagicMock(scalars=lambda: scalars))
+    response = await api_client.get(
+        "/api/v1/chat/messages",
+        params={"only_bookmarked": "true", "category": "VPN"},
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_chat_delete_session_invalid_id(api_client: AsyncClient) -> None:
+    response = await api_client.delete("/api/v1/chat/sessions/not-a-uuid")
+    assert response.status_code == 400
