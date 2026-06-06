@@ -258,3 +258,61 @@ async def test_disconnect_slack_clears_tokens() -> None:
     assert integration.slack_bot_token is None
     assert integration.default_channel_id is None
     mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_slack_noop_when_missing() -> None:
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    await disconnect_slack(mock_db, organization_id=uuid.uuid4())
+    mock_db.commit.assert_not_awaited()
+
+
+def test_create_oauth_state_requires_jwt(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "jwt_secret", None)
+    with pytest.raises(SlackApiError, match="JWT_SECRET"):
+        create_oauth_state(org_id=uuid.uuid4(), user_id=uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_exchange_oauth_code_http_error(monkeypatch: pytest.MonkeyPatch, slack_oauth_env: None) -> None:
+    import star_itsm_api.services.slack as slack_service
+
+    response = _FakeResponse(400, {})
+    monkeypatch.setattr(
+        slack_service.httpx,
+        "AsyncClient",
+        lambda *args, **kwargs: _FakeAsyncClient(response=response),
+    )
+    with pytest.raises(SlackApiError, match="token exchange"):
+        await exchange_oauth_code("bad-code")
+
+
+@pytest.mark.asyncio
+async def test_fetch_channels_api_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import star_itsm_api.services.slack as slack_service
+
+    response = _FakeResponse(500, {})
+    monkeypatch.setattr(
+        slack_service.httpx,
+        "AsyncClient",
+        lambda *args, **kwargs: _FakeAsyncClient(response=response),
+    )
+    with pytest.raises(SlackApiError, match="Kunne ikke hente"):
+        await fetch_channels("xoxb-test")
+
+
+@pytest.mark.asyncio
+async def test_post_ticket_message_http_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import star_itsm_api.services.slack as slack_service
+
+    response = _FakeResponse(503, {})
+    monkeypatch.setattr(
+        slack_service.httpx,
+        "AsyncClient",
+        lambda *args, **kwargs: _FakeAsyncClient(response=response),
+    )
+    with pytest.raises(SlackApiError, match="Slack afviste"):
+        await post_ticket_message(bot_token="xoxb", channel_id="C1", text="Hej")
