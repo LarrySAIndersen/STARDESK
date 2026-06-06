@@ -7,18 +7,85 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
+import {
+  PERSONAL_NOTE_COLORS,
+  personalNoteColorClass,
+  resolveNoteColorId,
+  type PersonalNoteColorId,
+} from "@/lib/personal-note-colors";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, PersonalNoteCreate, PersonalNoteUpdate } from "@/types/personal";
 
-const NOTE_COLORS = [
-  { id: "yellow", className: "bg-amber-50 border-amber-200" },
-  { id: "blue", className: "bg-sky-50 border-sky-200" },
-  { id: "green", className: "bg-emerald-50 border-emerald-200" },
-  { id: "pink", className: "bg-rose-50 border-rose-200" },
-] as const;
-
-function noteColorClass(color: string | null): string {
-  return NOTE_COLORS.find((c) => c.id === color)?.className ?? "bg-card border-border";
+function NoteCard({
+  note,
+  index,
+  onPatch,
+  onDelete,
+}: {
+  note: PersonalNote;
+  index: number;
+  onPatch: (noteId: string, payload: PersonalNoteUpdate) => Promise<void>;
+  onDelete: (noteId: string) => Promise<void>;
+}) {
+  return (
+    <li
+      className={cn(
+        "post-it-note flex flex-col gap-2 rounded-sm border p-3 shadow-md",
+        personalNoteColorClass(note.color),
+        index % 2 === 0 ? "-rotate-[0.4deg]" : "rotate-[0.35deg]",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-semibold leading-snug">{note.title}</p>
+        <div className="flex shrink-0 gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            aria-label={note.is_pinned ? "Frigør note" : "Fastgør note"}
+            onClick={() => void onPatch(note.id, { is_pinned: !note.is_pinned }).catch(() => {})}
+          >
+            {note.is_pinned ? (
+              <PinOff className="size-4" aria-hidden />
+            ) : (
+              <Pin className="size-4" aria-hidden />
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-destructive size-8"
+            aria-label="Slet note"
+            onClick={() => void onDelete(note.id).catch(() => {})}
+          >
+            <Trash2 className="size-4" aria-hidden />
+          </Button>
+        </div>
+      </div>
+      {note.content ? (
+        <p className="text-star-text-muted whitespace-pre-wrap text-sm">{note.content}</p>
+      ) : null}
+      <div className="mt-auto flex flex-wrap gap-1.5">
+        {PERSONAL_NOTE_COLORS.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={cn(
+              "size-5 rounded-full border-2 border-white/80 shadow-sm",
+              c.swatchClassName,
+              resolveNoteColorId(note.color) === c.id && "ring-star-navy ring-2 ring-offset-1",
+            )}
+            aria-label={`Farve ${c.label}`}
+            onClick={() =>
+              void onPatch(note.id, { color: c.id as PersonalNoteColorId }).catch(() => {})
+            }
+          />
+        ))}
+      </div>
+    </li>
+  );
 }
 
 export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNote[] }) {
@@ -28,14 +95,15 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sortedNotes = useMemo(
-    () =>
-      [...notes].sort((a, b) => {
-        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-        return a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at);
-      }),
-    [notes],
-  );
+  const { pinnedNotes, otherNotes } = useMemo(() => {
+    const sorted = [...notes].sort(
+      (a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at),
+    );
+    return {
+      pinnedNotes: sorted.filter((n) => n.is_pinned),
+      otherNotes: sorted.filter((n) => !n.is_pinned),
+    };
+  }, [notes]);
 
   const createNote = useCallback(async () => {
     const trimmed = title.trim();
@@ -46,6 +114,7 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
       const payload: PersonalNoteCreate = {
         title: trimmed,
         content: content.trim(),
+        color: "navy",
       };
       const created = await apiPost<PersonalNote>("/api/v1/personal/notes", payload);
       setNotes((prev) => [...prev, created]);
@@ -73,7 +142,9 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="wire-sec-title text-base">Huskeliste</h2>
-          <p className="text-muted-foreground text-sm">Private noter kun synlige for dig.</p>
+          <p className="text-muted-foreground text-sm">
+            Private noter kun synlige for dig. Fastgør med nålen — de vises til venstre og i menuen.
+          </p>
         </div>
       </div>
 
@@ -110,70 +181,53 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
       </form>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {sortedNotes.length === 0 ? (
+      {notes.length === 0 ? (
         <p className="text-muted-foreground text-sm">Ingen noter endnu — tilføj noget du skal huske.</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {sortedNotes.map((note) => (
-            <li
-              key={note.id}
-              className={cn(
-                "flex flex-col gap-2 rounded-lg border p-3 shadow-sm",
-                noteColorClass(note.color),
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold leading-snug">{note.title}</p>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    aria-label={note.is_pinned ? "Frigør note" : "Fastgør note"}
-                    onClick={() =>
-                      void patchNote(note.id, { is_pinned: !note.is_pinned }).catch(() => {})
-                    }
-                  >
-                    {note.is_pinned ? (
-                      <PinOff className="size-4" aria-hidden />
-                    ) : (
-                      <Pin className="size-4" aria-hidden />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive size-8"
-                    aria-label="Slet note"
-                    onClick={() => void deleteNote(note.id).catch(() => {})}
-                  >
-                    <Trash2 className="size-4" aria-hidden />
-                  </Button>
-                </div>
-              </div>
-              {note.content ? (
-                <p className="text-muted-foreground whitespace-pre-wrap text-sm">{note.content}</p>
-              ) : null}
-              <div className="mt-auto flex flex-wrap gap-1">
-                {NOTE_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={cn(
-                      "size-5 rounded-full border-2",
-                      c.className,
-                      note.color === c.id && "ring-star-blue ring-2 ring-offset-1",
-                    )}
-                    aria-label={`Farve ${c.id}`}
-                    onClick={() => void patchNote(note.id, { color: c.id }).catch(() => {})}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          {pinnedNotes.length > 0 ? (
+            <aside className="w-full shrink-0 lg:w-52 xl:w-56">
+              <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-semibold">
+                <Pin className="size-3.5 shrink-0" aria-hidden />
+                Fastgjort til venstre
+              </p>
+              <ul className="flex flex-col gap-3">
+                {pinnedNotes.map((note, index) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    index={index}
+                    onPatch={patchNote}
+                    onDelete={deleteNote}
                   />
                 ))}
-              </div>
-            </li>
-          ))}
-        </ul>
+              </ul>
+            </aside>
+          ) : null}
+
+          {otherNotes.length > 0 ? (
+            <ul
+              className={cn(
+                "grid flex-1 gap-3 sm:grid-cols-2",
+                pinnedNotes.length > 0 ? "xl:grid-cols-2" : "xl:grid-cols-3",
+              )}
+            >
+              {otherNotes.map((note, index) => (
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  index={index}
+                  onPatch={patchNote}
+                  onDelete={deleteNote}
+                />
+              ))}
+            </ul>
+          ) : pinnedNotes.length > 0 ? (
+            <p className="text-muted-foreground flex-1 text-sm">
+              Alle dine noter er fastgjort — frigør en note for at flytte den til hovedlisten.
+            </p>
+          ) : null}
+        </div>
       )}
     </section>
   );

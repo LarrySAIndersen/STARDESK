@@ -2281,9 +2281,9 @@ body.page-layout-edit-active .page-layout-field--editing {
   background: color-mix(in srgb, var(--star-blue-light) 8%, transparent);
 }
 
-/* Stardesk Reviewer — gule sedler */
+/* Stardesk Reviewer — forbedrings-sedler (STAR palette) */
 .review-notes-toolbar {
-  @apply fixed right-4 z-[60] flex max-w-sm flex-col gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 shadow-md;
+  @apply fixed right-4 z-[60] flex max-w-sm flex-col gap-1 rounded-sm border border-star-navy/25 bg-star-blue-light px-3 py-2 text-xs text-star-navy shadow-md;
   top: calc(var(--wire-page-layout-banner-top, 3.5rem) + 0.5rem);
 }
 
@@ -2292,7 +2292,7 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .review-notes-toolbar__hint {
-  @apply text-amber-900/80 leading-snug;
+  @apply text-star-text-muted leading-snug;
 }
 
 .review-notes-layer {
@@ -2304,12 +2304,12 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .review-note-pin {
-  @apply absolute z-[46] flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-amber-500 bg-amber-300 text-amber-950 shadow-md transition-transform hover:scale-105;
+  @apply absolute z-[46] flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-star-red/40 bg-star-red-light text-star-navy shadow-md transition-transform hover:scale-105;
 }
 
 .review-note-popover,
 .review-note-composer {
-  @apply absolute z-[47] w-72 max-w-[calc(100vw-2rem)] rounded-md border border-amber-400 bg-amber-100 p-3 text-amber-950 shadow-lg;
+  @apply absolute z-[47] w-72 max-w-[calc(100vw-2rem)] rounded-sm border border-star-navy/30 bg-star-blue-light p-3 text-star-navy shadow-lg;
 }
 
 .review-note-popover__header,
@@ -2318,7 +2318,7 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .review-note-popover__meta {
-  @apply text-xs text-amber-900/80;
+  @apply text-star-text-muted text-xs;
 }
 
 .review-note-popover__comment {
@@ -2326,7 +2326,20 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .review-note-composer__textarea {
-  @apply border-amber-300 bg-amber-50 text-sm;
+  @apply border-star-navy/25 bg-card text-sm;
+}
+
+/* Personal post-it notes */
+.post-it-note {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--star-navy) 12%, transparent),
+    0 4px 10px color-mix(in srgb, var(--star-navy) 8%, transparent);
+}
+
+.post-it-note--sidebar {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--star-navy) 10%, transparent),
+    0 2px 6px color-mix(in srgb, var(--star-navy) 6%, transparent);
 }
 
 .review-note-composer__actions {
