@@ -106,12 +106,14 @@ CREATE TABLE sla_assignments (
     sla_policy_id   UUID NOT NULL REFERENCES sla_policies(id) ON DELETE RESTRICT,
     priority        VARCHAR(16) NOT NULL
                     CHECK (priority IN ('critical', 'high', 'medium', 'low')),
+    ticket_type     VARCHAR(32)
+                    CHECK (ticket_type IS NULL OR ticket_type IN ('service_request', 'incident', 'problem')),
     category_id     UUID REFERENCES categories(id) ON DELETE CASCADE,
     subcategory_id  UUID REFERENCES subcategories(id) ON DELETE CASCADE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_sla_assignments_lookup
-    ON sla_assignments (priority, category_id, subcategory_id);
+    ON sla_assignments (priority, ticket_type, category_id, subcategory_id);
 
 -- Routing Rules
 CREATE TABLE routing_rules (

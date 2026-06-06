@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiGet, apiPatch } from "@/lib/api";
+import { ticketTypeLabel } from "@/lib/ticket-labels";
 
 type SlaPolicy = Readonly<{
   id: string;
@@ -21,6 +22,7 @@ type SlaPolicy = Readonly<{
 
 type StandardRule = Readonly<{
   priority: string;
+  ticket_type: string;
   label_da: string;
   policy_name: string;
   response_kind: string;
@@ -293,13 +295,15 @@ export function AdminSlaPanel() {
       <section className="wire-card">
         <h2 className="wire-card-title">Standard SLA (P1–P4)</h2>
         <p className="text-muted-foreground mb-3 text-xs">
-          Gælder ved oprettelse og når prioritet/sagstype ændres (medmindre SLA startes ved
-          gruppetildeling). Incident og service request bruger samme beregningsmotor.
+          Gælder ved oprettelse og når prioritet eller sagstype ændres (medmindre SLA startes ved
+          gruppetildeling). Serviceanmodninger og problemer har længere løsningsfrister end
+          hændelser på P3/P4.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-[var(--gray-border)]">
+                <th className="py-2 pr-2">Sagstype</th>
                 <th className="py-2 pr-2">Prioritet</th>
                 <th className="py-2 pr-2">Respons</th>
                 <th className="py-2 pr-2">Løsning</th>
@@ -308,7 +312,11 @@ export function AdminSlaPanel() {
             </thead>
             <tbody>
               {rules.map((r) => (
-                <tr key={r.priority} className="border-b border-[var(--gray-border)]/60">
+                <tr
+                  key={`${r.ticket_type}-${r.priority}`}
+                  className="border-b border-[var(--gray-border)]/60"
+                >
+                  <td className="py-2 pr-2">{ticketTypeLabel(r.ticket_type)}</td>
                   <td className="py-2 pr-2 font-medium">{r.label_da}</td>
                   <td className="py-2 pr-2">
                     {r.response_amount}{" "}

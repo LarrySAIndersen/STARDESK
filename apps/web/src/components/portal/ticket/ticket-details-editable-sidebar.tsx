@@ -8,6 +8,7 @@ import {
 } from "@/components/page-layout/page-layout-edit-saga-indicator";
 import { PageLayoutField, PageLayoutGrid } from "@/components/page-layout/page-layout-field";
 import { usePageLayoutEdit } from "@/components/page-layout/page-layout-edit-provider";
+import { TicketDetailFieldLabel } from "@/components/portal/ticket/ticket-detail-field-label";
 import { SlaCountdown } from "@/components/sla-countdown";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -26,6 +27,7 @@ import {
   filterSourcesForSearch,
   filterStatusesForSearch,
   filterSubcategoriesForSearch,
+  filterTicketTypesForSearch,
 } from "@/lib/metadata-search";
 import { sortTeamsForDisplay } from "@/lib/team-categories";
 import {
@@ -34,31 +36,41 @@ import {
   ticketToDetailDraft,
   type TicketDetailDraft,
 } from "@/lib/ticket-detail-draft-save";
-import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
+import { priorityLabel, statusLabel, ticketTypeLabel } from "@/lib/ticket-labels";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
 import type { Ticket, TicketDetail } from "@/types/ticket";
 
 function EditableRow({
+  fieldId,
   label,
   children,
 }: {
+  fieldId: string;
   label: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1 border-b border-border py-2.5 text-[13px] last:border-b-0">
-      <span className="text-muted-foreground block font-medium">{label}</span>
+      <TicketDetailFieldLabel fieldId={fieldId} label={label} className="block" />
       <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-function ReadOnlyRow({ label, value }: { label: string; value: React.ReactNode }) {
+function ReadOnlyRow({
+  fieldId,
+  label,
+  value,
+}: {
+  fieldId: string;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex justify-between gap-3 border-b border-border py-2.5 text-[13px] last:border-b-0">
-      <span className="text-muted-foreground shrink-0 font-medium">{label}</span>
+      <TicketDetailFieldLabel fieldId={fieldId} label={label} className="shrink-0" />
       <span className="text-foreground text-right font-medium">{value}</span>
     </div>
   );
@@ -91,6 +103,7 @@ export function TicketDetailsEditableSidebar({
   const [categoryQuery, setCategoryQuery] = useState("");
   const [subcategoryQuery, setSubcategoryQuery] = useState("");
   const [priorityQuery, setPriorityQuery] = useState("");
+  const [typeQuery, setTypeQuery] = useState("");
   const [sourceQuery, setSourceQuery] = useState("");
   const [teamQuery, setTeamQuery] = useState("");
   const [userQuery, setUserQuery] = useState("");
@@ -132,6 +145,7 @@ export function TicketDetailsEditableSidebar({
     () => filterPrioritiesForSearch(priorityQuery),
     [priorityQuery],
   );
+  const typeOptions = useMemo(() => filterTicketTypesForSearch(typeQuery), [typeQuery]);
   const sourceOptions = useMemo(
     () => filterSourcesForSearch(sourceQuery),
     [sourceQuery],
@@ -285,6 +299,7 @@ export function TicketDetailsEditableSidebar({
       <PageLayoutGrid className="space-y-0">
         <PageLayoutField fieldId="status" defaultLabel="Status" defaultOrder={5}>
           <EditableRow
+            fieldId="status"
             label={getField("status", { label: "Status", order: 5 }).label}
           >
             <SearchableSelect
@@ -300,8 +315,31 @@ export function TicketDetailsEditableSidebar({
             />
           </EditableRow>
         </PageLayoutField>
+        <PageLayoutField fieldId="ticket_type" defaultLabel="Sagstype" defaultOrder={7}>
+          <EditableRow
+            fieldId="ticket_type"
+            label={getField("ticket_type", { label: "Sagstype", order: 7 }).label}
+          >
+            <SearchableSelect
+              valueId={draft.ticket_type}
+              displayValue={ticketTypeLabel(draft.ticket_type)}
+              options={typeOptions}
+              placeholder="Søg sagstype…"
+              emptyLabel="—"
+              allowClear={false}
+              disabled={isSaving}
+              onQueryChange={setTypeQuery}
+              onSelect={(option) => {
+                if (!isUnassignedOption(option.id)) {
+                  setDraft((prev) => ({ ...prev, ticket_type: option.id }));
+                }
+              }}
+            />
+          </EditableRow>
+        </PageLayoutField>
         <PageLayoutField fieldId="category" defaultLabel="Kategori" defaultOrder={10}>
           <EditableRow
+            fieldId="category"
             label={getField("category", { label: "Kategori", order: 10 }).label}
           >
             <SearchableSelect
@@ -318,6 +356,7 @@ export function TicketDetailsEditableSidebar({
         </PageLayoutField>
         <PageLayoutField fieldId="subcategory" defaultLabel="Underkategori" defaultOrder={20}>
           <EditableRow
+            fieldId="subcategory"
             label={getField("subcategory", { label: "Underkategori", order: 20 }).label}
           >
             <SearchableSelect
@@ -336,6 +375,7 @@ export function TicketDetailsEditableSidebar({
         </PageLayoutField>
         <PageLayoutField fieldId="team" defaultLabel="Tildelt team" defaultOrder={30}>
           <EditableRow
+            fieldId="team"
             label={getField("team", { label: "Tildelt team", order: 30 }).label}
           >
             <SearchableSelect
@@ -352,6 +392,7 @@ export function TicketDetailsEditableSidebar({
         </PageLayoutField>
         <PageLayoutField fieldId="assignee" defaultLabel="Sagsbehandler" defaultOrder={40}>
           <EditableRow
+            fieldId="assignee"
             label={getField("assignee", { label: "Sagsbehandler", order: 40 }).label}
           >
             <SearchableSelect
@@ -370,6 +411,7 @@ export function TicketDetailsEditableSidebar({
         </PageLayoutField>
         <PageLayoutField fieldId="priority" defaultLabel="Prioritet" defaultOrder={50}>
           <EditableRow
+            fieldId="priority"
             label={getField("priority", { label: "Prioritet", order: 50 }).label}
           >
             <SearchableSelect
@@ -390,7 +432,10 @@ export function TicketDetailsEditableSidebar({
           </EditableRow>
         </PageLayoutField>
         <PageLayoutField fieldId="source" defaultLabel="Kilde" defaultOrder={60}>
-          <EditableRow label={getField("source", { label: "Kilde", order: 60 }).label}>
+          <EditableRow
+            fieldId="source"
+            label={getField("source", { label: "Kilde", order: 60 }).label}
+          >
             <SearchableSelect
               valueId={draft.source}
               displayValue={ticketSourceLabelDa(draft.source)}
@@ -410,6 +455,7 @@ export function TicketDetailsEditableSidebar({
         </PageLayoutField>
         <PageLayoutField fieldId="reporter" defaultLabel="Indmelder" defaultOrder={70}>
           <ReadOnlyRow
+            fieldId="reporter"
             label={getField("reporter", { label: "Indmelder", order: 70 }).label}
             value={ticket.reporter_display_name ?? "—"}
           />
@@ -417,9 +463,11 @@ export function TicketDetailsEditableSidebar({
       </PageLayoutGrid>
       <PageLayoutField fieldId="sla" defaultLabel="SLA" defaultOrder={80}>
         <div className="border-border mt-4 border-t pt-4">
-          <p className="text-muted-foreground mb-2 text-[12px] font-medium uppercase tracking-wide">
-            {getField("sla", { label: "SLA", order: 80 }).label}
-          </p>
+          <TicketDetailFieldLabel
+            fieldId="sla"
+            label={getField("sla", { label: "SLA", order: 80 }).label}
+            className="text-muted-foreground mb-2 text-[12px] uppercase tracking-wide"
+          />
           <SlaCountdown
             status={ticket.status}
             resolutionDueAt={ticket.resolution_due_at}
@@ -445,7 +493,8 @@ export function TicketDetailsEditableSidebar({
       </Button>
       {hasChanges && !isSaving ? (
         <p className="text-muted-foreground mt-2 text-center text-[11px]">
-          Tildeling af team eller sagsbehandler kan flytte sagen til status Tildelt.
+          Ændring af sagstype eller prioritet genberegner SLA. Tildeling af team eller sagsbehandler
+          kan flytte sagen til status Tildelt.
         </p>
       ) : null}
     </aside>

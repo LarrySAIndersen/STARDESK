@@ -30,7 +30,8 @@ def effective_resolution_due_at(ticket: Ticket) -> datetime | None:
     anchor = ticket.created_at
     if anchor.tzinfo is None:
         anchor = anchor.replace(tzinfo=UTC)
-    _, resolution_due = compute_sla_due_dates_sync(ticket.priority, anchor)
+    ticket_type = getattr(ticket, "ticket_type", None)
+    _, resolution_due = compute_sla_due_dates_sync(ticket.priority, anchor, ticket_type)
     return resolution_due
 
 
@@ -42,7 +43,8 @@ def effective_response_due_at(ticket: Ticket) -> datetime | None:
     anchor = ticket.created_at
     if anchor.tzinfo is None:
         anchor = anchor.replace(tzinfo=UTC)
-    response_due, _ = compute_sla_due_dates_sync(ticket.priority, anchor)
+    ticket_type = getattr(ticket, "ticket_type", None)
+    response_due, _ = compute_sla_due_dates_sync(ticket.priority, anchor, ticket_type)
     return response_due
 
 

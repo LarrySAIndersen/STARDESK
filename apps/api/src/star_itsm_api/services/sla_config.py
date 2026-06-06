@@ -1,10 +1,13 @@
 """Standard STAR resolution SLA targets (single source of truth for calculation)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 Priority = Literal["critical", "high", "medium", "low"]
 SlaTimeKind = Literal["calendar_hours", "business_days"]
+TicketType = Literal["incident", "service_request", "problem"]
+
+TICKET_TYPES_FOR_SLA: tuple[TicketType, ...] = ("incident", "service_request", "problem")
 
 
 @dataclass(frozen=True)
@@ -59,8 +62,28 @@ STANDARD_SLA_RULES: dict[Priority, SlaRule] = {
 }
 
 
-def get_sla_rule(priority: str) -> SlaRule:
+# Longer resolution targets for service requests and problem records (response unchanged).
+TICKET_TYPE_SLA_OVERRIDES: dict[TicketType, dict[Priority, dict[str, int]]] = {
+    "service_request": {
+        "medium": {"resolution_amount": 5},
+        "low": {"resolution_amount": 7},
+    },
+    "problem": {
+        "medium": {"resolution_amount": 10},
+        "low": {"resolution_amount": 14},
+    },
+}
+
+
+def get_sla_rule(priority: str, ticket_type: str | None = None) -> SlaRule:
     rule = STANDARD_SLA_RULES.get(priority)  # type: ignore[arg-type]
     if rule is None:
-        return STANDARD_SLA_RULES["medium"]
-    return rule
+        rule = STANDARD_SLA_RULES["medium"]
+    if not ticket_type or ticket_type == "incident":
+        return rule
+    if ticket_type not in TICKET_TYPE_SLA_OVERRIDES:
+        return rule
+    override = TICKET_TYPE_SLA_OVERRIDES[ticket_type].get(rule.priority)  # type: ignore[arg-type]
+    if override is None:
+        return rule
+    return replace(rule, **override)

@@ -61,6 +61,13 @@ Merged PRs: #123, #129, #132, #134 (S2083 `safe_repo_paths.py`).
 - Feature-PR → base **`staging`**, draft indtil 10 commits eller label `batch-ready` / `hotfix`.
 - Prod kun Jan: PR `staging` → `main`.
 
+## Reference (workboard)
+
+| Emne | Fil |
+|------|-----|
+| Sagsarkiv, revision, migration før prod | [sagsarkiv-produktion.md](./sagsarkiv-produktion.md) |
+| Constitution (sikkerhed, performance, kodepraksis) | [constitution/README.md](./constitution/README.md) |
+
 ## Åbne opfølgninger
 
 - [ ] Merge PR #137 (staging gate Vercel bypass) til `staging`

@@ -8,6 +8,7 @@ export type TicketDetailDraft = {
   assigned_team_id: string | null;
   assigned_user_id: string | null;
   priority: string;
+  ticket_type: string;
   source: string | null;
 };
 
@@ -18,6 +19,7 @@ export function ticketToDetailDraft(ticket: TicketDetail): TicketDetailDraft {
     assigned_team_id: ticket.assigned_team_id ?? null,
     assigned_user_id: ticket.assigned_user_id ?? null,
     priority: ticket.priority,
+    ticket_type: ticket.ticket_type,
     source: ticket.source ?? null,
   };
 }
@@ -32,6 +34,7 @@ export function ticketDetailDraftsEqual(
     a.assigned_team_id === b.assigned_team_id &&
     a.assigned_user_id === b.assigned_user_id &&
     a.priority === b.priority &&
+    a.ticket_type === b.ticket_type &&
     a.source === b.source
   );
 }
@@ -83,6 +86,13 @@ export async function saveTicketDetailDraft(
   if (before.priority !== after.priority) {
     detail = await apiPatch<TicketDetail>(`/api/v1/tickets/${ticketId}/priority`, {
       priority: after.priority,
+      reason: METADATA_FIELD_CHANGE_REASON,
+    });
+  }
+
+  if (before.ticket_type !== after.ticket_type) {
+    detail = await apiPatch<TicketDetail>(`/api/v1/tickets/${ticketId}/ticket-type`, {
+      ticket_type: after.ticket_type,
       reason: METADATA_FIELD_CHANGE_REASON,
     });
   }
