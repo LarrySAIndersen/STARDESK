@@ -256,3 +256,61 @@ async def test_import_users_admin_handles_invalid_team_on_create() -> None:
     assert result.failed == 1
     assert result.errors[0].message == INVALID_GROUP
 
+
+@pytest.mark.asyncio
+async def test_import_users_admin_skips_when_email_taken_on_create() -> None:
+    mock_db = AsyncMock()
+    teams_result = MagicMock()
+    teams_result.all.return_value = []
+    orgs_result = MagicMock()
+    orgs_result.all.return_value = []
+    mock_db.execute = AsyncMock(side_effect=[teams_result, orgs_result])
+
+    with patch(
+        "star_itsm_api.services.user_import._user_by_email",
+        new_callable=AsyncMock,
+        return_value=None,
+    ), patch(
+        "star_itsm_api.services.user_import.email_taken",
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        payload = UserImportRequest(
+            rows=[UserImportRow(email="exists@example.dk", display_name="User")],
+            default_role=ROLE_SUBMITTER,
+            on_duplicate="skip",
+        )
+        result = await user_import.import_users_admin(mock_db, payload=payload, _actor_role="admin")
+
+    assert result.skipped == 1
+
+
+@pytest.mark.asyncio
+async def test_import_users_admin_update_value_error_adds_invalid_group() -> None:
+    mock_db = AsyncMock()
+    teams_result = MagicMock()
+    teams_result.all.return_value = []
+    orgs_result = MagicMock()
+    orgs_result.all.return_value = []
+    mock_db.execute = AsyncMock(side_effect=[teams_result, orgs_result])
+    existing = User(id=uuid.uuid4(), email="exists@example.dk", display_name="Old", role=ROLE_SUBMITTER)
+
+    with patch(
+        "star_itsm_api.services.user_import._user_by_email",
+        new_callable=AsyncMock,
+        return_value=existing,
+    ), patch(
+        "star_itsm_api.services.user_import.sync_user_teams",
+        new_callable=AsyncMock,
+        side_effect=ValueError("invalid_team"),
+    ):
+        payload = UserImportRequest(
+            rows=[UserImportRow(email="exists@example.dk", display_name="Updated")],
+            default_role=ROLE_SUBMITTER,
+            on_duplicate="update",
+        )
+        result = await user_import.import_users_admin(mock_db, payload=payload, _actor_role="admin")
+
+    assert result.failed == 1
+    assert result.errors[0].message == INVALID_GROUP
+
