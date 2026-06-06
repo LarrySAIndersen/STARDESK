@@ -11,6 +11,8 @@ from star_itsm_api.models.email_integration import EmailIntegration
 from star_itsm_api.services.gmail import (
     GmailApiError,
     InboundEmailMessage,
+    _gmail_history_ids,
+    _message_targets_sync_mailbox,
     assert_connected_mailbox_allowed,
     build_oauth_authorize_url,
     build_outbound_from_address,
@@ -29,8 +31,6 @@ from star_itsm_api.services.gmail import (
     refresh_access_token,
     save_gmail_preferences,
     upsert_email_integration,
-    _gmail_history_ids,
-    _message_targets_sync_mailbox,
 )
 
 
