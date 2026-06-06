@@ -36,7 +36,8 @@ jobs:
           pytest -q \
             --cov=star_itsm_api \
             --cov-report=term-missing \
-            --cov-report=xml:coverage.xml
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=85
       - name: Verify coverage artifact
         run: test -f coverage.xml
       - name: Rewrite coverage paths for SonarCloud
@@ -65,6 +66,13 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: SonarCloud Quality Gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
+        timeout-minutes: 10
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR }}
       - name: Bandit (SAST)
         run: bandit -r src -ll -q
       - name: pip-audit (dependencies)
