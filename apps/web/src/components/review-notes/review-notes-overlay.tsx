@@ -112,7 +112,7 @@ function ReviewNoteComposer({
       aria-label="Ny forbedring"
     >
       <div className="review-note-composer__header">
-        <StickyNote className="size-4 text-amber-700" aria-hidden />
+        <StickyNote className="text-star-red size-4" aria-hidden />
         <strong className="text-sm">Ny forbedring</strong>
       </div>
       <Textarea
@@ -227,7 +227,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             <span>Review-tilstand</span>
           </label>
           <span className="review-notes-toolbar__hint">
-            {reviewMode ? "Klik på siden for at placere en gul seddel" : "Slå til for at tilføje sedler"}
+            {reviewMode ? "Klik på siden for at placere en seddel" : "Slå til for at tilføje sedler"}
           </span>
         </div>
       ) : null}
