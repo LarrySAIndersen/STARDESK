@@ -10,3 +10,20 @@ export function readDraggedTicketId(dataTransfer: DataTransfer): string {
     dataTransfer.getData(PERSONAL_KANBAN_DRAG_MIME) || dataTransfer.getData("text/plain") || ""
   );
 }
+
+export function isNoteDrag(dataTransfer: DataTransfer): boolean {
+  return (
+    dataTransfer.types.includes(PERSONAL_NOTE_DRAG_MIME) ||
+    dataTransfer.types.includes("text/plain")
+  );
+}
+
+export function beginNoteDrag(dataTransfer: DataTransfer, noteId: string): void {
+  dataTransfer.setData(PERSONAL_NOTE_DRAG_MIME, noteId);
+  dataTransfer.setData("text/plain", noteId);
+  dataTransfer.effectAllowed = "move";
+}
+
+export function shouldBlockNoteDrag(target: EventTarget | null): boolean {
+  return Boolean((target as HTMLElement | null)?.closest("[data-no-drag]"));
+}

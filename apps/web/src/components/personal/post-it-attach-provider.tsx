@@ -1,10 +1,21 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { StickyNote } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiPatch } from "@/lib/api";
 import { readDraggedNoteId } from "@/lib/personal-board-dnd";
 import { cn } from "@/lib/utils";
@@ -33,19 +44,23 @@ export function usePostItAttach(): PostItAttachContextValue {
   return ctx;
 }
 
+type PostItAttachProviderProps = Readonly<{
+  children: ReactNode;
+  onNoteUpdated?: (note: PersonalNote) => void;
+  onAttached?: (note: PersonalNote) => void;
+}>;
+
 export function PostItAttachProvider({
   children,
   onNoteUpdated,
   onAttached,
-}: {
-  children: ReactNode;
-  onNoteUpdated?: (note: PersonalNote) => void;
-  onAttached?: (note: PersonalNote) => void;
-}) {
+}: PostItAttachProviderProps) {
   const [pending, setPending] = useState<PendingAttach | null>(null);
   const [visibility, setVisibility] = useState<PersonalNoteVisibility>("private");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const requestAttach = useCallback((next: PendingAttach) => {
     setVisibility("private");
@@ -53,11 +68,38 @@ export function PostItAttachProvider({
     setPending(next);
   }, []);
 
-  const close = () => {
+  const close = useCallback(() => {
     if (busy) return;
     setPending(null);
     setError(null);
-  };
+  }, [busy]);
+
+  const trapRef = useFocusTrap(Boolean(pending), close);
+  const contextValue = useMemo(() => ({ requestAttach }), [requestAttach]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (pending) {
+      if (!dialog.open) dialog.showModal();
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [pending]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleCancel = (event: Event) => {
+      if (busy) {
+        event.preventDefault();
+        return;
+      }
+      close();
+    };
+    dialog.addEventListener("cancel", handleCancel);
+    return () => dialog.removeEventListener("cancel", handleCancel);
+  }, [busy, close]);
 
   const confirm = async () => {
     if (!pending) return;
@@ -83,19 +125,14 @@ export function PostItAttachProvider({
   };
 
   return (
-    <PostItAttachContext.Provider value={{ requestAttach }}>
+    <PostItAttachContext.Provider value={contextValue}>
       {children}
       {pending ? (
-        <div className="post-it-attach-backdrop" role="presentation" onClick={close}>
-          <div
-            className="post-it-attach-dialog"
-            role="dialog"
-            aria-labelledby="post-it-attach-title"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <dialog ref={dialogRef} className="post-it-attach-dialog" aria-labelledby={titleId}>
+          <div ref={trapRef} className="post-it-attach-dialog__panel">
             <div className="post-it-attach-dialog__header">
               <StickyNote className="size-4 text-star-blue" aria-hidden />
-              <h2 id="post-it-attach-title" className="text-sm font-semibold">
+              <h2 id={titleId} className="text-sm font-semibold">
                 Fastgør seddel på sag
               </h2>
             </div>
@@ -148,11 +185,19 @@ export function PostItAttachProvider({
               </Button>
             </div>
           </div>
-        </div>
+        </dialog>
       ) : null}
     </PostItAttachContext.Provider>
   );
 }
+
+type TicketPostItDropTargetProps = Readonly<{
+  ticketId: string;
+  ticketNumber: string;
+  ticketTitle: string;
+  children: ReactNode;
+  className?: string;
+}>;
 
 export function TicketPostItDropTarget({
   ticketId,
@@ -160,19 +205,14 @@ export function TicketPostItDropTarget({
   ticketTitle,
   children,
   className,
-}: {
-  ticketId: string;
-  ticketNumber: string;
-  ticketTitle: string;
-  children: ReactNode;
-  className?: string;
-}) {
+}: TicketPostItDropTargetProps) {
   const { requestAttach } = usePostItAttach();
   const [active, setActive] = useState(false);
 
   return (
-    <div
+    <aside
       className={cn(className, active && "ticket-post-it-drop--active")}
+      aria-label={`Slip seddel her for at fastgøre på sag ${ticketNumber}`}
       onDragOver={(e) => {
         const noteId = e.dataTransfer.types.includes("application/x-stardesk-personal-note");
         if (!noteId) return;
@@ -190,6 +230,6 @@ export function TicketPostItDropTarget({
       }}
     >
       {children}
-    </div>
+    </aside>
   );
 }

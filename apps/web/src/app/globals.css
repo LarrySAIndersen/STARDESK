@@ -2854,6 +2854,47 @@ body.page-layout-edit-active .page-layout-field--editing {
   width: 100%;
 }
 
+.post-it-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  user-select: none;
+}
+
+.post-it-display__title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--star-navy);
+}
+
+.post-it-display__body {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--star-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.post-it-display__body--compact {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.post-it-display__placeholder {
+  margin: 0;
+  font-size: 0.625rem;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--star-navy) 45%, transparent);
+  font-style: italic;
+}
+
 .post-it-edit__badges {
   display: flex;
   flex-wrap: wrap;
@@ -2996,19 +3037,21 @@ body.page-layout-edit-active .page-layout-field--editing {
   border-radius: 4px;
 }
 
-.post-it-attach-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 70;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+.post-it-attach-dialog {
+  width: min(24rem, calc(100% - 2rem));
+  max-width: min(24rem, calc(100% - 2rem));
+  margin: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.post-it-attach-dialog::backdrop {
   background: color-mix(in srgb, var(--star-navy) 35%, transparent);
 }
 
-.post-it-attach-dialog {
-  width: min(24rem, 100%);
+.post-it-attach-dialog__panel {
+  width: 100%;
   padding: 1rem;
   border-radius: 0.5rem;
   border: 1px solid color-mix(in srgb, var(--star-navy) 12%, transparent);

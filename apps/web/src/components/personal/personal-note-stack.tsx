@@ -6,7 +6,12 @@ import { Plus, Trash2 } from "lucide-react";
 import { EditablePostItFields } from "@/components/personal/editable-post-it-fields";
 import { Button } from "@/components/ui/button";
 import { apiDelete, apiPost } from "@/lib/api";
-import { PERSONAL_NOTE_DRAG_MIME, readDraggedNoteId } from "@/lib/personal-board-dnd";
+import {
+  beginNoteDrag,
+  isNoteDrag,
+  readDraggedNoteId,
+  shouldBlockNoteDrag,
+} from "@/lib/personal-board-dnd";
 import {
   PERSONAL_NOTE_COLORS,
   personalNoteColorClass,
@@ -74,7 +79,8 @@ export function PersonalNoteStack({
     [notes, onNotesChange],
   );
 
-  const handleStackDragOver = (e: DragEvent<HTMLDivElement>) => {
+  const handleStackDragOver = (e: DragEvent<HTMLElement>) => {
+    if (!isNoteDrag(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setStackDragOver(true);
@@ -147,12 +153,11 @@ export function PersonalNoteStack({
           <div
             draggable
             onDragStart={(e) => {
-              if ((e.target as HTMLElement).closest("[data-no-drag]")) {
+              if (shouldBlockNoteDrag(e.target)) {
                 e.preventDefault();
                 return;
               }
-              e.dataTransfer.setData(PERSONAL_NOTE_DRAG_MIME, topNote.id);
-              e.dataTransfer.effectAllowed = "move";
+              beginNoteDrag(e.dataTransfer, topNote.id);
             }}
             className={cn(
               "post-it-stack__top post-it-note group cursor-grab active:cursor-grabbing",
@@ -160,7 +165,7 @@ export function PersonalNoteStack({
             )}
             style={{ zIndex: 10 }}
           >
-            <div className="post-it-stack__top-actions">
+            <div className="post-it-stack__top-actions" data-no-drag>
               <Button
                 type="button"
                 variant="ghost"
