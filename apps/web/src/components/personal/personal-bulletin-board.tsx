@@ -8,10 +8,11 @@ import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-
 import { Button } from "@/components/ui/button";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 import {
-  PERSONAL_KANBAN_DRAG_MIME,
-  PERSONAL_NOTE_DRAG_MIME,
+  beginNoteDrag,
+  isNoteDrag,
   readDraggedNoteId,
   readDraggedTicketId,
+  shouldBlockNoteDrag,
 } from "@/lib/personal-board-dnd";
 import { EditablePostItFields } from "@/components/personal/editable-post-it-fields";
 import { PersonalNoteStack } from "@/components/personal/personal-note-stack";
@@ -55,6 +56,7 @@ export function PersonalBulletinBoard({
     .filter((n) => n.is_pinned)
     .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at));
   const [notesDropActive, setNotesDropActive] = useState(false);
+  const [notesDropDepth, setNotesDropDepth] = useState(0);
   const [ticketsDropActive, setTicketsDropActive] = useState(false);
 
   const queueCards = kanban.cards
@@ -103,14 +105,33 @@ export function PersonalBulletinBoard({
     await onKanbanRefresh();
   };
 
+  const handleNotesDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    if (!isNoteDrag(e.dataTransfer)) return;
+    e.preventDefault();
+    setNotesDropDepth((depth) => {
+      const next = depth + 1;
+      if (next === 1) setNotesDropActive(true);
+      return next;
+    });
+  };
+
+  const handleNotesDragLeave = () => {
+    setNotesDropDepth((depth) => {
+      const next = Math.max(0, depth - 1);
+      if (next === 0) setNotesDropActive(false);
+      return next;
+    });
+  };
+
   const handleNotesDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!isNoteDrag(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setNotesDropActive(true);
   };
 
   const handleNotesDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    setNotesDropDepth(0);
     setNotesDropActive(false);
     const noteId = readDraggedNoteId(e.dataTransfer);
     if (noteId) void pinNote(noteId).catch(() => {});
@@ -153,8 +174,9 @@ export function PersonalBulletinBoard({
               notesDropActive && "bulletin-board-surface--drop-active",
             )}
             aria-label="Opslagstavle — træk sedler hertil"
+            onDragEnter={handleNotesDragEnter}
             onDragOver={handleNotesDragOver}
-            onDragLeave={() => setNotesDropActive(false)}
+            onDragLeave={handleNotesDragLeave}
             onDrop={handleNotesDrop}
           >
             <p className="bulletin-board-zone-label">Opslagstavle · træk sedler hertil</p>
@@ -182,12 +204,11 @@ export function PersonalBulletinBoard({
                       key={note.id}
                       draggable
                       onDragStart={(e) => {
-                        if ((e.target as HTMLElement).closest("[data-no-drag]")) {
+                        if (shouldBlockNoteDrag(e.target)) {
                           e.preventDefault();
                           return;
                         }
-                        e.dataTransfer.setData(PERSONAL_NOTE_DRAG_MIME, note.id);
-                        e.dataTransfer.effectAllowed = "move";
+                        beginNoteDrag(e.dataTransfer, note.id);
                       }}
                       className={cn(
                         "bulletin-board-mosaic__item group cursor-grab active:cursor-grabbing",
@@ -202,7 +223,7 @@ export function PersonalBulletinBoard({
                         )}
                       >
                         <BulletinPushpin />
-                        <div className="bulletin-post-it__actions">
+                        <div className="bulletin-post-it__actions" data-no-drag>
                           <Button
                             type="button"
                             variant="ghost"

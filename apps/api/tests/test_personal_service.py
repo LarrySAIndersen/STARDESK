@@ -423,3 +423,157 @@ async def test_remove_kanban_card_not_found() -> None:
     mock_db.get = AsyncMock(return_value=None)
     with pytest.raises(LookupError, match="card_not_found"):
         await personal_service.remove_kanban_card(mock_db, _user(), uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_update_note_attaches_to_ticket() -> None:
+    user = _user()
+    note = _note(user_id=user.id)
+    ticket_id = uuid.uuid4()
+    ticket = Ticket(
+        id=ticket_id,
+        ticket_number="INC-100",
+        ticket_type="incident",
+        title="Test sag",
+        description="Beskrivelse lang nok til test",
+        status="new",
+        priority="medium",
+        reporter_user_id=uuid.uuid4(),
+        source="portal",
+        created_at=datetime.now(UTC),
+    )
+    mock_db = AsyncMock()
+
+    async def get_side_effect(model, obj_id):
+        if model is PersonalNote and obj_id == note.id:
+            return note
+        if model is Ticket and obj_id == ticket_id:
+            return ticket
+        return None
+
+    mock_db.get = AsyncMock(side_effect=get_side_effect)
+
+    read = await personal_service.update_note(
+        mock_db,
+        user,
+        note.id,
+        PersonalNoteUpdate(ticket_id=ticket_id, visibility="private"),
+    )
+
+    assert note.ticket_id == ticket_id
+    assert note.visibility == "private"
+    assert read.ticket_id == ticket_id
+    mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_update_note_team_visibility_requires_staff() -> None:
+    user = _user()
+    user.role = "customer"
+    note = _note(user_id=user.id)
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=note)
+
+    with pytest.raises(PermissionError, match="team_visibility_requires_staff"):
+        await personal_service.update_note(
+            mock_db,
+            user,
+            note.id,
+            PersonalNoteUpdate(visibility="team"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_update_note_ticket_not_found() -> None:
+    user = _user()
+    note = _note(user_id=user.id)
+    ticket_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(
+        side_effect=lambda model, obj_id: note if model is PersonalNote else None,
+    )
+
+    with pytest.raises(LookupError, match="ticket_not_found"):
+        await personal_service.update_note(
+            mock_db,
+            user,
+            note.id,
+            PersonalNoteUpdate(ticket_id=ticket_id),
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_post_its_filters_by_visibility() -> None:
+    user = _user()
+    user.role = "agent"
+    ticket_id = uuid.uuid4()
+    own_note = _note(user_id=user.id, note_id=uuid.uuid4())
+    own_note.ticket_id = ticket_id
+    own_note.visibility = "private"
+    team_note = _note(user_id=uuid.uuid4(), note_id=uuid.uuid4())
+    team_note.ticket_id = ticket_id
+    team_note.visibility = "team"
+    hidden_note = _note(user_id=uuid.uuid4(), note_id=uuid.uuid4())
+    hidden_note.ticket_id = ticket_id
+    hidden_note.visibility = "private"
+
+    ticket = Ticket(
+        id=ticket_id,
+        ticket_number="INC-200",
+        ticket_type="incident",
+        title="Sag",
+        description="Beskrivelse lang nok til test",
+        status="new",
+        priority="medium",
+        reporter_user_id=uuid.uuid4(),
+        source="portal",
+        created_at=datetime.now(UTC),
+    )
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [own_note, team_note, hidden_note]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+    mock_db.get = AsyncMock(return_value=ticket)
+
+    with patch(
+        "star_itsm_api.services.personal_service.load_user_display_names",
+        new=AsyncMock(return_value={team_note.user_id: "Kollega"}),
+    ):
+        rows = await personal_service.list_ticket_post_its(mock_db, user, ticket_id)
+
+    assert len(rows) == 2
+    assert {row.id for row in rows} == {own_note.id, team_note.id}
+    team_row = next(row for row in rows if row.id == team_note.id)
+    assert team_row.author_name == "Kollega"
+    assert rows[0].ticket_number == "INC-200"
+
+
+@pytest.mark.asyncio
+async def test_summarize_ticket_post_its_counts_visible_notes() -> None:
+    user = _user()
+    user.role = "agent"
+    ticket_a = uuid.uuid4()
+    ticket_b = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.all.return_value = [(ticket_a, 2), (ticket_b, 1)]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    summaries = await personal_service.summarize_ticket_post_its(
+        mock_db,
+        user,
+        [ticket_a, ticket_b],
+    )
+
+    assert len(summaries) == 2
+    assert summaries[0].ticket_id == ticket_a
+    assert summaries[0].count == 2
+    assert summaries[1].count == 1
+
+
+@pytest.mark.asyncio
+async def test_summarize_ticket_post_its_empty_input() -> None:
+    mock_db = AsyncMock()
+    summaries = await personal_service.summarize_ticket_post_its(mock_db, _user(), [])
+    assert summaries == []
+    mock_db.execute.assert_not_awaited()

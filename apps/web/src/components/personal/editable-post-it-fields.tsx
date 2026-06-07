@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiPatch } from "@/lib/api";
 import {
@@ -20,22 +20,35 @@ import type {
   PersonalNoteVisibility,
 } from "@/types/personal";
 
+type EditablePostItFieldsProps = Readonly<{
+  note: PersonalNote;
+  onNoteUpdated: (note: PersonalNote) => void;
+  compact?: boolean;
+}>;
+
 export function EditablePostItFields({
   note,
   onNoteUpdated,
   compact = false,
-}: {
-  note: PersonalNote;
-  onNoteUpdated: (note: PersonalNote) => void;
-  compact?: boolean;
-}) {
+}: EditablePostItFieldsProps) {
+  const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(note.title);
   const [content, setContent] = useState(note.content);
+  const titleRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const skipOutsideCloseRef = useRef(false);
 
   useEffect(() => {
     setTitle(note.title);
     setContent(note.content);
   }, [note.title, note.content, note.id]);
+
+  useEffect(() => {
+    if (editing) {
+      titleRef.current?.focus();
+      titleRef.current?.select();
+    }
+  }, [editing]);
 
   const patch = useCallback(
     async (payload: PersonalNoteUpdate) => {
@@ -45,22 +58,95 @@ export function EditablePostItFields({
     [note.id, onNoteUpdated],
   );
 
-  const saveTitle = () => {
+  const saveTitle = useCallback(() => {
     const trimmed = title.trim();
     if (!trimmed || trimmed === note.title) return;
     void patch({ title: trimmed }).catch(() => {});
-  };
+  }, [note.title, patch, title]);
 
-  const saveContent = () => {
+  const saveContent = useCallback(() => {
     const trimmed = content.trim();
     if (trimmed === note.content) return;
     void patch({ content: trimmed }).catch(() => {});
-  };
+  }, [content, note.content, patch]);
+
+  const exitEditing = useCallback(() => {
+    saveTitle();
+    saveContent();
+    setEditing(false);
+  }, [saveContent, saveTitle]);
+
+  const enterEditing = useCallback(() => {
+    skipOutsideCloseRef.current = true;
+    setEditing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!editing) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (skipOutsideCloseRef.current) {
+        skipOutsideCloseRef.current = false;
+        return;
+      }
+      if (!rootRef.current?.contains(event.target as Node)) {
+        exitEditing();
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [editing, exitEditing]);
 
   const categoryLabel = personalNoteCategoryLabel(note.category);
+  const displayTitle = note.title.trim() || "Ny seddel";
+  const displayContent = note.content.trim();
+
+  if (!editing) {
+    return (
+      <div
+        className="post-it-display"
+        onDoubleClick={(event) => {
+          event.stopPropagation();
+          enterEditing();
+        }}
+        title="Dobbeltklik for at redigere"
+      >
+        <div className="post-it-edit__badges">
+          {categoryLabel ? (
+            <span className="post-it-edit__category-badge">{categoryLabel}</span>
+          ) : null}
+          {note.ticket_number ? (
+            <span className="post-it-edit__ticket-badge">{note.ticket_number}</span>
+          ) : null}
+          {note.ticket_id ? (
+            <span className="post-it-edit__visibility-badge">
+              {note.visibility === "team" ? "Alle på sagen" : "Kun mig"}
+            </span>
+          ) : null}
+        </div>
+        <p className="post-it-display__title">{displayTitle}</p>
+        {displayContent ? (
+          <p className={cn("post-it-display__body", compact && "post-it-display__body--compact")}>
+            {displayContent}
+          </p>
+        ) : (
+          <p className="post-it-display__placeholder">Dobbeltklik for at skrive…</p>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="post-it-edit" data-no-drag>
+    <div
+      ref={rootRef}
+      className="post-it-edit"
+      data-no-drag
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          exitEditing();
+        }
+      }}
+    >
       <div className="post-it-edit__badges">
         {categoryLabel ? (
           <span className="post-it-edit__category-badge">{categoryLabel}</span>
@@ -76,6 +162,7 @@ export function EditablePostItFields({
       </div>
 
       <input
+        ref={titleRef}
         type="text"
         className="post-it-edit__title"
         value={title}
