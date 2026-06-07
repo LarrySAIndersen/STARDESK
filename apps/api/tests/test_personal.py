@@ -61,6 +61,9 @@ async def test_list_personal_notes(
                     is_pinned=True,
                     sort_order=0,
                     color="yellow",
+                    category=None,
+                    ticket_id=None,
+                    visibility="private",
                     created_at=now,
                     updated_at=now,
                 )
@@ -103,6 +106,9 @@ async def test_create_personal_note(
             is_pinned=False,
             sort_order=0,
             color=None,
+            category=payload.category,
+            ticket_id=None,
+            visibility="private",
             created_at=now,
             updated_at=now,
         )

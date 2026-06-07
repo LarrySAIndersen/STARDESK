@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useId, useMemo, useState } from "react";
-import { ExternalLink, Plus, X } from "lucide-react";
+import { ExternalLink, Pin, Plus, X } from "lucide-react";
 
 import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -15,25 +15,30 @@ import {
 } from "@/components/ui/accessible-modal-shell";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
+import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
+import { PERSONAL_KANBAN_DRAG_MIME } from "@/lib/personal-board-dnd";
 import { cn } from "@/lib/utils";
-import type { PersonalKanban } from "@/types/personal";
+import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban } from "@/types/personal";
+
+const PINNED_QUEUE_COLUMN = PERSONAL_KANBAN_COLUMNS[0];
 import type { Ticket } from "@/types/ticket";
 import type { UserTicketsGrouped } from "@/types/admin-user";
-
-const DRAG_MIME = "application/x-stardesk-personal-kanban";
 
 function ticketById(tickets: Ticket[], id: string): Ticket | undefined {
   return tickets.find((t) => t.id === id);
 }
 
 export function PersonalKanbanBoard({
-  initialKanban,
+  kanban,
   assignableTickets,
+  hiddenColumns = [],
+  onKanbanChange,
 }: {
-  initialKanban: PersonalKanban;
+  kanban: PersonalKanban;
   assignableTickets: Ticket[];
+  hiddenColumns?: string[];
+  onKanbanChange?: (kanban: PersonalKanban) => void;
 }) {
-  const [kanban, setKanban] = useState(initialKanban);
   const [dragTicketId, setDragTicketId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -63,36 +68,32 @@ export function PersonalKanbanBoard({
     const res = await fetch("/api/proxy/v1/personal/kanban", { cache: "no-store" });
     if (!res.ok) return;
     const data = (await res.json()) as PersonalKanban;
-    setKanban(data);
-  }, []);
+    onKanbanChange?.(data);
+  }, [onKanbanChange]);
 
-  const addTicket = useCallback(
-    async (ticketId: string, columnName: string) => {
-      setBusy(true);
-      try {
-        await apiPost("/api/v1/personal/kanban/cards", {
-          ticket_id: ticketId,
-          column_name: columnName,
-        });
-        await refreshKanban();
-      } finally {
-        setBusy(false);
-      }
-    },
-    [refreshKanban],
+  const visibleColumns = useMemo(
+    () => kanban.columns.filter((col) => !hiddenColumns.includes(col)),
+    [hiddenColumns, kanban.columns],
   );
 
-  const moveTicket = useCallback(
+  const placeTicketInColumn = useCallback(
     async (ticketId: string, columnName: string) => {
       setBusy(true);
       try {
-        await apiPatch(`/api/v1/personal/kanban/cards/${ticketId}`, { column_name: columnName });
+        if (boardTicketIds.has(ticketId)) {
+          await apiPatch(`/api/v1/personal/kanban/cards/${ticketId}`, { column_name: columnName });
+        } else {
+          await apiPost("/api/v1/personal/kanban/cards", {
+            ticket_id: ticketId,
+            column_name: columnName,
+          });
+        }
         await refreshKanban();
       } finally {
         setBusy(false);
       }
     },
-    [refreshKanban],
+    [boardTicketIds, refreshKanban],
   );
 
   const removeTicket = useCallback(
@@ -113,7 +114,8 @@ export function PersonalKanbanBoard({
       <div>
         <h2 className="wire-sec-title text-base">Mit kanban</h2>
         <p className="text-muted-foreground text-sm">
-          Træk dine sager mellem kolonner — kun synligt for dig.
+          Træk sager mellem kolonner — eller op på <strong>opslagstavlen</strong> (fastgjorte
+          sager).
         </p>
       </div>
 
@@ -123,25 +125,46 @@ export function PersonalKanbanBoard({
             Tilføj sag til board
           </p>
           <ul className="flex flex-wrap gap-2">
-            {availableTickets.slice(0, 8).map((ticket) => (
+            {availableTickets.slice(0, 8).map((ticket, index) => (
               <li key={ticket.id}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void addTicket(ticket.id, kanban.columns[0] ?? "Min kø")}
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticket.id);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  className={cn(
+                    "bulletin-ticket-chip group cursor-grab active:cursor-grabbing",
+                    index % 2 === 0 ? "-rotate-1" : "rotate-1",
+                  )}
                 >
-                  {ticket.ticket_number}: {ticket.title.slice(0, 40)}
-                </Button>
+                  <span className="bulletin-pushpin bulletin-pushpin--chip" aria-hidden />
+                  <span className="bulletin-ticket-chip__number">{ticket.ticket_number}</span>
+                  <span className="bulletin-ticket-chip__title">{ticket.title.slice(0, 36)}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="bulletin-ticket-chip__add h-6 px-2 text-[10px]"
+                    disabled={busy}
+                    onClick={() => void placeTicketInColumn(ticket.id, PINNED_QUEUE_COLUMN)}
+                  >
+                    Fastgør
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        {kanban.columns.map((column) => (
+      <div
+        className={cn(
+          "grid gap-3",
+          visibleColumns.length >= 3 ? "lg:grid-cols-3" : "lg:grid-cols-2",
+        )}
+      >
+        {visibleColumns.map((column) => (
           <div
             key={column}
             className={cn(
@@ -154,9 +177,9 @@ export function PersonalKanbanBoard({
             }}
             onDrop={(e) => {
               e.preventDefault();
-              const ticketId = e.dataTransfer.getData(DRAG_MIME);
+              const ticketId = e.dataTransfer.getData(PERSONAL_KANBAN_DRAG_MIME);
               setDragTicketId(null);
-              if (ticketId) void moveTicket(ticketId, column);
+              if (ticketId) void placeTicketInColumn(ticketId, column);
             }}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -184,12 +207,19 @@ export function PersonalKanbanBoard({
                     key={card.ticket_id}
                     draggable
                     onDragStart={(e) => {
-                      e.dataTransfer.setData(DRAG_MIME, card.ticket_id);
+                      e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, card.ticket_id);
                       setDragTicketId(card.ticket_id);
                     }}
                     onDragEnd={() => setDragTicketId(null)}
-                    className="bg-card cursor-grab rounded-md border p-3 shadow-sm active:cursor-grabbing"
+                    className="bulletin-kanban-card group cursor-grab rounded-md border p-3 pt-4 shadow-sm active:cursor-grabbing"
                   >
+                    <TicketPostItDropTarget
+                      ticketId={ticket.id}
+                      ticketNumber={ticket.ticket_number}
+                      ticketTitle={ticket.title}
+                      className="block"
+                    >
+                    <span className="bulletin-pushpin bulletin-pushpin--card" aria-hidden />
                     <div className="mb-2 flex items-start justify-between gap-2">
                       <Link
                         href={`/tickets/${ticket.id}`}
@@ -197,22 +227,36 @@ export function PersonalKanbanBoard({
                       >
                         {ticket.ticket_number}
                       </Link>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 shrink-0"
-                        aria-label="Fjern fra board"
-                        onClick={() => void removeTicket(card.ticket_id)}
-                      >
-                        <X className="size-4" aria-hidden />
-                      </Button>
+                      <div className="flex shrink-0 gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          aria-label="Fastgør på opslagstavle"
+                          title="Fastgør på opslagstavle"
+                          onClick={() => void placeTicketInColumn(card.ticket_id, PINNED_QUEUE_COLUMN)}
+                        >
+                          <Pin className="size-3.5" aria-hidden />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          aria-label="Fjern fra board"
+                          onClick={() => void removeTicket(card.ticket_id)}
+                        >
+                          <X className="size-4" aria-hidden />
+                        </Button>
+                      </div>
                     </div>
                     <p className="mb-2 line-clamp-2 text-sm">{ticket.title}</p>
                     <div className="flex flex-wrap gap-1">
                       <WireStatusBadge status={ticket.status} />
                       <WirePriorityBadge priority={ticket.priority} />
                     </div>
+                    </TicketPostItDropTarget>
                   </li>
                 );
               })}
@@ -236,7 +280,13 @@ export function PersonalKanbanBoard({
   );
 }
 
-export function MyTicketsSection({ userTickets }: { userTickets: UserTicketsGrouped }) {
+export function MyTicketsSection({
+  userTickets,
+  boardTicketIds = new Set<string>(),
+}: {
+  userTickets: UserTicketsGrouped;
+  boardTicketIds?: Set<string>;
+}) {
   const assigned = userTickets.assigned;
   const reported = userTickets.reported;
 
@@ -257,8 +307,18 @@ export function MyTicketsSection({ userTickets }: { userTickets: UserTicketsGrou
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <TicketGroup title="Tildelt mig" tickets={assigned} empty="Ingen tildelte sager." />
-        <TicketGroup title="Indmeldt af mig" tickets={reported} empty="Du har ikke oprettet sager endnu." />
+        <TicketGroup
+          title="Tildelt mig"
+          tickets={assigned}
+          empty="Ingen tildelte sager."
+          boardTicketIds={boardTicketIds}
+        />
+        <TicketGroup
+          title="Indmeldt af mig"
+          tickets={reported}
+          empty="Du har ikke oprettet sager endnu."
+          boardTicketIds={boardTicketIds}
+        />
       </div>
     </section>
   );
@@ -268,10 +328,12 @@ function TicketGroup({
   title,
   tickets,
   empty,
+  boardTicketIds,
 }: {
   title: string;
   tickets: Ticket[];
   empty: string;
+  boardTicketIds: Set<string>;
 }) {
   if (tickets.length === 0) {
     return (
@@ -288,18 +350,48 @@ function TicketGroup({
         {title} ({tickets.length})
       </h3>
       <ul className="divide-border divide-y rounded-lg border">
-        {tickets.slice(0, 10).map((ticket) => (
-          <li key={ticket.id} className="hover:bg-muted/40 px-3 py-2">
-            <Link href={`/tickets/${ticket.id}`} className="block">
-              <span className="text-star-blue text-xs font-medium">{ticket.ticket_number}</span>
-              <p className="line-clamp-1 text-sm">{ticket.title}</p>
-              <div className="mt-1 flex gap-1">
-                <WireStatusBadge status={ticket.status} />
-                <WirePriorityBadge priority={ticket.priority} />
-              </div>
-            </Link>
-          </li>
-        ))}
+        {tickets.slice(0, 10).map((ticket, index) => {
+          const onBoard = boardTicketIds.has(ticket.id);
+          return (
+            <li
+              key={ticket.id}
+              draggable={!onBoard}
+              onDragStart={(e) => {
+                if (onBoard) return;
+                e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticket.id);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              className={cn(
+                "bulletin-ticket-row group relative px-3 py-2.5 pt-3",
+                !onBoard && "cursor-grab active:cursor-grabbing hover:bg-muted/40",
+                onBoard && "opacity-70",
+              )}
+            >
+              <span
+                className={cn(
+                  "bulletin-pushpin bulletin-pushpin--row",
+                  index % 2 === 0 ? "-rotate-[38deg]" : "-rotate-[42deg]",
+                )}
+                aria-hidden
+              />
+              <TicketPostItDropTarget
+                ticketId={ticket.id}
+                ticketNumber={ticket.ticket_number}
+                ticketTitle={ticket.title}
+                className="block"
+              >
+              <Link href={`/tickets/${ticket.id}`} className="block pl-1">
+                <span className="text-star-blue text-xs font-medium">{ticket.ticket_number}</span>
+                <p className="line-clamp-1 text-sm">{ticket.title}</p>
+                <div className="mt-1 flex gap-1">
+                  <WireStatusBadge status={ticket.status} />
+                  <WirePriorityBadge priority={ticket.priority} />
+                </div>
+              </Link>
+              </TicketPostItDropTarget>
+            </li>
+          );
+        })}
       </ul>
       {tickets.length > 10 ? (
         <Link href="/tickets" className="text-star-blue mt-2 inline-block text-sm underline">

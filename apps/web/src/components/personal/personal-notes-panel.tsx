@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { useCallback, useMemo, useState, type DragEvent } from "react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,11 @@ import {
   resolveNoteColorId,
   type PersonalNoteColorId,
 } from "@/lib/personal-note-colors";
+import { PERSONAL_NOTE_DRAG_MIME, readDraggedNoteId } from "@/lib/personal-board-dnd";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, PersonalNoteCreate, PersonalNoteUpdate } from "@/types/personal";
 
-function NoteCard({
+function DraggablePostIt({
   note,
   index,
   onPatch,
@@ -29,53 +30,42 @@ function NoteCard({
 }) {
   return (
     <li
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(PERSONAL_NOTE_DRAG_MIME, note.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
       className={cn(
-        "post-it-note flex flex-col gap-2 rounded-sm border p-3 shadow-md",
+        "personal-notes-tray__card post-it-note group cursor-grab active:cursor-grabbing",
         personalNoteColorClass(note.color),
-        index % 2 === 0 ? "-rotate-[0.4deg]" : "rotate-[0.35deg]",
+        index % 2 === 0 ? "-rotate-[2deg]" : "rotate-[1.5deg]",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="font-semibold leading-snug">{note.title}</p>
-        <div className="flex shrink-0 gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            aria-label={note.is_pinned ? "Frigør note" : "Fastgør note"}
-            onClick={() => void onPatch(note.id, { is_pinned: !note.is_pinned }).catch(() => {})}
-          >
-            {note.is_pinned ? (
-              <PinOff className="size-4" aria-hidden />
-            ) : (
-              <Pin className="size-4" aria-hidden />
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="text-destructive size-8"
-            aria-label="Slet note"
-            onClick={() => void onDelete(note.id).catch(() => {})}
-          >
-            <Trash2 className="size-4" aria-hidden />
-          </Button>
-        </div>
+      <div className="flex items-start justify-between gap-1">
+        <p className="line-clamp-2 text-sm leading-snug font-semibold">{note.title}</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="personal-notes-tray__delete size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+          aria-label="Slet seddel"
+          onClick={() => void onDelete(note.id).catch(() => {})}
+        >
+          <Trash2 className="text-destructive size-3.5" aria-hidden />
+        </Button>
       </div>
       {note.content ? (
-        <p className="text-star-text-muted whitespace-pre-wrap text-sm">{note.content}</p>
+        <p className="text-star-text-muted mt-1 line-clamp-2 text-xs">{note.content}</p>
       ) : null}
-      <div className="mt-auto flex flex-wrap gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-1">
         {PERSONAL_NOTE_COLORS.map((c) => (
           <button
             key={c.id}
             type="button"
             className={cn(
-              "size-5 rounded-full border-2 border-white/80 shadow-sm",
+              "size-4 rounded-full border border-white/80 shadow-sm",
               c.swatchClassName,
-              resolveNoteColorId(note.color) === c.id && "ring-star-navy ring-2 ring-offset-1",
+              resolveNoteColorId(note.color) === c.id && "ring-star-navy ring-1 ring-offset-1",
             )}
             aria-label={`Farve ${c.label}`}
             onClick={() =>
@@ -88,22 +78,28 @@ function NoteCard({
   );
 }
 
-export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNote[] }) {
-  const [notes, setNotes] = useState(initialNotes);
+export function PersonalNotesPanel({
+  notes,
+  onNotesChange,
+  onNoteDropToTray,
+}: {
+  notes: PersonalNote[];
+  onNotesChange: (notes: PersonalNote[]) => void;
+  onNoteDropToTray?: (noteId: string) => void;
+}) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [trayDragOver, setTrayDragOver] = useState(false);
 
-  const { pinnedNotes, otherNotes } = useMemo(() => {
-    const sorted = [...notes].sort(
-      (a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at),
-    );
-    return {
-      pinnedNotes: sorted.filter((n) => n.is_pinned),
-      otherNotes: sorted.filter((n) => !n.is_pinned),
-    };
-  }, [notes]);
+  const trayNotes = useMemo(
+    () =>
+      [...notes]
+        .filter((n) => !n.is_pinned)
+        .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at)),
+    [notes],
+  );
 
   const createNote = useCallback(async () => {
     const trimmed = title.trim();
@@ -117,7 +113,7 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
         color: "navy",
       };
       const created = await apiPost<PersonalNote>("/api/v1/personal/notes", payload);
-      setNotes((prev) => [...prev, created]);
+      onNotesChange([...notes, created]);
       setTitle("");
       setContent("");
     } catch (err) {
@@ -125,27 +121,46 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
     } finally {
       setBusy(false);
     }
-  }, [content, title]);
+  }, [content, notes, onNotesChange, title]);
 
-  const patchNote = useCallback(async (noteId: string, payload: PersonalNoteUpdate) => {
-    const updated = await apiPatch<PersonalNote>(`/api/v1/personal/notes/${noteId}`, payload);
-    setNotes((prev) => prev.map((n) => (n.id === noteId ? updated : n)));
-  }, []);
+  const patchNote = useCallback(
+    async (noteId: string, payload: PersonalNoteUpdate) => {
+      const updated = await apiPatch<PersonalNote>(`/api/v1/personal/notes/${noteId}`, payload);
+      onNotesChange(notes.map((n) => (n.id === noteId ? updated : n)));
+    },
+    [notes, onNotesChange],
+  );
 
-  const deleteNote = useCallback(async (noteId: string) => {
-    await apiDelete(`/api/v1/personal/notes/${noteId}`);
-    setNotes((prev) => prev.filter((n) => n.id !== noteId));
-  }, []);
+  const deleteNote = useCallback(
+    async (noteId: string) => {
+      await apiDelete(`/api/v1/personal/notes/${noteId}`);
+      onNotesChange(notes.filter((n) => n.id !== noteId));
+    },
+    [notes, onNotesChange],
+  );
+
+  const handleTrayDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setTrayDragOver(true);
+  };
+
+  const handleTrayDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setTrayDragOver(false);
+    const noteId = readDraggedNoteId(e.dataTransfer);
+    if (noteId && onNoteDropToTray) {
+      onNoteDropToTray(noteId);
+    }
+  };
 
   return (
     <section className="wire-card mb-0 flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="wire-sec-title text-base">Huskeliste</h2>
-          <p className="text-muted-foreground text-sm">
-            Private noter kun synlige for dig. Fastgør med nålen — de vises til venstre og i menuen.
-          </p>
-        </div>
+      <div>
+        <h2 className="wire-sec-title text-base">Huskeliste</h2>
+        <p className="text-muted-foreground text-sm">
+          Opret sedler her — <strong>træk dem op</strong> på opslagstavlen til venstre.
+        </p>
       </div>
 
       <form
@@ -181,54 +196,36 @@ export function PersonalNotesPanel({ initialNotes }: { initialNotes: PersonalNot
       </form>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
 
-      {notes.length === 0 ? (
-        <p className="text-muted-foreground text-sm">Ingen noter endnu — tilføj noget du skal huske.</p>
-      ) : (
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          {pinnedNotes.length > 0 ? (
-            <aside className="w-full shrink-0 lg:w-52 xl:w-56">
-              <p className="text-muted-foreground mb-2 flex items-center gap-1.5 text-xs font-semibold">
-                <Pin className="size-3.5 shrink-0" aria-hidden />
-                Fastgjort til venstre
-              </p>
-              <ul className="flex flex-col gap-3">
-                {pinnedNotes.map((note, index) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    index={index}
-                    onPatch={patchNote}
-                    onDelete={deleteNote}
-                  />
-                ))}
-              </ul>
-            </aside>
-          ) : null}
-
-          {otherNotes.length > 0 ? (
-            <ul
-              className={cn(
-                "grid flex-1 gap-3 sm:grid-cols-2",
-                pinnedNotes.length > 0 ? "xl:grid-cols-2" : "xl:grid-cols-3",
-              )}
-            >
-              {otherNotes.map((note, index) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  index={index}
-                  onPatch={patchNote}
-                  onDelete={deleteNote}
-                />
-              ))}
-            </ul>
-          ) : pinnedNotes.length > 0 ? (
-            <p className="text-muted-foreground flex-1 text-sm">
-              Alle dine noter er fastgjort — frigør en note for at flytte den til hovedlisten.
-            </p>
-          ) : null}
-        </div>
-      )}
+      <div
+        className={cn(
+          "personal-notes-tray",
+          trayDragOver && "personal-notes-tray--drop-active",
+        )}
+        onDragOver={handleTrayDragOver}
+        onDragLeave={() => setTrayDragOver(false)}
+        onDrop={handleTrayDrop}
+        aria-label="Sedler klar til at trække på opslagstavlen"
+      >
+        {trayNotes.length === 0 ? (
+          <p className="text-muted-foreground px-2 py-6 text-center text-sm">
+            {notes.some((n) => n.is_pinned)
+              ? "Alle sedler hænger på tavlen — træk en ned hertil for at frigøre den."
+              : "Ingen sedler i bakken — opret en og træk den op på tavlen."}
+          </p>
+        ) : (
+          <ul className="personal-notes-tray__list">
+            {trayNotes.map((note, index) => (
+              <DraggablePostIt
+                key={note.id}
+                note={note}
+                index={index}
+                onPatch={patchNote}
+                onDelete={deleteNote}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
