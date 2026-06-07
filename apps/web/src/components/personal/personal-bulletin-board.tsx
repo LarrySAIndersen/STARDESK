@@ -56,7 +56,7 @@ export function PersonalBulletinBoard({
     .filter((n) => n.is_pinned)
     .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at));
   const [notesDropActive, setNotesDropActive] = useState(false);
-  const [notesDropDepth, setNotesDropDepth] = useState(0);
+  const [, setNotesDropDepth] = useState(0);
   const [ticketsDropActive, setTicketsDropActive] = useState(false);
 
   const queueCards = kanban.cards
