@@ -57,10 +57,12 @@ describe("personal-board-dnd", () => {
   });
 
   it("blocks drag when target is inside no-drag region", () => {
-    const inner = document.createElement("input");
-    inner.setAttribute("data-no-drag", "");
-    const outer = document.createElement("div");
-    outer.appendChild(inner);
+    const inner = {
+      closest: (selector: string) => (selector === "[data-no-drag]" ? inner : null),
+    } as unknown as HTMLElement;
+    const outer = {
+      closest: () => null,
+    } as unknown as HTMLElement;
     expect(shouldBlockNoteDrag(inner)).toBe(true);
     expect(shouldBlockNoteDrag(outer)).toBe(false);
   });
