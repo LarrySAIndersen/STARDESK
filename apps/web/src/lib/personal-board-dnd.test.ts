@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach } from "vitest";
 
 import {
   PERSONAL_NOTE_DRAG_MIME,
   beginNoteDrag,
+  endNoteDrag,
+  getActiveNoteDragId,
   isNoteDrag,
+  isNoteDragActive,
   readDraggedNoteId,
   readDraggedTicketId,
   shouldBlockNoteDrag,
@@ -21,6 +24,10 @@ function mockDataTransfer(data: Record<string, string>, types?: string[]): DataT
   } as DataTransfer;
 }
 
+afterEach(() => {
+  endNoteDrag();
+});
+
 describe("personal-board-dnd", () => {
   it("reads note id from custom mime type", () => {
     const transfer = mockDataTransfer({
@@ -34,10 +41,24 @@ describe("personal-board-dnd", () => {
     expect(readDraggedNoteId(transfer)).toBe("note-456");
   });
 
-  it("detects note drag from mime or plain text", () => {
+  it("falls back to active drag id when dataTransfer is empty on drop", () => {
+    beginNoteDrag(mockDataTransfer({}), "note-active");
+    const transfer = mockDataTransfer({});
+    expect(readDraggedNoteId(transfer)).toBe("note-active");
+  });
+
+  it("detects note drag from mime type", () => {
     expect(isNoteDrag(mockDataTransfer({}, [PERSONAL_NOTE_DRAG_MIME]))).toBe(true);
-    expect(isNoteDrag(mockDataTransfer({}, ["text/plain"]))).toBe(true);
+    expect(isNoteDrag(mockDataTransfer({}, ["text/plain"]))).toBe(false);
     expect(isNoteDrag(mockDataTransfer({}, ["Files"]))).toBe(false);
+  });
+
+  it("detects active note drag during dragover", () => {
+    beginNoteDrag(mockDataTransfer({}), "note-789");
+    expect(isNoteDragActive()).toBe(true);
+    expect(isNoteDragActive(mockDataTransfer({}, []))).toBe(true);
+    endNoteDrag();
+    expect(isNoteDragActive()).toBe(false);
   });
 
   it("sets drag data with plain-text fallback", () => {
@@ -54,6 +75,13 @@ describe("personal-board-dnd", () => {
     expect(stored[PERSONAL_NOTE_DRAG_MIME]).toBe("note-789");
     expect(stored["text/plain"]).toBe("note-789");
     expect(transfer.effectAllowed).toBe("move");
+    expect(getActiveNoteDragId()).toBe("note-789");
+  });
+
+  it("clears active drag id on endNoteDrag", () => {
+    beginNoteDrag(mockDataTransfer({}), "note-789");
+    endNoteDrag();
+    expect(getActiveNoteDragId()).toBeNull();
   });
 
   it("blocks drag when target is inside no-drag region", () => {

@@ -2647,6 +2647,7 @@ body.page-layout-edit-active .page-layout-field--editing {
   border-radius: 1px;
   opacity: 0.35;
   box-shadow: 0 2px 6px color-mix(in srgb, black 12%, transparent);
+  pointer-events: none;
 }
 
 .bulletin-board-empty__ghost--a {
@@ -2669,6 +2670,7 @@ body.page-layout-edit-active .page-layout-field--editing {
   font-size: 0.9375rem;
   font-weight: 600;
   color: color-mix(in srgb, var(--bulletin-frame) 85%, white);
+  pointer-events: none;
 }
 
 .bulletin-board-empty--compact {
@@ -2684,6 +2686,7 @@ body.page-layout-edit-active .page-layout-field--editing {
   font-size: 0.75rem;
   line-height: 1.5;
   color: color-mix(in srgb, var(--bulletin-frame) 70%, white);
+  pointer-events: none;
 }
 
 .dark .bulletin-board-shell {

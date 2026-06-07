@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { EditablePostItFields } from "@/components/personal/editable-post-it-fields";
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { apiDelete, apiPost } from "@/lib/api";
 import {
   beginNoteDrag,
-  isNoteDrag,
+  endNoteDrag,
+  isNoteDragActive,
   readDraggedNoteId,
   shouldBlockNoteDrag,
 } from "@/lib/personal-board-dnd";
@@ -38,6 +39,7 @@ export function PersonalNoteStack({
 }) {
   const [stackDragOver, setStackDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
+  const bootstrappedRef = useRef(false);
 
   const trayNotes = useMemo(
     () =>
@@ -64,6 +66,12 @@ export function PersonalNoteStack({
     }
   }, [busy, notes, onNotesChange]);
 
+  useEffect(() => {
+    if (bootstrappedRef.current || notes.length > 0 || busy) return;
+    bootstrappedRef.current = true;
+    void createFreshNote();
+  }, [busy, createFreshNote, notes.length]);
+
   const deleteTopNote = useCallback(
     async (noteId: string) => {
       await apiDelete(`/api/v1/personal/notes/${noteId}`);
@@ -80,7 +88,7 @@ export function PersonalNoteStack({
   );
 
   const handleStackDragOver = (e: DragEvent<HTMLElement>) => {
-    if (!isNoteDrag(e.dataTransfer)) return;
+    if (!isNoteDragActive(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setStackDragOver(true);
@@ -90,6 +98,7 @@ export function PersonalNoteStack({
     e.preventDefault();
     setStackDragOver(false);
     const noteId = readDraggedNoteId(e.dataTransfer);
+    endNoteDrag();
     if (noteId && onNoteDropToStack) onNoteDropToStack(noteId);
   };
 
@@ -159,6 +168,7 @@ export function PersonalNoteStack({
               }
               beginNoteDrag(e.dataTransfer, topNote.id);
             }}
+            onDragEnd={() => endNoteDrag()}
             className={cn(
               "post-it-stack__top post-it-note group cursor-grab active:cursor-grabbing",
               personalNoteColorClass(topNote.color),

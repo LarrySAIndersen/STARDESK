@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 import {
   beginNoteDrag,
-  isNoteDrag,
+  endNoteDrag,
+  isNoteDragActive,
   readDraggedNoteId,
   readDraggedTicketId,
   shouldBlockNoteDrag,
@@ -106,7 +107,7 @@ export function PersonalBulletinBoard({
   };
 
   const handleNotesDragEnter = (e: DragEvent<HTMLDivElement>) => {
-    if (!isNoteDrag(e.dataTransfer)) return;
+    if (!isNoteDragActive(e.dataTransfer)) return;
     e.preventDefault();
     setNotesDropDepth((depth) => {
       const next = depth + 1;
@@ -115,16 +116,14 @@ export function PersonalBulletinBoard({
     });
   };
 
-  const handleNotesDragLeave = () => {
-    setNotesDropDepth((depth) => {
-      const next = Math.max(0, depth - 1);
-      if (next === 0) setNotesDropActive(false);
-      return next;
-    });
+  const handleNotesDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    setNotesDropDepth(0);
+    setNotesDropActive(false);
   };
 
   const handleNotesDragOver = (e: DragEvent<HTMLDivElement>) => {
-    if (!isNoteDrag(e.dataTransfer)) return;
+    if (!isNoteDragActive(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
@@ -134,6 +133,7 @@ export function PersonalBulletinBoard({
     setNotesDropDepth(0);
     setNotesDropActive(false);
     const noteId = readDraggedNoteId(e.dataTransfer);
+    endNoteDrag();
     if (noteId) void pinNote(noteId).catch(() => {});
   };
 
@@ -210,6 +210,7 @@ export function PersonalBulletinBoard({
                         }
                         beginNoteDrag(e.dataTransfer, note.id);
                       }}
+                      onDragEnd={() => endNoteDrag()}
                       className={cn(
                         "bulletin-board-mosaic__item group cursor-grab active:cursor-grabbing",
                         scatter.shift,
