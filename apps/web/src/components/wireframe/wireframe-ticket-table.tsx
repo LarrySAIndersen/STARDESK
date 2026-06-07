@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { ticketSourceLabelDa } from "@/lib/ticket-source-label";
 import type { Ticket } from "@/types/ticket";
 
+import { TicketPostItBadge } from "@/components/personal/ticket-post-it-badge";
+import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
 import { TICKET_DRAG_TYPE, setTicketDragData } from "@/lib/ticket-drag";
 
 export function WireframeTicketTable({
@@ -22,9 +24,13 @@ export function WireframeTicketTable({
   onDragEnd,
   className,
   columnFilters,
+  postItCounts,
+  postItDropEnabled = false,
 }: {
   tickets: Ticket[];
   draggable?: boolean;
+  postItCounts?: Record<string, number>;
+  postItDropEnabled?: boolean;
   /** Service desk: show assigned group on each row. */
   showTeamColumn?: boolean;
   onRowClick?: (ticket: Ticket) => void;
@@ -60,9 +66,9 @@ export function WireframeTicketTable({
           <span>SLA</span>
         </div>
       )}
-      {tickets.map((ticket) => (
+      {tickets.map((ticket) => {
+        const row = (
         <div
-          key={ticket.id}
           role="row"
           className={cn(
             "wire-table-row",
@@ -104,8 +110,9 @@ export function WireframeTicketTable({
             }
           }}
         >
-          <span className="text-[var(--gray-mid)] text-xs font-semibold">
+          <span className="text-[var(--gray-mid)] flex items-center gap-1 text-xs font-semibold">
             {ticket.ticket_number}
+            <TicketPostItBadge count={postItCounts?.[ticket.id] ?? 0} />
           </span>
           <span className="min-w-0">
             <p className="truncate text-[13px] font-medium">{ticket.title}</p>
@@ -139,8 +146,24 @@ export function WireframeTicketTable({
             />
           </span>
         </div>
-      ))}
-      </div>
+        );
+
+        if (!postItDropEnabled) {
+          return <div key={ticket.id}>{row}</div>;
+        }
+
+        return (
+          <TicketPostItDropTarget
+            key={ticket.id}
+            ticketId={ticket.id}
+            ticketNumber={ticket.ticket_number}
+            ticketTitle={ticket.title}
+          >
+            {row}
+          </TicketPostItDropTarget>
+        );
+      })}
+    </div>
     </div>
   );
 }

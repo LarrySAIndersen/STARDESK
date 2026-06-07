@@ -1,9 +1,14 @@
 from datetime import datetime
 from uuid import UUID
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from star_itsm_api.schemas.ticket import TicketRead
+
+PersonalNoteCategoryId = Literal["general", "follow_up", "meeting", "supplier", "reminder"]
+PersonalNoteVisibility = Literal["private", "team"]
 
 # ── Personal notes ──────────────────────────────────────────────────
 
@@ -12,6 +17,9 @@ class PersonalNoteCreate(BaseModel):
     content: str = Field(default="", max_length=10000)
     is_pinned: bool = False
     color: str | None = Field(default=None, max_length=32)
+    category: PersonalNoteCategoryId | None = Field(default=None, max_length=32)
+    ticket_id: UUID | None = None
+    visibility: PersonalNoteVisibility = "private"
 
 
 class PersonalNoteUpdate(BaseModel):
@@ -20,6 +28,9 @@ class PersonalNoteUpdate(BaseModel):
     is_pinned: bool | None = None
     sort_order: int | None = None
     color: str | None = Field(default=None, max_length=32)
+    category: PersonalNoteCategoryId | None = Field(default=None, max_length=32)
+    ticket_id: UUID | None = None
+    visibility: PersonalNoteVisibility | None = None
 
 
 class PersonalNoteRead(BaseModel):
@@ -32,8 +43,18 @@ class PersonalNoteRead(BaseModel):
     is_pinned: bool
     sort_order: int
     color: str | None
+    category: str | None
+    ticket_id: UUID | None = None
+    visibility: PersonalNoteVisibility | None = None
+    author_name: str | None = None
+    ticket_number: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class TicketPostItSummary(BaseModel):
+    ticket_id: UUID
+    count: int
 
 
 # ── Personal kanban ─────────────────────────────────────────────────

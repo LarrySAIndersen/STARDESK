@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { PostItAttachProvider } from "@/components/personal/post-it-attach-provider";
+import { apiGet } from "@/lib/api";
+import type { TicketPostItSummary } from "@/types/personal";
 
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
@@ -57,6 +61,30 @@ export function TicketsListClient({
   tickets: Ticket[];
   initialParams?: Record<string, string | string[] | undefined>;
 }) {
+  const [postItCounts, setPostItCounts] = useState<Record<string, number>>({});
+
+  const refreshPostItCounts = useCallback(async (ticketList: Ticket[]) => {
+    if (ticketList.length === 0) {
+      setPostItCounts({});
+      return;
+    }
+    const ids = ticketList.slice(0, 200).map((t) => t.id).join(",");
+    try {
+      const rows = await apiGet<TicketPostItSummary[]>(
+        `/api/v1/personal/ticket-post-its/summary?ticket_ids=${encodeURIComponent(ids)}`,
+      );
+      const next: Record<string, number> = {};
+      for (const row of rows) next[row.ticket_id] = row.count;
+      setPostItCounts(next);
+    } catch {
+      setPostItCounts({});
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshPostItCounts(tickets);
+  }, [tickets, refreshPostItCounts]);
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const dashboardFilter = dashboardFilterTitle(initialParams);
@@ -163,6 +191,7 @@ export function TicketsListClient({
   ]);
 
   return (
+    <PostItAttachProvider onAttached={() => void refreshPostItCounts(filtered)}>
     <div className="space-y-3">
       {fromDashboard ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -262,7 +291,12 @@ export function TicketsListClient({
         </div>
       ) : null}
 
-      <WireframeTicketTable tickets={filtered} />
+      <WireframeTicketTable
+        tickets={filtered}
+        postItCounts={postItCounts}
+        postItDropEnabled
+      />
     </div>
+    </PostItAttachProvider>
   );
 }

@@ -2,8 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { UserAvatar } from "@/components/agent/user-avatar";
-import { MyTicketsSection, PersonalKanbanBoard } from "@/components/personal/personal-kanban-board";
-import { PersonalNotesPanel } from "@/components/personal/personal-notes-panel";
+import { MinSideWorkspace } from "@/components/personal/min-side-workspace";
 import { buttonVariants } from "@/components/ui/button";
 import { getServerUser } from "@/lib/auth-server";
 import { apiGetServer } from "@/lib/api-server";
@@ -71,11 +70,12 @@ export default async function MinSidePage() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-6">
-        <PersonalNotesPanel initialNotes={notes} />
-        <PersonalKanbanBoard initialKanban={kanban} assignableTickets={assignableTickets} />
-        <MyTicketsSection userTickets={userTickets} />
-      </div>
+      <MinSideWorkspace
+        initialNotes={notes}
+        initialKanban={kanban}
+        userTickets={userTickets}
+        assignableTickets={assignableTickets}
+      />
     </div>
   );
 }

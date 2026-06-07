@@ -5,9 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.security import is_staff
 from star_itsm_api.models.personal import (
     DEFAULT_KANBAN_COLUMNS,
     PersonalKanbanCard,
@@ -15,6 +16,7 @@ from star_itsm_api.models.personal import (
 )
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
+from star_itsm_api.services.ticket_read import load_user_display_names
 from star_itsm_api.schemas.personal import (
     PersonalKanbanCardRead,
     PersonalKanbanColumnUpdate,
@@ -22,6 +24,7 @@ from star_itsm_api.schemas.personal import (
     PersonalNoteCreate,
     PersonalNoteRead,
     PersonalNoteUpdate,
+    TicketPostItSummary,
 )
 from star_itsm_api.schemas.ticket import TicketRead
 from star_itsm_api.services.ticket_read import tickets_to_read_list
@@ -31,7 +34,13 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _note_to_read(row: PersonalNote) -> PersonalNoteRead:
+def _note_to_read(
+    row: PersonalNote,
+    *,
+    author_name: str | None = None,
+    ticket_number: str | None = None,
+) -> PersonalNoteRead:
+    visibility = row.visibility if row.visibility in ("private", "team") else "private"
     return PersonalNoteRead(
         id=row.id,
         user_id=row.user_id,
@@ -40,9 +49,27 @@ def _note_to_read(row: PersonalNote) -> PersonalNoteRead:
         is_pinned=row.is_pinned,
         sort_order=row.sort_order,
         color=row.color,
+        category=row.category,
+        ticket_id=row.ticket_id,
+        visibility=visibility,
+        author_name=author_name,
+        ticket_number=ticket_number,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+async def _require_ticket(db: AsyncSession, ticket_id: uuid.UUID) -> Ticket:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise LookupError("ticket_not_found")
+    return ticket
+
+
+def _note_visible_to_user(row: PersonalNote, user: User) -> bool:
+    if row.user_id == user.id:
+        return True
+    return row.visibility == "team" and is_staff(user)
 
 
 async def list_notes(db: AsyncSession, user: User) -> list[PersonalNoteRead]:
@@ -58,7 +85,21 @@ async def list_notes(db: AsyncSession, user: User) -> list[PersonalNoteRead]:
             PersonalNote.updated_at.desc(),
         )
     )
-    return [_note_to_read(row) for row in result.scalars().all()]
+    rows = list(result.scalars().all())
+    ticket_ids = {row.ticket_id for row in rows if row.ticket_id is not None}
+    ticket_numbers: dict[uuid.UUID, str] = {}
+    if ticket_ids:
+        ticket_rows = await db.execute(
+            select(Ticket.id, Ticket.ticket_number).where(Ticket.id.in_(ticket_ids))
+        )
+        ticket_numbers = {tid: number for tid, number in ticket_rows.all()}
+    return [
+        _note_to_read(
+            row,
+            ticket_number=ticket_numbers.get(row.ticket_id) if row.ticket_id else None,
+        )
+        for row in rows
+    ]
 
 
 async def create_note(
@@ -77,6 +118,10 @@ async def create_note(
         .limit(1)
     )
     max_order = max_order_result.scalar_one_or_none() or -1
+    if payload.ticket_id is not None:
+        await _require_ticket(db, payload.ticket_id)
+    if payload.visibility == "team" and not is_staff(user):
+        raise PermissionError("team_visibility_requires_staff")
     row = PersonalNote(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -85,6 +130,9 @@ async def create_note(
         is_pinned=payload.is_pinned,
         sort_order=max_order + 1,
         color=payload.color,
+        category=payload.category,
+        ticket_id=payload.ticket_id,
+        visibility=payload.visibility,
         created_at=now,
         updated_at=now,
     )
@@ -113,10 +161,80 @@ async def update_note(
         row.sort_order = payload.sort_order
     if payload.color is not None:
         row.color = payload.color or None
+    if "category" in payload.model_fields_set:
+        row.category = payload.category
+    if "ticket_id" in payload.model_fields_set:
+        if payload.ticket_id is None:
+            row.ticket_id = None
+        else:
+            await _require_ticket(db, payload.ticket_id)
+            row.ticket_id = payload.ticket_id
+    if payload.visibility is not None:
+        if payload.visibility == "team" and not is_staff(user):
+            raise PermissionError("team_visibility_requires_staff")
+        row.visibility = payload.visibility
     row.updated_at = _now()
     await db.commit()
     await db.refresh(row)
     return _note_to_read(row)
+
+
+async def list_ticket_post_its(
+    db: AsyncSession,
+    user: User,
+    ticket_id: uuid.UUID,
+) -> list[PersonalNoteRead]:
+    await _require_ticket(db, ticket_id)
+    result = await db.execute(
+        select(PersonalNote)
+        .where(
+            PersonalNote.ticket_id == ticket_id,
+            PersonalNote.deleted_at.is_(None),
+        )
+        .order_by(PersonalNote.updated_at.desc())
+    )
+    rows = [row for row in result.scalars().all() if _note_visible_to_user(row, user)]
+    author_ids = {row.user_id for row in rows if row.user_id != user.id}
+    author_names = await load_user_display_names(db, author_ids)
+    ticket = await db.get(Ticket, ticket_id)
+    ticket_number = ticket.ticket_number if ticket else None
+    return [
+        _note_to_read(
+            row,
+            author_name=author_names.get(row.user_id),
+            ticket_number=ticket_number,
+        )
+        for row in rows
+    ]
+
+
+async def summarize_ticket_post_its(
+    db: AsyncSession,
+    user: User,
+    ticket_ids: list[uuid.UUID],
+) -> list[TicketPostItSummary]:
+    if not ticket_ids:
+        return []
+    visibility_filter = or_(
+        PersonalNote.user_id == user.id,
+        PersonalNote.visibility == "team",
+    )
+    if not is_staff(user):
+        visibility_filter = PersonalNote.user_id == user.id
+    result = await db.execute(
+        select(PersonalNote.ticket_id, func.count())
+        .where(
+            PersonalNote.ticket_id.in_(ticket_ids),
+            PersonalNote.deleted_at.is_(None),
+            visibility_filter,
+        )
+        .group_by(PersonalNote.ticket_id)
+    )
+    return [
+        TicketPostItSummary(ticket_id=ticket_id, count=int(count))
+        for ticket_id, count in result.all()
+        if ticket_id is not None
+    ]
 
 
 async def delete_note(db: AsyncSession, user: User, note_id: uuid.UUID) -> None:

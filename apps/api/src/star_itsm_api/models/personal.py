@@ -26,6 +26,17 @@ class PersonalNote(Base):
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tickets.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    visibility: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default="private",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
