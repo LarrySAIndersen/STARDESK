@@ -16,7 +16,6 @@ from star_itsm_api.models.personal import (
 )
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.user import User
-from star_itsm_api.services.ticket_read import load_user_display_names
 from star_itsm_api.schemas.personal import (
     PersonalKanbanCardRead,
     PersonalKanbanColumnUpdate,
@@ -27,7 +26,7 @@ from star_itsm_api.schemas.personal import (
     TicketPostItSummary,
 )
 from star_itsm_api.schemas.ticket import TicketRead
-from star_itsm_api.services.ticket_read import tickets_to_read_list
+from star_itsm_api.services.ticket_read import load_user_display_names, tickets_to_read_list
 
 
 def _now() -> datetime:
