@@ -1,5 +1,7 @@
 import type { Ticket } from "@/types/ticket";
 
+import type { PersonalNoteCategoryId } from "@/lib/personal-note-categories";
+
 export type PersonalNote = {
   id: string;
   user_id: string;
@@ -8,8 +10,20 @@ export type PersonalNote = {
   is_pinned: boolean;
   sort_order: number;
   color: string | null;
+  category: PersonalNoteCategoryId | string | null;
+  ticket_id: string | null;
+  visibility: PersonalNoteVisibility | null;
+  author_name?: string | null;
+  ticket_number?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type PersonalNoteVisibility = "private" | "team";
+
+export type TicketPostItSummary = {
+  ticket_id: string;
+  count: number;
 };
 
 export type PersonalKanbanCard = {
@@ -33,6 +47,9 @@ export type PersonalNoteCreate = {
   content?: string;
   is_pinned?: boolean;
   color?: string | null;
+  category?: PersonalNoteCategoryId | null;
+  ticket_id?: string | null;
+  visibility?: PersonalNoteVisibility;
 };
 
 export type PersonalNoteUpdate = {
@@ -41,4 +58,7 @@ export type PersonalNoteUpdate = {
   is_pinned?: boolean;
   sort_order?: number;
   color?: string | null;
+  category?: PersonalNoteCategoryId | null;
+  ticket_id?: string | null;
+  visibility?: PersonalNoteVisibility;
 };

@@ -113,7 +113,8 @@ function Repair-StardeskApiVenv {
     Write-Host "Creating Windows API venv with uv..." -ForegroundColor Cyan
     Push-Location $ApiDir
     try {
-        & uv sync --group dev --no-build
+        & uv python install 3.12 | Out-Null
+        & uv sync --group dev --python 3.12
         if ($LASTEXITCODE -ne 0) {
             throw "uv sync failed with exit code $LASTEXITCODE"
         }

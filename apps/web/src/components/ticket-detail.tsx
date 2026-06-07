@@ -14,6 +14,7 @@ import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketPriorityForm } from "@/components/ticket-priority-form";
 import { TicketSlackPush } from "@/components/ticket-slack-push";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
+import { TicketPostItsPanel } from "@/components/personal/ticket-post-its-panel";
 import { TicketCaseLayout } from "@/components/ticket/ticket-case-layout";
 import { TicketDetailTopBand } from "@/components/ticket/ticket-detail-top-band";
 import { TicketCaseImageStripSection } from "@/components/ticket/ticket-case-image-strip-section";
@@ -184,6 +185,10 @@ export function TicketDetailView({
             Oversigt / Tilknyttede sager
           </Link>
         </WireDetailCard>
+      ) : null}
+
+      {currentUser ? (
+        <TicketPostItsPanel ticketId={ticket.id} currentUserId={currentUser.id} />
       ) : null}
 
       <WireDetailCard title="Handlinger">
