@@ -60,7 +60,8 @@ def _format_ticket(t: Ticket) -> str:
 
 
 def _bot_help_reply(display_name: str | None) -> str:
-    first = (display_name or "").split()[0] if display_name else None
+    parts = display_name.split() if display_name else []
+    first = parts[0] if parts else None
     greet = f"Hej {first}!" if first else "Hej!"
     return (
         f"{greet} Jeg er **Sag-assistenten** (chat service) mens du venter på en agent.\n\n"

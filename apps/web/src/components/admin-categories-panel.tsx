@@ -319,7 +319,7 @@ export function AdminCategoriesPanel() {
                     checked={cat.is_active}
                     onChange={(e) => patchCategory(cat.id, { is_active: e.target.checked })}
                   />
-                  Aktiv
+                  <span>Aktiv</span>
                 </label>
               </div>
 
@@ -416,7 +416,7 @@ export function AdminCategoriesPanel() {
                                   patchSub(cat.id, sub.id, { is_active: e.target.checked })
                                 }
                               />
-                              Aktiv
+                              <span>Aktiv</span>
                             </label>
                             <Button
                               type="button"

@@ -152,11 +152,10 @@ def test_record_entity_relationship_defaults() -> None:
     assert row.created_at is not None
 
 
-@pytest.mark.asyncio
-async def test_record_ticket_user_relationship_known_role() -> None:
+def test_record_ticket_user_relationship_known_role() -> None:
     mock_db = MagicMock()
     with patch.object(svc, "record_entity_relationship") as mock_rec:
-        await svc.record_ticket_user_relationship(
+        svc.record_ticket_user_relationship(
             mock_db,
             ticket_id=uuid.uuid4(),
             user_id=uuid.uuid4(),
@@ -165,11 +164,10 @@ async def test_record_ticket_user_relationship_known_role() -> None:
     assert mock_rec.call_args.kwargs["relationship_type"] == "mentioned_in_comment"
 
 
-@pytest.mark.asyncio
-async def test_record_ticket_user_relationship_unknown_role_passthrough() -> None:
+def test_record_ticket_user_relationship_unknown_role_passthrough() -> None:
     mock_db = MagicMock()
     with patch.object(svc, "record_entity_relationship") as mock_rec:
-        await svc.record_ticket_user_relationship(
+        svc.record_ticket_user_relationship(
             mock_db,
             ticket_id=uuid.uuid4(),
             user_id=uuid.uuid4(),
@@ -225,7 +223,7 @@ async def test_upsert_stakeholder_creates_new() -> None:
     mock_db = MagicMock()
     with (
         patch.object(svc, "_get_active_stakeholder", new=AsyncMock(return_value=None)),
-        patch.object(svc, "record_ticket_user_relationship", new=AsyncMock()) as mock_rel,
+        patch.object(svc, "record_ticket_user_relationship", new=MagicMock()) as mock_rel,
     ):
         row = await svc.upsert_stakeholder(
             mock_db,
@@ -240,7 +238,7 @@ async def test_upsert_stakeholder_creates_new() -> None:
     assert row.user_id == user_id
     assert row.role == "affected"
     mock_db.add.assert_called_once_with(row)
-    mock_rel.assert_awaited_once()
+    mock_rel.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -288,7 +286,7 @@ async def test_sync_ticket_stakeholders_on_create_with_lists() -> None:
 
     mock_db = AsyncMock()
     with (
-        patch.object(svc, "record_ticket_user_relationship", new=AsyncMock()) as mock_rel,
+        patch.object(svc, "record_ticket_user_relationship", new=MagicMock()) as mock_rel,
         patch.object(svc, "upsert_stakeholder", new=AsyncMock()) as mock_upsert,
         patch.object(svc, "validate_stakeholder_user_ids", new=AsyncMock()) as mock_val,
         patch.object(svc, "sync_role_stakeholders", new=AsyncMock()) as mock_sync,
@@ -301,7 +299,7 @@ async def test_sync_ticket_stakeholders_on_create_with_lists() -> None:
             interested_user_ids=interested,
         )
 
-    mock_rel.assert_awaited_once()
+    mock_rel.assert_called_once()
     mock_upsert.assert_awaited_once()
     assert mock_val.await_count == 2
     assert mock_sync.await_count == 2
@@ -311,7 +309,7 @@ async def test_sync_ticket_stakeholders_on_create_with_lists() -> None:
 async def test_sync_ticket_stakeholders_on_create_no_lists() -> None:
     mock_db = AsyncMock()
     with (
-        patch.object(svc, "record_ticket_user_relationship", new=AsyncMock()),
+        patch.object(svc, "record_ticket_user_relationship", new=MagicMock()),
         patch.object(svc, "upsert_stakeholder", new=AsyncMock()),
         patch.object(svc, "validate_stakeholder_user_ids", new=AsyncMock()) as mock_val,
         patch.object(svc, "sync_role_stakeholders", new=AsyncMock()) as mock_sync,
