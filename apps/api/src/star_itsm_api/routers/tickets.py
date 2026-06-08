@@ -124,6 +124,11 @@ from star_itsm_api.services.ticket_hierarchy import (
     set_parent_ticket_id,
 )
 from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
+from star_itsm_api.services.ticket_list_query import (
+    apply_list_tickets_post_filters,
+    build_list_tickets_stmt,
+    validate_list_tickets_query,
+)
 from star_itsm_api.services.ticket_intelligence import (
     EVALUATION_RUBRIC_DA,
     build_llm_context_batch,
@@ -176,9 +181,6 @@ from star_itsm_api.services.ticket_timestamps import (
     touch_ticket_updated,
 )
 
-DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
-DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -191,6 +193,123 @@ async def _ensure_ticket_access(
 ) -> None:
     if not await user_can_access_ticket(db, user, ticket):
         raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
+
+
+async def _apply_metadata_classification(
+    db: AsyncSession,
+    ticket: Ticket,
+    updates: dict,
+    current_user: User,
+) -> None:
+    if "category_id" not in updates and "subcategory_id" not in updates:
+        return
+    if not is_staff(current_user):
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+    next_category_id = updates.get("category_id", ticket.category_id)
+    next_subcategory_id = updates.get("subcategory_id", ticket.subcategory_id)
+    await validate_ticket_classification(
+        db,
+        category_id=next_category_id,
+        subcategory_id=next_subcategory_id,
+    )
+    ticket.category_id = next_category_id
+    ticket.subcategory_id = next_subcategory_id
+
+
+async def _sync_metadata_stakeholders(
+    db: AsyncSession,
+    ticket: Ticket,
+    updates: dict,
+    current_user: User,
+    now: datetime,
+) -> None:
+    for field, role in (("affected_user_ids", "affected"), ("interested_user_ids", "interested")):
+        if field not in updates or updates[field] is None:
+            continue
+        if not is_staff(current_user):
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+        await validate_stakeholder_user_ids(db, updates[field])
+        await sync_role_stakeholders(
+            db,
+            ticket_id=ticket.id,
+            role=role,
+            user_ids=updates[field],
+            now=now,
+        )
+
+
+async def _apply_ticket_metadata_updates(
+    db: AsyncSession,
+    ticket: Ticket,
+    updates: dict,
+    current_user: User,
+) -> None:
+    require_staff_for_security_metadata_update(current_user, updates)
+    if "is_major" in updates and updates["is_major"] is not None:
+        ticket.is_major = updates["is_major"]
+        if ticket.is_major:
+            ticket.parent_ticket_id = None
+    if "is_shared" in updates and updates["is_shared"] is not None:
+        ticket.is_shared = updates["is_shared"]
+    if "is_security_ticket" in updates and updates["is_security_ticket"] is not None:
+        ticket.is_security_ticket = updates["is_security_ticket"]
+    if "parent_ticket_id" in updates:
+        try:
+            await set_parent_ticket_id(db, ticket, updates["parent_ticket_id"])
+        except HierarchyValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if "sub_cause_ids" in updates:
+        sub_cause_ids = updates["sub_cause_ids"] or []
+        await validate_sub_cause_ids(db, sub_cause_ids, category_id=ticket.category_id)
+        await replace_ticket_sub_causes(db, ticket.id, sub_cause_ids)
+    if "tags" in updates and updates["tags"] is not None:
+        ticket.tags = updates["tags"]
+    if "emoji" in updates:
+        ticket.emoji = updates["emoji"]
+    await _apply_metadata_classification(db, ticket, updates, current_user)
+    if "source" in updates and updates["source"] is not None:
+        if not is_staff(current_user):
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+        validate_ticket_source_value(updates["source"])
+        ticket.source = updates["source"]
+    stakeholder_now = datetime.now(UTC)
+    try:
+        await _sync_metadata_stakeholders(db, ticket, updates, current_user, stakeholder_now)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _validate_assignment_targets(
+    db: AsyncSession,
+    current_user: User,
+    team_id: uuid.UUID | None,
+    user_id: uuid.UUID | None,
+) -> None:
+    if team_id is not None:
+        team = await db.get(Team, team_id)
+        if team is None or not team.is_active:
+            raise HTTPException(status_code=400, detail="Invalid group")
+        if (
+            current_user.role == ROLE_AGENT
+            and not can_assign_to_any_team(current_user)
+            and not await user_in_team(db, current_user.id, team_id)
+        ):
+            raise HTTPException(status_code=403, detail="Not a member of this group")
+
+    if user_id is None:
+        return
+    assignee = await db.get(User, user_id)
+    if assignee is None or assignee.deleted_at is not None or not assignee.is_active:
+        raise HTTPException(status_code=400, detail="Invalid user")
+    if assignee.role == ROLE_SUBMITTER:
+        raise HTTPException(status_code=400, detail="Cannot assign to submitter")
+    if not is_admin(current_user):
+        actor_org = get_user_organization_id(current_user)
+        assignee_org = get_user_organization_id(assignee)
+        if actor_org is not None and assignee_org != actor_org:
+            raise HTTPException(status_code=400, detail="User is not in your organization")
+    if team_id is not None and not await user_in_team(db, user_id, team_id):
+        raise HTTPException(status_code=400, detail="User is not a member of the selected group")
 
 
 async def _assignment_names(
@@ -377,130 +496,54 @@ async def list_tickets(
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
-        if assignee_id is not None and not can_manage_users(current_user):
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-
-        if stakeholder is not None and stakeholder != "me":
-            raise HTTPException(status_code=400, detail="Invalid stakeholder filter")
-        if involving_user_id is not None and not can_manage_users(current_user):
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-
-        parsed_scope = parse_dashboard_scope(scope)
-        if scope is not None and parsed_scope is None:
-            raise HTTPException(status_code=400, detail="Invalid scope")
-        if sla is not None and sla not in ("overdue", "due_soon"):
-            raise HTTPException(status_code=400, detail="Invalid sla filter")
-        if priority is not None and priority not in DASHBOARD_PRIORITY_VALUES:
-            raise HTTPException(status_code=400, detail="Invalid priority filter")
-        if ticket_type is not None and ticket_type not in DASHBOARD_TICKET_TYPES:
-            raise HTTPException(status_code=400, detail="Invalid ticket_type filter")
-        parsed_created_on: date | None = None
-        if created_on is not None:
-            try:
-                parsed_created_on = date.fromisoformat(created_on)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid created_on filter") from None
-        parsed_closed_on: date | None = None
-        if closed_on is not None:
-            try:
-                parsed_closed_on = date.fromisoformat(closed_on)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid closed_on filter") from None
-        try:
-            parsed_sort = parse_ticket_sort(sort)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid sort") from None
-
-        stmt = select(Ticket).where(Ticket.deleted_at.is_(None))
-        stmt = exclude_knowledge_articles(stmt)
-        stmt = apply_ticket_list_filter(stmt, current_user, store_sager=store_sager)
-        if assignee_id is not None:
-            stmt = stmt.where(Ticket.assigned_user_id == assignee_id)
-        if assigned_team_id is not None:
-            if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            stmt = stmt.where(Ticket.assigned_team_id == assigned_team_id)
-        effective_scope = parsed_scope
-        dashboard_filters = (
-            effective_scope is not None
-            or bucket is not None
-            or sla is not None
-            or opened_since_days is not None
-            or closed_since_days is not None
-            or status is not None
-            or priority is not None
-            or parsed_created_on is not None
-            or parsed_closed_on is not None
-            or ticket_type is not None
-            or assigned_team_id is not None
-            or parent_id is not None
-            or is_store is True
-            or security_only
+        parsed = validate_list_tickets_query(
+            current_user=current_user,
+            assignee_id=assignee_id,
+            involving_user_id=involving_user_id,
+            stakeholder=stakeholder,
+            scope=scope,
+            sla=sla,
+            priority=priority,
+            ticket_type=ticket_type,
+            created_on=created_on,
+            closed_on=closed_on,
+            sort=sort,
+            open_only=open_only,
+            limit=limit,
         )
-        if effective_scope is not None and is_staff_role(current_user):
-            stmt = await apply_dashboard_scope_stmt(db, stmt, current_user, effective_scope)
-        elif effective_scope is not None:
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-        if bucket is not None:
-            if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            stmt = apply_bucket_filter(stmt, bucket)
-        if parent_id is not None:
-            stmt = stmt.where(Ticket.parent_ticket_id == parent_id)
-        if has_parent is True:
-            stmt = stmt.where(Ticket.parent_ticket_id.is_not(None))
-        elif has_parent is False:
-            stmt = stmt.where(Ticket.parent_ticket_id.is_(None))
-        if is_store is True:
-            stmt = stmt.where(
-                Ticket.is_major.is_(True),
-                Ticket.parent_ticket_id.is_(None),
-            )
-        elif is_store is False:
-            stmt = stmt.where((Ticket.is_major.is_(False)) | (Ticket.parent_ticket_id.is_not(None)))
-        if board:
-            if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            open_only = True
-            limit = min(limit, 500)
-        elif major_open:
-            if not is_staff_role(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            stmt = stmt.where(Ticket.is_major.is_(True))
-            # Match dashboard major_open_count (OPEN_STATUSES, not merely non-closed).
-            stmt = stmt.where(Ticket.status.in_(tuple(OPEN_STATUSES)))
-        elif store_sager and current_user.role != ROLE_SUBMITTER:
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-        elif current_user.role == ROLE_AGENT and not dashboard_filters:
-            stmt = await apply_agent_team_list_filter(db, stmt, current_user)
-        if security_only:
-            stmt = stmt.where(Ticket.is_security_ticket.is_(True))
-        if open_only:
-            stmt = stmt.where(Ticket.status.notin_(tuple(CLOSED_STATUSES)))
-        if status is not None:
-            stmt = stmt.where(Ticket.status == status)
-        if priority is not None:
-            stmt = stmt.where(Ticket.priority == priority)
-        if ticket_type is not None:
-            stmt = stmt.where(Ticket.ticket_type == ticket_type)
-        stmt = apply_ticket_search_filter(stmt, q)
-        if stakeholder == "me":
-            stmt = apply_stakeholder_ticket_filter(stmt, user_id=current_user.id)
-        elif involving_user_id is not None:
-            stmt = apply_stakeholder_ticket_filter(stmt, user_id=involving_user_id)
-        stmt = apply_ticket_sort(stmt, parsed_sort).limit(limit)
+        stmt = await build_list_tickets_stmt(
+            db,
+            current_user,
+            parsed,
+            store_sager=store_sager,
+            assignee_id=assignee_id,
+            assigned_team_id=assigned_team_id,
+            bucket=bucket,
+            parent_id=parent_id,
+            has_parent=has_parent,
+            is_store=is_store,
+            board=board,
+            major_open=major_open,
+            security_only=security_only,
+            sla=sla,
+            opened_since_days=opened_since_days,
+            closed_since_days=closed_since_days,
+            status=status,
+            priority=priority,
+            ticket_type=ticket_type,
+            q=q,
+            stakeholder=stakeholder,
+            involving_user_id=involving_user_id,
+        )
         result = await db.execute(stmt)
         tickets = list(result.scalars().all())
-        if sla is not None:
-            tickets = filter_tickets_by_sla(tickets, sla=sla)
-        if opened_since_days is not None:
-            tickets = filter_tickets_opened_since(tickets, days=opened_since_days)
-        if closed_since_days is not None:
-            tickets = filter_tickets_closed_since(tickets, days=closed_since_days)
-        if parsed_created_on is not None:
-            tickets = filter_tickets_created_on(tickets, on=parsed_created_on)
-        if parsed_closed_on is not None:
-            tickets = filter_tickets_closed_on(tickets, on=parsed_closed_on)
+        tickets = apply_list_tickets_post_filters(
+            tickets,
+            parsed,
+            sla=sla,
+            opened_since_days=opened_since_days,
+            closed_since_days=closed_since_days,
+        )
         return await tickets_to_read_list(db, tickets)
     except HTTPException:
         raise
@@ -965,75 +1008,7 @@ async def update_ticket_metadata(
     await _ensure_ticket_access(db, ticket, current_user)
 
     updates = payload.model_dump(exclude_unset=True)
-    require_staff_for_security_metadata_update(current_user, updates)
-    if "is_major" in updates and updates["is_major"] is not None:
-        ticket.is_major = updates["is_major"]
-        if ticket.is_major:
-            ticket.parent_ticket_id = None
-    if "is_shared" in updates and updates["is_shared"] is not None:
-        ticket.is_shared = updates["is_shared"]
-    if "is_security_ticket" in updates and updates["is_security_ticket"] is not None:
-        ticket.is_security_ticket = updates["is_security_ticket"]
-    if "parent_ticket_id" in updates:
-        try:
-            await set_parent_ticket_id(db, ticket, updates["parent_ticket_id"])
-        except HierarchyValidationError as exc:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-    if "sub_cause_ids" in updates:
-        sub_cause_ids = updates["sub_cause_ids"] or []
-        await validate_sub_cause_ids(
-            db,
-            sub_cause_ids,
-            category_id=ticket.category_id,
-        )
-        await replace_ticket_sub_causes(db, ticket.id, sub_cause_ids)
-    if "tags" in updates and updates["tags"] is not None:
-        ticket.tags = updates["tags"]
-    if "emoji" in updates:
-        ticket.emoji = updates["emoji"]
-    if "category_id" in updates or "subcategory_id" in updates:
-        if not is_staff(current_user):
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-        next_category_id = updates.get("category_id", ticket.category_id)
-        next_subcategory_id = updates.get("subcategory_id", ticket.subcategory_id)
-        await validate_ticket_classification(
-            db,
-            category_id=next_category_id,
-            subcategory_id=next_subcategory_id,
-        )
-        ticket.category_id = next_category_id
-        ticket.subcategory_id = next_subcategory_id
-    if "source" in updates and updates["source"] is not None:
-        if not is_staff(current_user):
-            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-        validate_ticket_source_value(updates["source"])
-        ticket.source = updates["source"]
-    stakeholder_now = datetime.now(UTC)
-    try:
-        if "affected_user_ids" in updates and updates["affected_user_ids"] is not None:
-            if not is_staff(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            await validate_stakeholder_user_ids(db, updates["affected_user_ids"])
-            await sync_role_stakeholders(
-                db,
-                ticket_id=ticket.id,
-                role="affected",
-                user_ids=updates["affected_user_ids"],
-                now=stakeholder_now,
-            )
-        if "interested_user_ids" in updates and updates["interested_user_ids"] is not None:
-            if not is_staff(current_user):
-                raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
-            await validate_stakeholder_user_ids(db, updates["interested_user_ids"])
-            await sync_role_stakeholders(
-                db,
-                ticket_id=ticket.id,
-                role="interested",
-                user_ids=updates["interested_user_ids"],
-                now=stakeholder_now,
-            )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await _apply_ticket_metadata_updates(db, ticket, updates, current_user)
 
     if updates:
         now = datetime.now(UTC)
@@ -1368,33 +1343,7 @@ async def assign_ticket(
         updates=updates,
     )
 
-    if team_id is not None:
-        team = await db.get(Team, team_id)
-        if team is None or not team.is_active:
-            raise HTTPException(status_code=400, detail="Invalid group")
-        if (
-            current_user.role == ROLE_AGENT
-            and not can_assign_to_any_team(current_user)
-            and not await user_in_team(db, current_user.id, team_id)
-        ):
-            raise HTTPException(status_code=403, detail="Not a member of this group")
-
-    if user_id is not None:
-        assignee = await db.get(User, user_id)
-        if assignee is None or assignee.deleted_at is not None or not assignee.is_active:
-            raise HTTPException(status_code=400, detail="Invalid user")
-        if assignee.role == ROLE_SUBMITTER:
-            raise HTTPException(status_code=400, detail="Cannot assign to submitter")
-        if not is_admin(current_user):
-            actor_org = get_user_organization_id(current_user)
-            assignee_org = get_user_organization_id(assignee)
-            if actor_org is not None and assignee_org != actor_org:
-                raise HTTPException(status_code=400, detail="User is not in your organization")
-        if team_id is not None and not await user_in_team(db, user_id, team_id):
-            raise HTTPException(
-                status_code=400,
-                detail="User is not a member of the selected group",
-            )
+    await _validate_assignment_targets(db, current_user, team_id, user_id)
 
     previous = {
         "assigned_team_id": str(ticket.assigned_team_id) if ticket.assigned_team_id else None,

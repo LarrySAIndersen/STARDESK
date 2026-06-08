@@ -644,6 +644,114 @@ def _store_ticket_email(
     return row
 
 
+async def _ingest_inbound_message(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    message: InboundEmailMessage,
+    stats: GmailSyncStats,
+) -> None:
+    ticket_id = await _existing_ticket_for_thread(
+        db,
+        organization_id=organization_id,
+        gmail_thread_id=message.gmail_thread_id,
+    )
+    if ticket_id is None:
+        ticket = await _create_ticket_from_inbound(
+            db,
+            organization_id=organization_id,
+            fallback_user_id=actor_user_id,
+            message=message,
+        )
+        ticket_id = ticket.id
+        stats.created_tickets += 1
+    else:
+        stats.appended_to_threads += 1
+    _store_ticket_email(
+        db,
+        organization_id=organization_id,
+        ticket_id=ticket_id,
+        message=message,
+        direction="inbound",
+    )
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket_id,
+            actor_user_id=actor_user_id,
+            event_type="email.received",
+            payload={"from": message.from_email, "subject": message.subject},
+            created_at=message.received_at,
+        )
+    )
+    stats.processed += 1
+
+
+async def _sync_mock_gmail_inbox(
+    db: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+) -> GmailSyncStats:
+    from star_itsm_api.services.gmail_mock import mock_messages
+
+    stats = GmailSyncStats()
+    for mock in mock_messages():
+        message = InboundEmailMessage(
+            gmail_message_id=mock["gmail_message_id"],
+            gmail_thread_id=mock["gmail_thread_id"],
+            internet_message_id=mock.get("internet_message_id"),
+            subject=mock.get("subject") or "(ingen emnelinje)",
+            from_email=mock.get("from_email"),
+            to_email=mock.get("to_email"),
+            body_text=mock.get("body_text") or "",
+            received_at=mock.get("received_at") or datetime.now(UTC),
+            in_reply_to=None,
+            references=None,
+        )
+        exists = await db.execute(
+            select(TicketEmail).where(TicketEmail.gmail_message_id == message.gmail_message_id)
+        )
+        if exists.scalar_one_or_none() is not None:
+            stats.skipped_duplicates += 1
+            continue
+        await _ingest_inbound_message(
+            db,
+            organization_id=organization_id,
+            actor_user_id=actor_user_id,
+            message=message,
+            stats=stats,
+        )
+    await db.commit()
+    return stats
+
+
+def _skip_inbound_for_integration(
+    message: InboundEmailMessage,
+    integration: EmailIntegration,
+) -> bool:
+    if integration.connected_email and _normalize_email(message.from_email) == _normalize_email(
+        integration.connected_email
+    ):
+        return True
+    return not _message_targets_sync_mailbox(message)
+
+
+async def _list_gmail_sync_message_ids(
+    access_token: str,
+    integration: EmailIntegration,
+) -> tuple[list[str], str | None]:
+    if integration.last_history_id:
+        message_ids, newest_history_id = await _gmail_history_ids(
+            access_token, integration.last_history_id
+        )
+        if newest_history_id is None:
+            return await _gmail_unread_ids(access_token)
+        return message_ids, newest_history_id
+    return await _gmail_unread_ids(access_token)
+
+
 async def sync_gmail_inbox(
     db: AsyncSession,
     *,
@@ -655,76 +763,15 @@ async def sync_gmail_inbox(
 
     if integration is None or not integration.refresh_token_encrypted:
         if settings.gmail_mock:
-            from star_itsm_api.services.gmail_mock import mock_messages
-
-            for mock in mock_messages():
-                message = InboundEmailMessage(
-                    gmail_message_id=mock["gmail_message_id"],
-                    gmail_thread_id=mock["gmail_thread_id"],
-                    internet_message_id=mock.get("internet_message_id"),
-                    subject=mock.get("subject") or "(ingen emnelinje)",
-                    from_email=mock.get("from_email"),
-                    to_email=mock.get("to_email"),
-                    body_text=mock.get("body_text") or "",
-                    received_at=mock.get("received_at") or datetime.now(UTC),
-                    in_reply_to=None,
-                    references=None,
-                )
-                exists = await db.execute(
-                    select(TicketEmail).where(
-                        TicketEmail.gmail_message_id == message.gmail_message_id
-                    )
-                )
-                if exists.scalar_one_or_none() is not None:
-                    stats.skipped_duplicates += 1
-                    continue
-                ticket_id = await _existing_ticket_for_thread(
-                    db,
-                    organization_id=organization_id,
-                    gmail_thread_id=message.gmail_thread_id,
-                )
-                if ticket_id is None:
-                    ticket = await _create_ticket_from_inbound(
-                        db,
-                        organization_id=organization_id,
-                        fallback_user_id=actor_user_id,
-                        message=message,
-                    )
-                    ticket_id = ticket.id
-                    stats.created_tickets += 1
-                else:
-                    stats.appended_to_threads += 1
-                _store_ticket_email(
-                    db,
-                    organization_id=organization_id,
-                    ticket_id=ticket_id,
-                    message=message,
-                    direction="inbound",
-                )
-                db.add(
-                    TicketEvent(
-                        id=uuid.uuid4(),
-                        ticket_id=ticket_id,
-                        actor_user_id=actor_user_id,
-                        event_type="email.received",
-                        payload={"from": message.from_email, "subject": message.subject},
-                        created_at=message.received_at,
-                    )
-                )
-                stats.processed += 1
-            await db.commit()
-            return stats
+            return await _sync_mock_gmail_inbox(
+                db,
+                organization_id=organization_id,
+                actor_user_id=actor_user_id,
+            )
         raise GmailApiError("Gmail er ikke forbundet.")
 
     access_token = await refresh_access_token(integration)
-    if integration.last_history_id:
-        message_ids, newest_history_id = await _gmail_history_ids(
-            access_token, integration.last_history_id
-        )
-        if newest_history_id is None:
-            message_ids, newest_history_id = await _gmail_unread_ids(access_token)
-    else:
-        message_ids, newest_history_id = await _gmail_unread_ids(access_token)
+    message_ids, newest_history_id = await _list_gmail_sync_message_ids(access_token, integration)
 
     for gmail_message_id in message_ids:
         existing = await db.execute(
@@ -737,49 +784,16 @@ async def sync_gmail_inbox(
             access_token, f"/users/me/messages/{gmail_message_id}", params={"format": "full"}
         )
         message = parse_gmail_message(raw)
-        if message is None:
+        if message is None or _skip_inbound_for_integration(message, integration):
             continue
-        if integration.connected_email and _normalize_email(message.from_email) == _normalize_email(
-            integration.connected_email
-        ):
-            continue
-        if not _message_targets_sync_mailbox(message):
-            continue
-        ticket_id = await _existing_ticket_for_thread(
+        await _ingest_inbound_message(
             db,
             organization_id=organization_id,
-            gmail_thread_id=message.gmail_thread_id,
-        )
-        if ticket_id is None:
-            ticket = await _create_ticket_from_inbound(
-                db,
-                organization_id=organization_id,
-                fallback_user_id=actor_user_id,
-                message=message,
-            )
-            ticket_id = ticket.id
-            stats.created_tickets += 1
-        else:
-            stats.appended_to_threads += 1
-        _store_ticket_email(
-            db,
-            organization_id=organization_id,
-            ticket_id=ticket_id,
+            actor_user_id=actor_user_id,
             message=message,
-            direction="inbound",
-        )
-        db.add(
-            TicketEvent(
-                id=uuid.uuid4(),
-                ticket_id=ticket_id,
-                actor_user_id=actor_user_id,
-                event_type="email.received",
-                payload={"from": message.from_email, "subject": message.subject},
-                created_at=message.received_at,
-            )
+            stats=stats,
         )
         await _mark_message_processed(access_token, gmail_message_id)
-        stats.processed += 1
 
     integration.last_history_id = newest_history_id or integration.last_history_id
     integration.last_sync_at = datetime.now(UTC)
@@ -809,14 +823,12 @@ def _latest_thread_email_stmt(ticket_id: uuid.UUID) -> Select[tuple[TicketEmail]
     )
 
 
-async def send_ticket_email_reply(
+async def _resolve_outbound_org_id(
     db: AsyncSession,
     *,
     ticket: Ticket,
     actor: User,
-    body: str,
-    to_email_override: str | None = None,
-) -> TicketEmail:
+) -> uuid.UUID:
     org_id = get_user_organization_id(actor) or ticket.organization_id
     if org_id is None and is_admin(actor):
         try:
@@ -825,51 +837,69 @@ async def send_ticket_email_reply(
             raise GmailApiError(str(exc)) from exc
     if org_id is None:
         raise GmailApiError("Bruger er ikke knyttet til en organisation.")
-    integration = await get_email_integration(db, organization_id=org_id)
+    return org_id
 
-    if integration is None or not integration.refresh_token_encrypted:
-        if not settings.gmail_mock:
-            raise GmailApiError("Gmail er ikke forbundet.")
-        now = datetime.now(UTC)
-        latest = await db.execute(_latest_thread_email_stmt(ticket.id))
-        latest_email = latest.scalar_one_or_none()
-        thread_id = latest_email.gmail_thread_id if latest_email else f"mock-thread-{ticket.id}"
-        subject = build_reply_subject(
-            ticket.ticket_number, latest_email.subject if latest_email else ticket.title
-        )
-        outbound = InboundEmailMessage(
-            gmail_message_id=f"mock-outbound-{uuid.uuid4()}",
-            gmail_thread_id=thread_id,
-            internet_message_id=None,
-            subject=subject,
-            from_email="mock-stardesk@example.dk",
-            to_email=to_email_override or latest_email.from_email if latest_email else None,
-            body_text=f"{body.strip()}\n\nSagsnummer: {ticket.ticket_number}",
-            received_at=now,
-            in_reply_to=latest_email.internet_message_id if latest_email else None,
-            references=latest_email.internet_message_id if latest_email else None,
-        )
-        row = _store_ticket_email(
-            db,
-            organization_id=org_id,
+
+async def _send_mock_ticket_email_reply(
+    db: AsyncSession,
+    *,
+    ticket: Ticket,
+    actor: User,
+    org_id: uuid.UUID,
+    body: str,
+    to_email_override: str | None,
+) -> TicketEmail:
+    now = datetime.now(UTC)
+    latest = await db.execute(_latest_thread_email_stmt(ticket.id))
+    latest_email = latest.scalar_one_or_none()
+    thread_id = latest_email.gmail_thread_id if latest_email else f"mock-thread-{ticket.id}"
+    subject = build_reply_subject(
+        ticket.ticket_number, latest_email.subject if latest_email else ticket.title
+    )
+    outbound = InboundEmailMessage(
+        gmail_message_id=f"mock-outbound-{uuid.uuid4()}",
+        gmail_thread_id=thread_id,
+        internet_message_id=None,
+        subject=subject,
+        from_email="mock-stardesk@example.dk",
+        to_email=to_email_override or latest_email.from_email if latest_email else None,
+        body_text=f"{body.strip()}\n\nSagsnummer: {ticket.ticket_number}",
+        received_at=now,
+        in_reply_to=latest_email.internet_message_id if latest_email else None,
+        references=latest_email.internet_message_id if latest_email else None,
+    )
+    row = _store_ticket_email(
+        db,
+        organization_id=org_id,
+        ticket_id=ticket.id,
+        message=outbound,
+        direction="outbound",
+    )
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
             ticket_id=ticket.id,
-            message=outbound,
-            direction="outbound",
+            actor_user_id=actor.id,
+            event_type="email.sent",
+            payload={"to": outbound.to_email, "subject": outbound.subject, "mock": True},
+            created_at=now,
         )
-        db.add(
-            TicketEvent(
-                id=uuid.uuid4(),
-                ticket_id=ticket.id,
-                actor_user_id=actor.id,
-                event_type="email.sent",
-                payload={"to": outbound.to_email, "subject": outbound.subject, "mock": True},
-                created_at=now,
-            )
-        )
-        await db.commit()
-        await db.refresh(row)
-        return row
+    )
+    await db.commit()
+    await db.refresh(row)
+    return row
 
+
+async def _send_live_ticket_email_reply(
+    db: AsyncSession,
+    *,
+    ticket: Ticket,
+    actor: User,
+    org_id: uuid.UUID,
+    integration: EmailIntegration,
+    body: str,
+    to_email_override: str | None,
+) -> TicketEmail:
     access_token = await refresh_access_token(integration)
     latest_result = await db.execute(_latest_thread_email_stmt(ticket.id))
     latest_email = latest_result.scalar_one_or_none()
@@ -937,3 +967,37 @@ async def send_ticket_email_reply(
     await db.commit()
     await db.refresh(row)
     return row
+
+
+async def send_ticket_email_reply(
+    db: AsyncSession,
+    *,
+    ticket: Ticket,
+    actor: User,
+    body: str,
+    to_email_override: str | None = None,
+) -> TicketEmail:
+    org_id = await _resolve_outbound_org_id(db, ticket=ticket, actor=actor)
+    integration = await get_email_integration(db, organization_id=org_id)
+
+    if integration is None or not integration.refresh_token_encrypted:
+        if not settings.gmail_mock:
+            raise GmailApiError("Gmail er ikke forbundet.")
+        return await _send_mock_ticket_email_reply(
+            db,
+            ticket=ticket,
+            actor=actor,
+            org_id=org_id,
+            body=body,
+            to_email_override=to_email_override,
+        )
+
+    return await _send_live_ticket_email_reply(
+        db,
+        ticket=ticket,
+        actor=actor,
+        org_id=org_id,
+        integration=integration,
+        body=body,
+        to_email_override=to_email_override,
+    )
