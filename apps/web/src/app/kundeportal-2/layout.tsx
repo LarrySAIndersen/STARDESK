@@ -2,9 +2,10 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { PortalShell } from "@/components/portal/portal-shell";
+import { Kp2Shell } from "@/components/kundeportal-2/kp2-shell";
 import { TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
+import { canAccessKundeportal2 } from "@/lib/kundeportal-2-access";
 
 export const metadata = {
   title: "Kundeportal #2 — STAR Selvbetjening",
@@ -19,13 +20,9 @@ export default async function Kundeportal2Layout({ children }: { children: React
   }
 
   const user = await getServerUser();
-  if (!user) {
-    redirect("/login/helpdesk?next=/kundeportal-2");
+  if (!canAccessKundeportal2(user)) {
+    redirect("/portal");
   }
 
-  return (
-    <PortalShell user={user}>
-      <div className="kp2-app min-h-full">{children}</div>
-    </PortalShell>
-  );
+  return <Kp2Shell>{children}</Kp2Shell>;
 }

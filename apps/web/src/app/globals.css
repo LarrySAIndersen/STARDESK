@@ -1646,6 +1646,210 @@
   .portal-v2-btn-primary {
     @apply bg-primary hover:bg-primary/90 inline-flex h-9 shrink-0 items-center justify-center rounded-[2px] px-4 text-sm font-medium text-primary-foreground;
   }
+
+  /* Kundeportal #2 — STAR selvbetjening (TOPdesk-alternativ) */
+  .kp2-app {
+    --kp2-blue: #003087;
+    --kp2-red: #c8102e;
+    --kp2-turkis: #00c7b1;
+    background: #f7f8fa;
+    color: #1a1a1a;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .kp2-header {
+    @apply bg-white shadow-sm;
+  }
+
+  .kp2-header-top {
+    @apply mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6;
+  }
+
+  .kp2-brand {
+    @apply flex items-center gap-3;
+  }
+
+  .kp2-brand-crown {
+    @apply text-xl text-[var(--kp2-blue)];
+  }
+
+  .kp2-brand-title {
+    @apply text-sm font-semibold text-[var(--kp2-blue)];
+  }
+
+  .kp2-brand-sub {
+    @apply text-muted-foreground text-xs;
+  }
+
+  .kp2-hero {
+    @apply relative bg-gradient-to-b from-slate-100 to-white px-4 py-8 sm:px-6;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
+      repeating-linear-gradient(135deg, #e8eaed 0 2px, transparent 2px 24px);
+  }
+
+  .kp2-search {
+    @apply mx-auto flex max-w-2xl overflow-hidden rounded-sm border border-border bg-white shadow-sm;
+  }
+
+  .kp2-search-input {
+    @apply min-w-0 flex-1 border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--kp2-blue)]/30;
+  }
+
+  .kp2-search-btn {
+    @apply flex items-center justify-center px-4 text-[var(--kp2-blue)] hover:bg-slate-50;
+  }
+
+  .kp2-breadcrumbs {
+    @apply text-muted-foreground mx-auto max-w-6xl px-4 py-2 text-[11px] tracking-wide sm:px-6;
+  }
+
+  .kp2-breadcrumb-link {
+    @apply hover:text-[var(--kp2-blue)] hover:underline;
+  }
+
+  .kp2-main {
+    @apply min-h-0 flex-1;
+  }
+
+  .kp2-page-title {
+    @apply text-2xl font-normal tracking-tight text-[var(--kp2-blue)];
+  }
+
+  .kp2-section-title {
+    @apply text-base font-semibold text-foreground;
+  }
+
+  .kp2-card {
+    @apply rounded-sm border border-border bg-white shadow-sm;
+  }
+
+  .kp2-tile-grid {
+    @apply grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4;
+  }
+
+  .kp2-tile {
+    @apply flex min-h-[120px] flex-col items-center justify-center gap-3 bg-[var(--kp2-blue)] p-4 text-center text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kp2-turkis)];
+  }
+
+  .kp2-tile-icon {
+    @apply opacity-90;
+  }
+
+  .kp2-tile-label {
+    @apply text-xs leading-snug font-semibold;
+  }
+
+  .kp2-message-banner {
+    @apply rounded-sm border border-border bg-white shadow-sm;
+  }
+
+  .kp2-message-banner-header {
+    @apply flex items-center gap-2 bg-slate-700 px-3 py-2 text-white;
+  }
+
+  .kp2-message-banner-link {
+    @apply block p-3 hover:bg-slate-50;
+  }
+
+  .kp2-catalog-list {
+    @apply divide-y divide-border overflow-hidden rounded-sm border border-border bg-white;
+  }
+
+  .kp2-catalog-item {
+    @apply flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50;
+  }
+
+  .kp2-btn-primary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-[var(--kp2-blue)] px-5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50;
+  }
+
+  .kp2-btn-secondary {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-border bg-white px-4 text-sm hover:bg-slate-50;
+  }
+
+  .kp2-back-link {
+    @apply text-muted-foreground inline-flex items-center gap-1 text-sm hover:text-[var(--kp2-blue)];
+  }
+
+  .kp2-field {
+    @apply space-y-1.5;
+  }
+
+  .kp2-field-label {
+    @apply block text-sm font-semibold;
+  }
+
+  .kp2-input {
+    @apply w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-[var(--kp2-blue)] focus:ring-2 focus:ring-[var(--kp2-blue)]/20;
+  }
+
+  .kp2-input--inline {
+    @apply w-auto min-w-[10rem];
+  }
+
+  .kp2-toolbar {
+    @apply flex flex-wrap items-center gap-4 rounded-sm border border-border bg-white p-3;
+  }
+
+  .kp2-table {
+    @apply w-full text-left text-sm;
+  }
+
+  .kp2-table th {
+    @apply bg-slate-50 px-4 py-2 font-semibold;
+  }
+
+  .kp2-table td {
+    @apply border-t border-border px-4 py-2;
+  }
+
+  .kp2-empty {
+    @apply rounded-sm border border-dashed border-border bg-white p-8 text-center;
+  }
+
+  .kp2-user-btn {
+    @apply flex items-center gap-1 rounded-full border border-border bg-amber-100 p-0.5;
+  }
+
+  .kp2-user-avatar {
+    @apply flex size-9 items-center justify-center rounded-full bg-amber-300 text-sm font-bold text-amber-950;
+  }
+
+  .kp2-user-menu {
+    @apply absolute right-0 z-50 mt-2 min-w-[12rem] rounded-sm border border-border bg-white py-2 shadow-lg;
+  }
+
+  .kp2-user-menu-name {
+    @apply border-b border-border px-4 pb-2 text-sm font-semibold;
+  }
+
+  .kp2-user-menu-item {
+    @apply flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-slate-50;
+  }
+
+  .kp2-status-badge {
+    @apply rounded-sm border border-sky-200 bg-sky-50 px-3 py-2 text-center text-sm font-medium text-sky-900;
+  }
+
+  .kp2-message-icon {
+    @apply flex size-10 items-center justify-center rounded-sm bg-sky-600 font-bold text-white;
+  }
+
+  .kp2-update-card {
+    @apply mb-3 flex gap-3 rounded-sm border border-border bg-slate-50 p-4;
+  }
+
+  .kp2-update-avatar {
+    @apply size-10 shrink-0 rounded-full bg-slate-300;
+  }
+
+  .kp2-bar-reg {
+    @apply bg-[var(--kp2-blue)];
+  }
+
+  .kp2-bar-res {
+    @apply bg-[var(--kp2-turkis)];
+  }
 }
 
 /* Classic (TOPdesk-style) staff flow — separate from wireframe agent shell */
