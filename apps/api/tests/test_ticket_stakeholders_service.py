@@ -152,11 +152,10 @@ def test_record_entity_relationship_defaults() -> None:
     assert row.created_at is not None
 
 
-@pytest.mark.asyncio
-async def test_record_ticket_user_relationship_known_role() -> None:
+def test_record_ticket_user_relationship_known_role() -> None:
     mock_db = MagicMock()
     with patch.object(svc, "record_entity_relationship") as mock_rec:
-        await svc.record_ticket_user_relationship(
+        svc.record_ticket_user_relationship(
             mock_db,
             ticket_id=uuid.uuid4(),
             user_id=uuid.uuid4(),
@@ -165,11 +164,10 @@ async def test_record_ticket_user_relationship_known_role() -> None:
     assert mock_rec.call_args.kwargs["relationship_type"] == "mentioned_in_comment"
 
 
-@pytest.mark.asyncio
-async def test_record_ticket_user_relationship_unknown_role_passthrough() -> None:
+def test_record_ticket_user_relationship_unknown_role_passthrough() -> None:
     mock_db = MagicMock()
     with patch.object(svc, "record_entity_relationship") as mock_rec:
-        await svc.record_ticket_user_relationship(
+        svc.record_ticket_user_relationship(
             mock_db,
             ticket_id=uuid.uuid4(),
             user_id=uuid.uuid4(),
