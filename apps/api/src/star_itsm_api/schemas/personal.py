@@ -26,6 +26,8 @@ class PersonalNoteUpdate(BaseModel):
     content: str | None = Field(default=None, max_length=10000)
     is_pinned: bool | None = None
     sort_order: int | None = None
+    board_x: float | None = Field(default=None, ge=0)
+    board_y: float | None = Field(default=None, ge=0)
     color: str | None = Field(default=None, max_length=32)
     category: PersonalNoteCategoryId | None = Field(default=None, max_length=32)
     ticket_id: UUID | None = None
@@ -42,6 +44,8 @@ class PersonalNoteRead(BaseModel):
     content: str
     is_pinned: bool
     sort_order: int
+    board_x: float | None = None
+    board_y: float | None = None
     color: str | None
     category: str | None
     ticket_id: UUID | None = None

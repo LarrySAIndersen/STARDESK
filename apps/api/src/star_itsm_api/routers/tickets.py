@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy import select
@@ -69,14 +69,9 @@ from star_itsm_api.services.comment_reactions import (
     load_reaction_summaries,
     set_comment_reaction,
 )
-from star_itsm_api.services.dashboard_scope import (
-    apply_dashboard_scope_stmt,
-    parse_dashboard_scope,
-)
 from star_itsm_api.services.db_resilience import optional_db_read
 from star_itsm_api.services.gmail import GmailApiError, list_ticket_emails, send_ticket_email_reply
 from star_itsm_api.services.gmail import get_email_integration as get_gmail_integration
-from star_itsm_api.services.knowledge_articles import exclude_knowledge_articles
 from star_itsm_api.services.org_access import (
     apply_agent_team_list_filter,
     apply_ticket_list_filter,
@@ -84,8 +79,8 @@ from star_itsm_api.services.org_access import (
     get_user_organization_id,
     user_can_access_ticket,
 )
-from star_itsm_api.services.permissions import can_manage_users, is_admin, is_staff_role
-from star_itsm_api.services.reports import OPEN_STATUSES, is_reopen_transition
+from star_itsm_api.services.permissions import is_admin
+from star_itsm_api.services.reports import is_reopen_transition
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.sla_pause import (
@@ -106,14 +101,6 @@ from star_itsm_api.services.ticket_classification import (
     validate_ticket_classification,
     validate_ticket_source_value,
 )
-from star_itsm_api.services.ticket_dashboard_filters import (
-    apply_bucket_filter,
-    filter_tickets_by_sla,
-    filter_tickets_closed_on,
-    filter_tickets_closed_since,
-    filter_tickets_created_on,
-    filter_tickets_opened_since,
-)
 from star_itsm_api.services.ticket_hierarchy import (
     HierarchyValidationError,
     add_related_major_link,
@@ -124,16 +111,16 @@ from star_itsm_api.services.ticket_hierarchy import (
     set_parent_ticket_id,
 )
 from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
-from star_itsm_api.services.ticket_list_query import (
-    apply_list_tickets_post_filters,
-    build_list_tickets_stmt,
-    validate_list_tickets_query,
-)
 from star_itsm_api.services.ticket_intelligence import (
     EVALUATION_RUBRIC_DA,
     build_llm_context_batch,
     build_ticket_llm_context,
     intelligence_from_ticket,
+)
+from star_itsm_api.services.ticket_list_query import (
+    apply_list_tickets_post_filters,
+    build_list_tickets_stmt,
+    validate_list_tickets_query,
 )
 from star_itsm_api.services.ticket_notifications import (
     build_assignment_notification,
@@ -152,19 +139,13 @@ from star_itsm_api.services.ticket_read import (
     tickets_to_read_list,
 )
 from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
-from star_itsm_api.services.ticket_search import apply_ticket_search_filter
 from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
     resolve_create_security_flag,
 )
-from star_itsm_api.services.ticket_sort import (
-    DEFAULT_TICKET_SORT,
-    apply_ticket_sort,
-    parse_ticket_sort,
-)
+from star_itsm_api.services.ticket_sort import DEFAULT_TICKET_SORT
 from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
 from star_itsm_api.services.ticket_stakeholders import (
-    apply_stakeholder_ticket_filter,
     get_ticket_stakeholders_grouped,
     process_comment_mentions,
     soft_delete_stakeholder,

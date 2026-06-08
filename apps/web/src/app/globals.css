@@ -3365,18 +3365,66 @@ body.page-layout-edit-active .page-layout-field--editing {
   color: color-mix(in srgb, var(--star-navy) 55%, white);
 }
 
-.min-side-board__stack-list,
-.min-side-board__cork-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
+.min-side-board__stack-pile {
+  position: relative;
   flex: 1;
+  min-height: 11rem;
+  margin: 0.25rem 0;
 }
 
-.min-side-board__cork-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
-  align-content: start;
+.min-side-board__stack-sheet {
+  position: absolute;
+  inset: 0.35rem 0.5rem auto;
+  height: 7.5rem;
+  border-radius: 0.375rem;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--star-navy) 8%, transparent),
+    0 3px 8px color-mix(in srgb, var(--star-navy) 6%, transparent);
+  pointer-events: none;
+}
+
+.min-side-board__stack-peek {
+  display: block;
+  padding: 0.75rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--star-navy) 70%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.min-side-board__stack-top {
+  position: absolute;
+  inset: 0.35rem 0.5rem auto;
+}
+
+.min-side-board__empty--pile {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.min-side-board__cork-surface {
+  position: relative;
+  flex: 1;
+  min-height: 18rem;
+  border-radius: 0.5rem;
+}
+
+.min-side-board__cork-note {
+  position: absolute;
+  width: 11rem;
+  transition: opacity 0.12s ease;
+}
+
+.min-side-board__cork-note--dragging {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .min-side-board__empty,
@@ -3389,7 +3437,8 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .min-side-board__cork-empty {
-  flex: 1;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3478,6 +3527,11 @@ body.page-layout-edit-active .page-layout-field--editing {
 
 .min-side-board__grid--dragging {
   user-select: none;
+}
+
+.min-side-board__grid--dragging .min-side-board__stack-top .min-side-note--dragging,
+.min-side-board__grid--dragging .min-side-board__cork-note--dragging {
+  pointer-events: none;
 }
 
 .min-side-note {

@@ -15,20 +15,55 @@ export type PersonalNoteDropTarget = {
   ticketId?: string;
   ticketNumber?: string;
   ticketTitle?: string;
+  boardX?: number;
+  boardY?: number;
 };
 
+const BOARD_NOTE_WIDTH = 176;
+const BOARD_NOTE_HEIGHT = 120;
+
+function readBoardPosition(
+  target: HTMLElement,
+  clientX: number,
+  clientY: number,
+): { boardX: number; boardY: number } {
+  const rect = target.getBoundingClientRect();
+  const maxX = Math.max(0, rect.width - BOARD_NOTE_WIDTH);
+  const maxY = Math.max(0, rect.height - BOARD_NOTE_HEIGHT);
+  const boardX = Math.min(maxX, Math.max(0, clientX - rect.left - BOARD_NOTE_WIDTH / 2));
+  const boardY = Math.min(maxY, Math.max(0, clientY - rect.top - 24));
+  return { boardX, boardY };
+}
+
+export function resolvePersonalNoteDropTarget(
+  elements: Element[],
+  clientX?: number,
+  clientY?: number,
+): PersonalNoteDropTarget | null {
+  for (const el of elements) {
+    const target = el.closest("[data-note-drop]") as HTMLElement | null;
+    if (!target) continue;
+    const zone = target.dataset.noteDrop as PersonalNoteDropZone | undefined;
+    if (!zone) continue;
+    const result: PersonalNoteDropTarget = {
+      zone,
+      ticketId: target.dataset.ticketId,
+      ticketNumber: target.dataset.ticketNumber,
+      ticketTitle: target.dataset.ticketTitle,
+    };
+    if (zone === "board" && clientX !== undefined && clientY !== undefined) {
+      const position = readBoardPosition(target, clientX, clientY);
+      result.boardX = position.boardX;
+      result.boardY = position.boardY;
+    }
+    return result;
+  }
+  return null;
+}
+
 function readDropTarget(clientX: number, clientY: number): PersonalNoteDropTarget | null {
-  const el = document.elementFromPoint(clientX, clientY);
-  const target = el?.closest("[data-note-drop]") as HTMLElement | null;
-  if (!target) return null;
-  const zone = target.dataset.noteDrop as PersonalNoteDropZone | undefined;
-  if (!zone) return null;
-  return {
-    zone,
-    ticketId: target.dataset.ticketId,
-    ticketNumber: target.dataset.ticketNumber,
-    ticketTitle: target.dataset.ticketTitle,
-  };
+  const elements = document.elementsFromPoint(clientX, clientY);
+  return resolvePersonalNoteDropTarget(elements, clientX, clientY);
 }
 
 export function usePersonalNoteDrag(

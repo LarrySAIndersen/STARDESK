@@ -49,6 +49,8 @@ def _note_to_read(
         content=row.content,
         is_pinned=row.is_pinned,
         sort_order=row.sort_order,
+        board_x=row.board_x,
+        board_y=row.board_y,
         color=row.color,
         category=row.category,
         ticket_id=row.ticket_id,
@@ -162,6 +164,13 @@ async def update_note(
         row.is_pinned = payload.is_pinned
     if payload.sort_order is not None:
         row.sort_order = payload.sort_order
+    if "board_x" in payload.model_fields_set:
+        row.board_x = payload.board_x
+    if "board_y" in payload.model_fields_set:
+        row.board_y = payload.board_y
+    if payload.is_pinned is False:
+        row.board_x = None
+        row.board_y = None
     if payload.color is not None:
         row.color = payload.color or None
     if "category" in payload.model_fields_set:
