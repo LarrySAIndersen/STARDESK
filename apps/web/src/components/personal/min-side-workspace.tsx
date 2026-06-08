@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { PostItAttachProvider } from "@/components/personal/post-it-attach-provider";
-import { PersonalBulletinBoard } from "@/components/personal/personal-bulletin-board";
+import { PersonalBoard } from "@/components/personal/personal-board";
 import { MyTicketsSection, PersonalKanbanBoard } from "@/components/personal/personal-kanban-board";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban, type PersonalNote } from "@/types/personal";
 import type { UserTicketsGrouped } from "@/types/admin-user";
@@ -37,7 +37,7 @@ export function MinSideWorkspace({
       }
     >
     <div className="flex flex-col gap-6">
-      <PersonalBulletinBoard
+      <PersonalBoard
         notes={notes}
         onNotesChange={setNotes}
         kanban={kanban}

@@ -26,6 +26,7 @@ from star_itsm_api.schemas.personal import (
     TicketPostItSummary,
 )
 from star_itsm_api.schemas.ticket import TicketRead
+from star_itsm_api.services.personal_note_numbers import generate_personal_note_number
 from star_itsm_api.services.ticket_read import load_user_display_names, tickets_to_read_list
 
 
@@ -43,6 +44,7 @@ def _note_to_read(
     return PersonalNoteRead(
         id=row.id,
         user_id=row.user_id,
+        note_number=row.note_number,
         title=row.title,
         content=row.content,
         is_pinned=row.is_pinned,
@@ -121,9 +123,11 @@ async def create_note(
         await _require_ticket(db, payload.ticket_id)
     if payload.visibility == "team" and not is_staff(user):
         raise PermissionError("team_visibility_requires_staff")
+    note_number = await generate_personal_note_number(db)
     row = PersonalNote(
         id=uuid.uuid4(),
         user_id=user.id,
+        note_number=note_number,
         title=payload.title.strip(),
         content=payload.content.strip(),
         is_pinned=payload.is_pinned,

@@ -18,6 +18,7 @@ class PersonalNote(Base):
         nullable=False,
     )
     title: Mapped[str] = mapped_column(String(256), nullable=False)
+    note_number: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
     is_pinned: Mapped[bool] = mapped_column(
         Boolean,

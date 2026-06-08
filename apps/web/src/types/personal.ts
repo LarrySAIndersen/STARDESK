@@ -5,6 +5,7 @@ import type { PersonalNoteCategoryId } from "@/lib/personal-note-categories";
 export type PersonalNote = {
   id: string;
   user_id: string;
+  note_number: string;
   title: string;
   content: string;
   is_pinned: boolean;

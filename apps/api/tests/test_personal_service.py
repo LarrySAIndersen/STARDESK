@@ -28,6 +28,7 @@ def _note(*, user_id: uuid.UUID, note_id: uuid.UUID | None = None) -> PersonalNo
     return PersonalNote(
         id=note_id or uuid.uuid4(),
         user_id=user_id,
+        note_number="IDE-2026-00001",
         title="Note",
         content="Body",
         is_pinned=False,
@@ -67,15 +68,20 @@ async def test_create_note_assigns_next_sort_order() -> None:
 
     mock_db.refresh = AsyncMock()
 
-    read = await personal_service.create_note(
-        mock_db,
-        user,
-        PersonalNoteCreate(title="  Ny note  ", content="  Indhold  ", is_pinned=True, color="blue"),
-    )
+    with patch(
+        "star_itsm_api.services.personal_service.generate_personal_note_number",
+        AsyncMock(return_value="IDE-2026-00099"),
+    ):
+        read = await personal_service.create_note(
+            mock_db,
+            user,
+            PersonalNoteCreate(title="  Ny note  ", content="  Indhold  ", is_pinned=True, color="blue"),
+        )
 
     assert read.title == "Ny note"
     assert read.content == "Indhold"
     assert read.sort_order == 3
+    assert read.note_number == "IDE-2026-00099"
     mock_db.add.assert_called_once()
     mock_db.commit.assert_awaited_once()
 
@@ -577,3 +583,133 @@ async def test_summarize_ticket_post_its_empty_input() -> None:
     summaries = await personal_service.summarize_ticket_post_its(mock_db, _user(), [])
     assert summaries == []
     mock_db.execute.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_list_notes_includes_ticket_numbers() -> None:
+    user = _user()
+    ticket_id = uuid.uuid4()
+    note = _note(user_id=user.id)
+    note.ticket_id = ticket_id
+    notes_result = MagicMock()
+    notes_result.scalars.return_value.all.return_value = [note]
+    ticket_result = MagicMock()
+    ticket_result.all.return_value = [(ticket_id, "INC-42")]
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(side_effect=[notes_result, ticket_result])
+
+    rows = await personal_service.list_notes(mock_db, user)
+
+    assert len(rows) == 1
+    assert rows[0].ticket_number == "INC-42"
+
+
+@pytest.mark.asyncio
+async def test_create_note_with_ticket_and_team_visibility() -> None:
+    user = _user()
+    user.role = "agent"
+    ticket_id = uuid.uuid4()
+    ticket = Ticket(
+        id=ticket_id,
+        ticket_number="INC-9",
+        ticket_type="incident",
+        title="Sag",
+        description="Beskrivelse lang nok til test",
+        status="new",
+        priority="medium",
+        reporter_user_id=uuid.uuid4(),
+        source="portal",
+        created_at=datetime.now(UTC),
+    )
+    mock_db = AsyncMock()
+    order_result = MagicMock()
+    order_result.scalar_one_or_none.return_value = None
+    mock_db.execute = AsyncMock(return_value=order_result)
+    mock_db.get = AsyncMock(return_value=ticket)
+    mock_db.refresh = AsyncMock()
+
+    with patch(
+        "star_itsm_api.services.personal_service.generate_personal_note_number",
+        AsyncMock(return_value="IDE-2026-00100"),
+    ):
+        read = await personal_service.create_note(
+            mock_db,
+            user,
+            PersonalNoteCreate(
+                title="Team note",
+                content="Synlig for teamet",
+                ticket_id=ticket_id,
+                visibility="team",
+            ),
+        )
+
+    assert read.ticket_id == ticket_id
+    assert read.visibility == "team"
+    assert read.note_number == "IDE-2026-00100"
+
+
+@pytest.mark.asyncio
+async def test_create_note_team_visibility_requires_staff() -> None:
+    user = _user()
+    user.role = "customer"
+    mock_db = AsyncMock()
+    with pytest.raises(PermissionError, match="team_visibility_requires_staff"):
+        await personal_service.create_note(
+            mock_db,
+            user,
+            PersonalNoteCreate(title="X", content="Y", visibility="team"),
+        )
+
+
+@pytest.mark.asyncio
+async def test_update_note_clears_category_and_ticket() -> None:
+    user = _user()
+    note = _note(user_id=user.id)
+    note.category = "follow-up"
+    note.ticket_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_db.get = AsyncMock(return_value=note)
+
+    read = await personal_service.update_note(
+        mock_db,
+        user,
+        note.id,
+        PersonalNoteUpdate(category=None, ticket_id=None),
+    )
+
+    assert note.category is None
+    assert note.ticket_id is None
+    assert read.ticket_id is None
+
+
+@pytest.mark.asyncio
+async def test_summarize_ticket_post_its_non_staff_only_own_notes() -> None:
+    user = _user()
+    user.role = "customer"
+    ticket_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.all.return_value = [(ticket_id, 1)]
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    summaries = await personal_service.summarize_ticket_post_its(mock_db, user, [ticket_id])
+
+    assert summaries[0].count == 1
+    mock_db.execute.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_next_kanban_sort_order_increments() -> None:
+    user = _user()
+    mock_db = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = 3
+    mock_db.execute = AsyncMock(return_value=result)
+
+    order = await personal_service._next_kanban_sort_order(
+        mock_db,
+        user.id,
+        DEFAULT_KANBAN_COLUMNS[0],
+    )
+
+    assert order == 4
