@@ -8,7 +8,7 @@ function mockDropElement(
 ): HTMLElement {
   const el = {
     dataset: { noteDrop: zone, ...extras },
-  } as HTMLElement;
+  } as unknown as HTMLElement;
   el.closest = (selector: string) => (selector === "[data-note-drop]" ? el : null);
   return el;
 }
