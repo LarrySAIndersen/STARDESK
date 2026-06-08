@@ -8,7 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
-from star_itsm_api.db_schema_sync import ensure_personal_notes_schema_current
+from star_itsm_api.db_schema_sync import (
+    ensure_kundeportal_2_role_current,
+    ensure_personal_notes_schema_current,
+)
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
     admin,
@@ -50,6 +53,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     else:
         # Lightweight idempotent sync for personal_notes only (staging often skips Alembic).
         await ensure_personal_notes_schema_current(engine, settings.database_url)
+        await ensure_kundeportal_2_role_current(engine, settings.database_url)
         logger.info(
             "Skipping full Alembic/ticket schema sync in lifespan. "
             "Run 'alembic upgrade head' manually after deploys that need migrations."
