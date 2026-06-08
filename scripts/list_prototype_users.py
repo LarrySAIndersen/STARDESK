@@ -74,18 +74,18 @@ def main() -> int:
         dsn = load_database_url()
     except SystemExit as exc:
         print(f"(skip: {exc})", file=sys.stderr)
-        return 0
+        return 1
 
     try:
         with psycopg.connect(dsn) as conn:
             users, total = fetch_prototype_users(conn, limit=limit)
     except Exception as exc:  # noqa: BLE001 — dev helper; show connection errors clearly
         print(f"(skip: could not query users: {exc})", file=sys.stderr)
-        return 0
+        return 1
 
     if not users:
         print("(no active @example.dk users in database yet)", file=sys.stderr)
-        return 0
+        return 1
 
     for email, display_name, role in users:
         print(format_user_line(email, display_name, role))
