@@ -18,8 +18,14 @@ export default async function MinSidePage() {
     redirect("/");
   }
 
+  let notesLoadFailed = false;
+  const notesPromise = apiGetServer<PersonalNote[]>("/api/v1/personal/notes").catch(() => {
+    notesLoadFailed = true;
+    return [] as PersonalNote[];
+  });
+
   const [notes, kanban, userTickets] = await Promise.all([
-    apiGetServer<PersonalNote[]>("/api/v1/personal/notes").catch(() => [] as PersonalNote[]),
+    notesPromise,
     apiGetServer<PersonalKanban>("/api/v1/personal/kanban").catch(
       () =>
         ({
@@ -75,6 +81,7 @@ export default async function MinSidePage() {
         initialKanban={kanban}
         userTickets={userTickets}
         assignableTickets={assignableTickets}
+        notesLoadFailed={notesLoadFailed}
       />
     </div>
   );
