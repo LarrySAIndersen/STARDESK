@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import ensure_personal_notes_schema_current
-from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
     admin,
