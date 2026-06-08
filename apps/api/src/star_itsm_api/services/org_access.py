@@ -137,6 +137,23 @@ async def apply_agent_team_list_filter(
     return stmt.where(Ticket.assigned_user_id == user.id)
 
 
+def _submitter_can_access_ticket(user: User, ticket: Ticket, org_id: uuid.UUID | None) -> bool:
+    if ticket.reporter_user_id == user.id:
+        return True
+    if ticket.is_major and org_id is not None and ticket.organization_id == org_id:
+        return True
+    return bool(ticket.is_major and getattr(ticket, "is_shared", False))
+
+
+async def _agent_can_access_ticket(db: AsyncSession, user: User, ticket: Ticket, org_id: uuid.UUID | None) -> bool:
+    if org_id is None:
+        return True
+    if ticket.reporter_user_id == user.id or ticket.assigned_user_id == user.id:
+        return True
+    team_ids = await get_user_team_ids(db, user.id)
+    return bool(ticket.assigned_team_id and ticket.assigned_team_id in team_ids)
+
+
 async def user_can_access_ticket(db: AsyncSession, user: User, ticket: Ticket) -> bool:
     if has_full_ticket_visibility(user):
         return True
@@ -146,18 +163,7 @@ async def user_can_access_ticket(db: AsyncSession, user: User, ticket: Ticket) -
     if getattr(ticket, "is_shared", False):
         return True
     if user.role == ROLE_SUBMITTER:
-        if ticket.reporter_user_id == user.id:
-            return True
-        if ticket.is_major and org_id is not None and ticket.organization_id == org_id:
-            return True
-        if ticket.is_major and getattr(ticket, "is_shared", False):
-            return True
+        return _submitter_can_access_ticket(user, ticket, org_id)
     if user.role == ROLE_AGENT:
-        if org_id is None:
-            return True
-        if ticket.reporter_user_id == user.id or ticket.assigned_user_id == user.id:
-            return True
-        team_ids = await get_user_team_ids(db, user.id)
-        if ticket.assigned_team_id and ticket.assigned_team_id in team_ids:
-            return True
+        return await _agent_can_access_ticket(db, user, ticket, org_id)
     return False

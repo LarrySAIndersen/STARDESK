@@ -199,26 +199,25 @@ async def patch_task_from_canvas_dict(
     return _read_from_row(row)
 
 
-async def bulk_import(
-    db: AsyncSession,
-    tasks: list[dict[str, Any]],
-    *,
-    replace_missing: bool = False,
-) -> WorkboardBulkImportResult:
-    stats = WorkboardBulkImportResult()
-    status_preserved = 0
-    seen_canvas_ids: set[str] = set()
-
+def _collect_valid_canvas_ids(tasks: list[dict[str, Any]], stats: WorkboardBulkImportResult) -> set[str]:
+    seen: set[str] = set()
     for raw in tasks:
         columns, _, _, _ = split_canvas_payload(raw)
         canvas_id = columns["canvas_id"]
         if not canvas_id:
             stats.skipped += 1
             continue
-        seen_canvas_ids.add(canvas_id)
+        seen.add(canvas_id)
+    return seen
 
-    # First pass: upsert rows without parent FK resolution
+
+async def _upsert_canvas_rows(
+    db: AsyncSession,
+    tasks: list[dict[str, Any]],
+    stats: WorkboardBulkImportResult,
+) -> tuple[dict[str, WorkboardTask], int]:
     canvas_to_row: dict[str, WorkboardTask] = {}
+    status_preserved = 0
     for raw in tasks:
         columns, _, _, _ = split_canvas_payload(raw)
         canvas_id = columns["canvas_id"]
@@ -232,25 +231,20 @@ async def bulk_import(
             canvas_to_row[canvas_id] = row
             stats.created += 1
         else:
-            columns, _, _, _ = split_canvas_payload(raw)
-            resolved, preserved = resolve_persisted_status(
-                existing.status,
-                columns["status"],
-            )
+            resolved, preserved = resolve_persisted_status(existing.status, columns["status"])
             if preserved:
                 status_preserved += 1
-            apply_canvas_payload_to_row(
-                existing,
-                raw,
-                parent_uuid=None,
-                status_override=resolved,
-            )
+            apply_canvas_payload_to_row(existing, raw, parent_uuid=None, status_override=resolved)
             canvas_to_row[canvas_id] = existing
             stats.updated += 1
+    return canvas_to_row, status_preserved
 
-    await db.flush()
 
-    # Second pass: wire parent_id from parent_canvas_id
+async def _wire_canvas_parents(
+    db: AsyncSession,
+    tasks: list[dict[str, Any]],
+    canvas_to_row: dict[str, WorkboardTask],
+) -> None:
     for raw in tasks:
         columns, _, _, _ = split_canvas_payload(raw)
         canvas_id = columns["canvas_id"]
@@ -260,23 +254,39 @@ async def bulk_import(
         parent_canvas = columns["parent_canvas_id"]
         if parent_canvas:
             parent_row = canvas_to_row.get(parent_canvas)
-            if parent_row is None:
-                parent_uuid = await _resolve_parent_id(db, parent_canvas)
-            else:
-                parent_uuid = parent_row.id
+            parent_uuid = parent_row.id if parent_row else await _resolve_parent_id(db, parent_canvas)
             row.parent_id = parent_uuid
             row.parent_canvas_id = parent_canvas
         else:
             row.parent_id = None
             row.parent_canvas_id = None
 
-    if replace_missing and seen_canvas_ids:
-        all_rows = await db.execute(select(WorkboardTask).where(WorkboardTask.deleted_at.is_(None)))
-        for row in all_rows.scalars().all():
-            if row.canvas_id not in seen_canvas_ids:
-                row.deleted_at = _now()
-                stats.soft_deleted += 1
 
+async def _soft_delete_missing_canvas_rows(
+    db: AsyncSession,
+    seen_canvas_ids: set[str],
+    stats: WorkboardBulkImportResult,
+) -> None:
+    all_rows = await db.execute(select(WorkboardTask).where(WorkboardTask.deleted_at.is_(None)))
+    for row in all_rows.scalars().all():
+        if row.canvas_id not in seen_canvas_ids:
+            row.deleted_at = _now()
+            stats.soft_deleted += 1
+
+
+async def bulk_import(
+    db: AsyncSession,
+    tasks: list[dict[str, Any]],
+    *,
+    replace_missing: bool = False,
+) -> WorkboardBulkImportResult:
+    stats = WorkboardBulkImportResult()
+    seen_canvas_ids = _collect_valid_canvas_ids(tasks, stats)
+    canvas_to_row, status_preserved = await _upsert_canvas_rows(db, tasks, stats)
+    await db.flush()
+    await _wire_canvas_parents(db, tasks, canvas_to_row)
+    if replace_missing and seen_canvas_ids:
+        await _soft_delete_missing_canvas_rows(db, seen_canvas_ids, stats)
     await db.commit()
     stats.status_preserved = status_preserved
     return stats

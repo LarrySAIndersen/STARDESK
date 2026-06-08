@@ -208,57 +208,65 @@ async def update_subcategory(
     )
 
 
+async def _ensure_category_row(db: AsyncSession, spec) -> tuple[Category, bool]:
+    row = (await db.execute(select(Category).where(Category.name == spec.name))).scalar_one_or_none()
+    if row is None:
+        row = Category(
+            id=uuid.uuid4(),
+            name=spec.name,
+            name_da=spec.name_da,
+            sort_order=spec.sort_order,
+            is_active=True,
+        )
+        db.add(row)
+        await db.flush()
+        return row, True
+    row.name_da = spec.name_da
+    row.sort_order = spec.sort_order
+    if not row.is_active:
+        row.is_active = True
+    return row, False
+
+
+async def _sync_subcategory_spec(db: AsyncSession, row: Category, sub_spec) -> bool:
+    sub = (
+        await db.execute(
+            select(Subcategory).where(
+                Subcategory.category_id == row.id,
+                Subcategory.name == sub_spec.name,
+            )
+        )
+    ).scalar_one_or_none()
+    if sub is None:
+        db.add(
+            Subcategory(
+                id=uuid.uuid4(),
+                category_id=row.id,
+                name=sub_spec.name,
+                name_da=sub_spec.name_da,
+                sort_order=sub_spec.sort_order,
+                is_active=True,
+            )
+        )
+        return True
+    sub.name_da = sub_spec.name_da
+    sub.sort_order = sub_spec.sort_order
+    if not sub.is_active:
+        sub.is_active = True
+    return False
+
+
 async def sync_default_categories(db: AsyncSession) -> CategorySyncCounts:
     categories_created = 0
     subcategories_created = 0
 
     for spec in DEFAULT_CATEGORIES:
-        row = (
-            await db.execute(select(Category).where(Category.name == spec.name))
-        ).scalar_one_or_none()
-        if row is None:
-            row = Category(
-                id=uuid.uuid4(),
-                name=spec.name,
-                name_da=spec.name_da,
-                sort_order=spec.sort_order,
-                is_active=True,
-            )
-            db.add(row)
-            await db.flush()
+        row, created = await _ensure_category_row(db, spec)
+        if created:
             categories_created += 1
-        else:
-            row.name_da = spec.name_da
-            row.sort_order = spec.sort_order
-            if not row.is_active:
-                row.is_active = True
-
         for sub_spec in spec.subcategories:
-            sub = (
-                await db.execute(
-                    select(Subcategory).where(
-                        Subcategory.category_id == row.id,
-                        Subcategory.name == sub_spec.name,
-                    )
-                )
-            ).scalar_one_or_none()
-            if sub is None:
-                db.add(
-                    Subcategory(
-                        id=uuid.uuid4(),
-                        category_id=row.id,
-                        name=sub_spec.name,
-                        name_da=sub_spec.name_da,
-                        sort_order=sub_spec.sort_order,
-                        is_active=True,
-                    )
-                )
+            if await _sync_subcategory_spec(db, row, sub_spec):
                 subcategories_created += 1
-            else:
-                sub.name_da = sub_spec.name_da
-                sub.sort_order = sub_spec.sort_order
-                if not sub.is_active:
-                    sub.is_active = True
 
     await db.commit()
     total = len((await db.execute(select(Category))).scalars().all())

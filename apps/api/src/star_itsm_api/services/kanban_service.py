@@ -750,6 +750,26 @@ async def create_column(
     return KanbanColumnRead.model_validate(column)
 
 
+async def _reposition_kanban_column(
+    db: AsyncSession,
+    board_id: uuid.UUID,
+    column: KanbanColumn,
+    new_pos: int,
+    now: datetime,
+) -> None:
+    columns = await _list_board_columns(db, board_id)
+    old_pos = column.position
+    for col in columns:
+        if col.id == column.id:
+            continue
+        if old_pos < new_pos and old_pos < col.position <= new_pos:
+            col.position -= 1
+        elif old_pos > new_pos and new_pos <= col.position < old_pos:
+            col.position += 1
+        col.updated_at = now
+    column.position = new_pos
+
+
 async def update_column(
     db: AsyncSession,
     user: User,
@@ -775,18 +795,7 @@ async def update_column(
         column.default_status = payload.default_status
 
     if payload.position is not None and payload.position != column.position:
-        columns = await _list_board_columns(db, board_id)
-        old_pos = column.position
-        new_pos = payload.position
-        for col in columns:
-            if col.id == column.id:
-                continue
-            if old_pos < new_pos and old_pos < col.position <= new_pos:
-                col.position -= 1
-            elif old_pos > new_pos and new_pos <= col.position < old_pos:
-                col.position += 1
-            col.updated_at = now
-        column.position = new_pos
+        await _reposition_kanban_column(db, board_id, column, payload.position, now)
 
     column.updated_at = now
     await db.commit()

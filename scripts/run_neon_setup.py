@@ -38,26 +38,16 @@ def _normalize_url(url: str) -> str:
 
 
 def load_database_url() -> str:
-    from_env = os.environ.get("DATABASE_URL", "").strip()
-    if from_env:
-        return _normalize_url(from_env)
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from lib.dev_database_url import load_database_url as _load
 
-    for name in (".env.local", ".env"):
-        env_path = ROOT / "apps" / "api" / name
-        if not env_path.exists():
-            continue
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if line.startswith("DATABASE_URL="):
-                url = line.split("=", 1)[1].strip().strip('"').strip("'")
-                if url:
-                    return _normalize_url(url)
-    raise SystemExit(
-        "DATABASE_URL not found. Run from apps/api:\n"
-        "  npx vercel env run -e production -- python ..\\..\\scripts\\run_neon_setup.py"
-    )
+    try:
+        return _load()
+    except SystemExit:
+        raise SystemExit(
+            "DATABASE_URL not found. Run from apps/api:\n"
+            "  npx vercel env run -e production -- python ..\\..\\scripts\\run_neon_setup.py"
+        ) from None
 
 
 def run_sql_file(conn: psycopg.Connection, path: Path) -> None:
@@ -100,6 +90,40 @@ def _maybe_run_alembic() -> int:
     return result.returncode
 
 
+def _run_sql_paths(conn: psycopg.Connection, paths: list[Path], *, label: str) -> int:
+    print(f"\n{label}:")
+    for path in paths:
+        try:
+            run_sql_file(conn, path)
+        except psycopg.Error as exc:
+            conn.rollback()
+            print(f"FAILED\n     {exc}")
+            return 1
+    return 0
+
+
+def _run_seed_files(conn: psycopg.Connection) -> int:
+    paths: list[Path] = []
+    for rel in SEEDS:
+        path = ROOT / rel
+        if not path.exists():
+            print(f"  SKIP missing {rel}")
+            continue
+        paths.append(path)
+    return _run_sql_paths(conn, paths, label="Seeds")
+
+
+def _print_counts(conn: psycopg.Connection) -> None:
+    with conn.cursor() as cur:
+        cur.execute("SELECT COUNT(*) FROM tickets WHERE deleted_at IS NULL")
+        tickets = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL")
+        users = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM organizations")
+        orgs = cur.fetchone()[0]
+    print(f"\nDone. tickets={tickets}, users={users}, organizations={orgs}")
+
+
 def main() -> int:
     migrations_only = "--migrations-only" in sys.argv
     dsn = load_database_url()
@@ -112,39 +136,15 @@ def main() -> int:
         else:
             print("Schema already present — skipping init.sql")
 
-        print("\nMigrations:")
-        for path in migration_paths():
-            try:
-                run_sql_file(conn, path)
-            except psycopg.Error as exc:
-                conn.rollback()
-                print(f"FAILED\n     {exc}")
-                return 1
+        if _run_sql_paths(conn, migration_paths(), label="Migrations") != 0:
+            return 1
 
-        if not migrations_only:
-            print("\nSeeds:")
-            for rel in SEEDS:
-                path = ROOT / rel
-                if not path.exists():
-                    print(f"  SKIP missing {rel}")
-                    continue
-                try:
-                    run_sql_file(conn, path)
-                except psycopg.Error as exc:
-                    conn.rollback()
-                    print(f"FAILED\n     {exc}")
-                    return 1
-        else:
+        if migrations_only:
             print("\nSeeds: skipped (--migrations-only)")
+        elif _run_seed_files(conn) != 0:
+            return 1
 
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM tickets WHERE deleted_at IS NULL")
-            tickets = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM users WHERE deleted_at IS NULL")
-            users = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM organizations")
-            orgs = cur.fetchone()[0]
-        print(f"\nDone. tickets={tickets}, users={users}, organizations={orgs}")
+        _print_counts(conn)
 
     alembic_rc = _maybe_run_alembic()
     return alembic_rc if alembic_rc != 0 else 0
