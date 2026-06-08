@@ -1529,7 +1529,11 @@
   }
 
   .case-assistant-panel--floating {
-    @apply touch-none select-none;
+    @apply pointer-events-none touch-none select-none;
+  }
+
+  .case-assistant-panel--interactive {
+    @apply pointer-events-auto;
   }
 
   .case-assistant-panel-drag-handle {
