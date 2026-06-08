@@ -27,6 +27,24 @@ describe("resolveCaseAssistantPageContext", () => {
     expect(ctx.kind).toBe("service-desk");
     expect(ctx.ticketId).toBeNull();
   });
+
+  it("detects reports pages", () => {
+    const ctx = resolveCaseAssistantPageContext("/reports");
+    expect(ctx.kind).toBe("reports");
+    expect(ctx.pageLabel).toBe("Rapporter");
+    expect(ctx.ticketId).toBeNull();
+  });
+
+  it("detects analytics pages", () => {
+    const ctx = resolveCaseAssistantPageContext("/reports/analytics");
+    expect(ctx.kind).toBe("analytics");
+    expect(ctx.pageLabel).toBe("Avanceret sagsanalyse");
+  });
+
+  it("detects kanban pages", () => {
+    const ctx = resolveCaseAssistantPageContext("/kanban/board-1");
+    expect(ctx.kind).toBe("kanban");
+  });
 });
 
 describe("buildCaseAssistantWelcome", () => {
@@ -45,6 +63,18 @@ describe("buildCaseAssistantWelcome", () => {
     expect(welcome).toContain("INC-2026-00118");
     expect(welcome).toContain("Opsummere sagen");
   });
+
+  it("offers reports help on the reports page", () => {
+    const pageContext = resolveCaseAssistantPageContext("/reports");
+    const welcome = buildCaseAssistantWelcome({
+      staff: true,
+      displayName: "Anna Agent",
+      pageContext,
+    });
+
+    expect(welcome).toContain("Rapporter");
+    expect(welcome).toContain("KPI");
+  });
 });
 
 describe("getCaseAssistantQuickActions", () => {
@@ -58,5 +88,15 @@ describe("getCaseAssistantQuickActions", () => {
 
     expect(actions.some((action) => action.label === "Opsummer denne sag")).toBe(true);
     expect(actions.find((action) => action.label === "Opsummer denne sag")?.autoSend).toBe(true);
+  });
+
+  it("includes KPI actions on reports pages", () => {
+    const pageContext = resolveCaseAssistantPageContext("/reports");
+    const actions = getCaseAssistantQuickActions({
+      staff: true,
+      pageContext,
+    });
+
+    expect(actions.some((action) => action.label === "Forklar KPI'er")).toBe(true);
   });
 });

@@ -29,6 +29,7 @@ import { apiPost, apiGet, apiDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/agent/user-avatar";
+import { HelpABotIcon } from "@/components/portal/help-a-bot-icon";
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -77,112 +78,6 @@ function getExpandedHeight() {
     return PANEL_SIZE_PRESETS.expanded.height;
   }
   return Math.min(PANEL_SIZE_PRESETS.expanded.height, Math.floor(window.innerHeight * 0.85));
-}
-
-function HelpABotIcon({ className = "size-12" }: { className?: string }) {
-  return (
-    <div className={cn("relative flex items-center justify-center animate-hover-bob", className)}>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes hover-bob {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-5px); }
-        }
-        @keyframes flame-flicker {
-          0%, 100% { transform: scaleY(1) scaleX(1); opacity: 0.9; }
-          25% { transform: scaleY(1.2) scaleX(0.9); opacity: 1; }
-          50% { transform: scaleY(0.85) scaleX(1.1); opacity: 0.8; }
-          75% { transform: scaleY(1.1) scaleX(0.95); opacity: 0.95; }
-        }
-        @keyframes eye-pulse {
-          0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 1px #22d3ee); }
-          50% { opacity: 1; filter: drop-shadow(0 0 4px #22d3ee); }
-        }
-        .animate-hover-bob {
-          animation: hover-bob 3s ease-in-out infinite;
-        }
-        .animate-flame {
-          animation: flame-flicker 0.15s ease-in-out infinite;
-        }
-        .animate-eye {
-          animation: eye-pulse 2s ease-in-out infinite;
-        }
-      `}} />
-      <svg viewBox="0 0 100 100" className="w-full h-full select-none" aria-hidden="true">
-        <defs>
-          <radialGradient id="metal-body" cx="30%" cy="30%" r="70%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="45%" stopColor="#cbd5e1" />
-            <stop offset="85%" stopColor="#475569" />
-            <stop offset="100%" stopColor="#1e293b" />
-          </radialGradient>
-          
-          <linearGradient id="metal-dark" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#94a3b8" />
-            <stop offset="50%" stopColor="#475569" />
-            <stop offset="100%" stopColor="#0f172a" />
-          </linearGradient>
-
-          <radialGradient id="eye-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#e0f7fa" />
-            <stop offset="40%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#0891b2" />
-          </radialGradient>
-
-          <linearGradient id="flame-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#ffedd5" />
-            <stop offset="40%" stopColor="#f97316" />
-            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Flame thruster */}
-        <g className="animate-flame origin-top">
-          <path d="M42 74 Q50 96 58 74 Z" fill="url(#flame-grad)" />
-          <path d="M45 74 Q50 88 55 74 Z" fill="#ffffff" opacity="0.8" />
-        </g>
-
-        {/* Thruster nozzle */}
-        <rect x="43" y="68" width="14" height="6" rx="2" fill="url(#metal-dark)" stroke="#334155" strokeWidth="0.5" />
-
-        {/* Mechanical Arms */}
-        {/* Left Arm */}
-        <path d="M26 48 Q10 54 14 68 Q17 70 19 63" fill="none" stroke="url(#metal-dark)" strokeWidth="4.5" strokeLinecap="round" />
-        <circle cx="14" cy="68" r="3" fill="#cbd5e1" stroke="#334155" strokeWidth="0.5" />
-        {/* Right Arm */}
-        <path d="M74 48 Q90 54 86 68 Q83 70 81 63" fill="none" stroke="url(#metal-dark)" strokeWidth="4.5" strokeLinecap="round" />
-        <circle cx="86" cy="68" r="3" fill="#cbd5e1" stroke="#334155" strokeWidth="0.5" />
-
-        {/* Spherical Main Body */}
-        <circle cx="50" cy="42" r="24" fill="url(#metal-body)" stroke="#334155" strokeWidth="1" />
-
-        {/* Body details / plates */}
-        <path d="M31 38 Q50 43 69 38" fill="none" stroke="#334155" strokeWidth="1" opacity="0.5" />
-        <path d="M33 48 Q50 53 67 48" fill="none" stroke="#334155" strokeWidth="1" opacity="0.5" />
-
-        {/* Optic Sensor Stalks */}
-        {/* Left Eye Stalk */}
-        <path d="M36 26 Q22 14 24 9" fill="none" stroke="url(#metal-dark)" strokeWidth="4" strokeLinecap="round" />
-        {/* Right Eye Stalk */}
-        <path d="M64 26 Q78 14 76 9" fill="none" stroke="url(#metal-dark)" strokeWidth="4" strokeLinecap="round" />
-
-        {/* Optic Sensors (Eyes) */}
-        {/* Center Eye */}
-        <circle cx="50" cy="28" r="7.5" fill="url(#metal-dark)" stroke="#334155" strokeWidth="0.5" />
-        <circle cx="50" cy="28" r="4.5" fill="url(#eye-glow)" className="animate-eye" />
-        <circle cx="48.5" cy="26.5" r="1.5" fill="#ffffff" opacity="0.8" />
-
-        {/* Left Eye */}
-        <circle cx="24" cy="9" r="6.5" fill="url(#metal-dark)" stroke="#334155" strokeWidth="0.5" />
-        <circle cx="24" cy="9" r="3.8" fill="url(#eye-glow)" className="animate-eye" />
-        <circle cx="22.5" cy="7.5" r="1.2" fill="#ffffff" opacity="0.8" />
-
-        {/* Right Eye */}
-        <circle cx="76" cy="9" r="6.5" fill="url(#metal-dark)" stroke="#334155" strokeWidth="0.5" />
-        <circle cx="76" cy="9" r="3.8" fill="url(#eye-glow)" className="animate-eye" />
-        <circle cx="74.5" cy="7.5" r="1.2" fill="#ffffff" opacity="0.8" />
-      </svg>
-    </div>
-  );
 }
 
 export function CaseAssistantChat({
@@ -704,10 +599,12 @@ export function CaseAssistantChat({
             height: panelSize.height,
           }}
           role="dialog"
+          aria-modal={false}
           aria-label={botName}
         >
           <header
             className={cn(
+              "case-assistant-panel--interactive",
               staff
                 ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-3 py-2.5 pr-24 text-slate-100 border-b border-slate-700 case-assistant-panel-drag-handle shrink-0"
                 : "case-assistant-panel-header case-assistant-panel-drag-handle shrink-0",
@@ -761,7 +658,7 @@ export function CaseAssistantChat({
           </header>
 
           {/* Tabs Selector */}
-          <div className="flex border-b border-border bg-slate-50 dark:bg-slate-900 shrink-0">
+          <div className="case-assistant-panel--interactive flex shrink-0 border-b border-border bg-slate-50 dark:bg-slate-900">
             <button
               type="button"
               onClick={() => setActiveTab("chat")}
@@ -791,7 +688,7 @@ export function CaseAssistantChat({
           {activeTab === "chat" ? (
             <>
               {/* Chat messages list */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
+              <div className="pointer-events-none flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950">
                 {messages.map((m) => {
                   const isUser = m.role === "user";
                   const showUserAvatar = isUser && useAvatar;
@@ -800,7 +697,7 @@ export function CaseAssistantChat({
                     <div
                       key={m.id}
                       className={cn(
-                        "flex items-start gap-2.5",
+                        "case-assistant-panel--interactive flex items-start gap-2.5",
                         isUser ? "justify-end" : "justify-start"
                       )}
                     >
@@ -840,7 +737,7 @@ export function CaseAssistantChat({
                 })}
                 
                 {loading && (
-                  <div className="flex items-start gap-2.5 justify-start">
+                  <div className="case-assistant-panel--interactive flex items-start gap-2.5 justify-start">
                     {useIcon && (
                       <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
                         {staff ? (
@@ -863,7 +760,7 @@ export function CaseAssistantChat({
               </div>
 
               {/* Input footer */}
-              <footer className="p-3 border-t border-border bg-white dark:bg-slate-900 shrink-0">
+              <footer className="case-assistant-panel--interactive shrink-0 border-t border-border bg-white p-3 dark:bg-slate-900">
                 {activeTab === "chat" && contextualQuickActions.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {contextualQuickActions.map((action) => (
@@ -927,9 +824,9 @@ export function CaseAssistantChat({
             </>
           ) : (
             /* Archive & Search View */
-            <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-slate-950">
+            <div className="pointer-events-none flex min-h-0 flex-1 flex-col bg-slate-50 dark:bg-slate-950">
               {/* Search and Filters */}
-              <div className="p-3 border-b border-border bg-white dark:bg-slate-900 space-y-2 shrink-0">
+              <div className="case-assistant-panel--interactive shrink-0 space-y-2 border-b border-border bg-white p-3 dark:bg-slate-900">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
                   <input
@@ -987,16 +884,16 @@ export function CaseAssistantChat({
               </div>
 
               {/* Archived messages list */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div className="pointer-events-none flex-1 overflow-y-auto p-3 space-y-3">
                 {loadingArchive ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-xs text-muted-foreground gap-2">
+                  <div className="case-assistant-panel--interactive flex flex-col items-center justify-center gap-2 py-12 text-xs text-muted-foreground">
                     <RefreshCw className="size-5 animate-spin text-star-blue" />
                     <span>Henter arkiv...</span>
                   </div>
                 ) : archiveError ? (
-                  <div className="text-center py-12 text-xs text-red-500">{archiveError}</div>
+                  <div className="case-assistant-panel--interactive py-12 text-center text-xs text-red-500">{archiveError}</div>
                 ) : archivedMessages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-xs text-muted-foreground text-center px-4">
+                  <div className="case-assistant-panel--interactive flex flex-col items-center justify-center px-4 py-12 text-center text-xs text-muted-foreground">
                     <Clock className="size-8 text-slate-300 dark:text-slate-700 mb-2" />
                     <p className="font-semibold text-slate-600 dark:text-slate-400">Ingen beskeder fundet</p>
                     <p className="text-[10px] mt-1">Stil spørgsmål til chatbotten for automatisk at opbygge historikken.</p>
@@ -1009,7 +906,7 @@ export function CaseAssistantChat({
                     return (
                       <div 
                         key={msg.id} 
-                        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 shadow-sm hover:shadow-md transition-all space-y-2 relative group"
+                        className="case-assistant-panel--interactive relative space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all group hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
                       >
                         <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-1.5 text-[10px]">
                           <div className="flex items-center gap-1.5 font-bold">
@@ -1079,7 +976,7 @@ export function CaseAssistantChat({
             </div>
           )}
           <div
-            className="case-assistant-panel-resize-handle"
+            className="case-assistant-panel-resize-handle case-assistant-panel--interactive"
             role="separator"
             aria-label="Træk for at ændre størrelse"
             onMouseDown={handlePanelResizeStart}
