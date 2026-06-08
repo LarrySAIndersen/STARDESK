@@ -42,10 +42,8 @@ def is_kundeportal_2_user(user: User) -> bool:
 
 
 def can_access_kundeportal_2(user: User) -> bool:
-    """Kundeportal #2 — dedicated rettighedsgruppe or admin/support for test."""
-    if is_kundeportal_2_user(user):
-        return True
-    return is_admin(user)
+    """Kundeportal #2 — open to all authenticated users."""
+    return user is not None
 
 
 def has_full_ticket_visibility(user: User) -> bool:
