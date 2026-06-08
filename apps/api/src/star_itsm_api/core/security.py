@@ -30,8 +30,9 @@ ROLE_ADMIN = "admin"
 ROLE_TOP_ADMIN = "top_admin"
 ROLE_SUPPORTER = "supporter"
 ROLE_STARDESK_REVIEWER = "stardesk_reviewer"
+ROLE_KUNDEPORTAL_2 = "kundeportal_2"
 
-USER_ROLE_PATTERN = r"^(end_user|agent|admin|top_admin|supporter|stardesk_reviewer)$"
+USER_ROLE_PATTERN = r"^(end_user|agent|admin|top_admin|supporter|stardesk_reviewer|kundeportal_2)$"
 
 
 def hash_password(password: str) -> str:

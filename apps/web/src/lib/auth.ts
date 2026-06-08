@@ -28,6 +28,9 @@ export function normalizeUserRole(role: string | undefined): UserRole | null {
   if (key === "stardesk_reviewer" || key === "stardesk reviewer") {
     return "stardesk_reviewer";
   }
+  if (key === "kundeportal_2" || key === "kundeportal #2" || key === "kundeportal 2") {
+    return "kundeportal_2";
+  }
   return null;
 }
 
@@ -36,6 +39,7 @@ const ROLE_PRIORITY: UserRole[] = [
   "admin",
   "supporter",
   "agent",
+  "kundeportal_2",
   "stardesk_reviewer",
   "end_user",
 ];

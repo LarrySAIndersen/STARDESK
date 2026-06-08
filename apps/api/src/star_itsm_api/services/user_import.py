@@ -11,6 +11,7 @@ from star_itsm_api.core.http_details import INVALID_GROUP
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
+    ROLE_KUNDEPORTAL_2,
     ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
@@ -49,6 +50,9 @@ _ROLE_ALIASES: dict[str, str] = {
     "stardesk_reviewer": ROLE_STARDESK_REVIEWER,
     "stardesk reviewer": ROLE_STARDESK_REVIEWER,
     "reviewer": ROLE_STARDESK_REVIEWER,
+    "kundeportal_2": ROLE_KUNDEPORTAL_2,
+    "kundeportal #2": ROLE_KUNDEPORTAL_2,
+    "kundeportal 2": ROLE_KUNDEPORTAL_2,
 }
 
 _ACTIVE_TRUE = frozenset({"1", "true", "ja", "yes", "aktiv", "active", "y"})

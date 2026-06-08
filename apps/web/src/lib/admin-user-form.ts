@@ -7,6 +7,7 @@ export const adminUserRoleValues = [
   "top_admin",
   "supporter",
   "stardesk_reviewer",
+  "kundeportal_2",
 ] as const;
 
 export const adminUserPasswordSchema = z
