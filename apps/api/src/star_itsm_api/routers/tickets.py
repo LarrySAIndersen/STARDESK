@@ -111,16 +111,16 @@ from star_itsm_api.services.ticket_hierarchy import (
     set_parent_ticket_id,
 )
 from star_itsm_api.services.ticket_intake_assist import build_intake_assist_draft
-from star_itsm_api.services.ticket_list_query import (
-    apply_list_tickets_post_filters,
-    build_list_tickets_stmt,
-    validate_list_tickets_query,
-)
 from star_itsm_api.services.ticket_intelligence import (
     EVALUATION_RUBRIC_DA,
     build_llm_context_batch,
     build_ticket_llm_context,
     intelligence_from_ticket,
+)
+from star_itsm_api.services.ticket_list_query import (
+    apply_list_tickets_post_filters,
+    build_list_tickets_stmt,
+    validate_list_tickets_query,
 )
 from star_itsm_api.services.ticket_notifications import (
     build_assignment_notification,

@@ -450,7 +450,7 @@ def _mock_create_help(user_name: str) -> str:
     )
 
 
-async def _mock_try_create(user_msg: str, user_email: str, user_name: str) -> str | None:
+async def _mock_try_create(user_msg: str, user_email: str, _user_name: str) -> str | None:
     if ":" not in user_msg:
         return None
     try:
