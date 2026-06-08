@@ -16,6 +16,7 @@ import {
 
 function isStandaloneLoginPath(pathname: string): boolean {
   if (pathname === "/portal") return true;
+  if (pathname === "/kundeportal-2" || pathname.startsWith("/kundeportal-2/")) return true;
   return pathname === "/login/helpdesk" || pathname.startsWith("/login/helpdesk/");
 }
 

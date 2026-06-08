@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 from dev_database_url import load_database_url  # noqa: E402
 
-ROLE_ORDER = ("top_admin", "admin", "supporter", "agent", "end_user")
+ROLE_ORDER = ("top_admin", "admin", "supporter", "agent", "kundeportal_2", "stardesk_reviewer", "end_user")
 EMAIL_SUFFIX = "%@example.dk"
 
 
