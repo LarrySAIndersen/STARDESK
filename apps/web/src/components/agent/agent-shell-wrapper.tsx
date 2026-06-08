@@ -54,6 +54,15 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
     );
   }
 
+  if (pathname === "/kundeportal-2" || pathname.startsWith("/kundeportal-2/")) {
+    return (
+      <>
+        <ClientSessionHydrator />
+        {children}
+      </>
+    );
+  }
+
   if (hasAgentShellAccess(currentUser)) {
     if (isStaff(currentUser) && (await isStaffPathBlockedForUser(pathname, currentUser))) {
       redirect(await firstAllowedStaffPathForUser(currentUser));
