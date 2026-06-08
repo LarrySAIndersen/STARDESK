@@ -79,7 +79,7 @@ jobs:
         run: pip-audit -r <(pip freeze) || true
 
   database-migrate:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
     needs: [api-security]
     runs-on: ubuntu-latest
     defaults:
@@ -112,7 +112,11 @@ jobs:
           fi
           npm install -g vercel@latest
           vercel link --yes --project=api --token="$VERCEL_TOKEN"
-          vercel env pull .env.ci --environment=production --yes --token="$VERCEL_TOKEN"
+          if [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            vercel env pull .env.ci --environment=preview --yes --token="$VERCEL_TOKEN"
+          else
+            vercel env pull .env.ci --environment=production --yes --token="$VERCEL_TOKEN"
+          fi
           url=$(grep -E '^DATABASE_URL=' .env.ci | cut -d= -f2- | tr -d '"')
           if [ -z "$url" ]; then
             echo "::warning::Vercel pull returned empty DATABASE_URL — skip CI migrate (API runs alembic on startup)."
