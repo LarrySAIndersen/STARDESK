@@ -33,6 +33,152 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 TICKET_NUMBER_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 TICKET_REF_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 
+SUMMARY_PHRASES = (
+    "opsummer",
+    "opsummering",
+    "resumé",
+    "resume",
+    "kort fortalt",
+    "hvad handler",
+    "forklar sagen",
+    "fortæl om sagen",
+    "denne sag",
+)
+
+STATUS_PHRASES = (
+    "forklar status",
+    "status på denne",
+    "status på sagen",
+    "hvad er status",
+    "sla",
+    "prioritet",
+    "næste skridt",
+    "naeste skridt",
+)
+
+
+class ChatPageContext(BaseModel):
+    page_path: str | None = None
+    page_label: str | None = None
+    ticket_id: str | None = None
+    ticket_number: str | None = None
+    ticket_title: str | None = None
+
+
+def build_chat_system_prompt(request: "ChatRequest") -> str:
+    base = (
+        "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
+        f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
+        f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+        "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
+        "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
+        "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
+        "Svar altid venligt, professionelt og på dansk."
+    )
+
+    page_context = request.page_context
+    if not page_context:
+        return base
+
+    context_parts: list[str] = []
+    if page_context.page_label:
+        context_parts.append(f"Brugeren sidder på siden «{page_context.page_label}».")
+    if page_context.ticket_number:
+        title_suffix = f" «{page_context.ticket_title}»" if page_context.ticket_title else ""
+        context_parts.append(
+            "Brugeren kigger på sagen "
+            f"**{page_context.ticket_number}**{title_suffix}. "
+            "Antag at spørgsmål om «denne sag», «opsummering» og lignende handler om denne sag, "
+            "medmindre brugeren angiver et andet sagsnummer."
+        )
+    if context_parts:
+        base += " " + " ".join(context_parts)
+    return base
+
+
+async def try_page_context_command(
+    user_msg: str,
+    page_context: ChatPageContext | None,
+) -> str | None:
+    if not page_context or not page_context.ticket_number:
+        return None
+
+    lower = user_msg.strip().lower()
+    ticket_number = page_context.ticket_number.upper()
+
+    if any(phrase in lower for phrase in SUMMARY_PHRASES):
+        detail = await get_ticket_by_number(ticket_number)
+        return f"Her er en opsummering af **{ticket_number}**:\n\n{detail}"
+
+    if any(phrase in lower for phrase in STATUS_PHRASES) and not TICKET_NUMBER_RE.search(user_msg):
+        return await get_ticket_by_number(ticket_number)
+
+    return None
+
+
+def _parse_short_create_payload(msg: str) -> tuple[str, str] | None:
+    if ":" in msg:
+        payload = msg.split(":", 1)[1].strip()
+    elif " " in msg:
+        payload = msg.split(" ", 1)[1].strip()
+    else:
+        return None
+    if not payload:
+        return None
+    if " - " in payload:
+        title, description = payload.split(" - ", 1)
+    elif "-" in payload and not TICKET_NUMBER_RE.search(payload):
+        title, description = payload.split("-", 1)
+    else:
+        title, description = payload, f"Oprettet via Help-a-bot: {payload}"
+    title = title.strip()
+    description = description.strip()
+    if len(title) < 3 or len(description) < 10:
+        return None
+    return title, description
+
+
+async def _short_command_close(msg: str, lower: str, ticket_number: str, email: str) -> str | None:
+    for prefix in ("luk sag ", "luk ", "close "):
+        if not lower.startswith(prefix):
+            continue
+        remainder = msg[len(prefix):].strip()
+        note = remainder[len(ticket_number):].strip() if remainder.upper().startswith(ticket_number) else remainder
+        note = note.lstrip("-:").strip() or None
+        return await update_ticket_status(
+            ticket_number=ticket_number,
+            status="closed",
+            actor_email=email,
+            note=note,
+        )
+    return None
+
+
+async def _short_command_resolve(lower: str, ticket_number: str, email: str) -> str | None:
+    for prefix in ("løs ", "los ", "resolve "):
+        if lower.startswith(prefix):
+            return await update_ticket_status(
+                ticket_number=ticket_number,
+                status="resolved",
+                actor_email=email,
+                note=None,
+            )
+    return None
+
+
+async def _short_command_ticket_number(
+    msg: str, lower: str, ticket_number: str, email: str,
+) -> str | None:
+    closed = await _short_command_close(msg, lower, ticket_number, email)
+    if closed:
+        return closed
+    resolved = await _short_command_resolve(lower, ticket_number, email)
+    if resolved:
+        return resolved
+    if len(msg.split()) <= 2 or any(k in lower for k in ("find", "sag", "vis", "status", "sla")):
+        return await get_ticket_by_number(ticket_number)
+    return None
+
 
 async def try_short_command(
     user_msg: str,
@@ -50,52 +196,19 @@ async def try_short_command(
     ticket_number = ticket_match.group(0).upper() if ticket_match else None
 
     if ticket_number:
-        for prefix in ("luk sag ", "luk ", "close "):
-            if lower.startswith(prefix):
-                remainder = msg[len(prefix):].strip()
-                note = remainder[len(ticket_number):].strip() if remainder.upper().startswith(ticket_number) else remainder
-                note = note.lstrip("-:").strip() or None
-                return await update_ticket_status(
-                    ticket_number=ticket_number,
-                    status="closed",
-                    actor_email=email,
-                    note=note,
-                )
-
-        for prefix in ("løs ", "los ", "resolve "):
-            if lower.startswith(prefix):
-                return await update_ticket_status(
-                    ticket_number=ticket_number,
-                    status="resolved",
-                    actor_email=email,
-                    note=None,
-                )
-
-        word_count = len(msg.split())
-        if word_count <= 2 or any(k in lower for k in ("find", "sag", "vis", "status", "sla")):
-            return await get_ticket_by_number(ticket_number)
+        ticket_result = await _short_command_ticket_number(msg, lower, ticket_number, email)
+        if ticket_result:
+            return ticket_result
 
     if lower in {"mine sager", "sager", "mine", "status"} or lower.startswith("mine sager"):
         tickets_res = await get_user_tickets(email)
         return f"Her er dine seneste sager:\n\n{tickets_res}"
 
     if lower.startswith("opret") or lower.startswith("ny sag"):
-        payload = msg.split(":", 1)[1].strip() if ":" in msg else msg.split(" ", 1)[1].strip() if " " in msg else ""
-        if payload:
-            if " - " in payload:
-                title, description = payload.split(" - ", 1)
-            elif "-" in payload and not TICKET_NUMBER_RE.search(payload):
-                title, description = payload.split("-", 1)
-            else:
-                title, description = payload, f"Oprettet via Help-a-bot: {payload}"
-            title = title.strip()
-            description = description.strip()
-            if len(title) >= 3 and len(description) >= 10:
-                return await create_ticket(
-                    user_email=email,
-                    title=title,
-                    description=description,
-                )
+        parsed = _parse_short_create_payload(msg)
+        if parsed:
+            title, description = parsed
+            return await create_ticket(user_email=email, title=title, description=description)
 
     return None
 
@@ -118,6 +231,7 @@ class ChatRequest(BaseModel):
     openai_key: str | None = None
     anthropic_key: str | None = None
     google_key: str | None = None
+    page_context: ChatPageContext | None = None
 
 
 class ChatResponse(BaseModel):
@@ -526,6 +640,13 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
         if short_response:
             return await make_response(short_response)
 
+        context_response = await try_page_context_command(
+            last_user_msg,
+            request.page_context,
+        )
+        if context_response:
+            return await make_response(context_response)
+
     # 1. Check if we should call a custom router (OpenRouter, Azure AI Foundry, standard custom)
     if request.model_override == "custom-router" or (request.custom_router_url and request.model_override in ["custom-router", "openrouter", "azure"]):
         url_str = request.custom_router_url
@@ -553,15 +674,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             ))
 
         # Format messages for OpenAI format
-        system_text = (
-            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
-            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
-            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
-            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
-            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
-            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
-            "Svar altid venligt, professionelt og på dansk."
-        )
+        system_text = build_chat_system_prompt(request)
         
         openai_messages = [{"role": "system", "content": system_text}]
         for msg in request.messages:
@@ -606,15 +719,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             mock_resp = await get_smart_mock_response(request)
             return await make_response(mock_resp)
 
-        system_text = (
-            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
-            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
-            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
-            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
-            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
-            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
-            "Svar altid venligt, professionelt og på dansk."
-        )
+        system_text = build_chat_system_prompt(request)
 
         openai_messages = [{"role": "system", "content": system_text}]
         for msg in request.messages:
@@ -654,15 +759,7 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
             mock_resp = await get_smart_mock_response(request)
             return await make_response(mock_resp)
 
-        system_text = (
-            "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
-            f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
-            f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
-            "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
-            "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
-            "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
-            "Svar altid venligt, professionelt og på dansk."
-        )
+        system_text = build_chat_system_prompt(request)
 
         anthropic_messages = []
         for msg in request.messages:
@@ -714,20 +811,13 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
         role = "user" if msg.role == "user" else "model"
         contents.append({"role": role, "parts": [{"text": msg.content}]})
 
-    # System instruction to define the bot's identity and behavior
-    user_display_name = request.user_name or "Bruger"
     system_instruction = {
         "parts": [
             {
                 "text": (
-                    "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
-                    f"Den aktuelle bruger, du taler med, hedder: {user_display_name}. "
-                    f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({user_display_name}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
-                    "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
-                    "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
-                    "Korte kommandoer virker direkte: bare sagsnummer, 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
-                    "Svar altid venligt, professionelt og på dansk. "
-                    "Du har adgang til værktøjer til at søge i vidensartikler, hente kategorier og finde sager. Brug dem aktivt, når det er relevant! "
+                    build_chat_system_prompt(request)
+                    + " Du har adgang til værktøjer til at søge i vidensartikler, hente kategorier og finde sager. "
+                    "Brug dem aktivt, når det er relevant! "
                     f"Hvis du leder efter sager for den aktuelle bruger, kan du bruge deres e-mail: {request.user_email or 'ikke angivet'}."
                 )
             }
