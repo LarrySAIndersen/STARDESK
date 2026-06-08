@@ -10,6 +10,8 @@ export type PersonalNote = {
   content: string;
   is_pinned: boolean;
   sort_order: number;
+  board_x?: number | null;
+  board_y?: number | null;
   color: string | null;
   category: PersonalNoteCategoryId | string | null;
   ticket_id: string | null;
@@ -58,6 +60,8 @@ export type PersonalNoteUpdate = {
   content?: string;
   is_pinned?: boolean;
   sort_order?: number;
+  board_x?: number | null;
+  board_y?: number | null;
   color?: string | null;
   category?: PersonalNoteCategoryId | null;
   ticket_id?: string | null;
