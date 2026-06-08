@@ -59,14 +59,17 @@ export function PersonalBoard({
   onNotesChange,
   kanban,
   onKanbanRefresh,
+  notesLoadFailed = false,
 }: {
   notes: PersonalNote[];
   onNotesChange: (notes: PersonalNote[]) => void;
   kanban: PersonalKanban;
   onKanbanRefresh: () => Promise<void>;
+  notesLoadFailed?: boolean;
 }) {
   const { requestAttach } = usePostItAttach();
   const [busy, setBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const stackNotes = useMemo(
     () =>
@@ -147,6 +150,7 @@ export function PersonalBoard({
   const createNote = useCallback(async () => {
     if (busy) return;
     setBusy(true);
+    setCreateError(null);
     try {
       const color = PERSONAL_NOTE_COLORS[notes.length % PERSONAL_NOTE_COLORS.length]
         .id as PersonalNoteColorId;
@@ -156,6 +160,10 @@ export function PersonalBoard({
         color,
       });
       onNotesChange([...notes, created]);
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : "Kunne ikke oprette idé — prøv igen om lidt.",
+      );
     } finally {
       setBusy(false);
     }
@@ -232,9 +240,25 @@ export function PersonalBoard({
           <p className="min-side-board__zone-label">Bunke</p>
           <div className="min-side-board__stack-pile">
             {stackNotes.length === 0 ? (
-              <p className="min-side-board__empty min-side-board__empty--pile">
-                {busy ? "Opretter idé…" : "Ingen idéer i bunken"}
-              </p>
+              <div className="min-side-board__empty min-side-board__empty--pile">
+                <p>
+                  {busy
+                    ? "Opretter idé…"
+                    : notesLoadFailed
+                      ? "Kunne ikke hente idéer"
+                      : "Ingen idéer i bunken — klik Ny idé"}
+                </p>
+                {notesLoadFailed ? (
+                  <p className="text-destructive mt-2 text-xs" role="alert">
+                    API/database mangler migration. Kontakt admin eller prøv igen senere.
+                  </p>
+                ) : null}
+                {createError ? (
+                  <p className="text-destructive mt-2 text-xs" role="alert">
+                    {createError}
+                  </p>
+                ) : null}
+              </div>
             ) : (
               <>
                 {underStackNotes.map((note, index) => {

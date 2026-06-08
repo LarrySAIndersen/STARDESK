@@ -14,11 +14,13 @@ export function MinSideWorkspace({
   initialKanban,
   userTickets,
   assignableTickets,
+  notesLoadFailed = false,
 }: {
   initialNotes: PersonalNote[];
   initialKanban: PersonalKanban;
   userTickets: UserTicketsGrouped;
   assignableTickets: Ticket[];
+  notesLoadFailed?: boolean;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [kanban, setKanban] = useState(initialKanban);
@@ -42,6 +44,7 @@ export function MinSideWorkspace({
         onNotesChange={setNotes}
         kanban={kanban}
         onKanbanRefresh={refreshKanban}
+        notesLoadFailed={notesLoadFailed}
       />
       <PersonalKanbanBoard
         kanban={kanban}
