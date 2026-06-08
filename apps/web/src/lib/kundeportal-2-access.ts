@@ -1,19 +1,9 @@
-import { isAdmin, resolveUserRole, resolveUserRoles } from "@/lib/auth";
+import { resolveUserRole, resolveUserRoles } from "@/lib/auth";
 import type { User } from "@/types/user";
 
-/** Brugere med rettighedsgruppen kundeportal_2 (eller admin/supporter til test). */
+/** Alle indloggede brugere kan aabne Kundeportal #2. */
 export function canAccessKundeportal2(user: User | null): boolean {
-  if (!user) {
-    return false;
-  }
-  if (resolveUserRoles(user).includes("kundeportal_2")) {
-    return true;
-  }
-  const roles = resolveUserRoles(user);
-  return (
-    isAdmin(user) ||
-    roles.includes("supporter")
-  );
+  return user !== null;
 }
 
 export function kundeportal2RoleLabel(user: User): string {

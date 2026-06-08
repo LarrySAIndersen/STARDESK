@@ -11,6 +11,7 @@ import {
   Mail,
   MessageSquare,
   Plus,
+  LayoutGrid,
   LayoutTemplate,
   StickyNote,
   Ticket,
@@ -139,6 +140,13 @@ export function buildAgentNavItems(options: {
       href: "/portal",
       label: "Selvbetjeningsportal",
       icon: UserCircle,
+      section: "Slutbrugere",
+    },
+    {
+      id: "kundeportal-2",
+      href: "/kundeportal-2",
+      label: "Kundeportal #2",
+      icon: LayoutGrid,
       section: "Slutbrugere",
     },
     ...(staff
