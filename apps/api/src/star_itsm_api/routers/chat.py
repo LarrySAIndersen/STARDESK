@@ -60,9 +60,32 @@ STATUS_PHRASES = (
 class ChatPageContext(BaseModel):
     page_path: str | None = None
     page_label: str | None = None
+    page_kind: str | None = None
     ticket_id: str | None = None
     ticket_number: str | None = None
     ticket_title: str | None = None
+
+
+PAGE_KIND_HINTS: dict[str, str] = {
+    "reports": (
+        "Brugeren er i rapporteringscenteret. Hjælp med KPI'er, rapportfortolkning, "
+        "filtre og navigation til avanceret sagsanalyse."
+    ),
+    "analytics": (
+        "Brugeren er i avanceret sagsanalyse/observability. Forklar grafer, trends, "
+        "sagspipeline og tidsperioder."
+    ),
+    "kanban": "Brugeren er på Kanban. Hjælp med boards, kolonner, WIP og arbejdsflow.",
+    "backlog": "Brugeren er i Backlog. Hjælp med prioritering og sprint-planlægning.",
+    "dashboard": "Brugeren er på dashboard/drift. Hjælp med KPI-overblik, SLA og dagens status.",
+    "knowledge": "Brugeren er i vidensbasen. Hjælp med søgning, artikler og emner.",
+    "admin": "Brugeren er i administration. Forklar indstillinger og konfiguration for den aktuelle side.",
+    "users": "Brugeren administrerer brugere. Hjælp med roller, adgang og tildeling.",
+    "assets": "Brugeren er i aktiver/CMDB. Hjælp med udstyr og tilknytning til sager.",
+    "groups": "Brugeren er i grupper. Hjælp med teams, eskalering og tildeling.",
+    "integrations": "Brugeren konfigurerer integrationer. Hjælp med opsætning og fejlfinding.",
+    "portal": "Brugeren er i selvbetjeningsportalen. Hjælp med slutbruger-flows.",
+}
 
 
 def build_chat_system_prompt(request: "ChatRequest") -> str:
@@ -91,6 +114,10 @@ def build_chat_system_prompt(request: "ChatRequest") -> str:
             "Antag at spørgsmål om «denne sag», «opsummering» og lignende handler om denne sag, "
             "medmindre brugeren angiver et andet sagsnummer."
         )
+    if page_context.page_kind:
+        kind_hint = PAGE_KIND_HINTS.get(page_context.page_kind)
+        if kind_hint:
+            context_parts.append(kind_hint)
     if context_parts:
         base += " " + " ".join(context_parts)
     return base
