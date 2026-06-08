@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { PortalShell } from "@/components/portal/portal-shell";
 import { TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import { canAccessKundeportal2 } from "@/lib/kundeportal-2-access";
@@ -23,5 +24,9 @@ export default async function Kundeportal2Layout({ children }: { children: React
     redirect("/portal");
   }
 
-  return <div className="kp2-app min-h-dvh">{children}</div>;
+  return (
+    <PortalShell user={user}>
+      <div className="kp2-app min-h-full">{children}</div>
+    </PortalShell>
+  );
 }
