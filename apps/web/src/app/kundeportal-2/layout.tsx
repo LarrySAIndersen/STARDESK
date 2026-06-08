@@ -8,8 +8,8 @@ import { getServerUser } from "@/lib/auth-server";
 import { canAccessKundeportal2 } from "@/lib/kundeportal-2-access";
 
 export const metadata = {
-  title: "Kundeportal #2 — STAR Selvbetjening",
-  description: "Alternativ selvbetjeningsportal for Service Requests & Changes",
+  title: "Kundeportal #2 - STAR Selvbetjening",
+  description: "Alternativ selvbetjeningsportal for Service Requests and Changes",
 };
 
 export default async function Kundeportal2Layout({ children }: { children: ReactNode }) {
