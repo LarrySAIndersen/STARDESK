@@ -62,6 +62,15 @@ async def _table_exists(engine: AsyncEngine, table_name: str) -> bool:
         return result.scalar() is not None
 
 
+_REQUIRED_PERSONAL_NOTE_COLUMNS = (
+    "note_number",
+    "board_x",
+    "board_y",
+    "category",
+    "ticket_id",
+    "visibility",
+)
+
 _REQUIRED_TICKET_COLUMNS = (
     "organization_id",
     "is_major",
@@ -198,6 +207,40 @@ async def _needs_ticket_source_chat_migration(engine: AsyncEngine) -> bool:
         if row is None or row[0] is None:
             return False
         return "chat" not in str(row[0]).lower()
+
+
+async def _personal_notes_schema_needs_migration(engine: AsyncEngine) -> bool:
+    if not await _table_exists(engine, "personal_notes"):
+        return True
+    for column in _REQUIRED_PERSONAL_NOTE_COLUMNS:
+        if not await _schema_has_column(engine, column, table_name="personal_notes"):
+            return True
+    return False
+
+
+async def ensure_personal_notes_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Apply idempotent personal_notes columns when Alembic was not run (e.g. staging)."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _personal_notes_schema_needs_migration(engine):
+            logger.warning("personal_notes schema outdated — applying SQL migration")
+            await asyncio.to_thread(
+                _run_single_migration,
+                database_url,
+                "33_personal-notes-schema-migration.sql",
+            )
+            if await _personal_notes_schema_needs_migration(engine):
+                logger.error(
+                    "personal_notes schema sync finished but required columns are still missing"
+                )
+            else:
+                logger.info("personal_notes schema sync completed")
+    except Exception:
+        logger.exception("personal_notes schema sync failed — notes endpoints may return 500")
 
 
 async def ensure_ticket_schema_current(
