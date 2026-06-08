@@ -3,6 +3,7 @@
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
+    ROLE_KUNDEPORTAL_2,
     ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
@@ -34,6 +35,17 @@ def is_end_user(user: User) -> bool:
 
 def is_stardesk_reviewer(user: User) -> bool:
     return user_has_any_role(user, ROLE_STARDESK_REVIEWER)
+
+
+def is_kundeportal_2_user(user: User) -> bool:
+    return user_has_any_role(user, ROLE_KUNDEPORTAL_2)
+
+
+def can_access_kundeportal_2(user: User) -> bool:
+    """Kundeportal #2 — dedicated rettighedsgruppe or admin/support for test."""
+    if is_kundeportal_2_user(user):
+        return True
+    return is_admin(user)
 
 
 def has_full_ticket_visibility(user: User) -> bool:

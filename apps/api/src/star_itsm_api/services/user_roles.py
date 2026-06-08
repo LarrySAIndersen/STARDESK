@@ -14,12 +14,14 @@ ROLE_ADMIN = "admin"
 ROLE_TOP_ADMIN = "top_admin"
 ROLE_SUPPORTER = "supporter"
 ROLE_STARDESK_REVIEWER = "stardesk_reviewer"
+ROLE_KUNDEPORTAL_2 = "kundeportal_2"
 
 ROLE_PRIORITY: tuple[str, ...] = (
     ROLE_TOP_ADMIN,
     ROLE_ADMIN,
     ROLE_SUPPORTER,
     ROLE_AGENT,
+    ROLE_KUNDEPORTAL_2,
     ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
 )

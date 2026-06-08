@@ -131,6 +131,19 @@ def test_is_stardesk_reviewer() -> None:
     assert is_stardesk_reviewer(user_agent) is False
 
 
+def test_can_access_kundeportal_2() -> None:
+    from star_itsm_api.core.security import ROLE_ADMIN, ROLE_KUNDEPORTAL_2
+    from star_itsm_api.services.permissions import can_access_kundeportal_2
+
+    kp2_user = MagicMock(role=ROLE_KUNDEPORTAL_2, _roles_cache=frozenset({ROLE_KUNDEPORTAL_2}))
+    agent = MagicMock(role=ROLE_AGENT, _roles_cache=frozenset({ROLE_AGENT}))
+    admin = MagicMock(role=ROLE_ADMIN, _roles_cache=frozenset({ROLE_ADMIN}))
+
+    assert can_access_kundeportal_2(kp2_user) is True
+    assert can_access_kundeportal_2(admin) is True
+    assert can_access_kundeportal_2(agent) is False
+
+
 def test_can_assign_tickets() -> None:
     from star_itsm_api.services.permissions import can_assign_tickets
     for role in [ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT, ROLE_SUPPORTER]:

@@ -11,6 +11,7 @@ const ROLE_VALUES: UserRole[] = [
   "top_admin",
   "supporter",
   "stardesk_reviewer",
+  "kundeportal_2",
 ];
 
 export function AdminRoleCheckboxList({

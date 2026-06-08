@@ -100,7 +100,7 @@ def record_entity_relationship(
     return row
 
 
-async def record_ticket_user_relationship(
+def record_ticket_user_relationship(
     db: AsyncSession,
     *,
     ticket_id: uuid.UUID,
@@ -166,7 +166,7 @@ async def upsert_stakeholder(
         deleted_at=None,
     )
     db.add(row)
-    await record_ticket_user_relationship(
+    record_ticket_user_relationship(
         db,
         ticket_id=ticket_id,
         user_id=user_id,
@@ -216,7 +216,7 @@ async def sync_ticket_stakeholders_on_create(
     now: datetime | None = None,
 ) -> None:
     ts = now or _now()
-    await record_ticket_user_relationship(
+    record_ticket_user_relationship(
         db,
         ticket_id=ticket_id,
         user_id=reporter_user_id,

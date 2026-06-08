@@ -3,7 +3,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -834,7 +834,7 @@ async def log_chatbot_message(
             category=category,
             ticket_ref=ticket_ref,
             is_bookmarked=False,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(UTC)
         )
         db.add(msg)
         await db.commit()

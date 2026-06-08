@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from star_itsm_api.core.security import (
     ROLE_ADMIN,
     ROLE_AGENT,
+    ROLE_KUNDEPORTAL_2,
     ROLE_STARDESK_REVIEWER,
     ROLE_SUBMITTER,
     ROLE_SUPPORTER,
@@ -20,6 +21,7 @@ ASSIGNABLE_ROLES = (
     ROLE_ADMIN,
     ROLE_SUPPORTER,
     ROLE_STARDESK_REVIEWER,
+    ROLE_KUNDEPORTAL_2,
 )
 
 

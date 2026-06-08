@@ -73,7 +73,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
 
   const mobileDrawer = !isLgUp && !isStaffUser ? (
     <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} title="Selvbetjening">
-      <PortalSidebar collapsed={false} onNavigate={closeMobileNav} />
+      <PortalSidebar collapsed={false} onNavigate={closeMobileNav} user={sessionUser} />
     </MobileNavDrawer>
   ) : null;
 
@@ -111,7 +111,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
               className="min-h-0 min-w-0"
             >
               <div className="relative h-full min-h-0">
-                <PortalSidebar collapsed={collapsed} onToggle={toggle} />
+                <PortalSidebar collapsed={collapsed} onToggle={toggle} user={sessionUser} />
               </div>
             </Panel>
             <ShellResizeSeparator disabled={collapsed} hidden={collapsed} />
