@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import { PortalCommentForm } from "@/components/portal/ticket/comment-form";
 import { CommentForm } from "@/components/comment-form";
@@ -15,10 +15,11 @@ import type { TicketDetail } from "@/types/ticket";
 
 export type TicketCaseLayoutProps = {
   ticket: TicketDetail;
+  onTicketUpdated?: (ticket: TicketDetail) => void;
   staffView?: boolean;
   breadcrumb?: ReactNode;
   sidebarExtra?: ReactNode;
-  below?: ReactNode;
+  below?: ReactNode | ((ticket: TicketDetail) => ReactNode);
   showCommentForm?: boolean;
   /** Staff: editable Detaljer sidebar with Gem (requires teams + categories). */
   editableDetails?: boolean;
@@ -27,7 +28,8 @@ export type TicketCaseLayoutProps = {
 };
 
 export function TicketCaseLayout({
-  ticket: initialTicket,
+  ticket,
+  onTicketUpdated,
   staffView = false,
   breadcrumb,
   sidebarExtra,
@@ -37,11 +39,9 @@ export function TicketCaseLayout({
   teams = [],
   categories = [],
 }: TicketCaseLayoutProps) {
-  const [ticket, setTicket] = useState(initialTicket);
-
-  useEffect(() => {
-    setTicket(initialTicket);
-  }, [initialTicket]);
+  function handleTicketUpdated(updated: TicketDetail) {
+    onTicketUpdated?.(updated);
+  }
 
   const showEditableDetails =
     editableDetails && staffView && teams.length > 0 && categories.length > 0;
@@ -110,7 +110,7 @@ export function TicketCaseLayout({
               ticket={ticket}
               teams={teams}
               categories={categories}
-              onTicketUpdated={setTicket}
+              onTicketUpdated={handleTicketUpdated}
             />
           ) : (
             <TicketDetailsSidebar ticket={ticket} />
@@ -119,7 +119,11 @@ export function TicketCaseLayout({
         </div>
       </div>
 
-      {below ? <div className="ticket-case-below space-y-6 border-t border-border pt-8">{below}</div> : null}
+      {below ? (
+        <div className="ticket-case-below space-y-6 border-t border-border pt-8">
+          {typeof below === "function" ? below(ticket) : below}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -101,6 +101,7 @@ export function KanbanTicketDrawer({
               currentUser={currentUser}
               teams={teams}
               categories={categories}
+              onTicketUpdated={setTicket}
             />
           ) : null}
         </div>
