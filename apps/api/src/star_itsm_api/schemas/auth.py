@@ -53,6 +53,7 @@ ROLE_LABELS: dict[str, str] = {
     "top_admin": "Topadministrator",
     "supporter": "Supporter",
     "stardesk_reviewer": "Stardesk Reviewer",
+    "kundeportal_2": "Kundeportal #2",
 }
 
 

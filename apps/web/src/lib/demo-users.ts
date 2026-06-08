@@ -40,6 +40,13 @@ function admin(email: string, displayName: string, roleLabel = "Administrator"):
 
 const RAW_DEMO_USERS: DemoUser[] = [
   {
+    email: "kp2@example.dk",
+    password: DEMO_PASSWORD,
+    roleLabel: "Kundeportal #2",
+    group: "Kundeportal #2",
+    displayName: "Jan Kjærby Vinding",
+  },
+  {
     email: "submitter@example.dk",
     password: DEMO_PASSWORD,
     roleLabel: "Indmelder",
