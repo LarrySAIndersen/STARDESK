@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Plus, StickyNote, Ticket, X } from "lucide-react";
 
 import { PersonalNoteCard } from "@/components/personal/personal-note-card";
@@ -10,6 +10,7 @@ import { WirePriorityBadge, WireStatusBadge } from "@/components/wireframe/wire-
 import { Button } from "@/components/ui/button";
 import { usePersonalNoteDrag } from "@/hooks/use-personal-note-drag";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
+import { PERSONAL_KANBAN_DRAG_MIME, readDraggedTicketId } from "@/lib/personal-board-dnd";
 import {
   PERSONAL_NOTE_COLORS,
   type PersonalNoteColorId,
@@ -37,6 +38,14 @@ export function PersonalBoard({
 }) {
   const { requestAttach } = usePostItAttach();
   const [busy, setBusy] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [ticketDropActive, setTicketDropActive] = useState(false);
+  const bootstrappedRef = useRef(false);
+
+  const boardTicketIds = useMemo(
+    () => new Set(kanban.cards.map((c) => c.ticket_id)),
+    [kanban.cards],
+  );
 
   const stackNotes = useMemo(
     () =>
@@ -92,9 +101,27 @@ export function PersonalBoard({
     [onKanbanRefresh],
   );
 
+  const pinTicketToQueue = useCallback(
+    async (ticketId: string) => {
+      if (boardTicketIds.has(ticketId)) {
+        await apiPatch(`/api/v1/personal/kanban/cards/${ticketId}`, {
+          column_name: PINNED_QUEUE_COLUMN,
+        });
+      } else {
+        await apiPost("/api/v1/personal/kanban/cards", {
+          ticket_id: ticketId,
+          column_name: PINNED_QUEUE_COLUMN,
+        });
+      }
+      await onKanbanRefresh();
+    },
+    [boardTicketIds, onKanbanRefresh],
+  );
+
   const createNote = useCallback(async () => {
     if (busy) return;
     setBusy(true);
+    setCreateError(null);
     try {
       const color = PERSONAL_NOTE_COLORS[notes.length % PERSONAL_NOTE_COLORS.length]
         .id as PersonalNoteColorId;
@@ -104,10 +131,18 @@ export function PersonalBoard({
         color,
       });
       onNotesChange([...notes, created]);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : "Kunne ikke oprette idé");
     } finally {
       setBusy(false);
     }
   }, [busy, notes, onNotesChange]);
+
+  useEffect(() => {
+    if (bootstrappedRef.current || notes.length > 0 || busy) return;
+    bootstrappedRef.current = true;
+    void createNote();
+  }, [busy, createNote, notes.length]);
 
   const handleDrop = useCallback(
     (
@@ -143,6 +178,23 @@ export function PersonalBoard({
 
   const draggingNote = drag ? notes.find((n) => n.id === drag.noteId) : undefined;
 
+  const handleTicketDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setTicketDropActive(true);
+  };
+
+  const handleTicketDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setTicketDropActive(false);
+    const ticketId = readDraggedTicketId(event.dataTransfer);
+    if (ticketId) void pinTicketToQueue(ticketId).catch(() => {});
+  };
+
+  const isKanbanDrag = (event: DragEvent<HTMLDivElement>) =>
+    event.dataTransfer.types.includes(PERSONAL_KANBAN_DRAG_MIME) ||
+    event.dataTransfer.types.includes("text/plain");
+
   return (
     <section className="min-side-board">
       <header className="min-side-board__header">
@@ -167,7 +219,9 @@ export function PersonalBoard({
           <p className="min-side-board__zone-label">Bunke</p>
           <div className="min-side-board__stack-list">
             {stackNotes.length === 0 ? (
-              <p className="min-side-board__empty">Ingen idéer i bunken</p>
+              <p className="min-side-board__empty">
+                {busy ? "Opretter idé…" : "Ingen idéer i bunken — klik Ny idé"}
+              </p>
             ) : (
               stackNotes.map((note) => (
                 <PersonalNoteCard
@@ -178,6 +232,7 @@ export function PersonalBoard({
                   onNoteUpdated={(updated) =>
                     onNotesChange(notes.map((n) => (n.id === updated.id ? updated : n)))
                   }
+                  onPinToBoard={() => void pinNote(note.id).catch(() => {})}
                   onDelete={() =>
                     void apiDelete(`/api/v1/personal/notes/${note.id}`)
                       .then(() => onNotesChange(notes.filter((n) => n.id !== note.id)))
@@ -188,6 +243,7 @@ export function PersonalBoard({
               ))
             )}
           </div>
+          {createError ? <p className="min-side-board__error">{createError}</p> : null}
           <Button
             type="button"
             variant="outline"
@@ -234,7 +290,25 @@ export function PersonalBoard({
           )}
         </div>
 
-        <div className="min-side-board__zone min-side-board__zone--tickets">
+        <div
+          className={cn(
+            "min-side-board__zone min-side-board__zone--tickets",
+            (ticketDropActive || isZoneActive("ticket")) && "min-side-board__zone--active",
+          )}
+          data-ticket-drop="queue"
+          onDragEnter={(event) => {
+            if (!isKanbanDrag(event)) return;
+            event.preventDefault();
+            setTicketDropActive(true);
+          }}
+          onDragOver={handleTicketDragOver}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setTicketDropActive(false);
+            }
+          }}
+          onDrop={handleTicketDrop}
+        >
           <p className="min-side-board__zone-label">Fastgjorte sager</p>
           {queueTickets.length === 0 ? (
             <p className="min-side-board__empty">Træk sager hertil fra kanban</p>

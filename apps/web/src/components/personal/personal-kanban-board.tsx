@@ -16,7 +16,7 @@ import {
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
-import { PERSONAL_KANBAN_DRAG_MIME } from "@/lib/personal-board-dnd";
+import { PERSONAL_KANBAN_DRAG_MIME, beginTicketDrag } from "@/lib/personal-board-dnd";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban } from "@/types/personal";
 
@@ -130,8 +130,7 @@ export function PersonalKanbanBoard({
                 <div
                   draggable
                   onDragStart={(e) => {
-                    e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticket.id);
-                    e.dataTransfer.effectAllowed = "move";
+                    beginTicketDrag(e.dataTransfer, ticket.id);
                   }}
                   className={cn(
                     "bulletin-ticket-chip group cursor-grab active:cursor-grabbing",
@@ -207,7 +206,7 @@ export function PersonalKanbanBoard({
                     key={card.ticket_id}
                     draggable
                     onDragStart={(e) => {
-                      e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, card.ticket_id);
+                      beginTicketDrag(e.dataTransfer, card.ticket_id);
                       setDragTicketId(card.ticket_id);
                     }}
                     onDragEnd={() => setDragTicketId(null)}
@@ -358,8 +357,7 @@ function TicketGroup({
               draggable={!onBoard}
               onDragStart={(e) => {
                 if (onBoard) return;
-                e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticket.id);
-                e.dataTransfer.effectAllowed = "move";
+                beginTicketDrag(e.dataTransfer, ticket.id);
               }}
               className={cn(
                 "bulletin-ticket-row group relative px-3 py-2.5 pt-3",

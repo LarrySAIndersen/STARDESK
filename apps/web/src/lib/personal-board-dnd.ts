@@ -24,6 +24,12 @@ export function beginNoteDrag(dataTransfer: DataTransfer, noteId: string): void 
   dataTransfer.effectAllowed = "move";
 }
 
+export function beginTicketDrag(dataTransfer: DataTransfer, ticketId: string): void {
+  dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticketId);
+  dataTransfer.setData("text/plain", ticketId);
+  dataTransfer.effectAllowed = "move";
+}
+
 export function shouldBlockNoteDrag(target: EventTarget | null): boolean {
   return Boolean((target as HTMLElement | null)?.closest("[data-no-drag]"));
 }

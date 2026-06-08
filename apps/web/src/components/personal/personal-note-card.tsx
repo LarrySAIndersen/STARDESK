@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Pin, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { apiPatch } from "@/lib/api";
@@ -15,6 +15,7 @@ type PersonalNoteCardProps = Readonly<{
   dragging?: boolean;
   onNoteUpdated: (note: PersonalNote) => void;
   onDelete?: () => void;
+  onPinToBoard?: () => void;
   onDragStart?: (noteId: string, clientX: number, clientY: number) => void;
 }>;
 
@@ -24,6 +25,7 @@ export function PersonalNoteCard({
   dragging = false,
   onNoteUpdated,
   onDelete,
+  onPinToBoard,
   onDragStart,
 }: PersonalNoteCardProps) {
   const [title, setTitle] = useState(note.title);
@@ -42,6 +44,8 @@ export function PersonalNoteCard({
     [note.id, onNoteUpdated],
   );
 
+  const label = note.note_number || "Idé";
+
   return (
     <article
       className={cn(
@@ -52,23 +56,47 @@ export function PersonalNoteCard({
         dragging && "min-side-note--dragging",
       )}
     >
-      <header className="min-side-note__header">
+      <header
+        className="min-side-note__header"
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          if ((event.target as HTMLElement).closest("button,input,textarea")) return;
+          event.preventDefault();
+          (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+          onDragStart?.(note.id, event.clientX, event.clientY);
+        }}
+      >
         <button
           type="button"
           className="min-side-note__handle"
-          aria-label={`Træk ${note.note_number}`}
+          aria-label={`Træk ${label}`}
           onPointerDown={(event) => {
             if (event.button !== 0) return;
             event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.setPointerCapture(event.pointerId);
             onDragStart?.(note.id, event.clientX, event.clientY);
           }}
         >
-          <GripVertical className="size-3.5" aria-hidden />
+          <GripVertical className="size-4" aria-hidden />
         </button>
         <div className="min-side-note__meta">
-          <span className="min-side-note__number">{note.note_number}</span>
+          <span className="min-side-note__number">{label}</span>
           <span className="min-side-note__type">Idé</span>
         </div>
+        {onPinToBoard ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="min-side-note__pin size-7"
+            aria-label="Fastgør på opslagstavle"
+            title="Fastgør på opslagstavle"
+            onClick={onPinToBoard}
+          >
+            <Pin className="size-3.5" aria-hidden />
+          </Button>
+        ) : null}
         {onDelete ? (
           <Button
             type="button"

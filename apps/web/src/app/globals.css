@@ -3492,10 +3492,22 @@ body.page-layout-edit-active .page-layout-field--editing {
   opacity: 0.35;
 }
 
+.min-side-board__error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--star-red);
+}
+
 .min-side-note__header {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  cursor: grab;
+  touch-action: none;
+}
+
+.min-side-note__header:active {
+  cursor: grabbing;
 }
 
 .min-side-note__handle {
