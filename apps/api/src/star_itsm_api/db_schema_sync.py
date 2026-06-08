@@ -243,6 +243,53 @@ async def ensure_personal_notes_schema_current(
         logger.exception("personal_notes schema sync failed — notes endpoints may return 500")
 
 
+async def _role_constraints_include_kundeportal_2(engine: AsyncEngine) -> bool:
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                """
+                SELECT pg_get_constraintdef(c.oid)
+                FROM pg_constraint c
+                JOIN pg_class t ON c.conrelid = t.oid
+                WHERE t.relname = 'user_roles'
+                  AND c.conname = 'user_roles_role_check'
+                """
+            )
+        )
+        row = result.fetchone()
+        if row is None or row[0] is None:
+            return False
+        return "kundeportal_2" in str(row[0])
+
+
+async def ensure_kundeportal_2_role_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Apply kundeportal_2 role constraints when Alembic migration did not run."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _role_constraints_include_kundeportal_2(engine):
+            return
+        logger.warning("user_roles missing kundeportal_2 — applying SQL migration")
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "34_kundeportal-2-role-migration.sql",
+        )
+        if await _role_constraints_include_kundeportal_2(engine):
+            logger.info("kundeportal_2 role constraint sync completed")
+        else:
+            logger.error(
+                "kundeportal_2 role sync finished but user_roles_role_check is still outdated"
+            )
+    except Exception:
+        logger.exception(
+            "kundeportal_2 role sync failed — assigning Kundeportal #2 may return 500"
+        )
+
+
 async def ensure_ticket_schema_current(
     engine: AsyncEngine | None,
     database_url: str | None,

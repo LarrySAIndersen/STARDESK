@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.http_details import (
@@ -346,7 +347,14 @@ async def update_user(
     updates = payload.model_dump(exclude_unset=True)
     await _apply_user_role_updates(db, user, updates, current_user)
     await _apply_user_scalar_updates(db, user, updates)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Rettighedsgruppen kunne ikke gemmes — vent på database-migration og prøv igen",
+        ) from exc
     updated = await get_user_admin(db, user_id)
     if updated is None:
         raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
