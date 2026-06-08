@@ -10,6 +10,19 @@ export type CaseAssistantPageKind =
   | "dashboard"
   | "knowledge"
   | "create-ticket"
+  | "reports"
+  | "analytics"
+  | "kanban"
+  | "backlog"
+  | "admin"
+  | "users"
+  | "assets"
+  | "groups"
+  | "integrations"
+  | "portal"
+  | "profile"
+  | "forbedringer"
+  | "classic"
   | "other";
 
 export type CaseAssistantPageContext = {
@@ -28,6 +41,7 @@ export type CaseAssistantQuickAction = {
 
 const PAGE_LABELS: Record<string, string> = {
   "/": "Dashboard",
+  "/min-side": "Min side",
   "/service-desk": "Service Desk",
   "/kanban": "Kanban",
   "/backlog": "Backlog",
@@ -35,8 +49,29 @@ const PAGE_LABELS: Record<string, string> = {
   "/tickets/new": "Ny sag",
   "/tickets/major": "Store sager",
   "/knowledge": "Vidensartikler",
-  "/portal": "Selvbetjening",
-  "/min-side": "Min side",
+  "/knowledge/new": "Ny vidensartikel",
+  "/reports": "Rapporter",
+  "/reports/analytics": "Avanceret sagsanalyse",
+  "/aktiver": "Aktiver",
+  "/groups": "Grupper",
+  "/users": "Brugere",
+  "/portal": "Selvbetjeningsportal",
+  "/profile": "Profil",
+  "/skift-adgangskode": "Skift adgangskode",
+  "/forbedringer": "Review-sedler",
+  "/forbedringer/saglayout-2": "Saglayout #2",
+  "/integrations": "Integrationer",
+  "/admin/dashboard": "Admin dashboard",
+  "/admin/chatbot": "Chatbot-indstillinger",
+  "/admin/sla": "SLA-indstillinger",
+  "/admin/categories": "Kategorier",
+  "/admin/dependencies": "Afhængigheder & sikkerhed",
+  "/classic": "Classic UI",
+  "/classic/incidents": "Classic — Incidents",
+  "/classic/changes": "Classic — Changes",
+  "/classic/problems": "Classic — Problems",
+  "/classic/service-requests": "Classic — Service requests",
+  "/classic/my-work": "Classic — Mit arbejde",
 };
 
 function extractTicketId(pathname: string): string | null {
@@ -80,6 +115,45 @@ function resolvePageKind(pathname: string, ticketId: string | null): CaseAssista
   if (pathname.startsWith("/knowledge") || pathname.startsWith("/portal/knowledge")) {
     return "knowledge";
   }
+  if (pathname.startsWith("/reports/analytics")) {
+    return "analytics";
+  }
+  if (pathname.startsWith("/reports")) {
+    return "reports";
+  }
+  if (pathname.startsWith("/kanban")) {
+    return "kanban";
+  }
+  if (pathname.startsWith("/backlog")) {
+    return "backlog";
+  }
+  if (pathname.startsWith("/admin")) {
+    return "admin";
+  }
+  if (pathname.startsWith("/users")) {
+    return "users";
+  }
+  if (pathname.startsWith("/aktiver")) {
+    return "assets";
+  }
+  if (pathname.startsWith("/groups")) {
+    return "groups";
+  }
+  if (pathname.startsWith("/integrations")) {
+    return "integrations";
+  }
+  if (pathname.startsWith("/portal")) {
+    return "portal";
+  }
+  if (pathname.startsWith("/profile") || pathname.startsWith("/skift-adgangskode")) {
+    return "profile";
+  }
+  if (pathname.startsWith("/forbedringer")) {
+    return "forbedringer";
+  }
+  if (pathname.startsWith("/classic")) {
+    return "classic";
+  }
   return "other";
 }
 
@@ -89,6 +163,20 @@ function resolvePageLabel(pathname: string, kind: CaseAssistantPageKind): string
   }
   if (PAGE_LABELS[pathname]) {
     return PAGE_LABELS[pathname];
+  }
+  if (kind === "admin") {
+    const segment = pathname.split("/").filter(Boolean).slice(1).join(" ");
+    return segment ? `Admin — ${segment.replace(/-/g, " ")}` : "Administration";
+  }
+  if (kind === "integrations") {
+    const segment = pathname.split("/").filter(Boolean).slice(1).join(" ");
+    return segment ? `Integration — ${segment.replace(/-/g, " ")}` : "Integrationer";
+  }
+  if (kind === "knowledge" && pathname.includes("/")) {
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length > 1 && parts[1] !== "new") {
+      return "Vidensartikel";
+    }
   }
   const segment = pathname.split("/").filter(Boolean)[0];
   if (!segment) {
@@ -165,7 +253,107 @@ export function buildCaseAssistantWelcome(options: {
   }
 
   if (pageContext.kind === "knowledge") {
-    return `Hej${namePart}! Du er i **vidensbasen**. Spørg fx om VPN, MitID eller andre emner.`;
+    return staff
+      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om emner, artikler eller søgning i vidensbasen.`
+      : `Hej${namePart}! Du er i vidensbasen. Spørg fx om VPN, MitID eller andre emner.`;
+  }
+
+  if (pageContext.kind === "reports") {
+    return staff
+      ? [
+          `Hej${namePart}! Jeg kan se, du er på **${pageContext.pageLabel}**.`,
+          "",
+          "Her får du overblik over Service Desk KPI'er. Jeg kan fx:",
+          "• Forklare hvad tallene betyder",
+          "• Guide dig til den rigtige rapport",
+          "• Hjælpe med filtre og eksport",
+        ].join("\n")
+      : `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "analytics") {
+    return staff
+      ? [
+          `Hej${namePart}! Du er i **${pageContext.pageLabel}**.`,
+          "",
+          "Jeg kan hjælpe med:",
+          "• At læse grafer og trends",
+          "• Observability og sagspipeline",
+          "• Filtre og tidsperioder",
+        ].join("\n")
+      : `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "kanban") {
+    return staff
+      ? `Hej${namePart}! Du er på **Kanban**. Jeg kan hjælpe med boards, kolonner, WIP-grænser og arbejdsflow.`
+      : `Hej${namePart}! Du er på **Kanban**. Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "backlog") {
+    return staff
+      ? `Hej${namePart}! Du er i **Backlog**. Spørg om prioritering, sprint-planlægning eller sagsstatus.`
+      : `Hej${namePart}! Du er i **Backlog**. Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "dashboard") {
+    return staff
+      ? `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Her ser du drifts-KPI'er — spørg fx om SLA, køer eller dagens overblik.`
+      : `Hej${namePart}! Velkommen til **${pageContext.pageLabel}**. Spørg om dine sager eller IT-hjælp.`;
+  }
+
+  if (pageContext.kind === "admin") {
+    return staff
+      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om indstillinger, konfiguration eller hvad denne side gør.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "users") {
+    return staff
+      ? `Hej${namePart}! Du er i **Brugere**. Jeg kan hjælpe med roller, adgang og brugeradministration.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "assets") {
+    return staff
+      ? `Hej${namePart}! Du er i **Aktiver**. Spørg om CMDB, udstyr eller tilknytning til sager.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "groups") {
+    return staff
+      ? `Hej${namePart}! Du er i **Grupper**. Spørg om team-tildeling, eskalering eller gruppeindstillinger.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "integrations") {
+    return staff
+      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om opsætning, synkronisering eller fejlfinding.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "portal") {
+    return staff
+      ? `Hej${namePart}! Du kigger på **${pageContext.pageLabel}** (slutbruger-visning). Spørg om portal-flows og selvbetjening.`
+      : `Hej${namePart}! Velkommen i selvbetjeningen. Spørg om dine sager, vejledninger eller opret en ny sag.`;
+  }
+
+  if (pageContext.kind === "profile") {
+    return staff
+      ? `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp til profil eller adgangskode.`
+      : `Hej${namePart}! Her kan du administrere din profil. Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "forbedringer") {
+    return staff
+      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om review-sedler, layout-forslag eller forbedringsarbejde.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
+  }
+
+  if (pageContext.kind === "classic") {
+    return staff
+      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}** (Classic UI). Jeg kan hjælpe med sager, incidents og ændringer.`
+      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
   }
 
   if (staff) {
@@ -180,7 +368,7 @@ export function buildCaseAssistantWelcome(options: {
     ].join("\n");
   }
 
-  return `Hej${namePart}! Skriv kort: \`mine sager\`, sagsnummer, eller \`opret Titel - Beskrivelse\`. Mikrofonen virker også.`;
+  return `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Skriv \`mine sager\`, sagsnummer, eller \`opret Titel - Beskrivelse\`. Mikrofonen virker også.`;
 }
 
 export function getCaseAssistantQuickActions(options: {
@@ -189,8 +377,9 @@ export function getCaseAssistantQuickActions(options: {
   ticket?: Pick<Ticket, "ticket_number"> | null;
 }): CaseAssistantQuickAction[] {
   const { staff, pageContext, ticket } = options;
+  const { kind } = pageContext;
 
-  if (pageContext.kind === "ticket-detail") {
+  if (kind === "ticket-detail") {
     const actions: CaseAssistantQuickAction[] = [
       { label: "Opsummer denne sag", message: "Opsummer denne sag", autoSend: true },
       { label: "Forklar status", message: "Forklar status på denne sag", autoSend: true },
@@ -209,6 +398,80 @@ export function getCaseAssistantQuickActions(options: {
       }
     }
     return actions;
+  }
+
+  if (kind === "reports") {
+    return [
+      { label: "Forklar KPI'er", message: "Forklar KPI'erne på rapportsiden", autoSend: true },
+      { label: "Hvilken rapport?", message: "Hvilken rapport skal jeg bruge til mit formål?", autoSend: true },
+      { label: "Gå til analyse", message: "Hvad kan jeg se under avanceret sagsanalyse?", autoSend: true },
+    ];
+  }
+
+  if (kind === "analytics") {
+    return [
+      { label: "Læs grafer", message: "Hvordan læser jeg graferne på denne side?", autoSend: true },
+      { label: "Trends", message: "Forklar trends og observability her", autoSend: true },
+    ];
+  }
+
+  if (kind === "kanban") {
+    return [
+      { label: "Kanban-hjælp", message: "Hvordan bruger jeg Kanban-boardet?", autoSend: true },
+      { label: "mine sager", message: "mine sager" },
+    ];
+  }
+
+  if (kind === "backlog") {
+    return [
+      { label: "Prioritering", message: "Hvordan prioriterer jeg backlog?", autoSend: true },
+      { label: "mine sager", message: "mine sager" },
+    ];
+  }
+
+  if (kind === "dashboard") {
+    return [
+      { label: "Dagens overblik", message: "Giv mig et kort overblik over dagens drift", autoSend: true },
+      { label: "mine sager", message: "mine sager" },
+    ];
+  }
+
+  if (kind === "knowledge") {
+    return [
+      { label: "Søg vidensbase", message: "Hvordan søger jeg i vidensbasen?", autoSend: true },
+      { label: "VPN", message: "Hjælp med VPN", autoSend: true },
+    ];
+  }
+
+  if (kind === "create-ticket") {
+    return [{ label: "Kategorier", message: "Hvilken kategori skal jeg vælge?", autoSend: true }];
+  }
+
+  if (kind === "admin") {
+    return [
+      {
+        label: "Hvad gør siden?",
+        message: `Hvad kan jeg gøre på ${pageContext.pageLabel}?`,
+        autoSend: true,
+      },
+    ];
+  }
+
+  if (kind === "users") {
+    return [{ label: "Roller", message: "Forklar brugerroller og adgang", autoSend: true }];
+  }
+
+  if (kind === "integrations") {
+    return [
+      { label: "Opsætning", message: "Hvordan opsætter jeg denne integration?", autoSend: true },
+    ];
+  }
+
+  if (kind === "portal") {
+    return [
+      { label: "Mine sager", message: "mine sager", autoSend: true },
+      { label: "Opret sag", message: "Hvordan opretter jeg en ny sag?", autoSend: true },
+    ];
   }
 
   if (staff) {
@@ -231,6 +494,7 @@ export function buildCaseAssistantApiPageContext(
   return {
     page_path: pageContext.pagePath,
     page_label: pageContext.pageLabel,
+    page_kind: pageContext.kind,
     ticket_id: ticket?.id ?? pageContext.ticketId,
     ticket_number: ticket?.ticket_number ?? null,
     ticket_title: ticket?.title ?? null,
