@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,8 @@ class PersonalNote(Base):
         server_default="false",
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    board_x: Mapped[float | None] = mapped_column(Float, nullable=True)
+    board_y: Mapped[float | None] = mapped_column(Float, nullable=True)
     color: Mapped[str | None] = mapped_column(String(32), nullable=True)
     category: Mapped[str | None] = mapped_column(String(32), nullable=True)
     ticket_id: Mapped[uuid.UUID | None] = mapped_column(
