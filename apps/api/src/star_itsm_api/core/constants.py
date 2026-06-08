@@ -14,4 +14,5 @@ TICKET_TYPE_PREFIX: dict[str, str] = {
     "service_request": "SR",
     "problem": "PRB",
     "knowledge_article": "KB",
+    "idea": "IDE",
 }

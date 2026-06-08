@@ -37,6 +37,7 @@ class PersonalNoteRead(BaseModel):
 
     id: UUID
     user_id: UUID
+    note_number: str
     title: str
     content: str
     is_pinned: bool

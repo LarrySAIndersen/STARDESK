@@ -27,6 +27,7 @@ const TICKET_TYPE_LABELS: Record<string, string> = {
   incident: "Hændelse",
   service_request: "Serviceanmodning",
   problem: "Problem",
+  idea: "Idé",
 };
 
 export function ticketTypeLabel(ticketType: string): string {
