@@ -18,7 +18,7 @@ function mockDataTransfer(data: Record<string, string>, types?: string[]): DataT
     },
     setData() {},
     effectAllowed: "move",
-  } as DataTransfer;
+  } as unknown as DataTransfer;
 }
 
 describe("personal-board-dnd", () => {

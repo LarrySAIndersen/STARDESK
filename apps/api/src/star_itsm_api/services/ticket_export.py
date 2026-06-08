@@ -70,49 +70,52 @@ async def fetch_tickets_for_export(db: AsyncSession, user: User) -> list[Ticket]
     return list(result.scalars().all())
 
 
+def _ticket_export_values(ticket: Ticket, row, org_name: str) -> list[str]:
+    return [
+        ticket.ticket_number,
+        ticket.title,
+        org_name,
+        status_label_da(ticket.status),
+        PRIORITY_LABELS_DA.get(ticket.priority, ticket.priority),
+        TICKET_TYPE_LABELS_DA.get(ticket.ticket_type, ticket.ticket_type),
+        row.assigned_user_name if row else "",
+        row.assigned_team_name if row else "",
+        row.reporter_display_name if row else "",
+        "Ja" if ticket.is_major else "Nej",
+        "Ja" if getattr(ticket, "is_shared", False) else "Nej",
+        ticket.created_at.isoformat() if ticket.created_at else "",
+        ticket.updated_at.isoformat() if ticket.updated_at else "",
+        ticket.resolved_at.isoformat() if ticket.resolved_at else "",
+        ticket.closed_at.isoformat() if ticket.closed_at else "",
+    ]
+
+
+def _write_export_sheet(sheet, tickets: list[Ticket], enrich_by_id: dict, org_names: dict) -> None:
+    header_font = Font(bold=True)
+    for col, header in enumerate(EXPORT_HEADERS, start=1):
+        cell = sheet.cell(row=1, column=col, value=header)
+        cell.font = header_font
+    for row_idx, ticket in enumerate(tickets, start=2):
+        row = enrich_by_id.get(ticket.id)
+        org_name = org_names.get(ticket.organization_id) if ticket.organization_id else ""
+        for col, value in enumerate(_ticket_export_values(ticket, row, org_name), start=1):
+            sheet.cell(row=row_idx, column=col, value=value)
+    footer_row = len(tickets) + 3
+    sheet.cell(row=footer_row, column=1, value=f"Eksporteret {datetime.now(UTC).isoformat()}")
+    sheet.cell(row=footer_row + 1, column=1, value=f"Antal sager: {len(tickets)}")
+
+
 async def build_tickets_export_xlsx(db: AsyncSession, user: User) -> bytes:
     tickets = await fetch_tickets_for_export(db, user)
     enriched = await tickets_to_read_list(db, tickets)
     enrich_by_id = {t.id: t for t in enriched}
-
     org_ids = {t.organization_id for t in tickets if t.organization_id}
     org_names = await _load_organization_names(db, org_ids)
 
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = "Sager"
-
-    header_font = Font(bold=True)
-    for col, header in enumerate(EXPORT_HEADERS, start=1):
-        cell = sheet.cell(row=1, column=col, value=header)
-        cell.font = header_font
-
-    for row_idx, ticket in enumerate(tickets, start=2):
-        row = enrich_by_id.get(ticket.id)
-        org_name = org_names.get(ticket.organization_id) if ticket.organization_id else ""
-        values = [
-            ticket.ticket_number,
-            ticket.title,
-            org_name,
-            status_label_da(ticket.status),
-            PRIORITY_LABELS_DA.get(ticket.priority, ticket.priority),
-            TICKET_TYPE_LABELS_DA.get(ticket.ticket_type, ticket.ticket_type),
-            row.assigned_user_name if row else "",
-            row.assigned_team_name if row else "",
-            row.reporter_display_name if row else "",
-            "Ja" if ticket.is_major else "Nej",
-            "Ja" if getattr(ticket, "is_shared", False) else "Nej",
-            ticket.created_at.isoformat() if ticket.created_at else "",
-            ticket.updated_at.isoformat() if ticket.updated_at else "",
-            ticket.resolved_at.isoformat() if ticket.resolved_at else "",
-            ticket.closed_at.isoformat() if ticket.closed_at else "",
-        ]
-        for col, value in enumerate(values, start=1):
-            sheet.cell(row=row_idx, column=col, value=value)
-
-    footer_row = len(tickets) + 3
-    sheet.cell(row=footer_row, column=1, value=f"Eksporteret {datetime.now(UTC).isoformat()}")
-    sheet.cell(row=footer_row + 1, column=1, value=f"Antal sager: {len(tickets)}")
+    _write_export_sheet(sheet, tickets, enrich_by_id, org_names)
 
     buffer = io.BytesIO()
     workbook.save(buffer)

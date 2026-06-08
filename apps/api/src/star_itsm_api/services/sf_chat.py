@@ -444,6 +444,58 @@ async def abandon_customer_session(
     return session
 
 
+async def _authorize_customer_message(db: AsyncSession, session: SfChatSession) -> None:
+    if session.status == SESSION_REJECTED_QUEUE:
+        raise ValueError("queue_rejected")
+    if session.status == SESSION_CLOSED:
+        raise ValueError("session_closed")
+    if session.status == SESSION_WAITING and not session.bot_assistant_active:
+        await _try_assign_agent(db, session)
+        if session.status == SESSION_WAITING and not await _fresh_online_agent_ids(db):
+            session.status = SESSION_REJECTED_QUEUE
+            session.queue_rejected_at = _now()
+            await db.commit()
+            raise ValueError("chat_closed")
+
+
+def _claim_waiting_session_for_agent(
+    session: SfChatSession,
+    *,
+    agent_id: uuid.UUID,
+) -> None:
+    session.assigned_agent_id = agent_id
+    session.status = SESSION_ACTIVE
+    session.bot_assistant_active = False
+
+
+async def _maybe_reply_with_bot(
+    db: AsyncSession,
+    *,
+    session: SfChatSession,
+    session_id: uuid.UUID,
+    body: str,
+) -> None:
+    customer = await db.get(User, session.customer_user_id)
+    if customer is None:
+        return
+    reply = await build_bot_reply_for_customer(
+        db,
+        customer=customer,
+        message_body=body.strip(),
+    )
+    bot_msg = SfChatMessage(
+        session_id=session_id,
+        sender_user_id=None,
+        body=reply,
+        is_bot=True,
+        created_at=_now(),
+    )
+    db.add(bot_msg)
+    session.updated_at = _now()
+    await db.commit()
+    await db.refresh(bot_msg)
+
+
 async def add_message(
     db: AsyncSession,
     session_id: uuid.UUID,
@@ -459,24 +511,12 @@ async def add_message(
     is_sf_agent = await is_sf_team_member(db, sender.id)
 
     if is_customer:
-        if session.status == SESSION_REJECTED_QUEUE:
-            raise ValueError("queue_rejected")
-        if session.status == SESSION_CLOSED:
-            raise ValueError("session_closed")
-        if session.status == SESSION_WAITING and not session.bot_assistant_active:
-            await _try_assign_agent(db, session)
-            if session.status == SESSION_WAITING and not await _fresh_online_agent_ids(db):
-                session.status = SESSION_REJECTED_QUEUE
-                session.queue_rejected_at = _now()
-                await db.commit()
-                raise ValueError("chat_closed")
+        await _authorize_customer_message(db, session)
     elif not (is_assigned_agent or (is_sf_agent and session.status == SESSION_WAITING)):
         raise ValueError("forbidden")
 
     if session.status == SESSION_WAITING and is_sf_agent:
-        session.assigned_agent_id = sender.id
-        session.status = SESSION_ACTIVE
-        session.bot_assistant_active = False
+        _claim_waiting_session_for_agent(session, agent_id=sender.id)
         presence = await db.get(SfChatPresence, sender.id)
         if presence:
             presence.active_session_id = session.id
@@ -490,30 +530,16 @@ async def add_message(
     )
     db.add(msg)
     session.updated_at = now
-    if session.status == SESSION_ACTIVE:
-        session.status = SESSION_ACTIVE
     await db.commit()
     await db.refresh(msg)
 
     if is_customer and session.status == SESSION_WAITING and session.bot_assistant_active:
-        customer = await db.get(User, session.customer_user_id)
-        if customer is not None:
-            reply = await build_bot_reply_for_customer(
-                db,
-                customer=customer,
-                message_body=body.strip(),
-            )
-            bot_msg = SfChatMessage(
-                session_id=session_id,
-                sender_user_id=None,
-                body=reply,
-                is_bot=True,
-                created_at=_now(),
-            )
-            db.add(bot_msg)
-            session.updated_at = _now()
-            await db.commit()
-            await db.refresh(bot_msg)
+        await _maybe_reply_with_bot(
+            db,
+            session=session,
+            session_id=session_id,
+            body=body,
+        )
 
     return msg
 
@@ -662,6 +688,72 @@ async def logout_check(db: AsyncSession, user: User) -> SfChatLogoutCheckRead:
     return SfChatLogoutCheckRead(can_logout=True)
 
 
+def _inbox_unread_count(
+    last_msg: SfChatMessage | None,
+    *,
+    session: SfChatSession,
+    recent_cutoff: datetime,
+) -> int:
+    if (
+        last_msg
+        and not last_msg.is_system
+        and last_msg.sender_user_id == session.customer_user_id
+        and last_msg.created_at >= recent_cutoff
+    ):
+        return 1
+    return 0
+
+
+def _inbox_message_preview(last_msg: SfChatMessage | None) -> str | None:
+    if not last_msg:
+        return None
+    preview = last_msg.body[:80]
+    if last_msg.is_system:
+        return f"System: {preview}"
+    return preview
+
+
+async def _build_inbox_item(
+    db: AsyncSession,
+    *,
+    session: SfChatSession,
+    customer: User,
+    now: datetime,
+    recent_cutoff: datetime,
+) -> tuple[SfChatAgentInboxItem, int]:
+    last_msg_result = await db.execute(
+        select(SfChatMessage)
+        .where(SfChatMessage.session_id == session.id)
+        .order_by(SfChatMessage.created_at.desc())
+        .limit(1)
+    )
+    last_msg = last_msg_result.scalar_one_or_none()
+    unread = _inbox_unread_count(last_msg, session=session, recent_cutoff=recent_cutoff)
+
+    agent_name = None
+    if session.assigned_agent_id:
+        agent_name = await _user_display(db, session.assigned_agent_id)
+
+    typing = bool(
+        session.customer_last_typing_at
+        and session.customer_last_typing_at >= _now() - timedelta(seconds=12)
+    )
+
+    return (
+        SfChatAgentInboxItem(
+            session=_session_read(session, agent_name=agent_name, now=now),
+            customer_display_name=customer.display_name or customer.email,
+            customer_email=customer.email,
+            last_message_preview=_inbox_message_preview(last_msg),
+            last_message_at=last_msg.created_at if last_msg else None,
+            unread_count=unread,
+            customer_is_typing=typing,
+            wait_seconds=_wait_seconds_for_session(session, now=now),
+        ),
+        unread,
+    )
+
+
 async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRead:
     if not await is_sf_team_member(db, agent.id):
         return SfChatAgentInboxRead(items=[], online=False, notification_count=0)
@@ -691,50 +783,15 @@ async def build_agent_inbox(db: AsyncSession, agent: User) -> SfChatAgentInboxRe
     est_wait = _estimated_wait_minutes(waiting_total, online_agents)
 
     for session, customer in rows:
-        last_msg_result = await db.execute(
-            select(SfChatMessage)
-            .where(SfChatMessage.session_id == session.id)
-            .order_by(SfChatMessage.created_at.desc())
-            .limit(1)
+        item, unread = await _build_inbox_item(
+            db,
+            session=session,
+            customer=customer,
+            now=now,
+            recent_cutoff=recent_cutoff,
         )
-        last_msg = last_msg_result.scalar_one_or_none()
-        unread = 0
-        if (
-            last_msg
-            and not last_msg.is_system
-            and last_msg.sender_user_id == session.customer_user_id
-        ) and last_msg.created_at >= recent_cutoff:
-            unread = 1
-            notification_count += 1
-
-        agent_name = None
-        if session.assigned_agent_id:
-            agent_name = await _user_display(db, session.assigned_agent_id)
-
-        typing = False
-        if session.customer_last_typing_at:
-            typing = session.customer_last_typing_at >= _now() - timedelta(seconds=12)
-
-        preview = None
-        if last_msg:
-            preview = last_msg.body[:80]
-            if last_msg.is_system:
-                preview = f"System: {preview}"
-
-        wait_sec = _wait_seconds_for_session(session, now=now)
-
-        items.append(
-            SfChatAgentInboxItem(
-                session=_session_read(session, agent_name=agent_name, now=now),
-                customer_display_name=customer.display_name or customer.email,
-                customer_email=customer.email,
-                last_message_preview=preview,
-                last_message_at=last_msg.created_at if last_msg else None,
-                unread_count=unread,
-                customer_is_typing=typing,
-                wait_seconds=wait_sec,
-            )
-        )
+        items.append(item)
+        notification_count += unread
 
     return SfChatAgentInboxRead(
         items=items,

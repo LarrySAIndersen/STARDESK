@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { 
   X, 
   Bot, 
@@ -17,12 +17,20 @@ import {
   GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  buildCaseAssistantApiPageContext,
+  buildCaseAssistantWelcome,
+  getCaseAssistantQuickActions,
+  resolveCaseAssistantPageContext,
+  type CaseAssistantQuickAction,
+} from "@/lib/case-assistant-page-context";
 import { isStaff } from "@/lib/auth";
 import { apiPost, apiGet, apiDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/agent/user-avatar";
 import type { User } from "@/types/user";
+import type { TicketDetail } from "@/types/ticket";
 
 type ArchivedMessage = {
   id: string;
@@ -53,13 +61,6 @@ const PANEL_SIZE_PRESETS: Record<PanelSizePreset, { width: number; height: numbe
 const PANEL_POS_STORAGE_KEY = "stardesk-helpabot-pos";
 const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
 const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
-
-const STAFF_QUICK_ACTIONS = [
-  "mine sager",
-  "INC-2026-00118",
-  "luk INC-2026-00118",
-  "opret Printer fejl - Kan ikke printe",
-] as const;
 
 function clampPanelSize(width: number, height: number) {
   if (typeof window === "undefined") {
@@ -184,7 +185,13 @@ function HelpABotIcon({ className = "size-12" }: { className?: string }) {
   );
 }
 
-export function CaseAssistantChat({ user }: { user: User | null }) {
+export function CaseAssistantChat({
+  user,
+  pathname = "/",
+}: {
+  user: User | null;
+  pathname?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -192,6 +199,21 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   const endRef = useRef<HTMLDivElement>(null);
 
   const staff = isStaff(user);
+  const pageContext = resolveCaseAssistantPageContext(pathname);
+  const [pageTicket, setPageTicket] = useState<TicketDetail | null>(null);
+  const contextualQuickActions = useMemo(
+    () =>
+      getCaseAssistantQuickActions({
+        staff,
+        pageContext,
+        ticket: pageTicket,
+      }),
+    [staff, pageContext, pageTicket],
+  );
+  const apiPageContext = useMemo(
+    () => buildCaseAssistantApiPageContext(pageContext, pageTicket),
+    [pageContext, pageTicket],
+  );
   const botName = staff ? "Help-a-bot" : "Sag-assistent";
   const botSub = staff 
     ? "Spørg om systemer, fagsager og procedurer" 
@@ -490,19 +512,76 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
   }, [activeTab, open, fetchArchive]);
 
   useEffect(() => {
+    if (!pageContext.ticketId) {
+      setPageTicket(null);
+      return;
+    }
+
+    let cancelled = false;
+    apiGet<TicketDetail>(`/api/v1/tickets/${pageContext.ticketId}`)
+      .then((ticket) => {
+        if (!cancelled) {
+          setPageTicket(ticket);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPageTicket(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pageContext.ticketId]);
+
+  useEffect(() => {
+    setMessages([]);
+    setChatSessionId("");
+    setDraft("");
+  }, [pageContext.contextKey]);
+
+  useEffect(() => {
     if (open && messages.length === 0) {
-      const namePart = useName && user?.display_name ? ` ${user.display_name}` : "";
       setMessages([
         {
           id: "welcome",
           role: "assistant",
-          body: staff 
-            ? `Hej${namePart}! Jeg er Help-a-bot. Korte kommandoer virker med det samme:\n• \`INC-2026-00118\` — find sag\n• \`luk INC-…\` — luk sag\n• \`mine sager\` — dine sager\n• \`opret Titel - Beskrivelse\` — ny sag\n\nSkriv eller brug mikrofonen.`
-            : `Hej${namePart}! Skriv kort: \`mine sager\`, sagsnummer, eller \`opret Titel - Beskrivelse\`. Mikrofonen virker også.`
-        }
+          body: buildCaseAssistantWelcome({
+            staff,
+            displayName: useName ? user?.display_name : null,
+            pageContext,
+            ticket: pageTicket,
+          }),
+        },
       ]);
     }
-  }, [open, messages.length, staff, useName, user?.display_name]);
+  }, [open, messages.length, staff, useName, user?.display_name, pageContext, pageTicket]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setMessages((prev) => {
+      const onlyWelcome =
+        prev.length === 1 && prev[0]?.id === "welcome" && prev[0]?.role === "assistant";
+      if (!onlyWelcome) {
+        return prev;
+      }
+      return [
+        {
+          id: "welcome",
+          role: "assistant",
+          body: buildCaseAssistantWelcome({
+            staff,
+            displayName: useName ? user?.display_name : null,
+            pageContext,
+            ticket: pageTicket,
+          }),
+        },
+      ];
+    });
+  }, [open, pageTicket, pageContext, staff, useName, user?.display_name]);
 
   useEffect(() => {
     if (open) {
@@ -510,8 +589,8 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     }
   }, [messages, open]);
 
-  const handleSend = useCallback(async () => {
-    const trimmed = draft.trim();
+  const handleSend = useCallback(async (messageOverride?: string) => {
+    const trimmed = (messageOverride ?? draft).trim();
     if (!trimmed || loading) return;
 
     const userMsg: ChatMessage = {
@@ -521,17 +600,17 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setDraft("");
+    if (!messageOverride) {
+      setDraft("");
+    }
     setLoading(true);
 
     try {
-      // Call our FastAPI backend chat endpoint
       const chatHistory = messages.concat(userMsg).map((m) => ({
         role: m.role,
         content: m.body
       }));
 
-      // Retrieve custom router settings
       const customUrl = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-url") : null;
       const customModel = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-model") : null;
       const customKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-key") : null;
@@ -553,7 +632,8 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
         session_id: chatSessionId || null,
         openai_key: openaiKey,
         anthropic_key: anthropicKey,
-        google_key: googleKey
+        google_key: googleKey,
+        page_context: apiPageContext,
       });
 
       setMessages((prev) => [
@@ -577,7 +657,18 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
     } finally {
       setLoading(false);
     }
-  }, [draft, loading, messages, user, useName, activeModel, chatSessionId]);
+  }, [draft, loading, messages, user, useName, activeModel, chatSessionId, apiPageContext]);
+
+  const handleQuickAction = useCallback(
+    (action: CaseAssistantQuickAction) => {
+      if (action.autoSend) {
+        void handleSend(action.message);
+        return;
+      }
+      setDraft(action.message);
+    },
+    [handleSend],
+  );
 
   return (
     <>
@@ -773,16 +864,17 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
 
               {/* Input footer */}
               <footer className="p-3 border-t border-border bg-white dark:bg-slate-900 shrink-0">
-                {staff && activeTab === "chat" ? (
+                {activeTab === "chat" && contextualQuickActions.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-1.5">
-                    {STAFF_QUICK_ACTIONS.map((action) => (
+                    {contextualQuickActions.map((action) => (
                       <button
-                        key={action}
+                        key={action.label}
                         type="button"
                         className="rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2.5 py-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 transition-colors hover:border-star-blue hover:bg-star-blue-light hover:text-star-navy"
-                        onClick={() => setDraft(action)}
+                        onClick={() => handleQuickAction(action)}
+                        disabled={loading}
                       >
-                        {action}
+                        {action.label}
                       </button>
                     ))}
                   </div>
@@ -825,7 +917,7 @@ export function CaseAssistantChat({ user }: { user: User | null }) {
                     size="icon"
                     className="bg-star-blue hover:bg-star-navy text-white shrink-0 size-9 rounded-lg"
                     disabled={!draft.trim() || loading}
-                    onClick={handleSend}
+                    onClick={() => void handleSend()}
                     aria-label="Send"
                   >
                     <Send className="size-4" />

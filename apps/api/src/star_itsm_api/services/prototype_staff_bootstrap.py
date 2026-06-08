@@ -52,54 +52,56 @@ PROTOTYPE_STAFF_BY_EMAIL: dict[str, PrototypeStaffProfile] = {
 }
 
 
-async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
-    """Apply profile for known demo staff emails. Returns True if user row was mutated."""
-    profile = PROTOTYPE_STAFF_BY_EMAIL.get(user.email.lower().strip())
-    if profile is None:
-        return False
-
+def _apply_prototype_profile_fields(user: User, profile) -> bool:
     changed = False
-    if user.role != profile.role:
-        user.role = profile.role
-        changed = True
-    if getattr(user, "ui_mode", None) != profile.ui_mode:
-        user.ui_mode = profile.ui_mode
-        changed = True
-    if user.display_name != profile.display_name:
-        user.display_name = profile.display_name
-        changed = True
+    field_updates = (
+        ("role", profile.role),
+        ("ui_mode", profile.ui_mode),
+        ("display_name", profile.display_name),
+    )
+    for attr, value in field_updates:
+        if getattr(user, attr, None) != value:
+            setattr(user, attr, value)
+            changed = True
     if not user.is_active:
         user.is_active = True
         changed = True
     if user.deleted_at is not None:
         user.deleted_at = None
         changed = True
-    if profile.prototype_password and not verify_password(
-        profile.prototype_password, user.password_hash
-    ):
+    if profile.prototype_password and not verify_password(profile.prototype_password, user.password_hash):
         pepper = profile.password_pepper or "default"
         user.password_hash = hash_prototype_password(profile.prototype_password, pepper=pepper)
         changed = True
-
     if user.must_change_password:
         user.must_change_password = False
         changed = True
     if not getattr(user, "password_policy_exempt", False):
         user.password_policy_exempt = True
         changed = True
+    return changed
 
+
+async def _resolve_prototype_team_ids(db: AsyncSession, profile) -> list[uuid.UUID]:
     team_ids: list[uuid.UUID] = []
     for team_name in profile.team_names:
         row = await db.execute(
-            select(Team.id).where(
-                Team.is_active.is_(True),
-                Team.name == team_name,
-            )
+            select(Team.id).where(Team.is_active.is_(True), Team.name == team_name)
         )
         team_id = row.scalar_one_or_none()
         if team_id is not None:
             team_ids.append(team_id)
+    return team_ids
 
+
+async def ensure_prototype_staff_account(db: AsyncSession, user: User) -> bool:
+    """Apply profile for known demo staff emails. Returns True if user row was mutated."""
+    profile = PROTOTYPE_STAFF_BY_EMAIL.get(user.email.lower().strip())
+    if profile is None:
+        return False
+
+    changed = _apply_prototype_profile_fields(user, profile)
+    team_ids = await _resolve_prototype_team_ids(db, profile)
     if team_ids:
         existing = await db.execute(select(TeamMember.team_id).where(TeamMember.user_id == user.id))
         existing_ids = set(existing.scalars().all())

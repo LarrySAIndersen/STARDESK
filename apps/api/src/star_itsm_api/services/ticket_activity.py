@@ -1,5 +1,6 @@
 import logging
 import uuid
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,45 +62,71 @@ def _priority_label(priority: str | None) -> str:
     return _PRIORITY_LABELS_DA.get(priority, priority)
 
 
+def _label_status_changed(payload: dict) -> tuple[str, str, str | None]:
+    prev = _status_label(payload.get("previous_status"))
+    new = _status_label(payload.get("status"))
+    return f"Status ændret til {new}", "external", f"Tidligere: {prev}"
+
+
+def _label_comment_created(payload: dict) -> tuple[str, str, str | None]:
+    if payload.get("is_internal"):
+        return "Intern note tilføjet", "internal", None
+    return "Ekstern opdatering tilføjet", "external", None
+
+
+def _label_priority_changed(payload: dict) -> tuple[str, str, str | None]:
+    prev = _priority_label(payload.get("previous_priority"))
+    new = _priority_label(payload.get("priority"))
+    reason = (payload.get("reason") or "").strip()
+    return f"Prioritet ændret: {prev} → {new}", "internal", reason or None
+
+
+def _label_attachment_uploaded(payload: dict) -> tuple[str, str, str | None]:
+    filename = payload.get("filename") or "dokument"
+    return f"Dokument uploadet: {filename}", "external", payload.get("scan_status")
+
+
+def _label_sla_escalated(payload: dict) -> tuple[str, str, str | None]:
+    level = payload.get("level")
+    return "SLA-eskalering", "system", f"Niveau {level}" if level is not None else None
+
+
+def _label_slack_pushed(payload: dict) -> tuple[str, str, str | None]:
+    channel_name = payload.get("channel_name") or payload.get("channel_id") or "ukendt"
+    return f"Sag delt i Slack (#{channel_name})", "internal", None
+
+
+def _label_email_received(payload: dict) -> tuple[str, str, str | None]:
+    sender = payload.get("from") or "ukendt afsender"
+    return f"E-mail modtaget fra {sender}", "external", payload.get("subject")
+
+
+def _label_email_sent(payload: dict) -> tuple[str, str, str | None]:
+    recipient = payload.get("to") or "ukendt modtager"
+    return f"E-mail sendt til {recipient}", "external", payload.get("subject")
+
+
+_EVENT_LABEL_HANDLERS: dict[str, Any] = {
+    "ticket.created": lambda p: ("Sag oprettet", "external", p.get("ticket_number")),
+    "ticket.status_changed": _label_status_changed,
+    "ticket.reopened": lambda p: ("Sag genåbnet", "external", f"Ny status: {_status_label(p.get('status'))}"),
+    "ticket.assigned": lambda _p: ("Tildeling opdateret", "internal", None),
+    "comment.created": _label_comment_created,
+    "ticket.priority_changed": _label_priority_changed,
+    "ticket.metadata_changed": lambda _p: ("Sagsmetadata opdateret", "internal", None),
+    "ticket.attachment.uploaded": _label_attachment_uploaded,
+    "sla.escalated": _label_sla_escalated,
+    "ticket.slack_pushed": _label_slack_pushed,
+    "email.received": _label_email_received,
+    "email.sent": _label_email_sent,
+}
+
+
 def _event_label(event_type: str, payload: dict) -> tuple[str, str, str | None]:
     """Return (label_da, visibility, detail)."""
-    if event_type == "ticket.created":
-        return "Sag oprettet", "external", payload.get("ticket_number")
-    if event_type == "ticket.status_changed":
-        prev = _status_label(payload.get("previous_status"))
-        new = _status_label(payload.get("status"))
-        return f"Status ændret til {new}", "external", f"Tidligere: {prev}"
-    if event_type == "ticket.reopened":
-        new = _status_label(payload.get("status"))
-        return "Sag genåbnet", "external", f"Ny status: {new}"
-    if event_type == "ticket.assigned":
-        return "Tildeling opdateret", "internal", None
-    if event_type == "comment.created":
-        if payload.get("is_internal"):
-            return "Intern note tilføjet", "internal", None
-        return "Ekstern opdatering tilføjet", "external", None
-    if event_type == "ticket.priority_changed":
-        prev = _priority_label(payload.get("previous_priority"))
-        new = _priority_label(payload.get("priority"))
-        reason = (payload.get("reason") or "").strip()
-        return f"Prioritet ændret: {prev} → {new}", "internal", reason or None
-    if event_type == "ticket.metadata_changed":
-        return "Sagsmetadata opdateret", "internal", None
-    if event_type == "ticket.attachment.uploaded":
-        filename = payload.get("filename") or "dokument"
-        return f"Dokument uploadet: {filename}", "external", payload.get("scan_status")
-    if event_type == "sla.escalated":
-        level = payload.get("level")
-        return "SLA-eskalering", "system", f"Niveau {level}" if level is not None else None
-    if event_type == "ticket.slack_pushed":
-        channel_name = payload.get("channel_name") or payload.get("channel_id") or "ukendt"
-        return f"Sag delt i Slack (#{channel_name})", "internal", None
-    if event_type == "email.received":
-        sender = payload.get("from") or "ukendt afsender"
-        return f"E-mail modtaget fra {sender}", "external", payload.get("subject")
-    if event_type == "email.sent":
-        recipient = payload.get("to") or "ukendt modtager"
-        return f"E-mail sendt til {recipient}", "external", payload.get("subject")
+    handler = _EVENT_LABEL_HANDLERS.get(event_type)
+    if handler:
+        return handler(payload)
     return event_type, "internal", None
 
 

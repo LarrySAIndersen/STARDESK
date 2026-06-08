@@ -90,8 +90,9 @@ export function PinnedNotesSidebar({ collapsed }: { collapsed: boolean }) {
                 personalNoteColorClass(note.color),
                 index % 2 === 0 ? "-rotate-[0.6deg]" : "rotate-[0.5deg]",
               )}
-              title={note.content || note.title}
+              title={note.content || `${note.note_number} — ${note.title}`}
             >
+              <span className="text-star-blue text-[10px] font-bold">{note.note_number}</span>
               <span className="line-clamp-2 font-semibold">{note.title}</span>
             </Link>
           </li>

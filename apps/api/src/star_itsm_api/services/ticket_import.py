@@ -1,6 +1,7 @@
 """Bulk import of tickets from TOPdesk CSV/JSON export."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -161,6 +162,258 @@ async def _user_by_email(db: AsyncSession, email: str) -> User | None:
     ).scalar_one_or_none()
 
 
+@dataclass(frozen=True)
+class _ParsedTicketImportRow:
+    index: int
+    title: str
+    ticket_type: str
+    priority: str
+    status: str
+    description: str
+    external: str | None
+    category_id: uuid.UUID | None
+    assigned_team_id: uuid.UUID | None
+    reporter_user_id: uuid.UUID
+    source: str
+    is_major: bool
+
+
+def _import_row_error(
+    *,
+    index: int,
+    message: str,
+    external_number: str | None = None,
+) -> TicketImportRowError:
+    return TicketImportRowError(
+        row=index,
+        external_number=external_number,
+        message=message,
+    )
+
+
+def _resolve_import_category(
+    row,
+    *,
+    index: int,
+    external: str | None,
+    categories_by_name: dict[str, uuid.UUID],
+) -> tuple[uuid.UUID | None, TicketImportRowError | None]:
+    if not row.category or not str(row.category).strip():
+        return None, None
+    category_id = categories_by_name.get(str(row.category).strip().lower())
+    if category_id is None:
+        return None, _import_row_error(
+            index=index,
+            external_number=external,
+            message=f"Ukendt kategori: {row.category}",
+        )
+    return category_id, None
+
+
+def _resolve_import_team(
+    row,
+    *,
+    index: int,
+    external: str | None,
+    teams_by_name: dict[str, uuid.UUID],
+) -> tuple[uuid.UUID | None, TicketImportRowError | None]:
+    if not row.team or not str(row.team).strip():
+        return None, None
+    assigned_team_id = teams_by_name.get(str(row.team).strip().lower())
+    if assigned_team_id is None:
+        return None, _import_row_error(
+            index=index,
+            external_number=external,
+            message=f"Ukendt gruppe: {row.team}",
+        )
+    return assigned_team_id, None
+
+
+async def _resolve_import_reporter(
+    db: AsyncSession,
+    row,
+    *,
+    index: int,
+    external: str | None,
+    actor: User,
+) -> tuple[uuid.UUID, TicketImportRowError | None]:
+    if not row.reporter_email or not str(row.reporter_email).strip():
+        return actor.id, None
+    reporter = await _user_by_email(db, str(row.reporter_email).strip())
+    if reporter is None:
+        return actor.id, _import_row_error(
+            index=index,
+            external_number=external,
+            message=f"Ukendt indmelder: {row.reporter_email}",
+        )
+    return reporter.id, None
+
+
+async def _parse_ticket_import_row(
+    db: AsyncSession,
+    row,
+    *,
+    index: int,
+    payload: TicketImportRequest,
+    actor: User,
+    categories_by_name: dict[str, uuid.UUID],
+    teams_by_name: dict[str, uuid.UUID],
+) -> tuple[_ParsedTicketImportRow | None, TicketImportRowError | None]:
+    title = (row.title or "").strip()
+    if not title:
+        return None, _import_row_error(index=index, message="Titel mangler")
+
+    ticket_type = normalize_import_ticket_type(row.ticket_type, default=payload.default_ticket_type)
+    if ticket_type is None:
+        return None, _import_row_error(
+            index=index,
+            external_number=row.external_number,
+            message=f"Ukendt sagstype: {row.ticket_type}",
+        )
+
+    priority = normalize_import_priority(row.priority, default=payload.default_priority)
+    if priority is None:
+        return None, _import_row_error(
+            index=index,
+            external_number=row.external_number,
+            message=f"Ukendt prioritet: {row.priority}",
+        )
+
+    external = (row.external_number or "").strip()[:32] or None
+    category_id, category_err = _resolve_import_category(
+        row, index=index, external=external, categories_by_name=categories_by_name
+    )
+    if category_err is not None:
+        return None, category_err
+
+    assigned_team_id, team_err = _resolve_import_team(
+        row, index=index, external=external, teams_by_name=teams_by_name
+    )
+    if team_err is not None:
+        return None, team_err
+
+    reporter_user_id, reporter_err = await _resolve_import_reporter(
+        db, row, index=index, external=external, actor=actor
+    )
+    if reporter_err is not None:
+        return None, reporter_err
+
+    return _ParsedTicketImportRow(
+        index=index,
+        title=title,
+        ticket_type=ticket_type,
+        priority=priority,
+        status=normalize_import_status(row.status),
+        description=_ensure_description(title, row.description),
+        external=external,
+        category_id=category_id,
+        assigned_team_id=assigned_team_id,
+        reporter_user_id=reporter_user_id,
+        source=normalize_import_source(row.source),
+        is_major=parse_import_is_major(row.is_major),
+    ), None
+
+
+async def _update_existing_import_ticket(
+    db: AsyncSession,
+    existing: Ticket,
+    parsed: _ParsedTicketImportRow,
+) -> None:
+    existing.title = parsed.title[:256]
+    existing.description = parsed.description
+    existing.ticket_type = parsed.ticket_type
+    existing.priority = parsed.priority
+    existing.status = parsed.status
+    existing.category_id = parsed.category_id
+    existing.assigned_team_id = parsed.assigned_team_id
+    existing.is_major = parsed.is_major
+    meta = dict(existing.routing_metadata or {})
+    meta["import_source"] = "topdesk"
+    if parsed.external:
+        meta["external_number"] = parsed.external
+    existing.routing_metadata = meta
+    existing.updated_at = datetime.now(UTC)
+    await db.commit()
+
+
+async def _create_import_ticket(
+    db: AsyncSession,
+    parsed: _ParsedTicketImportRow,
+    *,
+    actor: User,
+    actor_org_id: uuid.UUID | None,
+) -> TicketImportRowError | None:
+    routing = await apply_routing(
+        db,
+        ticket_type=parsed.ticket_type,
+        category_id=parsed.category_id,
+        subcategory_id=None,
+        priority=parsed.priority,
+    )
+    final_team_id = parsed.assigned_team_id or routing.assigned_team_id
+    final_user_id = routing.assigned_user_id if not parsed.assigned_team_id else None
+
+    now = datetime.now(UTC)
+    ticket_number = parsed.external or await generate_ticket_number(db, parsed.ticket_type)
+    if await _ticket_by_number(db, ticket_number):
+        return _import_row_error(
+            index=parsed.index,
+            external_number=parsed.external,
+            message=f"Sagsnummer findes allerede: {ticket_number}",
+        )
+
+    resolved_status = parsed.status
+    if resolved_status == "new" and final_team_id:
+        resolved_status = "assigned"
+
+    ticket = Ticket(
+        id=uuid.uuid4(),
+        ticket_number=ticket_number,
+        ticket_type=parsed.ticket_type,
+        title=parsed.title[:256],
+        description=parsed.description,
+        status=resolved_status,
+        priority=parsed.priority,
+        reporter_user_id=parsed.reporter_user_id,
+        organization_id=actor_org_id,
+        assigned_team_id=final_team_id,
+        assigned_user_id=final_user_id,
+        category_id=parsed.category_id,
+        subcategory_id=None,
+        source=resolve_ticket_source_on_create(is_staff_user=True, requested=parsed.source),
+        escalation_level=0,
+        is_major=parsed.is_major,
+        is_security_ticket=False,
+        parent_ticket_id=None,
+        routing_metadata={
+            "import_source": "topdesk",
+            **({"external_number": parsed.external} if parsed.external else {}),
+        },
+        created_at=now,
+        updated_at=now,
+        deleted_at=None,
+    )
+    db.add(ticket)
+    await apply_sla_to_ticket(db, ticket, priority=parsed.priority, start_at=now)
+    await db.flush()
+    db.add(
+        TicketEvent(
+            id=uuid.uuid4(),
+            ticket_id=ticket.id,
+            actor_user_id=actor.id,
+            event_type="ticket.created",
+            payload={
+                "ticket_number": ticket.ticket_number,
+                "source": "import",
+                "import_source": "topdesk",
+            },
+            created_at=now,
+        )
+    )
+    await db.commit()
+    return None
+
+
 async def import_tickets_admin(
     db: AsyncSession,
     *,
@@ -181,179 +434,41 @@ async def import_tickets_admin(
     actor_org_id = getattr(actor, "organization_id", None)
 
     for index, row in enumerate(payload.rows, start=1):
-        title = (row.title or "").strip()
-        if not title:
-            errors.append(
-                TicketImportRowError(row=index, message="Titel mangler"),
-            )
-            continue
-
-        ticket_type = normalize_import_ticket_type(
-            row.ticket_type, default=payload.default_ticket_type
+        parsed, parse_err = await _parse_ticket_import_row(
+            db,
+            row,
+            index=index,
+            payload=payload,
+            actor=actor,
+            categories_by_name=categories_by_name,
+            teams_by_name=teams_by_name,
         )
-        if ticket_type is None:
-            errors.append(
-                TicketImportRowError(
-                    row=index,
-                    external_number=row.external_number,
-                    message=f"Ukendt sagstype: {row.ticket_type}",
-                ),
-            )
+        if parse_err is not None:
+            errors.append(parse_err)
             continue
-
-        priority = normalize_import_priority(row.priority, default=payload.default_priority)
-        if priority is None:
-            errors.append(
-                TicketImportRowError(
-                    row=index,
-                    external_number=row.external_number,
-                    message=f"Ukendt prioritet: {row.priority}",
-                ),
-            )
-            continue
-
-        status = normalize_import_status(row.status)
-        description = _ensure_description(title, row.description)
-        external = (row.external_number or "").strip()[:32] or None
-
-        category_id = None
-        if row.category and str(row.category).strip():
-            category_id = categories_by_name.get(str(row.category).strip().lower())
-            if category_id is None:
-                errors.append(
-                    TicketImportRowError(
-                        row=index,
-                        external_number=external,
-                        message=f"Ukendt kategori: {row.category}",
-                    ),
-                )
-                continue
-
-        assigned_team_id = None
-        if row.team and str(row.team).strip():
-            assigned_team_id = teams_by_name.get(str(row.team).strip().lower())
-            if assigned_team_id is None:
-                errors.append(
-                    TicketImportRowError(
-                        row=index,
-                        external_number=external,
-                        message=f"Ukendt gruppe: {row.team}",
-                    ),
-                )
-                continue
-
-        reporter_user_id = actor.id
-        if row.reporter_email and str(row.reporter_email).strip():
-            reporter = await _user_by_email(db, str(row.reporter_email).strip())
-            if reporter is None:
-                errors.append(
-                    TicketImportRowError(
-                        row=index,
-                        external_number=external,
-                        message=f"Ukendt indmelder: {row.reporter_email}",
-                    ),
-                )
-                continue
-            reporter_user_id = reporter.id
+        assert parsed is not None
 
         existing: Ticket | None = None
-        if external:
-            existing = await _ticket_by_number(db, external)
+        if parsed.external:
+            existing = await _ticket_by_number(db, parsed.external)
 
         if existing is not None:
             if payload.on_duplicate == "skip":
                 skipped += 1
                 continue
-            existing.title = title[:256]
-            existing.description = description
-            existing.ticket_type = ticket_type
-            existing.priority = priority
-            existing.status = status
-            existing.category_id = category_id
-            existing.assigned_team_id = assigned_team_id
-            existing.is_major = parse_import_is_major(row.is_major)
-            meta = dict(existing.routing_metadata or {})
-            meta["import_source"] = "topdesk"
-            if external:
-                meta["external_number"] = external
-            existing.routing_metadata = meta
-            existing.updated_at = datetime.now(UTC)
-            await db.commit()
+            await _update_existing_import_ticket(db, existing, parsed)
             updated += 1
             continue
 
-        routing = await apply_routing(
+        create_err = await _create_import_ticket(
             db,
-            ticket_type=ticket_type,
-            category_id=category_id,
-            subcategory_id=None,
-            priority=priority,
+            parsed,
+            actor=actor,
+            actor_org_id=actor_org_id,
         )
-        final_team_id = assigned_team_id or routing.assigned_team_id
-        final_user_id = routing.assigned_user_id if not assigned_team_id else None
-
-        now = datetime.now(UTC)
-        ticket_number = external or await generate_ticket_number(db, ticket_type)
-        if await _ticket_by_number(db, ticket_number):
-            errors.append(
-                TicketImportRowError(
-                    row=index,
-                    external_number=external,
-                    message=f"Sagsnummer findes allerede: {ticket_number}",
-                ),
-            )
+        if create_err is not None:
+            errors.append(create_err)
             continue
-
-        resolved_status = status
-        if resolved_status == "new" and final_team_id:
-            resolved_status = "assigned"
-
-        source = normalize_import_source(row.source)
-        ticket = Ticket(
-            id=uuid.uuid4(),
-            ticket_number=ticket_number,
-            ticket_type=ticket_type,
-            title=title[:256],
-            description=description,
-            status=resolved_status,
-            priority=priority,
-            reporter_user_id=reporter_user_id,
-            organization_id=actor_org_id,
-            assigned_team_id=final_team_id,
-            assigned_user_id=final_user_id,
-            category_id=category_id,
-            subcategory_id=None,
-            source=resolve_ticket_source_on_create(is_staff_user=True, requested=source),
-            escalation_level=0,
-            is_major=parse_import_is_major(row.is_major),
-            is_security_ticket=False,
-            parent_ticket_id=None,
-            routing_metadata={
-                "import_source": "topdesk",
-                **({"external_number": external} if external else {}),
-            },
-            created_at=now,
-            updated_at=now,
-            deleted_at=None,
-        )
-        db.add(ticket)
-        await apply_sla_to_ticket(db, ticket, priority=priority, start_at=now)
-        await db.flush()
-        db.add(
-            TicketEvent(
-                id=uuid.uuid4(),
-                ticket_id=ticket.id,
-                actor_user_id=actor.id,
-                event_type="ticket.created",
-                payload={
-                    "ticket_number": ticket.ticket_number,
-                    "source": "import",
-                    "import_source": "topdesk",
-                },
-                created_at=now,
-            )
-        )
-        await db.commit()
         created += 1
 
     return TicketImportResult(

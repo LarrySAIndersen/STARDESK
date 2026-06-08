@@ -28,5 +28,5 @@ export function CaseAssistantHost({ user }: { user: User | null }) {
     return null;
   }
 
-  return <CaseAssistantChat user={user} />;
+  return <CaseAssistantChat user={user} pathname={pathname} />;
 }

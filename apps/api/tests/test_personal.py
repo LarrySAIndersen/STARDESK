@@ -56,6 +56,7 @@ async def test_list_personal_notes(
                 PersonalNoteRead(
                     id=uuid.uuid4(),
                     user_id=user.id,
+                    note_number="IDE-2026-00001",
                     title="Ring til KMD",
                     content="Følg op på sag 123",
                     is_pinned=True,
@@ -101,6 +102,7 @@ async def test_create_personal_note(
         return PersonalNoteRead(
             id=uuid.uuid4(),
             user_id=end_user.id,
+            note_number="IDE-2026-00002",
             title=payload.title,
             content=payload.content,
             is_pinned=False,
@@ -181,3 +183,541 @@ async def test_get_personal_kanban(
     assert response.status_code == 200
     body = response.json()
     assert body["columns"] == ["Min kø", "I gang", "Færdig"]
+
+
+@pytest.mark.asyncio
+async def test_update_personal_note_success(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    note_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    now = datetime.now(UTC)
+    from star_itsm_api.schemas.personal import PersonalNoteRead
+
+    monkeypatch.setattr(
+        personal_service,
+        "update_note",
+        AsyncMock(
+            return_value=PersonalNoteRead(
+                id=note_id,
+                user_id=user.id,
+                note_number="IDE-2026-00003",
+                title="Opdateret",
+                content="Nyt indhold",
+                is_pinned=False,
+                sort_order=1,
+                color=None,
+                category=None,
+                ticket_id=None,
+                visibility="private",
+                created_at=now,
+                updated_at=now,
+            )
+        ),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/notes/{note_id}",
+        json={"title": "Opdateret"},
+    )
+    assert response.status_code == 200
+    assert response.json()["title"] == "Opdateret"
+
+
+@pytest.mark.asyncio
+async def test_update_personal_note_not_found(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "update_note",
+        AsyncMock(side_effect=LookupError("note_not_found")),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/notes/{uuid.uuid4()}",
+        json={"title": "X"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_personal_note_team_visibility_forbidden(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_SUBMITTER)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "update_note",
+        AsyncMock(side_effect=PermissionError("team_visibility_requires_staff")),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/notes/{uuid.uuid4()}",
+        json={"visibility": "team"},
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_post_its(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    now = datetime.now(UTC)
+    from star_itsm_api.schemas.personal import PersonalNoteRead
+
+    monkeypatch.setattr(
+        personal_service,
+        "list_ticket_post_its",
+        AsyncMock(
+            return_value=[
+                PersonalNoteRead(
+                    id=uuid.uuid4(),
+                    user_id=user.id,
+                    note_number="IDE-2026-00010",
+                    title="Post-it",
+                    content="Husk at ringe",
+                    is_pinned=False,
+                    sort_order=0,
+                    color="yellow",
+                    category=None,
+                    ticket_id=ticket_id,
+                    visibility="private",
+                    created_at=now,
+                    updated_at=now,
+                )
+            ]
+        ),
+    )
+
+    response = await api_client.get(f"/api/v1/personal/tickets/{ticket_id}/post-its")
+    assert response.status_code == 200
+    assert response.json()[0]["title"] == "Post-it"
+
+
+@pytest.mark.asyncio
+async def test_list_ticket_post_its_ticket_not_found(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "list_ticket_post_its",
+        AsyncMock(side_effect=LookupError("ticket_not_found")),
+    )
+
+    response = await api_client.get(f"/api/v1/personal/tickets/{uuid.uuid4()}/post-its")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_summarize_ticket_post_its(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_a = uuid.uuid4()
+    ticket_b = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    from star_itsm_api.schemas.personal import TicketPostItSummary
+
+    monkeypatch.setattr(
+        personal_service,
+        "summarize_ticket_post_its",
+        AsyncMock(
+            return_value=[
+                TicketPostItSummary(ticket_id=ticket_a, count=2),
+                TicketPostItSummary(ticket_id=ticket_b, count=1),
+            ]
+        ),
+    )
+
+    response = await api_client.get(
+        f"/api/v1/personal/ticket-post-its/summary?ticket_ids={ticket_a},{ticket_b}"
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_success(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    from star_itsm_api.schemas.personal import PersonalKanbanCardRead
+
+    monkeypatch.setattr(
+        personal_service,
+        "add_kanban_card",
+        AsyncMock(
+            return_value=PersonalKanbanCardRead(
+                user_id=user.id,
+                ticket_id=ticket_id,
+                column_name="Min kø",
+                sort_order=0,
+                created_at=datetime.now(UTC),
+            )
+        ),
+    )
+
+    response = await api_client.post(
+        "/api/v1/personal/kanban/cards",
+        json={"ticket_id": str(ticket_id), "column_name": "Min kø"},
+    )
+    assert response.status_code == 201
+    assert response.json()["ticket_id"] == str(ticket_id)
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_already_on_board(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "add_kanban_card",
+        AsyncMock(side_effect=ValueError("ticket_already_on_board")),
+    )
+
+    response = await api_client.post(
+        "/api/v1/personal/kanban/cards",
+        json={"ticket_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_invalid_column(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "add_kanban_card",
+        AsyncMock(side_effect=ValueError("invalid_column")),
+    )
+
+    response = await api_client.post(
+        "/api/v1/personal/kanban/cards",
+        json={"ticket_id": str(uuid.uuid4()), "column_name": "Ukendt"},
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_move_kanban_card_success(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    from star_itsm_api.schemas.personal import PersonalKanbanCardRead
+
+    monkeypatch.setattr(
+        personal_service,
+        "move_kanban_card",
+        AsyncMock(
+            return_value=PersonalKanbanCardRead(
+                user_id=user.id,
+                ticket_id=ticket_id,
+                column_name="Færdig",
+                sort_order=1,
+                created_at=datetime.now(UTC),
+            )
+        ),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/kanban/cards/{ticket_id}",
+        json={"column_name": "Færdig"},
+    )
+    assert response.status_code == 200
+    assert response.json()["column_name"] == "Færdig"
+
+
+@pytest.mark.asyncio
+async def test_move_kanban_card_not_found(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "move_kanban_card",
+        AsyncMock(side_effect=LookupError("card_not_found")),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/kanban/cards/{uuid.uuid4()}",
+        json={"column_name": "Færdig"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_remove_kanban_card_success(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "remove_kanban_card",
+        AsyncMock(return_value=None),
+    )
+
+    response = await api_client.delete(f"/api/v1/personal/kanban/cards/{uuid.uuid4()}")
+    assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_remove_kanban_card_not_found(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "remove_kanban_card",
+        AsyncMock(side_effect=LookupError("card_not_found")),
+    )
+
+    response = await api_client.delete(f"/api/v1/personal/kanban/cards/{uuid.uuid4()}")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_ticket_not_found(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "add_kanban_card",
+        AsyncMock(side_effect=LookupError("ticket_not_found")),
+    )
+
+    response = await api_client.post(
+        "/api/v1/personal/kanban/cards",
+        json={"ticket_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_add_kanban_card_other_value_error(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "add_kanban_card",
+        AsyncMock(side_effect=ValueError("unexpected")),
+    )
+
+    response = await api_client.post(
+        "/api/v1/personal/kanban/cards",
+        json={"ticket_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "unexpected"
+
+
+@pytest.mark.asyncio
+async def test_move_kanban_card_invalid_column(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "move_kanban_card",
+        AsyncMock(side_effect=ValueError("invalid_column")),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/kanban/cards/{uuid.uuid4()}",
+        json={"column_name": "Ukendt"},
+    )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_summarize_ticket_post_its_skips_empty_ids(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    from star_itsm_api.schemas.personal import TicketPostItSummary
+
+    summarize = AsyncMock(return_value=[TicketPostItSummary(ticket_id=ticket_id, count=1)])
+    monkeypatch.setattr(personal_service, "summarize_ticket_post_its", summarize)
+
+    response = await api_client.get(
+        f"/api/v1/personal/ticket-post-its/summary?ticket_ids= ,{ticket_id}, "
+    )
+    assert response.status_code == 200
+    summarize.assert_awaited_once()
+    assert summarize.await_args.args[2] == [ticket_id]
+
+
+@pytest.mark.asyncio
+async def test_move_kanban_card_other_value_error(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_service,
+        "move_kanban_card",
+        AsyncMock(side_effect=ValueError("unexpected")),
+    )
+
+    response = await api_client.patch(
+        f"/api/v1/personal/kanban/cards/{uuid.uuid4()}",
+        json={"column_name": "Færdig"},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "unexpected"

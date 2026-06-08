@@ -372,6 +372,24 @@ def _extract_mention_tokens(body: str) -> list[str]:
     return tokens
 
 
+def _resolve_token_to_user_id(
+    users: list[User],
+    token_lower: str,
+    *,
+    exclude_user_id: uuid.UUID | None,
+    seen: set[uuid.UUID],
+) -> uuid.UUID | None:
+    for user in users:
+        if exclude_user_id is not None and user.id == exclude_user_id:
+            continue
+        if user.email.lower() == token_lower or user.display_name.lower() == token_lower:
+            if user.id in seen:
+                return None
+            seen.add(user.id)
+            return user.id
+    return None
+
+
 async def resolve_mentioned_user_ids(
     db: AsyncSession,
     body: str,
@@ -382,29 +400,17 @@ async def resolve_mentioned_user_ids(
     if not tokens:
         return []
     result = await db.execute(
-        select(User).where(
-            User.deleted_at.is_(None),
-            User.is_active.is_(True),
-        )
+        select(User).where(User.deleted_at.is_(None), User.is_active.is_(True))
     )
     users = list(result.scalars().all())
     resolved: list[uuid.UUID] = []
     seen: set[uuid.UUID] = set()
     for token in tokens:
-        token_lower = token.lower()
-        for user in users:
-            if exclude_user_id is not None and user.id == exclude_user_id:
-                continue
-            if user.email.lower() == token_lower:
-                if user.id not in seen:
-                    seen.add(user.id)
-                    resolved.append(user.id)
-                break
-            if user.display_name.lower() == token_lower:
-                if user.id not in seen:
-                    seen.add(user.id)
-                    resolved.append(user.id)
-                break
+        user_id = _resolve_token_to_user_id(
+            users, token.lower(), exclude_user_id=exclude_user_id, seen=seen,
+        )
+        if user_id is not None:
+            resolved.append(user_id)
     return resolved
 
 

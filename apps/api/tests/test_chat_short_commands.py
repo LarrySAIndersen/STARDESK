@@ -8,7 +8,14 @@ import pytest
 from httpx import AsyncClient
 
 from star_itsm_api.models.chatbot_message import ChatbotMessage
-from star_itsm_api.routers.chat import ChatRequest, execute_tool, try_short_command
+from star_itsm_api.routers.chat import (
+    ChatPageContext,
+    ChatRequest,
+    build_chat_system_prompt,
+    execute_tool,
+    try_page_context_command,
+    try_short_command,
+)
 
 
 @pytest.mark.asyncio
@@ -374,6 +381,52 @@ async def test_chat_messages_only_bookmarked_filter(
     )
     assert response.status_code == 200
     assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_try_page_context_command_summarize_ticket() -> None:
+    page_context = ChatPageContext(
+        page_path="/tickets/abc",
+        page_label="Sagsdetaljer",
+        ticket_number="INC-2026-00118",
+        ticket_title="Printer fejl",
+    )
+    with patch(
+        "star_itsm_api.routers.chat.get_ticket_by_number",
+        new_callable=AsyncMock,
+        return_value="INC-2026-00118: Printer fejl",
+    ) as mock_lookup:
+        result = await try_page_context_command("Opsummer denne sag", page_context)
+    assert result is not None
+    assert "opsummering" in result.lower()
+    mock_lookup.assert_awaited_once_with("INC-2026-00118")
+
+
+@pytest.mark.asyncio
+async def test_try_page_context_command_ignores_without_ticket() -> None:
+    result = await try_page_context_command(
+        "Opsummer denne sag",
+        ChatPageContext(page_path="/tickets", page_label="Alle sager"),
+    )
+    assert result is None
+
+
+def test_build_chat_system_prompt_includes_page_context() -> None:
+    prompt = build_chat_system_prompt(
+        ChatRequest(
+            messages=[],
+            user_name="Anna",
+            page_context=ChatPageContext(
+                page_path="/tickets/abc",
+                page_label="Sagsdetaljer",
+                ticket_number="INC-2026-00118",
+                ticket_title="Printer fejl",
+            ),
+        )
+    )
+    assert "Sagsdetaljer" in prompt
+    assert "INC-2026-00118" in prompt
+    assert "Printer fejl" in prompt
 
 
 @pytest.mark.asyncio

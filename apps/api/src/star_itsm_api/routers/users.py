@@ -62,6 +62,75 @@ from star_itsm_api.services.user_tickets import list_user_tickets_grouped
 router = APIRouter(prefix="/users", tags=["users"])
 
 
+async def _apply_user_role_updates(
+    db: AsyncSession,
+    user: User,
+    updates: dict,
+    current_user: User,
+) -> None:
+    if "roles" not in updates and "role" not in updates:
+        return
+    target_email = str(updates["email"]).lower().strip() if "email" in updates else user.email
+    if "roles" in updates:
+        next_roles = list(updates["roles"])
+    elif "role" in updates:
+        next_roles = [updates["role"]]
+    else:
+        next_roles = []
+    if not next_roles:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=MIN_ONE_GROUP_REQUIRED,
+        )
+    for assigned_role in next_roles:
+        _assert_can_assign_role(current_user, assigned_role, target_email=target_email)
+    normalized_roles = [
+        role_after_top_admin_policy(target_email, assigned_role) for assigned_role in next_roles
+    ]
+    if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(target_email):
+        normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
+        if ROLE_ADMIN not in normalized_roles:
+            normalized_roles.append(ROLE_ADMIN)
+    try:
+        user.role = await sync_user_roles(db, user.id, normalized_roles)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=MIN_ONE_GROUP_REQUIRED,
+        ) from None
+
+
+async def _apply_user_scalar_updates(db: AsyncSession, user: User, updates: dict) -> None:
+    if "display_name" in updates:
+        user.display_name = updates["display_name"].strip()
+    if "email" in updates:
+        email = str(updates["email"]).lower().strip()
+        if user.role == ROLE_TOP_ADMIN and not can_hold_top_admin_role(email):
+            user.role = ROLE_ADMIN
+        if await email_taken(db, email, exclude_user_id=user.id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="E-mail er allerede i brug",
+            )
+        user.email = email
+    if "is_active" in updates:
+        user.is_active = updates["is_active"]
+    if "password_policy_exempt" in updates:
+        user.password_policy_exempt = updates["password_policy_exempt"]
+        if user.password_policy_exempt:
+            user.must_change_password = False
+    if "organization_id" in updates:
+        user.organization_id = updates["organization_id"]
+    if "team_ids" in updates:
+        try:
+            await sync_user_teams(db, user.id, updates["team_ids"])
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=INVALID_GROUP,
+            ) from None
+
+
 def _assert_can_assign_role(actor: User, new_role: str, *, target_email: str) -> None:
     try:
         assert_may_assign_role(actor=actor, target_email=target_email, new_role=new_role)
@@ -275,75 +344,8 @@ async def update_user(
         raise HTTPException(status_code=404, detail=USER_NOT_FOUND)
 
     updates = payload.model_dump(exclude_unset=True)
-
-    if "roles" in updates or "role" in updates:
-        target_email = str(updates["email"]).lower().strip() if "email" in updates else user.email
-        if "roles" in updates:
-            next_roles = list(updates["roles"])
-        elif "role" in updates:
-            next_roles = [updates["role"]]
-        else:
-            next_roles = []
-
-        if not next_roles:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=MIN_ONE_GROUP_REQUIRED,
-            )
-
-        for assigned_role in next_roles:
-            _assert_can_assign_role(current_user, assigned_role, target_email=target_email)
-
-        normalized_roles = [
-            role_after_top_admin_policy(target_email, assigned_role) for assigned_role in next_roles
-        ]
-        if ROLE_TOP_ADMIN in normalized_roles and not can_hold_top_admin_role(target_email):
-            normalized_roles = [r for r in normalized_roles if r != ROLE_TOP_ADMIN]
-            if ROLE_ADMIN not in normalized_roles:
-                normalized_roles.append(ROLE_ADMIN)
-
-        try:
-            user.role = await sync_user_roles(db, user.id, normalized_roles)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=MIN_ONE_GROUP_REQUIRED,
-            ) from None
-
-    if "display_name" in updates:
-        user.display_name = updates["display_name"].strip()
-
-    if "email" in updates:
-        email = str(updates["email"]).lower().strip()
-        if user.role == ROLE_TOP_ADMIN and not can_hold_top_admin_role(email):
-            user.role = ROLE_ADMIN
-        if await email_taken(db, email, exclude_user_id=user.id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="E-mail er allerede i brug",
-            )
-        user.email = email
-
-    if "is_active" in updates:
-        user.is_active = updates["is_active"]
-
-    if "password_policy_exempt" in updates:
-        user.password_policy_exempt = updates["password_policy_exempt"]
-        if user.password_policy_exempt:
-            user.must_change_password = False
-
-    if "organization_id" in updates:
-        user.organization_id = updates["organization_id"]
-
-    if "team_ids" in updates:
-        try:
-            await sync_user_teams(db, user.id, updates["team_ids"])
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=INVALID_GROUP,
-            ) from None
-
+    await _apply_user_role_updates(db, user, updates, current_user)
+    await _apply_user_scalar_updates(db, user, updates)
     await db.commit()
     updated = await get_user_admin(db, user_id)
     if updated is None:

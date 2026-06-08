@@ -214,52 +214,49 @@ async def build_standard_report(
     )
 
 
-def report_to_csv(report: StandardReportRead, *, bucket_key: str | None = None) -> str:
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=";")
-    buckets = report.buckets
-    if bucket_key:
-        buckets = [b for b in buckets if b.key == bucket_key]
+_CSV_TICKET_HEADERS = [
+    "Sagsnr", "Titel", "Status", "Prioritet", "Type", "Gruppe",
+    "Sagsbehandler", "Oprettet", "Løst", "Lukket", "Genåbnet",
+]
 
+
+def _write_csv_report_header(writer: csv.writer, report: StandardReportRead) -> None:
     writer.writerow(["STARdesk standardrapport"])
     writer.writerow(["Genereret", report.generated_at.isoformat()])
     if report.period_days:
         writer.writerow(["Periode (dage)", report.period_days])
     writer.writerow([])
 
-    for bucket in buckets:
-        writer.writerow([bucket.label_da, f"Antal: {bucket.count}"])
+
+def _write_csv_bucket(writer: csv.writer, bucket) -> None:
+    writer.writerow([bucket.label_da, f"Antal: {bucket.count}"])
+    writer.writerow(_CSV_TICKET_HEADERS)
+    for row in bucket.tickets:
         writer.writerow(
             [
-                "Sagsnr",
-                "Titel",
-                "Status",
-                "Prioritet",
-                "Type",
-                "Gruppe",
-                "Sagsbehandler",
-                "Oprettet",
-                "Løst",
-                "Lukket",
-                "Genåbnet",
+                row.ticket_number,
+                row.title,
+                row.status_label_da,
+                row.priority,
+                row.ticket_type,
+                row.assigned_team_name or "",
+                row.assigned_user_name or "",
+                row.created_at.isoformat(),
+                row.resolved_at.isoformat() if row.resolved_at else "",
+                row.closed_at.isoformat() if row.closed_at else "",
+                row.reopened_at.isoformat() if row.reopened_at else "",
             ]
         )
-        for row in bucket.tickets:
-            writer.writerow(
-                [
-                    row.ticket_number,
-                    row.title,
-                    row.status_label_da,
-                    row.priority,
-                    row.ticket_type,
-                    row.assigned_team_name or "",
-                    row.assigned_user_name or "",
-                    row.created_at.isoformat(),
-                    row.resolved_at.isoformat() if row.resolved_at else "",
-                    row.closed_at.isoformat() if row.closed_at else "",
-                    row.reopened_at.isoformat() if row.reopened_at else "",
-                ]
-            )
-        writer.writerow([])
+    writer.writerow([])
 
+
+def report_to_csv(report: StandardReportRead, *, bucket_key: str | None = None) -> str:
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter=";")
+    buckets = report.buckets
+    if bucket_key:
+        buckets = [b for b in buckets if b.key == bucket_key]
+    _write_csv_report_header(writer, report)
+    for bucket in buckets:
+        _write_csv_bucket(writer, bucket)
     return output.getvalue()
