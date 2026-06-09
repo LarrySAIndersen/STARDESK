@@ -29,7 +29,13 @@ import { apiPost, apiGet, apiDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/agent/user-avatar";
-import { HelpABotIcon } from "@/components/portal/help-a-bot-icon";
+import { HelpABotAvatarPicker } from "@/components/portal/help-a-bot-avatar-picker";
+import {
+  HelpABotAvatar,
+  HELP_A_BOT_AVATAR_STORAGE_KEY,
+  isValidHelpABotAvatarId,
+  type HelpABotAvatarId,
+} from "@/components/portal/help-a-bot-icon";
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -61,6 +67,7 @@ const PANEL_SIZE_PRESETS: Record<PanelSizePreset, { width: number; height: numbe
 
 const PANEL_POS_STORAGE_KEY = "stardesk-helpabot-pos";
 const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
+const FAB_POS_STORAGE_KEY = "stardesk-helpabot-fab-pos";
 const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
 
 function clampPanelSize(width: number, height: number) {
@@ -133,10 +140,17 @@ export function CaseAssistantChat({
   const [panelPreset, setPanelPreset] = useState<PanelSizePreset>("normal");
   const [panelSize, setPanelSize] = useState(() => PANEL_SIZE_PRESETS.normal);
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null);
+  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  const [selectedAvatarId, setSelectedAvatarId] = useState<HelpABotAvatarId>("robot");
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const fabRef = useRef<HTMLButtonElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const fabDragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
+  const fabDragMovedRef = useRef(false);
+  const fabClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeStateRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   const fetchArchive = useCallback(async () => {
@@ -168,12 +182,23 @@ export function CaseAssistantChat({
     if (typeof window === "undefined") return;
     try {
       const storedPos = localStorage.getItem(PANEL_POS_STORAGE_KEY);
+      const storedFabPos = localStorage.getItem(FAB_POS_STORAGE_KEY);
+      const storedAvatar = localStorage.getItem(HELP_A_BOT_AVATAR_STORAGE_KEY);
       const storedSize = localStorage.getItem(PANEL_SIZE_STORAGE_KEY);
       if (storedPos) {
         const parsed = JSON.parse(storedPos) as { x: number; y: number };
         if (typeof parsed.x === "number" && typeof parsed.y === "number") {
           setPanelPos(parsed);
         }
+      }
+      if (storedFabPos) {
+        const parsed = JSON.parse(storedFabPos) as { x: number; y: number };
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          setFabPos(parsed);
+        }
+      }
+      if (storedAvatar && isValidHelpABotAvatarId(storedAvatar)) {
+        setSelectedAvatarId(storedAvatar);
       }
       if (storedSize) {
         const parsed = JSON.parse(storedSize) as {
@@ -206,6 +231,16 @@ export function CaseAssistantChat({
     localStorage.setItem(PANEL_POS_STORAGE_KEY, JSON.stringify(panelPos));
   }, [panelPos]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !fabPos) return;
+    localStorage.setItem(FAB_POS_STORAGE_KEY, JSON.stringify(fabPos));
+  }, [fabPos]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(HELP_A_BOT_AVATAR_STORAGE_KEY, selectedAvatarId);
+  }, [selectedAvatarId]);
+
   const applyPreset = useCallback((preset: PanelSizePreset) => {
     const base = PANEL_SIZE_PRESETS[preset];
     const height = preset === "expanded" ? getExpandedHeight() : base.height;
@@ -224,6 +259,93 @@ export function CaseAssistantChat({
   }, [panelSize.height, panelSize.width]);
 
   const resolvedPanelPos = panelPos ?? getDefaultPanelPos();
+
+  const getDefaultFabPos = useCallback(() => {
+    if (typeof window === "undefined") {
+      return { x: 20, y: 500 };
+    }
+    const fabWidth = fabRef.current?.offsetWidth ?? 180;
+    const fabHeight = fabRef.current?.offsetHeight ?? 52;
+    return {
+      x: Math.max(16, window.innerWidth - fabWidth - 20),
+      y: Math.max(16, window.innerHeight - fabHeight - 84),
+    };
+  }, []);
+
+  const resolvedFabPos = fabPos ?? getDefaultFabPos();
+
+  const handleAvatarDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (fabClickTimerRef.current) {
+      clearTimeout(fabClickTimerRef.current);
+      fabClickTimerRef.current = null;
+    }
+    setAvatarPickerOpen(true);
+  }, []);
+
+  const handleFabDragStart = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (e.button !== 0 || !staff) return;
+      e.preventDefault();
+      const origin = fabPos ?? getDefaultFabPos();
+      fabDragMovedRef.current = false;
+      fabDragStateRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        originX: origin.x,
+        originY: origin.y,
+        moved: false,
+      };
+
+      function onMove(ev: MouseEvent) {
+        const drag = fabDragStateRef.current;
+        if (!drag) return;
+        const dx = ev.clientX - drag.startX;
+        const dy = ev.clientY - drag.startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          drag.moved = true;
+          fabDragMovedRef.current = true;
+        }
+        if (!drag.moved) return;
+
+        const fabWidth = fabRef.current?.offsetWidth ?? 180;
+        const fabHeight = fabRef.current?.offsetHeight ?? 52;
+        const nextX = drag.originX + dx;
+        const nextY = drag.originY + dy;
+        const maxX = Math.max(0, window.innerWidth - fabWidth);
+        const maxY = Math.max(0, window.innerHeight - fabHeight);
+        setFabPos({
+          x: Math.min(Math.max(0, nextX), maxX),
+          y: Math.min(Math.max(0, nextY), maxY),
+        });
+      }
+
+      function onUp() {
+        fabDragStateRef.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        window.setTimeout(() => {
+          fabDragMovedRef.current = false;
+        }, 0);
+      }
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [fabPos, getDefaultFabPos, staff],
+  );
+
+  const handleFabClick = useCallback(() => {
+    if (fabDragMovedRef.current) return;
+    if (fabClickTimerRef.current) {
+      clearTimeout(fabClickTimerRef.current);
+    }
+    fabClickTimerRef.current = setTimeout(() => {
+      fabClickTimerRef.current = null;
+      setOpen((prev) => !prev);
+    }, 250);
+  }, []);
 
   const handlePanelDragStart = useCallback(
     (e: React.MouseEvent<HTMLElement>) => {
@@ -349,6 +471,9 @@ export function CaseAssistantChat({
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
+      if (fabClickTimerRef.current) {
+        clearTimeout(fabClickTimerRef.current);
+      }
     };
   }, []);
 
@@ -568,18 +693,32 @@ export function CaseAssistantChat({
   return (
     <>
       <button
+        ref={fabRef}
         type="button"
         className={cn(
           staff
-            ? "fixed right-5 bottom-[5.25rem] z-[399] flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold shadow-lg transition-all hover:scale-[1.05] bg-gradient-to-r from-slate-700 to-slate-800 text-slate-100 border border-slate-600 hover:from-slate-600 hover:to-slate-700"
-            : cn("case-assistant-fab", open && "case-assistant-fab--open")
+            ? "fixed z-[399] flex cursor-grab items-center gap-2 rounded-full border border-slate-600 bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 shadow-lg transition-shadow hover:from-slate-600 hover:to-slate-700 active:cursor-grabbing"
+            : cn("case-assistant-fab", open && "case-assistant-fab--open"),
         )}
-        onClick={() => setOpen(!open)}
+        style={
+          staff
+            ? { left: resolvedFabPos.x, top: resolvedFabPos.y, right: "auto", bottom: "auto" }
+            : undefined
+        }
+        onMouseDown={staff ? handleFabDragStart : undefined}
+        onClick={staff ? handleFabClick : () => setOpen(!open)}
         aria-expanded={open}
         aria-label={botName}
+        title={staff ? "Træk for at flytte · Dobbeltklik på botten for avatar" : undefined}
       >
         {staff ? (
-          <HelpABotIcon className="size-12" />
+          <span
+            className="shrink-0 cursor-pointer"
+            onDoubleClick={handleAvatarDoubleClick}
+            title="Dobbeltklik for at vælge avatar"
+          >
+            <HelpABotAvatar avatarId={selectedAvatarId} className="size-12" />
+          </span>
         ) : (
           <Bot className="size-5 shrink-0" aria-hidden />
         )}
@@ -587,6 +726,15 @@ export function CaseAssistantChat({
           {fabLabel}
         </span>
       </button>
+
+      {staff ? (
+        <HelpABotAvatarPicker
+          open={avatarPickerOpen}
+          selectedId={selectedAvatarId}
+          onSelect={setSelectedAvatarId}
+          onClose={() => setAvatarPickerOpen(false)}
+        />
+      ) : null}
 
       {open ? (
         <div
@@ -614,8 +762,13 @@ export function CaseAssistantChat({
             <div className="flex items-center gap-2 min-w-0">
               <GripVertical className={cn("size-4 shrink-0 opacity-50", staff ? "text-slate-400" : "text-white/60")} aria-hidden />
               {staff && useIcon ? (
-                <div className="size-9 shrink-0 -my-1" aria-hidden="true">
-                  <HelpABotIcon className="size-9" />
+                <div
+                  className="size-9 shrink-0 -my-1 cursor-pointer"
+                  aria-hidden="true"
+                  onDoubleClick={handleAvatarDoubleClick}
+                  title="Dobbeltklik for at vælge avatar"
+                >
+                  <HelpABotAvatar avatarId={selectedAvatarId} className="size-9" />
                 </div>
               ) : null}
               <div className="min-w-0">
@@ -706,7 +859,7 @@ export function CaseAssistantChat({
                         <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
                           {staff ? (
                             <div className="size-10 scale-90 translate-y-0.5">
-                              <HelpABotIcon />
+                              <HelpABotAvatar avatarId={selectedAvatarId} />
                             </div>
                           ) : (
                             <Bot className="size-4 text-star-navy dark:text-star-blue" />
@@ -742,7 +895,7 @@ export function CaseAssistantChat({
                       <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
                         {staff ? (
                           <div className="size-10 scale-90 translate-y-0.5">
-                            <HelpABotIcon />
+                            <HelpABotAvatar avatarId={selectedAvatarId} />
                           </div>
                         ) : (
                           <Bot className="size-4 text-star-navy dark:text-star-blue" />
