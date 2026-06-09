@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Team fejrer STARDESK">
+  <rect width="400" height="300" fill="#f0f4fa"/>
+  <circle cx="120" cy="110" r="36" fill="#003087"/>
+  <circle cx="200" cy="95" r="40" fill="#c8102e"/>
+  <circle cx="280" cy="110" r="36" fill="#00c7b1"/>
+  <rect x="84" y="150" width="72" height="90" rx="8" fill="#003087" opacity="0.85"/>
+  <rect x="160" y="140" width="80" height="100" rx="8" fill="#c8102e" opacity="0.85"/>
+  <rect x="244" y="150" width="72" height="90" rx="8" fill="#00c7b1" opacity="0.85"/>
+  <text x="200" y="270" text-anchor="middle" fill="#003087" font-size="16" font-family="Arial,sans-serif" font-weight="bold">F�lles succes!</text>
+  <text x="60" y="50" fill="#ffd700" font-size="28"></text>
+  <text x="330" y="55" fill="#ffd700" font-size="24"></text>
+  <text x="200" y="40" text-anchor="middle" fill="#ffd700" font-size="32"></text>
+</svg>

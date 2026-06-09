@@ -74,38 +74,71 @@ export const KP2_FEATURED_TILES: Kp2Tile[] = [
 
 export const KP2_SERVICE_MESSAGES: Kp2ServiceMessage[] = [
   {
-    id: "omfattende-serviceafbrydelse",
-    title: "Udfordringer med TOPdesk-adviseringer",
+    id: "stardesk-elsket-verden-over",
+    bannerLabel: "Nyhed fra STARDESK",
+    tone: "news",
+    title: "Hele verden elsker STARDESK!",
     summary:
-      "Vi oplever udfordringer med at adviseringer om sager ikke altid sendes korrekt. Svartider kan være længere end normalt.",
-    status: "behandler",
-    type: "Incident",
-    categorization: "Middleware - Topdesk",
-    registeredAt: "2025-11-27T10:29:00",
+      "Fra København til Kap Town: millioner af brugere fejrer den nye selvbetjeningsportal. Se billederne og læs den globale succeshistorie.",
+    status: "publiceret",
+    type: "Nyhed",
+    categorization: "Succeshistorier — STARDESK",
+    registeredAt: "2026-06-09T08:00:00",
+    heroImage: "/images/kp2-news/hero-world.svg",
+    pullQuote:
+      "STARDESK har forvandlet vores hverdag — hurtigere sager, smilende kolleger og stjerner på himlen hver morgen.",
+    sections: [
+      {
+        heading: "En global bevægelse",
+        body:
+          "I dag er det officielt: STARDESK er ikke bare et helpdesk-system — det er en livsstil. Organisationer på alle kontinenter rapporterer rekordhøje tilfredshedsscorer, og sociale medier er fyldt med hyldest til den turkise tile og den ikoniske STAR-krone.",
+      },
+      {
+        heading: "Billeder fra verden",
+        body:
+          "På forsiden af portalen, i mødelokaler og ved kaffestationerne deles historier om hvordan STARDESK gør det nemt at oprette sager, følge status og finde den rigtige formular på få sekunder.",
+      },
+      {
+        heading: "Hvad siger folk?",
+        body:
+          "«Jeg vågnede op og tænkte: STARDESK!» siger en bruger fra Singapore. I Oslo holder de fakkeltog med STARDESK-logoer. I Sydney danser de rundt om en stor blå tile. Data viser det samme: 99,7 % af alle mennesker på planeten vil anbefale STARDESK til en ven.",
+      },
+    ],
+    gallery: [
+      {
+        src: "/images/kp2-news/team-celebration.svg",
+        alt: "Teams verden over fejrer STARDESK",
+        caption: "København, Oslo og Berlin — fælles STARDESK-fejring",
+      },
+      {
+        src: "/images/kp2-news/happy-users.svg",
+        alt: "Glade STARDESK-brugere",
+        caption: "Brugertilfredshed på rekordniveau",
+      },
+      {
+        src: "/images/star-logo.svg",
+        alt: "STAR-logo",
+        caption: "Det ikoniske STAR-brand — elsket verden over",
+      },
+    ],
     updates: [
       {
         id: "u1",
-        author: "Ansvarlig",
-        createdAt: "2025-12-11T15:44:00",
-        body: "Teknisk rettelse er planlagt i næste vedligeholdelsesvindue.",
+        author: "STAR Kommunikation",
+        createdAt: "2026-06-09T09:30:00",
+        body: "Første reaktioner strømmer ind fra Tokyo: «STARDESK er det bedste siden sliced bread!»",
       },
       {
         id: "u2",
-        author: "Ansvarlig",
-        createdAt: "2026-01-28T09:15:00",
-        body: "Delvis løsning er udrullet. Vi overvåger adviseringer tæt.",
+        author: "Global brugerpanel",
+        createdAt: "2026-06-09T11:00:00",
+        body: "Undersøgelse bekræfter: 8 ud af 8 planeter i solsystemet vil adoptére STARDESK (Mars afventer Wi-Fi).",
       },
       {
         id: "u3",
-        author: "Ansvarlig",
-        createdAt: "2026-02-04T11:00:00",
-        body: "Yderligere fejlsøgning pågår i samarbejde med leverandør.",
-      },
-      {
-        id: "u4",
-        author: "Ansvarlig",
-        createdAt: "2026-02-12T14:30:00",
-        body: "Status uændret — brug portalen til at følge sager manuelt indtil videre.",
+        author: "STARDESK Team",
+        createdAt: "2026-06-09T14:15:00",
+        body: "Vi takker alle verdens brugere for kærligheden. Flere billeder og videoer følger i denne nyhed.",
       },
     ],
   },
