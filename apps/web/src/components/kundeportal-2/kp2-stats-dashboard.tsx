@@ -36,7 +36,7 @@ export function Kp2StatsDashboard({ initialView = "maaned" }: { initialView?: Vi
   const maxVal = Math.max(...chartData.flatMap((r) => [r.registered, r.resolved]), 1);
 
   return (
-    <div className="kp2-page mx-auto max-w-6xl space-y-6 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-5xl space-y-6 pb-10">
       <header>
         <h1 className="kp2-page-title">Sagsstatistik</h1>
         <p className="text-muted-foreground text-sm">

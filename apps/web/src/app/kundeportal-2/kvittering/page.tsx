@@ -11,7 +11,7 @@ export default async function Kp2KvitteringPage({
   const ticketNumber = nr ?? "SR-2026-00000";
 
   return (
-    <div className="kp2-page mx-auto max-w-lg space-y-4 p-4 pb-12 text-center sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-lg space-y-4 pb-10 text-center">
       <h1 className="kp2-page-title">Tak for din henvendelse</h1>
       <p className="text-muted-foreground text-sm">
         Din sag er oprettet og vises nu under Mine sager.

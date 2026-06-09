@@ -22,7 +22,7 @@ export function Kp2FormCatalog() {
   const grouped = getKp2FormsByCategory();
 
   return (
-    <div className="kp2-page mx-auto max-w-5xl space-y-8 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-5xl space-y-8 pb-10">
       <header className="space-y-2">
         <h1 className="kp2-page-title">Service Requests & Changes</h1>
         <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">

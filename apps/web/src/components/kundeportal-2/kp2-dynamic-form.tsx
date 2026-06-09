@@ -50,7 +50,7 @@ export function Kp2DynamicForm({ schema }: { schema: Kp2FormSchema }) {
   }
 
   return (
-    <div className="kp2-page mx-auto max-w-6xl p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-5xl pb-10">
       <div className="mb-4">
         <Link href={`${KP2_BASE}/service-requests`} className="kp2-back-link">
           <ArrowLeft className="size-4" aria-hidden />

@@ -42,7 +42,7 @@ export function Kp2CaseList({ extended = false }: Kp2CaseListProps) {
   }, [statusFilter, typeFilter, mineOnly]);
 
   return (
-    <div className="kp2-page mx-auto max-w-6xl space-y-6 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-5xl space-y-6 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="kp2-page-title">

@@ -30,7 +30,7 @@ export default function Kp2SoegPage() {
   }, [q]);
 
   return (
-    <div className="kp2-page mx-auto max-w-3xl space-y-6 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-3xl space-y-6 pb-10">
       <h1 className="kp2-page-title">Søgeresultater</h1>
       {q ? (
         <p className="text-muted-foreground text-sm">

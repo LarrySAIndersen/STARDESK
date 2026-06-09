@@ -15,11 +15,24 @@ const TITLES: Record<string, string> = {
   "/portal": "Oversigt",
   "/portal/knowledge": "Vidensartikler",
   "/tickets/new": "Opret sag",
+  "/kundeportal-2": "Kundeportal #2",
+  "/kundeportal-2/mine-sager": "Mine sager",
+  "/kundeportal-2/mine-sager/udvidet": "Mine sager (udvidet)",
+  "/kundeportal-2/statistik": "Statistik",
+  "/kundeportal-2/service-requests": "Service Requests & Changes",
+  "/kundeportal-2/soeg": "Søg",
+  "/kundeportal-2/kvittering": "Kvittering",
 };
 
 function titleForPath(pathname: string): string {
   if (pathname.startsWith("/portal/knowledge/")) {
     return "Vidensartikel";
+  }
+  if (pathname.startsWith("/kundeportal-2/driftsmeddelelse/")) {
+    return "Driftsmeddelelse";
+  }
+  if (pathname.startsWith("/kundeportal-2/service-requests/")) {
+    return "Serviceanmodning";
   }
   return TITLES[pathname] ?? "Selvbetjening";
 }
