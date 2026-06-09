@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Glade brugere">
+  <rect width="400" height="300" fill="#fff8e6"/>
+  <circle cx="200" cy="130" r="70" fill="#ffd700" opacity="0.35"/>
+  <text x="200" y="145" text-anchor="middle" fill="#003087" font-size="72" font-family="Arial,sans-serif"></text>
+  <text x="80" y="220" fill="#c8102e" font-size="40">e</text>
+  <text x="300" y="220" fill="#c8102e" font-size="40">e</text>
+  <text x="200" y="260" text-anchor="middle" fill="#003087" font-size="18" font-family="Arial,sans-serif" font-weight="bold">Brugere elsker STARDESK</text>
+</svg>

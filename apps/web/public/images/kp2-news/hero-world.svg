@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" role="img" aria-label="Verden elsker STARDESK">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#003087"/>
+      <stop offset="100%" stop-color="#00c7b1"/>
+    </linearGradient>
+    <linearGradient id="globe" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4da3ff"/>
+      <stop offset="100%" stop-color="#003087"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="400" fill="url(#sky)"/>
+  <circle cx="400" cy="210" r="120" fill="url(#globe)" opacity="0.95"/>
+  <ellipse cx="400" cy="210" rx="120" ry="40" fill="none" stroke="#00c7b1" stroke-width="3" opacity="0.6"/>
+  <ellipse cx="400" cy="210" rx="40" ry="120" fill="none" stroke="#00c7b1" stroke-width="2" opacity="0.4"/>
+  <text x="120" y="80" fill="#ffd700" font-size="48" font-family="Arial,sans-serif"></text>
+  <text x="650" y="100" fill="#ffd700" font-size="36" font-family="Arial,sans-serif"></text>
+  <text x="680" y="320" fill="#ffd700" font-size="42" font-family="Arial,sans-serif"></text>
+  <text x="90" y="300" fill="#ffd700" font-size="32" font-family="Arial,sans-serif"></text>
+  <text x="400" y="370" text-anchor="middle" fill="white" font-size="28" font-family="Arial,sans-serif" font-weight="bold">STARDESK  elsket verden over</text>
+</svg>

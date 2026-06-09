@@ -1747,8 +1747,32 @@
     @apply flex items-center gap-2 bg-slate-700 px-3 py-2 text-white;
   }
 
+  .kp2-message-banner--news .kp2-message-banner-header {
+    background: linear-gradient(135deg, var(--kp2-blue) 0%, var(--kp2-turkis) 100%);
+  }
+
+  .kp2-message-banner-thumb {
+    @apply aspect-[2/1] object-cover;
+  }
+
   .kp2-message-banner-link {
     @apply block p-3 hover:bg-slate-50;
+  }
+
+  .kp2-news-hero img {
+    @apply aspect-[2/1] object-cover;
+  }
+
+  .kp2-news-quote {
+    @apply rounded-sm border-l-4 border-[var(--kp2-turkis)] bg-slate-50 px-4 py-3;
+  }
+
+  .kp2-news-gallery-item img {
+    @apply bg-slate-50;
+  }
+
+  .kp2-status-badge--news {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-900;
   }
 
   .kp2-catalog-list {

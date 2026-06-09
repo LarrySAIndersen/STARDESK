@@ -15,6 +15,18 @@ class RoutingResult:
     priority: str
 
 
+SF_SERVICE_DESK = "SF Service Desk"
+
+
+async def get_sf_service_desk_team_id(db: AsyncSession) -> uuid.UUID | None:
+    from star_itsm_api.models.team import Team
+
+    result = await db.execute(
+        select(Team.id).where(Team.name == SF_SERVICE_DESK, Team.is_active.is_(True)).limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def apply_routing(
     db: AsyncSession,
     *,

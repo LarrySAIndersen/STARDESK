@@ -53,14 +53,31 @@ export type Kp2ServiceMessageUpdate = {
   body: string;
 };
 
+export type Kp2ServiceMessageGalleryImage = {
+  src: string;
+  alt: string;
+  caption?: string;
+};
+
+export type Kp2ServiceMessageSection = {
+  heading?: string;
+  body: string;
+};
+
 export type Kp2ServiceMessage = {
   id: string;
   title: string;
   summary: string;
-  status: "behandler" | "loest" | "planlagt";
+  bannerLabel: string;
+  tone: "alert" | "news";
+  status: "behandler" | "loest" | "planlagt" | "publiceret";
   type: string;
   categorization: string;
   registeredAt: string;
+  heroImage?: string;
+  sections?: Kp2ServiceMessageSection[];
+  gallery?: Kp2ServiceMessageGalleryImage[];
+  pullQuote?: string;
   updates: Kp2ServiceMessageUpdate[];
 };
 

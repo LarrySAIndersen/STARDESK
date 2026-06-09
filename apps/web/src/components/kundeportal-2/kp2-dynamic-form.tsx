@@ -14,6 +14,7 @@ import {
   isKp2FieldVisible,
   kp2DefaultValues,
 } from "@/lib/kundeportal-2/form-zod";
+import { submitKp2Ticket } from "@/lib/kundeportal-2/submit-ticket";
 import type { Kp2FormSchema } from "@/lib/kundeportal-2/types";
 import { KP2_BASE } from "@/lib/kundeportal-2/types";
 
@@ -23,6 +24,7 @@ export function Kp2DynamicForm({ schema }: { schema: Kp2FormSchema }) {
   const zodSchema = useMemo(() => buildKp2ZodSchema(schema), [schema]);
   const defaults = useMemo(() => kp2DefaultValues(schema), [schema]);
   const [files, setFiles] = useState<File[]>([]);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -38,12 +40,13 @@ export function Kp2DynamicForm({ schema }: { schema: Kp2FormSchema }) {
   const values = watch();
 
   async function onSubmit(data: Record<string, string | boolean>) {
-    const ticketNumber = `SR-2026-${String(Math.floor(Math.random() * 900) + 100).padStart(3, "0")}`;
-    sessionStorage.setItem(
-      "kp2-last-submit",
-      JSON.stringify({ ticketNumber, title: schema.title, data, files: files.map((f) => f.name) }),
-    );
-    router.push(`${KP2_BASE}/kvittering?nr=${encodeURIComponent(ticketNumber)}`);
+    setSubmitError(null);
+    try {
+      const ticket = await submitKp2Ticket(schema, data, files);
+      router.push(`${KP2_BASE}/kvittering?nr=${encodeURIComponent(ticket.ticket_number)}`);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Kunne ikke oprette sagen");
+    }
   }
 
   return (
@@ -178,6 +181,12 @@ export function Kp2DynamicForm({ schema }: { schema: Kp2FormSchema }) {
             ) : null}
 
             <p className="text-muted-foreground text-xs">* Påkrævede felter</p>
+
+            {submitError ? (
+              <p className="text-destructive text-sm" role="alert">
+                {submitError}
+              </p>
+            ) : null}
 
             <div className="flex justify-end">
               <button type="submit" className="kp2-btn-primary" disabled={isSubmitting}>
