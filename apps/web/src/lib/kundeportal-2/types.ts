@@ -92,6 +92,7 @@ export type Kp2CaseRow = {
   priority: string;
   createdAt: string;
   requester: string;
+  reporterUserId?: string | null;
 };
 
 export type Kp2MonthlyStatRow = {
