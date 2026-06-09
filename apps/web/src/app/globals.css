@@ -1668,7 +1668,7 @@
   }
 
   .kp2-card {
-    @apply portal-v2-card;
+    @apply rounded-[2px] border border-border bg-card text-card-foreground shadow-sm;
   }
 
 
