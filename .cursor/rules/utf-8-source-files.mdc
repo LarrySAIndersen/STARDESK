@@ -1,0 +1,22 @@
+---
+description: Always write and commit source files as UTF-8 (never UTF-16) — required for Next.js/Vercel builds
+alwaysApply: true
+---
+
+# UTF-8 source files (mandatory)
+
+All text source files in this repo **must be UTF-8 without BOM**. Never save or commit UTF-16 LE/BE (Windows "Unicode") — Next.js/SWC fails with `stream did not contain valid UTF-8` and Vercel builds break.
+
+## When writing or editing files
+
+- Use the Write/StrReplace tools or UTF-8 shell output — not PowerShell `-Encoding Unicode` or `Out-File -Encoding Unicode`.
+- After editing on Windows, verify critical files start with ASCII bytes (e.g. `import` -> `69 6D 70 6F`), not `FF FE`.
+- If recovering content from a UTF-16 blob, convert explicitly before committing.
+
+## Applies to
+
+`.ts`, `.tsx`, `.js`, `.jsx`, `.css`, `.json`, `.sql`, `.md`, and any other text committed to git — especially under `apps/web/src/`.
+
+## Known past failure
+
+`apps/web/src/lib/kundeportal-2/submit-ticket.ts` and `cases-api.ts` were once UTF-16 and broke `npm run build` on Vercel.
