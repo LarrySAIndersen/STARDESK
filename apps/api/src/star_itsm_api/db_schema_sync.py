@@ -109,6 +109,8 @@ async def _schema_needs_migration(engine: AsyncEngine) -> bool:
     required_tables = [
         "comment_reactions",
         "ticket_links",
+        "ticket_stakeholders",
+        "entity_relationships",
         "organization_integrations",
         "email_integrations",
         "ticket_emails",

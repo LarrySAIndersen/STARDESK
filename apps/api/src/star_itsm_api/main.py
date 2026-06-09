@@ -11,6 +11,7 @@ from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import (
     ensure_kundeportal_2_role_current,
     ensure_personal_notes_schema_current,
+    ensure_ticket_schema_current,
 )
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
 from star_itsm_api.routers import (
@@ -54,13 +55,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # Lightweight idempotent sync for personal_notes only (staging often skips Alembic).
         await ensure_personal_notes_schema_current(engine, settings.database_url)
         await ensure_kundeportal_2_role_current(engine, settings.database_url)
-        logger.info(
-            "Skipping full Alembic/ticket schema sync in lifespan. "
-            "Run 'alembic upgrade head' manually after deploys that need migrations."
-        )
-        # Disabled to prevent cold-start failures on Vercel serverless.
-        # await asyncio.to_thread(run_alembic_upgrade_head)
-        # await ensure_ticket_schema_current(engine, settings.database_url)
+        await ensure_ticket_schema_current(engine, settings.database_url)
     yield
 
 
