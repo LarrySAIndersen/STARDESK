@@ -206,3 +206,16 @@ async def test_apply_routing_rule_priority_not_set() -> None:
     )
 
     assert result.priority == "high"
+
+
+@pytest.mark.asyncio
+async def test_get_sf_service_desk_team_id() -> None:
+    team_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=lambda: team_id),
+    )
+
+    result = await routing.get_sf_service_desk_team_id(mock_db)
+
+    assert result == team_id

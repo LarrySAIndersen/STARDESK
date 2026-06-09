@@ -81,7 +81,7 @@ from star_itsm_api.services.org_access import (
 )
 from star_itsm_api.services.permissions import is_admin
 from star_itsm_api.services.reports import is_reopen_transition
-from star_itsm_api.services.routing import apply_routing
+from star_itsm_api.services.routing import apply_routing, get_sf_service_desk_team_id
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.sla_pause import (
     maybe_start_sla_on_assignment,
@@ -589,6 +589,12 @@ async def create_ticket(
         subcategory_id=payload.subcategory_id,
         priority=payload.priority,
     )
+    assigned_team_id = routing.assigned_team_id
+    assigned_user_id = routing.assigned_user_id
+    if assigned_team_id is None and payload.intake_answers.get("kp2_form_id", "").strip():
+        sf_desk_id = await get_sf_service_desk_team_id(db)
+        if sf_desk_id is not None:
+            assigned_team_id = sf_desk_id
     await validate_sub_cause_ids(
         db,
         payload.sub_cause_ids,
@@ -618,8 +624,8 @@ async def create_ticket(
         priority=routing.priority,
         reporter_user_id=current_user.id,
         organization_id=get_user_organization_id(current_user),
-        assigned_team_id=routing.assigned_team_id,
-        assigned_user_id=routing.assigned_user_id,
+        assigned_team_id=assigned_team_id,
+        assigned_user_id=assigned_user_id,
         category_id=payload.category_id,
         subcategory_id=payload.subcategory_id,
         source=resolved_source,
