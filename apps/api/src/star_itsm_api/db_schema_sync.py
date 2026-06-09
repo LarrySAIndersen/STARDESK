@@ -264,6 +264,26 @@ async def _role_constraints_include_kundeportal_2(engine: AsyncEngine) -> bool:
         return "kundeportal_2" in str(row[0])
 
 
+async def ensure_prototype_staff_accounts_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Upsert Larry prototype accounts so password stays `password` on preview DBs."""
+    if engine is None or not database_url:
+        return
+    try:
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "36_larrysanders-prototype-account.sql",
+        )
+        logger.info("prototype staff account sync completed")
+    except Exception:
+        logger.exception(
+            "prototype staff account sync failed — larrysanders@example.dk login may fail"
+        )
+
+
 async def ensure_kundeportal_2_role_current(
     engine: AsyncEngine | None,
     database_url: str | None,

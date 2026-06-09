@@ -11,6 +11,7 @@ from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import (
     ensure_kundeportal_2_role_current,
     ensure_personal_notes_schema_current,
+    ensure_prototype_staff_accounts_current,
     ensure_ticket_schema_current,
 )
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
@@ -55,6 +56,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         # Lightweight idempotent sync for personal_notes only (staging often skips Alembic).
         await ensure_personal_notes_schema_current(engine, settings.database_url)
         await ensure_kundeportal_2_role_current(engine, settings.database_url)
+        await ensure_prototype_staff_accounts_current(engine, settings.database_url)
         await ensure_ticket_schema_current(engine, settings.database_url)
     yield
 
