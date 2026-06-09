@@ -1,4 +1,4 @@
-﻿import { apiPost } from "@/lib/api";
+import { apiPost } from "@/lib/api";
 import type { Kp2FormSchema } from "@/lib/kundeportal-2/types";
 import { parseTagsInput } from "@/lib/ticket-tags";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
