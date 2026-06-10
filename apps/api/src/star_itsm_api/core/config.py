@@ -94,6 +94,10 @@ class Settings(BaseSettings):
         default=None,
         validation_alias="GMAIL_DEFAULT_FROM",
     )
+    login_ip_max_attempts: int = Field(default=30, validation_alias="LOGIN_IP_MAX_ATTEMPTS")
+    login_ip_window_minutes: int = Field(default=15, validation_alias="LOGIN_IP_WINDOW_MINUTES")
+    login_account_max_failures: int = Field(default=5, validation_alias="LOGIN_ACCOUNT_MAX_FAILURES")
+    login_lockout_minutes: int = Field(default=15, validation_alias="LOGIN_LOCKOUT_MINUTES")
 
     @field_validator(
         "database_url",

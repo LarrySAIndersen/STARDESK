@@ -268,7 +268,7 @@ async def ensure_prototype_staff_accounts_current(
     engine: AsyncEngine | None,
     database_url: str | None,
 ) -> None:
-    """Upsert Larry prototype accounts so password stays `password` on preview DBs."""
+    """Upsert Larry prototype accounts on preview DBs (password sync happens on login)."""
     if engine is None or not database_url:
         return
     try:
@@ -342,6 +342,30 @@ async def ensure_ticket_schema_current(
             )
     except Exception:
         logger.exception("Schema sync failed — some endpoints may return 500")
+
+
+async def ensure_login_throttle_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Ensure login_throttle table exists for rate limiting (FINDING-101)."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _table_exists(engine, "login_throttle"):
+            return
+        logger.warning("login_throttle table missing — applying SQL migration")
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "37_login-throttle-migration.sql",
+        )
+        if await _table_exists(engine, "login_throttle"):
+            logger.info("login_throttle schema sync completed")
+        else:
+            logger.error("login_throttle schema sync finished but table is still missing")
+    except Exception:
+        logger.exception("login_throttle schema sync failed — login rate limit may not work")
 
 
 def _run_single_migration(database_url: str, filename: str) -> None:

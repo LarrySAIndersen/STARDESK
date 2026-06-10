@@ -49,11 +49,11 @@ def test_admin_same_ticket_access_as_top_admin() -> None:
     assert is_admin(user)
 
 
-def test_supporter_has_admin_rights() -> None:
+def test_supporter_has_ticket_visibility_not_user_management() -> None:
     user = MagicMock(role=ROLE_SUPPORTER, organization_id=None)
     assert has_full_ticket_visibility(user)
     assert is_admin(user)
-    assert can_manage_users(user)
+    assert not can_manage_users(user)
     assert can_export_tickets(user)
     assert is_staff_role(user)
 

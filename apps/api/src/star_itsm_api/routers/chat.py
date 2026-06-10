@@ -33,6 +33,14 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 TICKET_NUMBER_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 TICKET_REF_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
+_SECRET_QUERY_RE = re.compile(
+    r"([?&](?:key|api[_-]?key|apikey|token|access_token)=)[^&\s\"']+",
+    re.IGNORECASE,
+)
+_UPSTREAM_URL_RE = re.compile(
+    r"https?://[^\s\"']*(?:generativelanguage\.googleapis\.com|api\.openai\.com|api\.anthropic\.com)[^\s\"']*",
+    re.IGNORECASE,
+)
 
 SUMMARY_PHRASES = (
     "opsummer",
@@ -702,8 +710,21 @@ async def _post_anthropic_chat(request: ChatRequest, user_name: str, anthropic_k
 async def _provider_fallback(request: ChatRequest, caller: User, provider: str, error: Exception) -> str:
     logger.error("Error calling %s API: %s. Falling back to smart mock response.", provider, error)
     mock_resp = await get_smart_mock_response(request, caller)
-    return f"⚠️ **Bemærk**: Kunne ikke forbinde til {provider}-tjenesten ({error}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}"
+    safe_detail = _sanitize_client_error_message(error)
+    return (
+        f"⚠️ **Bemærk**: Kunne ikke forbinde til {provider}-tjenesten ({safe_detail}).\n\n"
+        f"Jeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}"
+    )
 
+
+def _sanitize_client_error_message(error: Exception) -> str:
+    """Never return upstream URLs or credential query params to clients (FINDING-108)."""
+    text = str(error)
+    text = _SECRET_QUERY_RE.sub(r"\1[REDACTED]", text)
+    text = _UPSTREAM_URL_RE.sub("[upstream-api-endpoint]", text)
+    if len(text) > 200:
+        text = text[:200] + "…"
+    return text or "midlertidig fejl"
 
 def _gemini_system_instruction(user_name: str, page_context: ChatPageContext | None) -> dict[str, Any]:
     return {"parts": [{"text": build_chat_system_prompt(user_name, page_context)}]}
@@ -719,6 +740,7 @@ def _gemini_contents(request: ChatRequest) -> list[dict[str, Any]]:
 async def _gemini_followup_with_tool(
     client: httpx.AsyncClient,
     url: str,
+    headers: dict[str, str],
     contents: list[dict[str, Any]],
     system_instruction: dict[str, Any],
     function_call: dict[str, Any],
@@ -734,7 +756,7 @@ async def _gemini_followup_with_tool(
         "parts": [{"functionResponse": {"name": tool_name, "response": {"output": tool_result}}}],
     })
     second_payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
-    second_res = await client.post(url, json=second_payload)
+    second_res = await client.post(url, json=second_payload, headers=headers)
     second_res.raise_for_status()
     second_candidates = second_res.json().get("candidates", [])
     if not second_candidates:
@@ -758,15 +780,17 @@ async def _call_gemini_chat(request: ChatRequest, caller: User) -> str:
 
     from urllib.parse import quote
     safe_model = quote(model, safe="")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{safe_model}:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{safe_model}:generateContent"
+    gemini_headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            response = await client.post(url, json=payload)
+            response = await client.post(url, json=payload, headers=gemini_headers)
             if response.status_code == 404 and model in ("gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash"):
                 model = "gemini-1.5-pro" if "pro" in model else "gemini-1.5-flash"
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-                response = await client.post(url, json=payload)
+                safe_model = quote(model, safe="")
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{safe_model}:generateContent"
+                response = await client.post(url, json=payload, headers=gemini_headers)
             response.raise_for_status()
             res_data = response.json()
         except HTTPException:
@@ -775,11 +799,14 @@ async def _call_gemini_chat(request: ChatRequest, caller: User) -> str:
             logger.error("Error calling Gemini API: %s. Falling back to smart mock response.", e)
             mock_resp = await get_smart_mock_response(request, caller)
             prefix = (
-                "⚠️ **Bemærk**: Sprogmodellen er midlertidigt overbelastet (Googles rate-limit/kvote for denne gratis-nøgle er overskredet).\n\n"
+                "⚠️ **Bemærk**: Sprogmodellen er midlertidigt overbelastet (Googles rate-limit/kvote er overskredet).\n\n"
                 "For at undgå afbrydelser har jeg slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
                 if "429" in str(e)
-                else f"⚠️ **Bemærk**: Der opstod en midlertidig fejl under kommunikationen med Google Gemini-tjenesten ({e}).\n\n"
-                "Jeg har derfor slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
+                else (
+                    "⚠️ **Bemærk**: Der opstod en midlertidig fejl under kommunikationen med Google Gemini-tjenesten "
+                    f"({_sanitize_client_error_message(e)}).\n\n"
+                    "Jeg har derfor slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
+                )
             )
             clean_mock = mock_resp.replace(
                 "Da der ikke er konfigureret en aktiv `GOOGLE_KEY` i miljøet, kører jeg",
@@ -798,7 +825,7 @@ async def _call_gemini_chat(request: ChatRequest, caller: User) -> str:
         text_response = "".join(p.get("text", "") for p in parts if "text" in p)
         if function_call:
             followup = await _gemini_followup_with_tool(
-                client, url, contents, system_instruction, function_call, caller,
+                client, url, gemini_headers, contents, system_instruction, function_call, caller,
             )
             return followup or text_response
         return text_response
