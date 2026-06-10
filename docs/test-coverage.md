@@ -119,7 +119,7 @@ cd apps/web && npm run test:coverage
 cd ../.. && python scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
 ```
 
-`vitest.config.ts` uses `coverage.all: true` so Sonar sees uncovered files under `src/`. New/changed web code in PRs must meet the Sonar **new code coverage ≥ 80%** gate — add Vitest specs (`@frontend-test`) when touching web logic.
+`vitest.config.ts` uses `coverage.include` so Sonar sees uncovered files under `src/` (Vitest 4 removed `coverage.all`). New/changed web code in PRs must meet the Sonar **new code coverage ≥ 80%** gate — add Vitest specs (`@frontend-test`) when touching web logic.
 
 Playwright hello-world gate (`bash scripts/run-deliverable-gate.sh --full`) covers critical UI flows locally/Cloud Agent.
 

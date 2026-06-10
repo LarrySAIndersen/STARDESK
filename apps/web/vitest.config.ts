@@ -9,8 +9,7 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "lcov"],
       reportsDirectory: "./coverage",
-      // Report all src files so SonarCloud can compute web coverage (not just touched files).
-      all: true,
+      // Vitest 4: include globs report covered + uncovered files (replaces removed coverage.all).
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.test.{ts,tsx}",
