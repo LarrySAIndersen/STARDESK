@@ -39,6 +39,7 @@ Where:
 
 - `sonar:agent` = all scopes
 - `sonar:agent:api` = only issues in `apps/api/`
+- `sonar:agent:web` = only issues in `apps/web/`
 
 ## Output
 
@@ -82,9 +83,9 @@ cd apps/api
 uv sync --group dev
 uv run pytest --cov=star_itsm_api --cov-report=xml:coverage.xml
 cd ../.. && python scripts/fix_coverage_xml_for_sonar.py apps/api/coverage.xml
-cd ../..
-# SONAR_TOKEN from SonarCloud — never commit
-sonar-scanner -Dsonar.host.url=https://sonarcloud.io -Dsonar.token="$SONAR_TOKEN"
+cd apps/web && npm run test:coverage
+cd ../.. && python scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
+cd scripts && npm run sonar:scan
 ```
 
 CI: `.github/workflows/sonarcloud.yml` runs pytest coverage + SonarCloud scan on `staging`/`main` (secret `SONAR`). See [docs/test-coverage.md](../../docs/test-coverage.md).

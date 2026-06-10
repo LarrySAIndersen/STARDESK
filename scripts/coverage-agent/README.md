@@ -28,7 +28,7 @@ npm run coverage:agent -- --skip-tests   # re-parse apps/api/coverage.json
 |-------|-----------|-------|
 | pytest overall | **≥85%** | `pyproject.toml` + `security.yml` |
 | Sonar new code | **≥80%** | SonarCloud quality gate |
-| Web | excluded | `sonar.coverage.exclusions` |
+| Web | enabled | Vitest LCOV → Sonar (`fix_lcov_for_sonar.py`) |
 
 See [docs/test-coverage.md](../../docs/test-coverage.md).
 

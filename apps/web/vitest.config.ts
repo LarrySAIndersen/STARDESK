@@ -9,6 +9,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "lcov"],
       reportsDirectory: "./coverage",
+      // Report all src files so SonarCloud can compute web coverage (not just touched files).
+      all: true,
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/**/*.d.ts",
+        "src/**/types.ts",
+      ],
     },
   },
   resolve: {
