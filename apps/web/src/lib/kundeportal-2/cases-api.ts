@@ -1,0 +1,34 @@
+import { apiGet } from "@/lib/api";
+import type { Kp2CaseRow } from "@/lib/kundeportal-2/types";
+import type { Ticket } from "@/types/ticket";
+
+const CLOSED_STATUSES = new Set(["resolved", "closed", "cancelled"]);
+
+function mapTicketType(ticketType: string): Kp2CaseRow["type"] {
+  if (ticketType === "incident" || ticketType === "problem") return "incident";
+  if (ticketType === "change") return "change";
+  return "service_request";
+}
+
+export function ticketToKp2CaseRow(ticket: Ticket): Kp2CaseRow {
+  return {
+    id: ticket.id,
+    number: ticket.ticket_number,
+    title: ticket.title,
+    type: mapTicketType(ticket.ticket_type),
+    status: ticket.status,
+    priority: ticket.priority,
+    createdAt: ticket.created_at,
+    requester: ticket.reporter_display_name ?? "Ukendt",
+    reporterUserId: ticket.reporter_user_id,
+  };
+}
+
+export async function fetchKp2Cases(): Promise<Kp2CaseRow[]> {
+  const tickets = await apiGet<Ticket[]>("/api/v1/tickets?limit=500&sort=created_desc");
+  return tickets.filter((ticket) => !ticket.is_major).map(ticketToKp2CaseRow);
+}
+
+export function isKp2CaseActive(row: Kp2CaseRow): boolean {
+  return !CLOSED_STATUSES.has(row.status);
+}

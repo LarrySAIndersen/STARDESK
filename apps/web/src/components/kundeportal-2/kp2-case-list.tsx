@@ -1,19 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { KP2_MOCK_CASES } from "@/lib/kundeportal-2/mock-data";
+import { getClientUser } from "@/lib/auth";
+import { fetchKp2Cases, isKp2CaseActive } from "@/lib/kundeportal-2/cases-api";
 import type { Kp2CaseRow } from "@/lib/kundeportal-2/types";
 import { KP2_BASE } from "@/lib/kundeportal-2/types";
-
-const STATUS_LABELS: Record<string, string> = {
-  new: "Ny",
-  assigned: "Tildelt",
-  in_progress: "I arbejde",
-  resolved: "Loest",
-  closed: "Lukket",
-};
+import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 
 const TYPE_LABELS: Record<Kp2CaseRow["type"], string> = {
   incident: "Incident",
@@ -26,23 +20,56 @@ type Kp2CaseListProps = {
 };
 
 export function Kp2CaseList({ extended = false }: Kp2CaseListProps) {
+  const user = getClientUser();
+  const [cases, setCases] = useState<Kp2CaseRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("aktiv");
   const [typeFilter, setTypeFilter] = useState("alle");
   const [mineOnly, setMineOnly] = useState(true);
 
-  const filtered = useMemo(() => {
-    return KP2_MOCK_CASES.filter((row) => {
-      if (statusFilter === "aktiv" && row.status === "resolved") return false;
-      if (typeFilter !== "alle" && row.type !== typeFilter) return false;
-      if (mineOnly && row.requester !== "Jan Kjaerby Vinding" && row.requester !== "Jan Kjærby Vinding") {
-        return false;
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCases() {
+      setLoading(true);
+      setFetchError(null);
+      try {
+        const rows = await fetchKp2Cases();
+        if (!cancelled) {
+          setCases(rows);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setFetchError(
+            err instanceof Error ? err.message : "Kunne ikke hente sager fra API",
+          );
+          setCases([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    }
+
+    loadCases();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filtered = useMemo(() => {
+    return cases.filter((row) => {
+      if (statusFilter === "aktiv" && !isKp2CaseActive(row)) return false;
+      if (typeFilter !== "alle" && row.type !== typeFilter) return false;
+      if (mineOnly && user?.id && row.reporterUserId !== user.id) return false;
       return true;
     });
-  }, [statusFilter, typeFilter, mineOnly]);
+  }, [cases, statusFilter, typeFilter, mineOnly, user?.id]);
 
   return (
-    <div className="kp2-page mx-auto max-w-6xl space-y-6 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-5xl space-y-6 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="kp2-page-title">
@@ -94,7 +121,16 @@ export function Kp2CaseList({ extended = false }: Kp2CaseListProps) {
         </label>
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="kp2-empty">
+          <p className="text-muted-foreground text-sm">Henter dine sager...</p>
+        </div>
+      ) : fetchError ? (
+        <div className="kp2-empty">
+          <p className="font-medium">Kunne ikke hente sager</p>
+          <p className="text-muted-foreground mt-2 text-sm">{fetchError}</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="kp2-empty">
           <p className="font-medium">Ingen sager endnu</p>
           <p className="text-muted-foreground mt-2 text-sm">
@@ -123,13 +159,16 @@ export function Kp2CaseList({ extended = false }: Kp2CaseListProps) {
                 <tr key={row.id}>
                   <td className="font-mono text-xs">{row.number}</td>
                   <td>
-                    <Link href={`${KP2_BASE}/mine-sager/${row.id}`} className="text-primary hover:underline">
+                    <Link
+                      href={`/portal-v2/sag/${row.id}`}
+                      className="text-primary hover:underline"
+                    >
                       {row.title}
                     </Link>
                   </td>
                   {extended ? <td>{TYPE_LABELS[row.type]}</td> : null}
-                  <td>{STATUS_LABELS[row.status] ?? row.status}</td>
-                  <td className="capitalize">{row.priority}</td>
+                  <td>{statusLabel(row.status)}</td>
+                  <td>{priorityLabel(row.priority)}</td>
                   {extended ? <td>{row.requester}</td> : null}
                 </tr>
               ))}

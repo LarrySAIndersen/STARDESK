@@ -582,6 +582,24 @@ async def create_ticket(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> TicketRead:
+    try:
+        return await _create_ticket_impl(db, current_user, payload)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to create ticket for user %s", current_user.id)
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Kunne ikke oprette sagen. Prøv igen om et øjeblik.",
+        ) from None
+
+
+async def _create_ticket_impl(
+    db: AsyncSession,
+    current_user: User,
+    payload: TicketCreate,
+) -> TicketRead:
     routing = await apply_routing(
         db,
         ticket_type=payload.ticket_type,
@@ -657,17 +675,24 @@ async def create_ticket(
     if payload.sub_cause_ids:
         await replace_ticket_sub_causes(db, ticket.id, payload.sub_cause_ids)
     try:
-        await sync_ticket_stakeholders_on_create(
-            db,
-            ticket_id=ticket.id,
-            reporter_user_id=current_user.id,
-            affected_user_ids=payload.affected_user_ids,
-            interested_user_ids=payload.interested_user_ids,
-            now=now,
-        )
+        async with db.begin_nested():
+            await sync_ticket_stakeholders_on_create(
+                db,
+                ticket_id=ticket.id,
+                reporter_user_id=current_user.id,
+                affected_user_ids=payload.affected_user_ids,
+                interested_user_ids=payload.interested_user_ids,
+                now=now,
+            )
     except ValueError as exc:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception:
+        logger.warning(
+            "Stakeholder sync skipped on ticket create for %s — schema may be behind",
+            ticket.id,
+            exc_info=True,
+        )
     db.add(
         TicketEvent(
             id=uuid.uuid4(),

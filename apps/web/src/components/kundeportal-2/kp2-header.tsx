@@ -5,9 +5,38 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Kp2UserMenu } from "@/components/kundeportal-2/kp2-user-menu";
+import { SearchInput } from "@/components/ui/search-input";
 import { getClientUser } from "@/lib/auth";
 import { KP2_BASE } from "@/lib/kundeportal-2/types";
 import { resolveUserAvatar } from "@/lib/user-avatar";
+
+export function Kp2GlobalSearch({ className }: { className?: string }) {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    router.push(`${KP2_BASE}/soeg?q=${encodeURIComponent(q)}`);
+  }
+
+  return (
+    <form onSubmit={onSubmit} role="search" className={className}>
+      <label htmlFor="kp2-global-search" className="sr-only">
+        Søg i sager og katalog
+      </label>
+      <SearchInput
+        id="kp2-global-search"
+        value={query}
+        onChange={setQuery}
+        placeholder="Brug nøgleord til søgning"
+        aria-label="Søg i sager og katalog"
+        className="max-w-none"
+      />
+    </form>
+  );
+}
 
 export function Kp2Header() {
   const user = resolveUserAvatar(getClientUser());

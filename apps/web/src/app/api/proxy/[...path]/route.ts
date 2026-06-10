@@ -29,12 +29,20 @@ async function proxyRequest(request: Request, pathSegments: string[]) {
   const hasBody = method !== "GET" && method !== "HEAD";
   const body = hasBody ? await request.arrayBuffer() : undefined;
 
-  const upstream = await fetch(target, {
-    method,
-    headers,
-    body,
-    cache: "no-store",
-  });
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method,
+      headers,
+      body,
+      cache: "no-store",
+    });
+  } catch {
+    return NextResponse.json(
+      { detail: "API er midlertidigt utilgængelig. Prøv igen om et øjeblik." },
+      { status: 502 },
+    );
+  }
 
   const responseHeaders = new Headers();
   const upstreamType = upstream.headers.get("content-type");

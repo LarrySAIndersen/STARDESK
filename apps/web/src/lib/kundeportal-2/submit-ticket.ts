@@ -1,5 +1,6 @@
 import { apiPost } from "@/lib/api";
 import type { Kp2FormSchema } from "@/lib/kundeportal-2/types";
+import { parseTagsInput } from "@/lib/ticket-tags";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
 import type { Ticket, TicketCreateInput } from "@/types/ticket";
 
@@ -67,6 +68,24 @@ function buildIntakeAnswers(
   return answers;
 }
 
+function buildKp2TicketTags(
+  schema: Kp2FormSchema,
+  data: Record<string, string | boolean>,
+): string[] {
+  const userTags =
+    typeof data.tags === "string" ? parseTagsInput(data.tags) : [];
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const tag of ["kundeportal-2", schema.id, ...userTags]) {
+    const normalized = tag.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    merged.push(normalized);
+    if (merged.length >= 10) break;
+  }
+  return merged;
+}
+
 export async function submitKp2Ticket(
   schema: Kp2FormSchema,
   data: Record<string, string | boolean>,
@@ -78,8 +97,9 @@ export async function submitKp2Ticket(
     description: buildDescription(schema, data),
     priority: data.prioritet ? mapKp2Priority(data.prioritet) : "medium",
     gdpr_consent: Boolean(data.gdpr_bekraeftelse),
-    tags: ["kundeportal-2", schema.id],
+    tags: buildKp2TicketTags(schema, data),
     intake_answers: buildIntakeAnswers(schema, data),
+    source: "portal",
   };
 
   const ticket = await apiPost<Ticket>("/api/v1/tickets", payload);

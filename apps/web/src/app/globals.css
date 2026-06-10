@@ -1647,72 +1647,20 @@
     @apply bg-primary hover:bg-primary/90 inline-flex h-9 shrink-0 items-center justify-center rounded-[2px] px-4 text-sm font-medium text-primary-foreground;
   }
 
-  /* Kundeportal #2 — STAR selvbetjening (TOPdesk-alternativ) */
+  /* Kundeportal #2 — aligned with STAR selvbetjening shell */
   .kp2-app {
-    --kp2-blue: #003087;
-    --kp2-red: #c8102e;
+    --kp2-blue: var(--star-navy);
+    --kp2-red: var(--star-red);
     --kp2-turkis: #00c7b1;
-    background: #f7f8fa;
-    color: #1a1a1a;
-    font-family: Arial, Helvetica, sans-serif;
+    @apply text-foreground min-h-0;
   }
 
-  .kp2-header {
-    @apply bg-white shadow-sm;
-  }
-
-  .kp2-header-top {
-    @apply mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6;
-  }
-
-  .kp2-brand {
-    @apply flex items-center gap-3;
-  }
-
-  .kp2-brand-crown {
-    @apply text-xl text-[var(--kp2-blue)];
-  }
-
-  .kp2-brand-title {
-    @apply text-sm font-semibold text-[var(--kp2-blue)];
-  }
-
-  .kp2-brand-sub {
-    @apply text-muted-foreground text-xs;
-  }
-
-  .kp2-hero {
-    @apply relative bg-gradient-to-b from-slate-100 to-white px-4 py-8 sm:px-6;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
-      repeating-linear-gradient(135deg, #e8eaed 0 2px, transparent 2px 24px);
-  }
-
-  .kp2-search {
-    @apply mx-auto flex max-w-2xl overflow-hidden rounded-sm border border-border bg-white shadow-sm;
-  }
-
-  .kp2-search-input {
-    @apply min-w-0 flex-1 border-0 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--kp2-blue)]/30;
-  }
-
-  .kp2-search-btn {
-    @apply flex items-center justify-center px-4 text-[var(--kp2-blue)] hover:bg-slate-50;
-  }
-
-  .kp2-breadcrumbs {
-    @apply text-muted-foreground mx-auto max-w-6xl px-4 py-2 text-[11px] tracking-wide sm:px-6;
-  }
-
-  .kp2-breadcrumb-link {
-    @apply hover:text-[var(--kp2-blue)] hover:underline;
-  }
-
-  .kp2-main {
-    @apply min-h-0 flex-1;
+  .kp2-app--subpage {
+    @apply mx-auto w-full max-w-5xl;
   }
 
   .kp2-page-title {
-    @apply text-2xl font-normal tracking-tight text-[var(--kp2-blue)];
+    @apply text-foreground text-xl font-bold tracking-tight sm:text-2xl;
   }
 
   .kp2-section-title {
@@ -1720,44 +1668,9 @@
   }
 
   .kp2-card {
-    @apply rounded-sm border border-border bg-white shadow-sm;
+    @apply rounded-[2px] border border-border bg-card text-card-foreground shadow-sm;
   }
 
-  .kp2-tile-grid {
-    @apply grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4;
-  }
-
-  .kp2-tile {
-    @apply flex min-h-[120px] flex-col items-center justify-center gap-3 bg-[var(--kp2-blue)] p-4 text-center text-white transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kp2-turkis)];
-  }
-
-  .kp2-tile-icon {
-    @apply opacity-90;
-  }
-
-  .kp2-tile-label {
-    @apply text-xs leading-snug font-semibold;
-  }
-
-  .kp2-message-banner {
-    @apply rounded-sm border border-border bg-white shadow-sm;
-  }
-
-  .kp2-message-banner-header {
-    @apply flex items-center gap-2 bg-slate-700 px-3 py-2 text-white;
-  }
-
-  .kp2-message-banner--news .kp2-message-banner-header {
-    background: linear-gradient(135deg, var(--kp2-blue) 0%, var(--kp2-turkis) 100%);
-  }
-
-  .kp2-message-banner-thumb {
-    @apply aspect-[2/1] object-cover;
-  }
-
-  .kp2-message-banner-link {
-    @apply block p-3 hover:bg-slate-50;
-  }
 
   .kp2-news-hero img {
     @apply aspect-[2/1] object-cover;
@@ -1784,15 +1697,15 @@
   }
 
   .kp2-btn-primary {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-sm bg-[var(--kp2-blue)] px-5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-50;
+    @apply bg-primary hover:bg-primary/90 inline-flex h-10 items-center justify-center gap-2 rounded-[2px] px-5 text-sm font-medium text-primary-foreground disabled:opacity-50;
   }
 
   .kp2-btn-secondary {
-    @apply inline-flex h-10 items-center justify-center gap-2 rounded-sm border border-border bg-white px-4 text-sm hover:bg-slate-50;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-[2px] border border-border bg-card px-4 text-sm hover:bg-accent/50;
   }
 
   .kp2-back-link {
-    @apply text-muted-foreground inline-flex items-center gap-1 text-sm hover:text-[var(--kp2-blue)];
+    @apply text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-sm transition-colors;
   }
 
   .kp2-field {

@@ -41,9 +41,11 @@ export type Kp2FormSchema = {
 export type Kp2Tile = {
   id: string;
   title: string;
+  description?: string;
   href: string;
   icon: string;
   featured?: boolean;
+  group?: "sager" | "opret" | "katalog";
 };
 
 export type Kp2ServiceMessageUpdate = {
@@ -90,6 +92,7 @@ export type Kp2CaseRow = {
   priority: string;
   createdAt: string;
   requester: string;
+  reporterUserId?: string | null;
 };
 
 export type Kp2MonthlyStatRow = {

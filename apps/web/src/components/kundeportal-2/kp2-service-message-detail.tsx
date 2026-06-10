@@ -16,7 +16,7 @@ export function Kp2ServiceMessageDetail({ message }: { message: Kp2ServiceMessag
   const isNews = message.tone === "news";
 
   return (
-    <div className="kp2-page mx-auto max-w-4xl space-y-6 p-4 pb-12 sm:p-6">
+    <div className="portal-v2-page mx-auto w-full max-w-4xl space-y-6 pb-10">
       <header className="space-y-1">
         {isNews ? (
           <p className="text-sm font-semibold uppercase tracking-wide text-[var(--kp2-turkis)]">
