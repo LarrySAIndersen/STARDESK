@@ -7,12 +7,12 @@ from sqlalchemy import or_, select
 
 from star_itsm_api.core.security import is_staff
 from star_itsm_api.db import async_session_factory
-from star_itsm_api.models.user import User
-from star_itsm_api.services.org_access import user_can_access_ticket
 from star_itsm_api.models.category import Category, Subcategory
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
+from star_itsm_api.models.user import User
+from star_itsm_api.services.org_access import user_can_access_ticket
 from star_itsm_api.services.ticket_timestamps import apply_status_milestone_timestamps
 
 logger = logging.getLogger(__name__)
@@ -406,7 +406,6 @@ ALLOWED_STATUSES = frozenset({
 async def update_ticket_status(
     ticket_number: str,
     status: str,
-    actor_email: str,
     note: str | None = None,
     *,
     caller: User,
