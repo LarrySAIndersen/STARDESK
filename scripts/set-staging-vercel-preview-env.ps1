@@ -37,8 +37,13 @@ function Read-DotEnv([string]$Path) {
     return $map
 }
 
+$VercelOrgId = "team_WAOS6DVTpQTnSqopWOIZf717"
+$VercelApiProjectId = "prj_TG8sOhHjUBMrcSmTVEDpr1rydHP0"
+$VercelWebProjectId = "prj_yp7rtTY7itzDFBuJqfMrL0urNybx"
+
 function Set-VercelPreviewEnv(
     [string]$ProjectDir,
+    [string]$ProjectId,
     [string]$Name,
     [string]$Value
 ) {
@@ -49,7 +54,9 @@ function Set-VercelPreviewEnv(
     Write-Host "  + $Name (preview/$GitBranch)"
     Push-Location $ProjectDir
     try {
-        & vercel env add $Name preview $GitBranch --yes --force --value $Value 2>&1 | Out-Null
+        $env:VERCEL_ORG_ID = $VercelOrgId
+        $env:VERCEL_PROJECT_ID = $ProjectId
+        & npx --yes vercel@latest env add $Name preview $GitBranch --yes --force --value $Value 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             throw "vercel env add failed for $Name (exit $LASTEXITCODE)"
         }
@@ -105,7 +112,7 @@ $apiKeys = @(
     "UPLOAD_DIR"
 )
 foreach ($key in $apiKeys) {
-    Set-VercelPreviewEnv -ProjectDir $ApiDir -Name $key -Value $api[$key]
+    Set-VercelPreviewEnv -ProjectDir $ApiDir -ProjectId $VercelApiProjectId -Name $key -Value $api[$key]
 }
 
 $webPath = Join-Path $WebDir ".env.local"
@@ -129,7 +136,7 @@ $webKeys = @(
     "NEXT_PUBLIC_PROTOTYPE_BOOTSTRAP_PASSWORD"
 )
 foreach ($key in $webKeys) {
-    Set-VercelPreviewEnv -ProjectDir $WebDir -Name $key -Value $web[$key]
+    Set-VercelPreviewEnv -ProjectDir $WebDir -ProjectId $VercelWebProjectId -Name $key -Value $web[$key]
 }
 
 if (-not $SkipRedeploy) {
