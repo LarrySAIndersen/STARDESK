@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { 
   X, 
@@ -39,7 +41,7 @@ import {
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
-type ArchivedMessage = {
+type ArchivedMessage = Readonly<{
   id: string;
   session_id: string;
   sender: "user" | "bot";
@@ -49,13 +51,13 @@ type ArchivedMessage = {
   ticket_ref?: string;
   is_bookmarked: boolean;
   created_at: string;
-};
+}>;
 
-type ChatMessage = {
+type ChatMessage = Readonly<{
   id: string;
   role: "user" | "assistant";
   body: string;
-};
+}>;
 
 type PanelSizePreset = "compact" | "normal" | "expanded";
 
@@ -682,7 +684,7 @@ export function CaseAssistantChat({
   const handleQuickAction = useCallback(
     (action: CaseAssistantQuickAction) => {
       if (action.autoSend) {
-        void handleSend(action.message);
+        fireAndForget(handleSend(action.message));
         return;
       }
       setDraft(action.message);
@@ -967,7 +969,7 @@ export function CaseAssistantChat({
                     size="icon"
                     className="bg-star-blue hover:bg-star-navy text-white shrink-0 size-9 rounded-lg"
                     disabled={!draft.trim() || loading}
-                    onClick={() => void handleSend()}
+                    onClick={() => fireAndForget(handleSend())}
                     aria-label="Send"
                   >
                     <Send className="size-4" />

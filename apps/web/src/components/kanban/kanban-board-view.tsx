@@ -188,7 +188,7 @@ export function KanbanBoardView({
   }, [initialTickets]);
 
   useEffect(() => {
-    void refreshNow();
+    fireAndForget(refreshNow());
   }, [refreshNow]);
 
   const showAdminPicker = canManageUsers(currentUser);

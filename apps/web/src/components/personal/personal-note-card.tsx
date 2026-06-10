@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 import { GripVertical, Trash2 } from "lucide-react";
 
@@ -91,7 +93,7 @@ export function PersonalNoteCard({
         onBlur={() => {
           const trimmed = title.trim();
           if (!trimmed || trimmed === note.title) return;
-          void save({ title: trimmed }).catch(() => {});
+          fireAndForget(save({ title: trimmed }).catch(() => {}));
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur();
@@ -108,7 +110,7 @@ export function PersonalNoteCard({
         onBlur={() => {
           const trimmed = content.trim();
           if (trimmed === note.content) return;
-          void save({ content: trimmed }).catch(() => {});
+          fireAndForget(save({ content: trimmed }).catch(() => {}));
         }}
         placeholder="Skriv noter her…"
         aria-label="Indhold"

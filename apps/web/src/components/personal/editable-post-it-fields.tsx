@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { apiPatch } from "@/lib/api";
@@ -61,13 +63,13 @@ export function EditablePostItFields({
   const saveTitle = useCallback(() => {
     const trimmed = title.trim();
     if (!trimmed || trimmed === note.title) return;
-    void patch({ title: trimmed }).catch(() => {});
+    fireAndForget(patch({ title: trimmed }).catch(() => {}));
   }, [note.title, patch, title]);
 
   const saveContent = useCallback(() => {
     const trimmed = content.trim();
     if (trimmed === note.content) return;
-    void patch({ content: trimmed }).catch(() => {});
+    fireAndForget(patch({ content: trimmed }).catch(() => {}));
   }, [content, note.content, patch]);
 
   const exitEditing = useCallback(() => {
@@ -202,9 +204,9 @@ export function EditablePostItFields({
                 )}
                 title={c.label}
                 onClick={() =>
-                  void patch({
+                  fireAndForget(patch({
                     category: note.category === c.id ? null : (c.id as PersonalNoteCategoryId),
-                  }).catch(() => {})
+                  }).catch(() => {}))
                 }
               >
                 {compact ? c.shortLabel : c.label}
@@ -230,7 +232,7 @@ export function EditablePostItFields({
                     "post-it-edit__chip",
                     (note.visibility ?? "private") === v.id && "post-it-edit__chip--active",
                   )}
-                  onClick={() => void patch({ visibility: v.id }).catch(() => {})}
+                  onClick={() => fireAndForget(patch({ visibility: v.id }).catch(() => {}))}
                 >
                   {v.label}
                 </button>
@@ -253,7 +255,7 @@ export function EditablePostItFields({
                 )}
                 aria-label={`Farve ${c.label}`}
                 onClick={() =>
-                  void patch({ color: c.id as PersonalNoteColorId }).catch(() => {})
+                  fireAndForget(patch({ color: c.id as PersonalNoteColorId }).catch(() => {}))
                 }
               />
             ))}

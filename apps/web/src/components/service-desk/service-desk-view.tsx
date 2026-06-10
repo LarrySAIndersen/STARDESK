@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -162,7 +164,7 @@ export function ServiceDeskView({
     });
     draggingTicketRef.current = null;
     setDraggingTicket(null);
-    void refreshNow();
+    fireAndForget(refreshNow());
     router.refresh();
   }, [refreshNow, router]);
 

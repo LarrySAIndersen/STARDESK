@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useMemo, useState, type DragEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -49,7 +51,7 @@ function DraggablePostIt({
           size="icon"
           className="personal-notes-tray__delete size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
           aria-label="Slet seddel"
-          onClick={() => void onDelete(note.id).catch(() => {})}
+          onClick={() => fireAndForget(onDelete(note.id).catch(() => {}))}
         >
           <Trash2 className="text-destructive size-3.5" aria-hidden />
         </Button>
@@ -69,7 +71,7 @@ function DraggablePostIt({
             )}
             aria-label={`Farve ${c.label}`}
             onClick={() =>
-              void onPatch(note.id, { color: c.id as PersonalNoteColorId }).catch(() => {})
+              fireAndForget(onPatch(note.id, { color: c.id as PersonalNoteColorId }).catch(() => {}))
             }
           />
         ))}
@@ -166,7 +168,7 @@ export function PersonalNotesPanel({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void createNote();
+          fireAndForget(createNote());
         }}
         autoComplete="off"
         className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"

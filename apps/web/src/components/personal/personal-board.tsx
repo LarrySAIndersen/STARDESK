@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { Plus, StickyNote, Ticket, X } from "lucide-react";
@@ -188,14 +190,14 @@ export function PersonalBoard({
         const x = target.boardX ?? 32;
         const y = target.boardY ?? 32;
         if (note.is_pinned) {
-          void moveNoteOnBoard(noteId, x, y).catch(() => {});
+          fireAndForget(moveNoteOnBoard(noteId, x, y).catch(() => {}));
         } else {
-          void pinNote(noteId, x, y).catch(() => {});
+          fireAndForget(pinNote(noteId, x, y).catch(() => {}));
         }
         return;
       }
       if (target.zone === "stack") {
-        void unpinNote(noteId).catch(() => {});
+        fireAndForget(unpinNote(noteId).catch(() => {}));
         return;
       }
       if (target.zone === "ticket" && target.ticketId && target.ticketNumber && target.ticketTitle) {
@@ -292,9 +294,11 @@ export function PersonalBoard({
                       dragging={drag?.noteId === topStackNote.id}
                       onNoteUpdated={updateNote}
                       onDelete={() =>
-                        void apiDelete(`/api/v1/personal/notes/${topStackNote.id}`)
-                          .then(() => onNotesChange(notes.filter((n) => n.id !== topStackNote.id)))
-                          .catch(() => {})
+                        fireAndForget(
+                          apiDelete(`/api/v1/personal/notes/${topStackNote.id}`).then(() =>
+                            onNotesChange(notes.filter((n) => n.id !== topStackNote.id)),
+                          ),
+                        )
                       }
                       onDragStart={startDrag}
                     />
@@ -309,7 +313,7 @@ export function PersonalBoard({
             size="sm"
             className="min-side-board__add"
             disabled={busy}
-            onClick={() => void createNote()}
+            onClick={() => fireAndForget(createNote())}
           >
             <Plus className="size-3.5" aria-hidden />
             Ny idé
@@ -393,7 +397,7 @@ export function PersonalBoard({
                         size="icon"
                         className="ml-auto size-7"
                         aria-label="Fjern fra tavlen"
-                        onClick={() => void removeTicket(ticketId).catch(() => {})}
+                        onClick={() => fireAndForget(removeTicket(ticketId).catch(() => {}))}
                       >
                         <X className="size-3.5" aria-hidden />
                       </Button>
