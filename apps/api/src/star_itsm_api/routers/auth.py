@@ -1,7 +1,7 @@
 import asyncio
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.demo import get_prototype_bootstrap_password
@@ -17,7 +17,7 @@ from star_itsm_api.core.security import (
     hash_password,
     verify_password,
 )
-from star_itsm_api.deps import require_db
+from star_itsm_api.core.request_client import client_ip_from_request
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.auth import (
@@ -27,6 +27,12 @@ from star_itsm_api.schemas.auth import (
     TokenResponse,
     UserRead,
     user_to_read,
+)
+from star_itsm_api.deps import require_db
+from star_itsm_api.services.login_throttle import (
+    assert_login_allowed,
+    on_login_failure,
+    on_login_success,
 )
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
@@ -70,16 +76,24 @@ async def _organization_name(db: AsyncSession, user: User) -> str | None:
 @router.post("/login")
 async def login(
     payload: LoginRequest,
+    request: Request,
     db: AsyncSession = Depends(require_db),
 ) -> TokenResponse:
+    normalized_email = payload.email.lower().strip()
+    client_ip = client_ip_from_request(request)
+    await assert_login_allowed(db, normalized_email, client_ip)
+
     user = await get_user_by_email(db, payload.email)
     password_hash_before = user.password_hash if user is not None else None
     if user is None or not _login_password_valid(user, payload.password):
+        await on_login_failure(db, normalized_email, client_ip, user)
         await asyncio.sleep(0.4)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Forkert e-mail eller adgangskode",
         )
+
+    await on_login_success(db, normalized_email)
 
     if user.password_hash != password_hash_before:
         await db.commit()

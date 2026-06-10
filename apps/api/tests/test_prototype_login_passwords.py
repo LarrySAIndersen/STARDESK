@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
-from star_itsm_api.core.prototype_credentials import LARRY_PROTOTYPE_PASSWORD
+from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
 from star_itsm_api.core.security import verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
@@ -75,6 +75,9 @@ async def repair_login_client(
         "ensure_prototype_staff_account",
         AsyncMock(return_value=None),
     )
+    monkeypatch.setattr(auth_router, "assert_login_allowed", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_failure", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_success", AsyncMock(return_value=None))
     app.dependency_overrides[require_db] = _fake_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -86,12 +89,12 @@ async def repair_login_client(
 async def test_login_repairs_larry_password_hash(repair_login_client: AsyncClient) -> None:
     response = await repair_login_client.post(
         "/api/v1/auth/login",
-        json={"email": LARRY_EMAIL, "password": LARRY_PROTOTYPE_PASSWORD},
+        json={"email": LARRY_EMAIL, "password": PROTOTYPE_BOOTSTRAP_PASSWORD},
     )
     assert response.status_code == 200
     user = await auth_router.get_user_by_email(None, LARRY_EMAIL)
     assert user is not None
-    assert verify_password(LARRY_PROTOTYPE_PASSWORD, user.password_hash)
+    assert verify_password(PROTOTYPE_BOOTSTRAP_PASSWORD, user.password_hash)
 
 
 @pytest.mark.asyncio

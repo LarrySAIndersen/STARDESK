@@ -18,7 +18,14 @@ export async function POST(request: Request) {
 
   const upstream = await fetch(buildBackendUrl("/api/v1/auth/login"), {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "X-Forwarded-For":
+        request.headers.get("x-forwarded-for") ??
+        request.headers.get("x-real-ip") ??
+        "",
+    },
     body: JSON.stringify(body),
     cache: "no-store",
   });

@@ -67,6 +67,6 @@
     "kodepraksis:export-plan": "node ./kodepraksis-agent/export-plan-table.mjs"
   },
   "devDependencies": {
-    "playwright": "^1.55.1"
+    "playwright": "^1.60.0"
   }
 }
