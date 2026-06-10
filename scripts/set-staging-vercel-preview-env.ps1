@@ -59,12 +59,14 @@ function Set-VercelPreviewEnv(
     }
 }
 
-function Invoke-StagingRedeploy([string]$ProjectDir, [string]$Label) {
+function Invoke-StagingRedeploy([string]$ProjectId, [string]$Label) {
     Write-Host ""
     Write-Host "==> Redeploy $Label (preview, branch $GitBranch)"
-    Push-Location $ProjectDir
+    Push-Location $RepoRoot
     try {
-        & vercel deploy --yes 2>&1 | ForEach-Object { Write-Host $_ }
+        $env:VERCEL_ORG_ID = $VercelOrgId
+        $env:VERCEL_PROJECT_ID = $ProjectId
+        & npx --yes vercel@latest deploy --yes 2>&1 | ForEach-Object { Write-Host $_ }
         if ($LASTEXITCODE -ne 0) {
             throw "vercel deploy failed for $Label"
         }
@@ -133,8 +135,8 @@ foreach ($key in $webKeys) {
 }
 
 if (-not $SkipRedeploy) {
-    Invoke-StagingRedeploy -ProjectDir $ApiDir -Label "api"
-    Invoke-StagingRedeploy -ProjectDir $WebDir -Label "web"
+    Invoke-StagingRedeploy -ProjectId $VercelApiProjectId -Label "api"
+    Invoke-StagingRedeploy -ProjectId $VercelWebProjectId -Label "web"
 }
 
 Write-Host ""

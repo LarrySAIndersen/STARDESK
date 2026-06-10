@@ -51,22 +51,6 @@ function Invoke-StardeskStagingHelloWorldGate {
         }
     }
 
-    if ((Test-StardeskVercelProtectedUrl -Url $ApiUrl) -and -not $env:VERCEL_PROTECTION_BYPASS) {
-        $webTarget = $env:STARDESK_STAGING_WEB_URL
-        if (-not $webTarget) { $webTarget = $script:StardeskDefaultStagingWebUrl }
-        $webTarget = $webTarget.TrimEnd("/")
-        if (Test-StardeskVercelProtectedUrl -Url $webTarget) {
-            try {
-                $webDir = if ($RepoRoot) { Join-Path $RepoRoot "apps\web" } else { $null }
-                $env:VERCEL_PROTECTION_BYPASS = Get-StardeskVercelProtectionBypass -DeploymentUrl $webTarget `
-                    -VercelProjectDir $webDir
-            }
-            catch {
-                Write-Host "Note: $($_.Exception.Message) — trying vercel curl per request." -ForegroundColor Yellow
-            }
-        }
-    }
-
     Write-Host "=============================================="
     Write-Host " STARDESK hello-world gate (staging Preview)"
     Write-Host " API: $ApiUrl"

@@ -292,6 +292,13 @@ function Invoke-StardeskApiRequest {
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
     )
 
+    # Vercel Preview deployments require authentication — use CLI curl (npx) directly.
+    if (Test-StardeskVercelProtectedUrl -Url $ApiUrl) {
+        $projectDir = Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
+        return Invoke-StardeskVercelCurl -DeploymentUrl $ApiUrl -Path $Path -Method $Method `
+            -BodyJson $BodyJson -Headers $Headers -VercelProjectDir $projectDir
+    }
+
     $uri = "$($ApiUrl.TrimEnd('/'))$Path"
     $params = @{
         Uri         = $uri
