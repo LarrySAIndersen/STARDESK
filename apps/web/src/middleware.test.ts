@@ -70,6 +70,29 @@ describe("middleware JWT session", () => {
     const response = middleware(makeRequest("/images/logo.svg"));
     expect(response.status).toBe(200);
   });
+
+  it("allows password-change exempt path without token", () => {
+    const response = middleware(makeRequest("/skift-adgangskode"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("allows auth BFF routes without token", () => {
+    const response = middleware(makeRequest("/api/auth/session"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-pathname")).toBeNull();
+  });
+
+  it("allows login subpaths without token", () => {
+    const response = middleware(makeRequest("/login/forgot"));
+    expect(response.status).toBe(200);
+  });
+
+  it("sets x-pathname header when authenticated request continues", () => {
+    const response = middleware(makeRequest("/tickets", { token: "jwt-token" }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-middleware-request-x-pathname")).toBe("/tickets");
+  });
 });
 
 describe("middleware Basic Auth staging lock", () => {
@@ -105,5 +128,16 @@ describe("middleware Basic Auth staging lock", () => {
       const response = middleware(makeRequest(path));
       expect(response.status).toBe(200);
     }
+  });
+
+  it("rejects invalid Basic Auth credentials", () => {
+    const encoded = Buffer.from("staging:wrong").toString("base64");
+    const response = middleware(makeRequest("/reports", { basicAuth: `Basic ${encoded}` }));
+    expect(response.status).toBe(401);
+  });
+
+  it("skips Basic Auth for favicon", () => {
+    const response = middleware(makeRequest("/favicon.ico"));
+    expect(response.status).toBe(200);
   });
 });
