@@ -12,10 +12,11 @@ from pydantic import BaseModel
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import get_user_by_email
+from star_itsm_api.core.security import get_current_user, is_staff
 from star_itsm_api.db import get_db
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.chatbot_message import ChatbotMessage
+from star_itsm_api.models.user import User
 from star_itsm_api.routers.mcp import (
     create_ticket,
     get_ticket_by_number,
@@ -88,18 +89,21 @@ PAGE_KIND_HINTS: dict[str, str] = {
 }
 
 
-def build_chat_system_prompt(request: "ChatRequest") -> str:
+def _user_display_name(user: User) -> str:
+    return user.display_name or user.email
+
+
+def build_chat_system_prompt(user_name: str, page_context: ChatPageContext | None = None) -> str:
     base = (
         "Du er STARdesk AI-assistenten (kaldet 'Help-a-bot' for medarbejdere og 'Sag-assistent' for eksterne brugere). "
-        f"Den aktuelle bruger, du taler med, hedder: {request.user_name or 'Bruger'}. "
-        f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({request.user_name or 'Bruger'}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
+        f"Den aktuelle bruger, du taler med, hedder: {user_name}. "
+        f"Det er MEGET vigtigt, at du hilser på brugeren ved navn ({user_name}) og titulerer dem med navn på en personlig og høflig måde under jeres samtale! "
         "Du hjælper brugere med at finde svar på deres IT-spørgsmål, tjekke status på deres sager, og vælge de rigtige kategorier. "
         "For medarbejdere kan du også slå sager op via sagsnummer, opdatere status (fx luk eller løs en sag) og tilføje interne noter — bekræft altid før du ændrer noget. "
         "Korte kommandoer virker direkte uden lange sætninger: bare sagsnummer (fx INC-2026-00118), 'luk INC-…', 'løs INC-…', 'mine sager', 'opret Titel - Beskrivelse'. "
         "Svar altid venligt, professionelt og på dansk."
     )
 
-    page_context = request.page_context
     if not page_context:
         return base
 
@@ -126,6 +130,7 @@ def build_chat_system_prompt(request: "ChatRequest") -> str:
 async def try_page_context_command(
     user_msg: str,
     page_context: ChatPageContext | None,
+    caller: User,
 ) -> str | None:
     if not page_context or not page_context.ticket_number:
         return None
@@ -134,11 +139,11 @@ async def try_page_context_command(
     ticket_number = page_context.ticket_number.upper()
 
     if any(phrase in lower for phrase in SUMMARY_PHRASES):
-        detail = await get_ticket_by_number(ticket_number)
+        detail = await get_ticket_by_number(ticket_number, caller=caller)
         return f"Her er en opsummering af **{ticket_number}**:\n\n{detail}"
 
     if any(phrase in lower for phrase in STATUS_PHRASES) and not TICKET_NUMBER_RE.search(user_msg):
-        return await get_ticket_by_number(ticket_number)
+        return await get_ticket_by_number(ticket_number, caller=caller)
 
     return None
 
@@ -165,7 +170,7 @@ def _parse_short_create_payload(msg: str) -> tuple[str, str] | None:
     return title, description
 
 
-async def _short_command_close(msg: str, lower: str, ticket_number: str, email: str) -> str | None:
+async def _short_command_close(msg: str, lower: str, ticket_number: str, caller: User) -> str | None:
     for prefix in ("luk sag ", "luk ", "close "):
         if not lower.startswith(prefix):
             continue
@@ -175,42 +180,43 @@ async def _short_command_close(msg: str, lower: str, ticket_number: str, email: 
         return await update_ticket_status(
             ticket_number=ticket_number,
             status="closed",
-            actor_email=email,
+            actor_email=caller.email,
             note=note,
+            caller=caller,
         )
     return None
 
 
-async def _short_command_resolve(lower: str, ticket_number: str, email: str) -> str | None:
+async def _short_command_resolve(lower: str, ticket_number: str, caller: User) -> str | None:
     for prefix in ("løs ", "los ", "resolve "):
         if lower.startswith(prefix):
             return await update_ticket_status(
                 ticket_number=ticket_number,
                 status="resolved",
-                actor_email=email,
+                actor_email=caller.email,
                 note=None,
+                caller=caller,
             )
     return None
 
 
 async def _short_command_ticket_number(
-    msg: str, lower: str, ticket_number: str, email: str,
+    msg: str, lower: str, ticket_number: str, caller: User,
 ) -> str | None:
-    closed = await _short_command_close(msg, lower, ticket_number, email)
+    closed = await _short_command_close(msg, lower, ticket_number, caller)
     if closed:
         return closed
-    resolved = await _short_command_resolve(lower, ticket_number, email)
+    resolved = await _short_command_resolve(lower, ticket_number, caller)
     if resolved:
         return resolved
     if len(msg.split()) <= 2 or any(k in lower for k in ("find", "sag", "vis", "status", "sla")):
-        return await get_ticket_by_number(ticket_number)
+        return await get_ticket_by_number(ticket_number, caller=caller)
     return None
 
 
 async def try_short_command(
     user_msg: str,
-    user_email: str | None,
-    _user_name: str | None,
+    caller: User,
 ) -> str | None:
     """Handle ultra-short Danish commands without calling the LLM."""
     msg = user_msg.strip()
@@ -218,24 +224,28 @@ async def try_short_command(
         return None
 
     lower = msg.lower()
-    email = user_email or "sf01@example.dk"
     ticket_match = TICKET_NUMBER_RE.search(msg)
     ticket_number = ticket_match.group(0).upper() if ticket_match else None
 
     if ticket_number:
-        ticket_result = await _short_command_ticket_number(msg, lower, ticket_number, email)
+        ticket_result = await _short_command_ticket_number(msg, lower, ticket_number, caller)
         if ticket_result:
             return ticket_result
 
     if lower in {"mine sager", "sager", "mine", "status"} or lower.startswith("mine sager"):
-        tickets_res = await get_user_tickets(email)
+        tickets_res = await get_user_tickets(caller.email, caller=caller)
         return f"Her er dine seneste sager:\n\n{tickets_res}"
 
     if lower.startswith("opret") or lower.startswith("ny sag"):
         parsed = _parse_short_create_payload(msg)
         if parsed:
             title, description = parsed
-            return await create_ticket(user_email=email, title=title, description=description)
+            return await create_ticket(
+                user_email=caller.email,
+                title=title,
+                description=description,
+                caller=caller,
+            )
 
     return None
 
@@ -247,17 +257,8 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
-    user_email: str | None = None
-    user_name: str | None = None
     model_override: str | None = None
-    custom_router_url: str | None = None
-    custom_router_key: str | None = None
-    custom_router_model: str | None = None
-    custom_router_header_type: str | None = "Bearer"
     session_id: str | None = None
-    openai_key: str | None = None
-    anthropic_key: str | None = None
-    google_key: str | None = None
     page_context: ChatPageContext | None = None
 
 
@@ -304,28 +305,15 @@ GEMINI_TOOLS = [
             },
             {
                 "name": "get_user_tickets",
-                "description": "Hent de seneste supportsager for en specifik bruger baseret på deres e-mailadresse. Bruges til at tjekke status eller give opdateringer.",
-                "parameters": {
-                    "type": "OBJECT",
-                    "properties": {
-                        "user_email": {
-                            "type": "STRING",
-                            "description": "Brugerens e-mailadresse (fx 'jan.hansen@star.dk').",
-                        }
-                    },
-                    "required": ["user_email"],
-                },
+                "description": "Hent de seneste supportsager for den aktuelle bruger. Bruges til at tjekke status eller give opdateringer.",
+                "parameters": {"type": "OBJECT", "properties": {}},
             },
             {
                 "name": "create_ticket",
-                "description": "Opret en ny supportsag (ticket) i STARdesk på vegne af en bruger, når de beder om det. Spørg først efter titel og detaljeret beskrivelse, og bekræft før oprettelse.",
+                "description": "Opret en ny supportsag (ticket) i STARdesk for den aktuelle bruger, når de beder om det. Spørg først efter titel og detaljeret beskrivelse, og bekræft før oprettelse.",
                 "parameters": {
                     "type": "OBJECT",
                     "properties": {
-                        "user_email": {
-                            "type": "STRING",
-                            "description": "Brugerens e-mailadresse (fx 'sf01@example.dk').",
-                        },
                         "title": {
                             "type": "STRING",
                             "description": "Sagens kortfattede titel (fx 'MitID virker ikke'). Mindst 3 tegn.",
@@ -351,7 +339,7 @@ GEMINI_TOOLS = [
                             "description": "Sags-type ('incident', 'service_request', 'problem'). Standard er 'incident'.",
                         }
                     },
-                    "required": ["user_email", "title", "description"],
+                    "required": ["title", "description"],
                 },
             },
             {
@@ -382,16 +370,12 @@ GEMINI_TOOLS = [
                             "type": "STRING",
                             "description": "Ny status: 'new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed', 'cancelled'.",
                         },
-                        "actor_email": {
-                            "type": "STRING",
-                            "description": "Medarbejderens e-mailadresse der udfører handlingen.",
-                        },
                         "note": {
                             "type": "STRING",
                             "description": "Valgfri intern kommentar (fx lukningsnote).",
                         },
                     },
-                    "required": ["ticket_number", "status", "actor_email"],
+                    "required": ["ticket_number", "status"],
                 },
             },
         ]
@@ -407,41 +391,50 @@ async def _tool_search_solutions(args: dict[str, Any]) -> str:
     return await search_historical_solutions(args.get("query", ""))
 
 
-async def _tool_create_ticket(args: dict[str, Any]) -> str:
+async def _tool_create_ticket(args: dict[str, Any], caller: User) -> str:
     return await create_ticket(
-        user_email=args.get("user_email", ""),
+        user_email=caller.email,
         title=args.get("title", ""),
         description=args.get("description", ""),
         category_id=args.get("category_id"),
         subcategory_id=args.get("subcategory_id"),
         priority=args.get("priority", "medium"),
         ticket_type=args.get("ticket_type", "incident"),
+        caller=caller,
     )
 
 
-async def _tool_update_status(args: dict[str, Any]) -> str:
+async def _tool_update_status(args: dict[str, Any], caller: User) -> str:
+    if not is_staff(caller):
+        return (
+            "Fejl: Kun medarbejdere kan opdatere sagsstatus via Help-a-bot. "
+            "Log ind som agent for at udføre denne handling."
+        )
     return await update_ticket_status(
         ticket_number=args.get("ticket_number", ""),
         status=args.get("status", ""),
-        actor_email=args.get("actor_email", ""),
+        actor_email=caller.email,
         note=args.get("note"),
+        caller=caller,
     )
 
 
-_TOOL_HANDLERS: dict[str, Any] = {
-    "search_knowledge_articles": _tool_search_knowledge,
-    "search_historical_solutions": _tool_search_solutions,
-    "get_ticket_categories": lambda _a: get_ticket_categories(),
-    "get_user_tickets": lambda a: get_user_tickets(a.get("user_email", "")),
-    "create_ticket": _tool_create_ticket,
-    "get_ticket_by_number": lambda a: get_ticket_by_number(a.get("ticket_number", "")),
-    "update_ticket_status": _tool_update_status,
-}
+def _tool_handlers(caller: User) -> dict[str, Any]:
+    return {
+        "search_knowledge_articles": _tool_search_knowledge,
+        "search_historical_solutions": _tool_search_solutions,
+        "get_ticket_categories": lambda _a: get_ticket_categories(),
+        "get_user_tickets": lambda _a: get_user_tickets(caller.email, caller=caller),
+        "create_ticket": lambda a: _tool_create_ticket(a, caller),
+        "get_ticket_by_number": lambda a: get_ticket_by_number(a.get("ticket_number", ""), caller=caller),
+        "update_ticket_status": lambda a: _tool_update_status(a, caller),
+    }
 
 
-async def execute_tool(name: str, args: dict[str, Any]) -> str:
+async def execute_tool(name: str, args: dict[str, Any], caller: User) -> str:
     """Execute the local python function matching the Gemini function call."""
-    handler = _TOOL_HANDLERS.get(name)
+    handlers = _tool_handlers(caller)
+    handler = handlers.get(name)
     if handler is None:
         return f"Fejl: Værktøjet '{name}' findes ikke."
     try:
@@ -477,7 +470,7 @@ def _mock_create_help(user_name: str) -> str:
     )
 
 
-async def _mock_try_create(user_msg: str, user_email: str, _user_name: str) -> str | None:
+async def _mock_try_create(user_msg: str, caller: User) -> str | None:
     if ":" not in user_msg:
         return None
     try:
@@ -485,7 +478,12 @@ async def _mock_try_create(user_msg: str, user_email: str, _user_name: str) -> s
         title = parts[0].strip()
         desc = parts[1].strip() if len(parts) > 1 else "Oprettet via STARdesk-assistenten."
         if len(title) >= 3 and len(desc) >= 10:
-            res = await create_ticket(user_email=user_email, title=title, description=desc)
+            res = await create_ticket(
+                user_email=caller.email,
+                title=title,
+                description=desc,
+                caller=caller,
+            )
             return f"**[Mock-assistent]** {res}"
     except Exception:
         return None
@@ -521,10 +519,9 @@ def _mock_fallback(user_name: str, user_msg: str) -> str:
     )
 
 
-async def get_smart_mock_response(request: ChatRequest) -> str:
+async def get_smart_mock_response(request: ChatRequest, caller: User) -> str:
     """Generate a highly helpful mock response based on actual database contents."""
-    user_email = request.user_email or "sf01@example.dk"
-    user_name = request.user_name or "Bruger"
+    user_name = _user_display_name(caller)
     user_msg = _extract_last_user_message(request.messages)
 
     if not user_msg:
@@ -533,7 +530,7 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
             "Jeg kører i lokal simulations-tilstand. Hvordan kan jeg hjælpe dig i dag?"
         )
 
-    short = await try_short_command(user_msg, user_email, user_name)
+    short = await try_short_command(user_msg, caller)
     if short:
         prefix = f"Hej {user_name}! **[Mock-assistent]**\n\n" if not short.startswith("Hej") else ""
         return f"{prefix}{short}" if prefix else short
@@ -541,14 +538,14 @@ async def get_smart_mock_response(request: ChatRequest) -> str:
     user_msg_lower = user_msg.lower()
     create_keywords = ["opret sag", "opret billet", "lav en sag", "opret incident"]
     if any(k in user_msg_lower for k in create_keywords):
-        created = await _mock_try_create(user_msg, user_email, user_name)
+        created = await _mock_try_create(user_msg, caller)
         return created if created else _mock_create_help(user_name)
 
     ticket_keywords = ["sag", "sager", "status", "billet", "ticket", "mine", "mine sager"]
     if any(k in user_msg_lower for k in ticket_keywords):
-        tickets_res = await get_user_tickets(user_email)
+        tickets_res = await get_user_tickets(caller.email, caller=caller)
         return (
-            f"Hej {user_name}! **[Mock-assistent]** Her er status på dine seneste sager i systemet (for e-mail: `{user_email}`):\n\n"
+            f"Hej {user_name}! **[Mock-assistent]** Her er status på dine seneste sager i systemet (for e-mail: `{caller.email}`):\n\n"
             f"{tickets_res}\n\n"
             "Hvis du har brug for at oprette en ny sag, kan du gøre det via 'Opret ny sag'-knappen."
         )
@@ -606,22 +603,24 @@ async def _build_logged_response(
     db: AsyncSession | None,
     last_user_msg: str | None,
     final_response: str,
+    caller: User,
 ) -> ChatResponse:
+    user_name = _user_display_name(caller)
     if last_user_msg:
         await log_chatbot_message(
             db=db,
             session_str=request.session_id,
-            user_email=request.user_email,
+            user_id=caller.id,
             sender="user",
-            sender_name=request.user_name or "Bruger",
+            sender_name=user_name,
             body=last_user_msg,
         )
     await log_chatbot_message(
         db=db,
         session_str=request.session_id,
-        user_email=request.user_email,
+        user_id=caller.id,
         sender="bot",
-        sender_name="Help-a-bot" if "staff" in (request.user_email or "") else "Sag-assistent",
+        sender_name="Help-a-bot" if is_staff(caller) else "Sag-assistent",
         body=final_response,
         category=_infer_chat_category(final_response, last_user_msg),
         ticket_ref=_extract_ticket_ref(final_response, last_user_msg),
@@ -629,8 +628,8 @@ async def _build_logged_response(
     return ChatResponse(response=final_response)
 
 
-def _openai_messages_for_request(request: ChatRequest) -> list[dict[str, str]]:
-    system_text = build_chat_system_prompt(request)
+def _openai_messages_for_request(request: ChatRequest, user_name: str) -> list[dict[str, str]]:
+    system_text = build_chat_system_prompt(user_name, request.page_context)
     role_map = {"user": "user", "assistant": "assistant", "system": "system", "model": "assistant"}
     messages = [{"role": "system", "content": system_text}]
     for msg in request.messages:
@@ -638,24 +637,26 @@ def _openai_messages_for_request(request: ChatRequest) -> list[dict[str, str]]:
     return messages
 
 
-def _resolve_custom_router_url(url_str: str | None) -> str:
+def _custom_router_url_from_env() -> str:
+    url_str = os.getenv("CUSTOM_ROUTER_URL")
     if not url_str:
         return "https://openrouter.ai/api/v1/chat/completions"
     from urllib.parse import urlparse, urlunparse
     parsed = urlparse(url_str)
     if parsed.scheme not in ("http", "https") or not parsed.netloc:
-        raise HTTPException(status_code=400, detail="Ugyldig router-URL")
+        raise HTTPException(status_code=503, detail="CUSTOM_ROUTER_URL er ugyldig")
     path = parsed.path
     if not path.endswith("/chat/completions") and "api-key" not in url_str.lower() and "azure" not in url_str.lower():
         path = path.rstrip("/") + "/chat/completions"
     return urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, parsed.query, parsed.fragment))
 
 
-def _router_auth_headers(request: ChatRequest, url: str) -> dict[str, str]:
-    key = request.custom_router_key
+def _router_auth_headers(url: str) -> dict[str, str]:
+    key = os.getenv("CUSTOM_ROUTER_KEY")
     if not key:
         return {}
-    if request.custom_router_header_type == "api-key" or "api-key" in url.lower() or "azure" in url.lower():
+    header_type = os.getenv("CUSTOM_ROUTER_HEADER_TYPE", "Bearer")
+    if header_type == "api-key" or "api-key" in url.lower() or "azure" in url.lower():
         return {"api-key": key}
     return {"Authorization": f"Bearer {key}"}
 
@@ -671,8 +672,8 @@ async def _post_openai_chat(url: str, headers: dict[str, str], messages: list[di
         return ""
 
 
-async def _post_anthropic_chat(request: ChatRequest, anthropic_key: str) -> str:
-    system_text = build_chat_system_prompt(request)
+async def _post_anthropic_chat(request: ChatRequest, user_name: str, anthropic_key: str) -> str:
+    system_text = build_chat_system_prompt(user_name, request.page_context)
     anthropic_messages = [
         {"role": "user" if msg.role == "user" else "assistant", "content": msg.content}
         for msg in request.messages
@@ -698,14 +699,14 @@ async def _post_anthropic_chat(request: ChatRequest, anthropic_key: str) -> str:
         return ""
 
 
-async def _provider_fallback(request: ChatRequest, provider: str, error: Exception) -> str:
+async def _provider_fallback(request: ChatRequest, caller: User, provider: str, error: Exception) -> str:
     logger.error("Error calling %s API: %s. Falling back to smart mock response.", provider, error)
-    mock_resp = await get_smart_mock_response(request)
+    mock_resp = await get_smart_mock_response(request, caller)
     return f"⚠️ **Bemærk**: Kunne ikke forbinde til {provider}-tjenesten ({error}).\n\nJeg har i stedet slået over på lokal simulations-tilstand:\n\n{mock_resp}"
 
 
-def _gemini_system_instruction(request: ChatRequest) -> dict[str, Any]:
-    return {"parts": [{"text": build_chat_system_prompt(request)}]}
+def _gemini_system_instruction(user_name: str, page_context: ChatPageContext | None) -> dict[str, Any]:
+    return {"parts": [{"text": build_chat_system_prompt(user_name, page_context)}]}
 
 
 def _gemini_contents(request: ChatRequest) -> list[dict[str, Any]]:
@@ -721,11 +722,12 @@ async def _gemini_followup_with_tool(
     contents: list[dict[str, Any]],
     system_instruction: dict[str, Any],
     function_call: dict[str, Any],
+    caller: User,
 ) -> str:
     tool_name = function_call.get("name")
     tool_args = function_call.get("args", {})
     logger.info("Gemini requested function call: %s with args %s", tool_name, tool_args)
-    tool_result = await execute_tool(tool_name, tool_args)
+    tool_result = await execute_tool(tool_name, tool_args, caller)
     contents.append({"role": "model", "parts": [{"functionCall": function_call}]})
     contents.append({
         "role": "user",
@@ -741,13 +743,14 @@ async def _gemini_followup_with_tool(
     return "".join(p.get("text", "") for p in second_parts if "text" in p)
 
 
-async def _call_gemini_chat(request: ChatRequest) -> str:
-    api_key = request.google_key or os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
+async def _call_gemini_chat(request: ChatRequest, caller: User) -> str:
+    api_key = os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
-        return await get_smart_mock_response(request)
+        return await get_smart_mock_response(request, caller)
 
     contents = _gemini_contents(request)
-    system_instruction = _gemini_system_instruction(request)
+    user_name = _user_display_name(caller)
+    system_instruction = _gemini_system_instruction(user_name, request.page_context)
     payload = {"contents": contents, "systemInstruction": system_instruction, "tools": GEMINI_TOOLS}
     model = request.model_override or "gemini-1.5-flash"
     if not re.match(r"^[a-zA-Z0-9.\-_]+$", model):
@@ -770,7 +773,7 @@ async def _call_gemini_chat(request: ChatRequest) -> str:
             raise
         except Exception as e:
             logger.error("Error calling Gemini API: %s. Falling back to smart mock response.", e)
-            mock_resp = await get_smart_mock_response(request)
+            mock_resp = await get_smart_mock_response(request, caller)
             prefix = (
                 "⚠️ **Bemærk**: Sprogmodellen er midlertidigt overbelastet (Googles rate-limit/kvote for denne gratis-nøgle er overskredet).\n\n"
                 "For at undgå afbrydelser har jeg slået over på min **smarte simulations-tilstand** via direkte database-opslag, så jeg stadig kan hjælpe dig:\n\n"
@@ -794,7 +797,9 @@ async def _call_gemini_chat(request: ChatRequest) -> str:
         function_call = next((p.get("functionCall") for p in parts if "functionCall" in p), None)
         text_response = "".join(p.get("text", "") for p in parts if "text" in p)
         if function_call:
-            followup = await _gemini_followup_with_tool(client, url, contents, system_instruction, function_call)
+            followup = await _gemini_followup_with_tool(
+                client, url, contents, system_instruction, function_call, caller,
+            )
             return followup or text_response
         return text_response
 
@@ -802,7 +807,7 @@ async def _call_gemini_chat(request: ChatRequest) -> str:
 async def log_chatbot_message(
     db: AsyncSession | None,
     session_str: str | None,
-    user_email: str | None,
+    user_id: uuid.UUID | None,
     sender: str,
     sender_name: str,
     body: str,
@@ -812,12 +817,6 @@ async def log_chatbot_message(
     if db is None:
         return
     try:
-        user_id = None
-        if user_email:
-            user = await get_user_by_email(db, user_email)
-            if user:
-                user_id = user.id
-        
         session_id = None
         if session_str:
             with contextlib.suppress(ValueError):
@@ -843,29 +842,36 @@ async def log_chatbot_message(
 
 
 @router.post("", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(get_db)):
+async def chat_endpoint(
+    request: ChatRequest,
+    db: AsyncSession | None = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     last_user_msg = _extract_last_user_message(request.messages) or None
+    user_name = _user_display_name(current_user)
 
     async def respond(final_response: str) -> ChatResponse:
-        return await _build_logged_response(request, db, last_user_msg, final_response)
+        return await _build_logged_response(
+            request, db, last_user_msg, final_response, current_user,
+        )
 
     if last_user_msg:
-        short_response = await try_short_command(last_user_msg, request.user_email, request.user_name)
+        short_response = await try_short_command(last_user_msg, current_user)
         if short_response:
             return await respond(short_response)
-        context_response = await try_page_context_command(last_user_msg, request.page_context)
+        context_response = await try_page_context_command(
+            last_user_msg, request.page_context, current_user,
+        )
         if context_response:
             return await respond(context_response)
 
-    uses_custom = request.model_override == "custom-router" or (
-        request.custom_router_url and request.model_override in ("custom-router", "openrouter", "azure")
-    )
+    uses_custom = request.model_override in ("custom-router", "openrouter", "azure")
     if uses_custom:
         try:
-            url = _resolve_custom_router_url(request.custom_router_url)
-            headers = _router_auth_headers(request, url)
-            messages = _openai_messages_for_request(request)
-            model = request.custom_router_model or "meta-llama/llama-3-70b-instruct"
+            url = _custom_router_url_from_env()
+            headers = _router_auth_headers(url)
+            messages = _openai_messages_for_request(request, user_name)
+            model = os.getenv("CUSTOM_ROUTER_MODEL") or "meta-llama/llama-3-70b-instruct"
             text = await _post_openai_chat(url, headers, messages, model)
             if not text:
                 text = "Undskyld, jeg modtog ikke et gyldigt svar fra den tilpassede sprogmodel."
@@ -873,45 +879,45 @@ async def chat_endpoint(request: ChatRequest, db: AsyncSession | None = Depends(
         except HTTPException:
             raise
         except Exception as e:
-            return await respond(await _provider_fallback(request, "din tilpassede udbyder", e))
+            return await respond(await _provider_fallback(request, current_user, "din tilpassede udbyder", e))
 
     if request.model_override == "gpt-4o":
-        openai_key = request.openai_key or os.getenv("OPENAI_API_KEY")
+        openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key:
-            logger.warning("OPENAI_API_KEY not found in environment or request. Falling back to mock responses.")
-            return await respond(await get_smart_mock_response(request))
+            logger.warning("OPENAI_API_KEY not found in environment. Falling back to mock responses.")
+            return await respond(await get_smart_mock_response(request, current_user))
         try:
             headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
             text = await _post_openai_chat(
                 "https://api.openai.com/v1/chat/completions",
                 headers,
-                _openai_messages_for_request(request),
+                _openai_messages_for_request(request, user_name),
                 "gpt-4o",
             )
             if not text:
                 text = "Undskyld, jeg modtog ikke et gyldigt svar fra OpenAI-modellen."
             return await respond(text)
         except Exception as e:
-            return await respond(await _provider_fallback(request, "OpenAI", e))
+            return await respond(await _provider_fallback(request, current_user, "OpenAI", e))
 
     if request.model_override == "claude-3-5-sonnet-20241022":
-        anthropic_key = request.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         if not anthropic_key:
-            logger.warning("ANTHROPIC_API_KEY not found in environment or request. Falling back to mock responses.")
-            return await respond(await get_smart_mock_response(request))
+            logger.warning("ANTHROPIC_API_KEY not found in environment. Falling back to mock responses.")
+            return await respond(await get_smart_mock_response(request, current_user))
         try:
-            text = await _post_anthropic_chat(request, anthropic_key)
+            text = await _post_anthropic_chat(request, user_name, anthropic_key)
             if not text:
                 text = "Undskyld, jeg modtog ikke et gyldigt svar fra Anthropic-modellen."
             return await respond(text)
         except Exception as e:
-            return await respond(await _provider_fallback(request, "Anthropic", e))
+            return await respond(await _provider_fallback(request, current_user, "Anthropic", e))
 
-    if not (request.google_key or os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")):
+    if not (os.getenv("GOOGLE_KEY") or os.getenv("GEMINI_API_KEY")):
         logger.warning("GOOGLE_KEY or GEMINI_API_KEY not found in environment. Falling back to mock responses.")
-        return await respond(await get_smart_mock_response(request))
+        return await respond(await get_smart_mock_response(request, current_user))
 
-    return await respond(await _call_gemini_chat(request))
+    return await respond(await _call_gemini_chat(request, current_user))
 
 class MessageReadSchema(BaseModel):
     id: str
@@ -930,23 +936,11 @@ async def get_messages(
     q: str | None = None,
     category: str | None = None,
     only_bookmarked: bool = False,
-    user_email: str | None = None,
-    db: AsyncSession = Depends(require_db)
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ):
-    user_id = None
-    if user_email:
-        user = await get_user_by_email(db, user_email)
-        if user:
-            user_id = user.id
-
     query = select(ChatbotMessage)
-    conditions = []
-    
-    if user_id:
-        conditions.append(ChatbotMessage.user_id == user_id)
-    elif user_email:
-        # If user is not found, filter by None to return empty
-        conditions.append(ChatbotMessage.user_id.is_(None))
+    conditions = [ChatbotMessage.user_id == current_user.id]
 
     if category and category != "Alle":
         conditions.append(ChatbotMessage.category == category)
@@ -990,7 +984,8 @@ async def get_messages(
 @router.post("/messages/{msg_id}/bookmark")
 async def toggle_bookmark(
     msg_id: str,
-    db: AsyncSession = Depends(require_db)
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         msg_uuid = uuid.UUID(msg_id)
@@ -1001,6 +996,8 @@ async def toggle_bookmark(
     result = await db.execute(query)
     msg = result.scalar_one_or_none()
     if not msg:
+        raise HTTPException(status_code=404, detail="Besked ikke fundet")
+    if msg.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Besked ikke fundet")
 
     msg.is_bookmarked = not msg.is_bookmarked
@@ -1013,6 +1010,7 @@ async def toggle_bookmark(
 async def delete_message(
     msg_id: str,
     db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         msg_uuid = uuid.UUID(msg_id)
@@ -1024,6 +1022,8 @@ async def delete_message(
     msg = result.scalar_one_or_none()
     if not msg:
         raise HTTPException(status_code=404, detail="Besked ikke fundet")
+    if msg.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Besked ikke fundet")
 
     await db.delete(msg)
     await db.commit()
@@ -1033,14 +1033,18 @@ async def delete_message(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: str,
-    db: AsyncSession = Depends(require_db)
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
 ):
     try:
         session_uuid = uuid.UUID(session_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Ugyldigt session-ID")
 
-    stmt = delete(ChatbotMessage).where(ChatbotMessage.session_id == session_uuid)
+    stmt = delete(ChatbotMessage).where(
+        ChatbotMessage.session_id == session_uuid,
+        ChatbotMessage.user_id == current_user.id,
+    )
     await db.execute(stmt)
     await db.commit()
     return {"success": True}

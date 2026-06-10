@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 
+from tests.conftest import FAKE_ADMIN
 from star_itsm_api.models.chatbot_message import ChatbotMessage
 from star_itsm_api.routers.chat import (
     ChatPageContext,
@@ -27,15 +28,15 @@ async def test_try_short_command_close_ticket_with_note() -> None:
     ) as mock_update:
         result = await try_short_command(
             "luk sag INC-2026-00042 - Kunden bekræftede løsning",
-            "agent@example.dk",
-            "Agent",
+            FAKE_ADMIN,
         )
     assert result == "Sag lukket"
     mock_update.assert_awaited_once_with(
         ticket_number="INC-2026-00042",
         status="closed",
-        actor_email="agent@example.dk",
+        actor_email="admin@example.dk",
         note="Kunden bekræftede løsning",
+        caller=FAKE_ADMIN,
     )
 
 
@@ -48,15 +49,15 @@ async def test_try_short_command_resolve_ticket() -> None:
     ) as mock_update:
         result = await try_short_command(
             "løs INC-2026-00042",
-            "agent@example.dk",
-            None,
+            FAKE_ADMIN,
         )
     assert result == "Sag løst"
     mock_update.assert_awaited_once_with(
         ticket_number="INC-2026-00042",
         status="resolved",
-        actor_email="agent@example.dk",
+        actor_email="admin@example.dk",
         note=None,
+        caller=FAKE_ADMIN,
     )
 
 
@@ -67,9 +68,9 @@ async def test_try_short_command_lookup_ticket() -> None:
         new_callable=AsyncMock,
         return_value="INC-2026-00042: Printer fejl",
     ) as mock_lookup:
-        result = await try_short_command("INC-2026-00042", "agent@example.dk", None)
+        result = await try_short_command("INC-2026-00042", FAKE_ADMIN)
     assert "INC-2026-00042" in (result or "")
-    mock_lookup.assert_awaited_once_with("INC-2026-00042")
+    mock_lookup.assert_awaited_once_with("INC-2026-00042", caller=FAKE_ADMIN)
 
 
 @pytest.mark.asyncio
@@ -79,10 +80,10 @@ async def test_try_short_command_mine_sager() -> None:
         new_callable=AsyncMock,
         return_value="INC-2026-00001 (new)",
     ) as mock_tickets:
-        result = await try_short_command("mine sager", "sf01@example.dk", None)
+        result = await try_short_command("mine sager", FAKE_ADMIN)
     assert result is not None
     assert "INC-2026-00001" in result
-    mock_tickets.assert_awaited_once_with("sf01@example.dk")
+    mock_tickets.assert_awaited_once_with("admin@example.dk", caller=FAKE_ADMIN)
 
 
 @pytest.mark.asyncio
@@ -94,25 +95,25 @@ async def test_try_short_command_opret_sag_with_dash() -> None:
     ) as mock_create:
         result = await try_short_command(
             "opret: Printer fejl - Den udskriver kun tomme sider",
-            "sf01@example.dk",
-            None,
+            FAKE_ADMIN,
         )
     assert result == "Oprettet INC-2026-00099"
     mock_create.assert_awaited_once_with(
-        user_email="sf01@example.dk",
+        user_email="admin@example.dk",
         title="Printer fejl",
         description="Den udskriver kun tomme sider",
+        caller=FAKE_ADMIN,
     )
 
 
 @pytest.mark.asyncio
 async def test_try_short_command_returns_none_for_empty() -> None:
-    assert await try_short_command("", "sf01@example.dk", None) is None
+    assert await try_short_command("", FAKE_ADMIN) is None
 
 
 @pytest.mark.asyncio
 async def test_execute_tool_unknown_name() -> None:
-    result = await execute_tool("missing_tool", {})
+    result = await execute_tool("missing_tool", {}, FAKE_ADMIN)
     assert "findes ikke" in result
 
 
@@ -123,7 +124,7 @@ async def test_execute_tool_get_ticket_categories() -> None:
         new_callable=AsyncMock,
         return_value="IT-Support",
     ) as mock_cats:
-        result = await execute_tool("get_ticket_categories", {})
+        result = await execute_tool("get_ticket_categories", {}, FAKE_ADMIN)
     assert result == "IT-Support"
     mock_cats.assert_awaited_once()
 
@@ -135,9 +136,9 @@ async def test_execute_tool_get_user_tickets() -> None:
         new_callable=AsyncMock,
         return_value="INC-1",
     ) as mock_tickets:
-        result = await execute_tool("get_user_tickets", {"user_email": "sf01@example.dk"})
+        result = await execute_tool("get_user_tickets", {}, FAKE_ADMIN)
     assert result == "INC-1"
-    mock_tickets.assert_awaited_once_with("sf01@example.dk")
+    mock_tickets.assert_awaited_once_with("admin@example.dk", caller=FAKE_ADMIN)
 
 
 @pytest.mark.asyncio
@@ -147,7 +148,7 @@ async def test_execute_tool_handles_exception() -> None:
         new_callable=AsyncMock,
         side_effect=RuntimeError("db down"),
     ):
-        result = await execute_tool("search_knowledge_articles", {"query": "vpn"})
+        result = await execute_tool("search_knowledge_articles", {"query": "vpn"}, FAKE_ADMIN)
     assert "Fejl under kørsel" in result
 
 
@@ -169,7 +170,6 @@ async def test_get_smart_mock_uses_short_command(api_client: AsyncClient) -> Non
                 "/api/v1/chat",
                 json={
                     "messages": [{"role": "user", "content": "luk INC-2026-00042"}],
-                    "user_email": "agent@example.dk",
                 },
             )
     assert response.status_code == 200
@@ -181,7 +181,7 @@ async def test_chat_messages_list_with_user_filter(
     override_db: AsyncMock,
     api_client: AsyncClient,
 ) -> None:
-    user_id = uuid.uuid4()
+    user_id = FAKE_ADMIN.id
     msg = ChatbotMessage(
         id=uuid.uuid4(),
         session_id=uuid.uuid4(),
@@ -194,8 +194,6 @@ async def test_chat_messages_list_with_user_filter(
         is_bookmarked=False,
         created_at=datetime.now(UTC),
     )
-    user = MagicMock()
-    user.id = user_id
 
     scalars = MagicMock()
     scalars.all.return_value = [msg]
@@ -203,15 +201,10 @@ async def test_chat_messages_list_with_user_filter(
     execute_result.scalars.return_value = scalars
     override_db.execute = AsyncMock(return_value=execute_result)
 
-    with patch(
-        "star_itsm_api.routers.chat.get_user_by_email",
-        new_callable=AsyncMock,
-        return_value=user,
-    ):
-        response = await api_client.get(
-            "/api/v1/chat/messages",
-            params={"user_email": "sf01@example.dk", "q": "vpn"},
-        )
+    response = await api_client.get(
+        "/api/v1/chat/messages",
+        params={"q": "vpn"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -228,6 +221,7 @@ async def test_chat_toggle_bookmark_success(
     msg = ChatbotMessage(
         id=msg_id,
         session_id=uuid.uuid4(),
+        user_id=FAKE_ADMIN.id,
         sender="user",
         sender_name="Anna",
         body="Hej",
@@ -259,6 +253,7 @@ async def test_chat_delete_message_success(
     msg = ChatbotMessage(
         id=msg_id,
         session_id=uuid.uuid4(),
+        user_id=FAKE_ADMIN.id,
         sender="user",
         sender_name="Anna",
         body="Hej",
@@ -298,14 +293,13 @@ async def test_get_smart_mock_response_categories() -> None:
 
     request = ChatRequest(
         messages=[{"role": "user", "content": "vis kategorier"}],
-        user_email="sf01@example.dk",
     )
     with patch(
         "star_itsm_api.routers.chat.get_ticket_categories",
         new_callable=AsyncMock,
         return_value="Kategori: IT",
     ):
-        response = await get_smart_mock_response(request)
+        response = await get_smart_mock_response(request, FAKE_ADMIN)
     assert "IT" in response
 
 
@@ -318,8 +312,7 @@ async def test_try_short_command_close_prefix() -> None:
     ) as mock_update:
         result = await try_short_command(
             "close INC-2026-00001",
-            "agent@example.dk",
-            None,
+            FAKE_ADMIN,
         )
     assert result == "Lukket"
     mock_update.assert_awaited_once()
@@ -332,9 +325,9 @@ async def test_execute_tool_get_ticket_by_number() -> None:
         new_callable=AsyncMock,
         return_value="INC-2026-00001: Printer",
     ) as mock_get:
-        result = await execute_tool("get_ticket_by_number", {"ticket_number": "INC-2026-00001"})
+        result = await execute_tool("get_ticket_by_number", {"ticket_number": "INC-2026-00001"}, FAKE_ADMIN)
     assert "INC-2026-00001" in result
-    mock_get.assert_awaited_once_with("INC-2026-00001")
+    mock_get.assert_awaited_once_with("INC-2026-00001", caller=FAKE_ADMIN)
 
 
 @pytest.mark.asyncio
@@ -349,8 +342,8 @@ async def test_execute_tool_update_ticket_status() -> None:
             {
                 "ticket_number": "INC-2026-00001",
                 "status": "resolved",
-                "actor_email": "agent@example.dk",
             },
+            FAKE_ADMIN,
         )
     assert result == "Status opdateret"
     mock_update.assert_awaited_once()
@@ -396,10 +389,10 @@ async def test_try_page_context_command_summarize_ticket() -> None:
         new_callable=AsyncMock,
         return_value="INC-2026-00118: Printer fejl",
     ) as mock_lookup:
-        result = await try_page_context_command("Opsummer denne sag", page_context)
+        result = await try_page_context_command("Opsummer denne sag", page_context, FAKE_ADMIN)
     assert result is not None
     assert "opsummering" in result.lower()
-    mock_lookup.assert_awaited_once_with("INC-2026-00118")
+    mock_lookup.assert_awaited_once_with("INC-2026-00118", caller=FAKE_ADMIN)
 
 
 @pytest.mark.asyncio
@@ -407,22 +400,20 @@ async def test_try_page_context_command_ignores_without_ticket() -> None:
     result = await try_page_context_command(
         "Opsummer denne sag",
         ChatPageContext(page_path="/tickets", page_label="Alle sager"),
+        FAKE_ADMIN,
     )
     assert result is None
 
 
 def test_build_chat_system_prompt_includes_page_context() -> None:
     prompt = build_chat_system_prompt(
-        ChatRequest(
-            messages=[],
-            user_name="Anna",
-            page_context=ChatPageContext(
-                page_path="/tickets/abc",
-                page_label="Sagsdetaljer",
-                ticket_number="INC-2026-00118",
-                ticket_title="Printer fejl",
-            ),
-        )
+        "Anna",
+        ChatPageContext(
+            page_path="/tickets/abc",
+            page_label="Sagsdetaljer",
+            ticket_number="INC-2026-00118",
+            ticket_title="Printer fejl",
+        ),
     )
     assert "Sagsdetaljer" in prompt
     assert "INC-2026-00118" in prompt
