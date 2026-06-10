@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useCallback, useId, useMemo, useState } from "react";
 import { ExternalLink, Pin, Plus, X } from "lucide-react";
@@ -147,7 +149,7 @@ export function PersonalKanbanBoard({
                     size="sm"
                     className="bulletin-ticket-chip__add h-6 px-2 text-[10px]"
                     disabled={busy}
-                    onClick={() => void placeTicketInColumn(ticket.id, PINNED_QUEUE_COLUMN)}
+                    onClick={() => fireAndForget(placeTicketInColumn(ticket.id, PINNED_QUEUE_COLUMN))}
                   >
                     Fastgør
                   </Button>
@@ -179,7 +181,7 @@ export function PersonalKanbanBoard({
               e.preventDefault();
               const ticketId = e.dataTransfer.getData(PERSONAL_KANBAN_DRAG_MIME);
               setDragTicketId(null);
-              if (ticketId) void placeTicketInColumn(ticketId, column);
+              if (ticketId) fireAndForget(placeTicketInColumn(ticketId, column));
             }}
           >
             <div className="mb-3 flex items-center justify-between">
@@ -235,7 +237,7 @@ export function PersonalKanbanBoard({
                           className="size-7"
                           aria-label="Fastgør på opslagstavle"
                           title="Fastgør på opslagstavle"
-                          onClick={() => void placeTicketInColumn(card.ticket_id, PINNED_QUEUE_COLUMN)}
+                          onClick={() => fireAndForget(placeTicketInColumn(card.ticket_id, PINNED_QUEUE_COLUMN))}
                         >
                           <Pin className="size-3.5" aria-hidden />
                         </Button>
@@ -245,7 +247,7 @@ export function PersonalKanbanBoard({
                           size="icon"
                           className="size-7"
                           aria-label="Fjern fra board"
-                          onClick={() => void removeTicket(card.ticket_id)}
+                          onClick={() => fireAndForget(removeTicket(card.ticket_id))}
                         >
                           <X className="size-4" aria-hidden />
                         </Button>
@@ -273,7 +275,7 @@ export function PersonalKanbanBoard({
           setCreateDialogColumn(null);
         }}
         onCreated={() => {
-          void refreshKanban();
+          fireAndForget(refreshKanban());
         }}
       />
     </section>

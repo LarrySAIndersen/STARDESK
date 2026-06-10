@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useMemo, useState, type DragEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -172,7 +174,7 @@ export function PersonalNoteStack({
                 size="icon"
                 className="post-it-stack__delete size-6 opacity-0 transition-opacity group-hover:opacity-100"
                 aria-label="Slet seddel"
-                onClick={() => void deleteTopNote(topNote.id).catch(() => {})}
+                onClick={() => fireAndForget(deleteTopNote(topNote.id).catch(() => {}))}
               >
                 <Trash2 className="text-destructive size-3" aria-hidden />
               </Button>
@@ -193,7 +195,7 @@ export function PersonalNoteStack({
             )}
             style={{ zIndex: 10 }}
             disabled={busy}
-            onClick={() => void createFreshNote()}
+            onClick={() => fireAndForget(createFreshNote())}
           >
             <span className="post-it-stack__title">Ny seddel</span>
             <span className="post-it-stack__hint">Klik for frisk seddel</span>
@@ -207,7 +209,7 @@ export function PersonalNoteStack({
         size="sm"
         className="post-it-stack__add"
         disabled={busy}
-        onClick={() => void createFreshNote()}
+        onClick={() => fireAndForget(createFreshNote())}
       >
         <Plus className="size-3.5" aria-hidden />
         Frisk seddel

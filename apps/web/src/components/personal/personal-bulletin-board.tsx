@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useState, type DragEvent } from "react";
 import { PinOff, StickyNote, Ticket, X } from "lucide-react";
@@ -134,7 +136,7 @@ export function PersonalBulletinBoard({
     setNotesDropDepth(0);
     setNotesDropActive(false);
     const noteId = readDraggedNoteId(e.dataTransfer);
-    if (noteId) void pinNote(noteId).catch(() => {});
+    if (noteId) fireAndForget(pinNote(noteId).catch(() => {}));
   };
 
   const handleTicketsDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -147,7 +149,7 @@ export function PersonalBulletinBoard({
     e.preventDefault();
     setTicketsDropActive(false);
     const ticketId = readDraggedTicketId(e.dataTransfer);
-    if (ticketId) void pinTicket(ticketId).catch(() => {});
+    if (ticketId) fireAndForget(pinTicket(ticketId).catch(() => {}));
   };
 
   return (
@@ -165,7 +167,7 @@ export function PersonalBulletinBoard({
           <PersonalNoteStack
             notes={notes}
             onNotesChange={onNotesChange}
-            onNoteDropToStack={(noteId) => void unpinNote(noteId).catch(() => {})}
+            onNoteDropToStack={(noteId) => fireAndForget(unpinNote(noteId).catch(() => {}))}
           />
           <div className="bulletin-board-split">
           <div
@@ -230,7 +232,7 @@ export function PersonalBulletinBoard({
                             size="icon"
                             className="bulletin-board-action"
                             aria-label="Frigør seddel fra tavlen"
-                            onClick={() => void unpinNote(note.id).catch(() => {})}
+                            onClick={() => fireAndForget(unpinNote(note.id).catch(() => {}))}
                           >
                             <PinOff className="size-3.5" aria-hidden />
                           </Button>
@@ -285,7 +287,7 @@ export function PersonalBulletinBoard({
                           size="icon"
                           className="bulletin-board-action"
                           aria-label="Fjern sag fra tavlen"
-                          onClick={() => void removeFromBoard(ticketId).catch(() => {})}
+                          onClick={() => fireAndForget(removeFromBoard(ticketId).catch(() => {}))}
                         >
                           <X className="size-3.5" aria-hidden />
                         </Button>

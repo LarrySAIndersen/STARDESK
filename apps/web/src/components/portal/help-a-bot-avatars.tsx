@@ -56,7 +56,7 @@ export const HELP_A_BOT_AVATARS: HelpABotAvatarDef[] = [
 
 export const HELP_A_BOT_AVATAR_STORAGE_KEY = "stardesk-helpabot-avatar";
 
-type Gaze = { x: number; y: number };
+type Gaze = Readonly<{ x: number; y: number }>;
 
 const HEAD_ROTATE_MAX = 18;
 const PUPIL_OFFSET = 2.8;

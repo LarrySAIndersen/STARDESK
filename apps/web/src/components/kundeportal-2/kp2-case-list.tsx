@@ -15,9 +15,9 @@ const TYPE_LABELS: Record<Kp2CaseRow["type"], string> = {
   change: "Change",
 };
 
-type Kp2CaseListProps = {
+type Kp2CaseListProps = Readonly<{
   extended?: boolean;
-};
+}>;
 
 export function Kp2CaseList({ extended = false }: Kp2CaseListProps) {
   const user = getClientUser();

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Pin, StickyNote } from "lucide-react";
@@ -45,11 +47,11 @@ export function PinnedNotesSidebar({ collapsed }: { collapsed: boolean }) {
   }, []);
 
   useEffect(() => {
-    void loadBoard();
+    fireAndForget(loadBoard());
   }, [loadBoard]);
 
   useEffect(() => {
-    const onFocus = () => void loadBoard();
+    const onFocus = () => fireAndForget(loadBoard());
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [loadBoard]);

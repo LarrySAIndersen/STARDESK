@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -82,7 +84,7 @@ export function TicketsListClient({
   }, []);
 
   useEffect(() => {
-    void refreshPostItCounts(tickets);
+    fireAndForget(refreshPostItCounts(tickets));
   }, [tickets, refreshPostItCounts]);
 
   const router = useRouter();
@@ -191,7 +193,7 @@ export function TicketsListClient({
   ]);
 
   return (
-    <PostItAttachProvider onAttached={() => void refreshPostItCounts(filtered)}>
+    <PostItAttachProvider onAttached={() => fireAndForget(refreshPostItCounts(filtered))}>
     <div className="space-y-3">
       {fromDashboard ? (
         <div className="flex flex-wrap items-center gap-2">

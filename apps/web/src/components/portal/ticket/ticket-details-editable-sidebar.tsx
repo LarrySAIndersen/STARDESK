@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -487,7 +489,7 @@ export function TicketDetailsEditableSidebar({
         type="button"
         className="mt-4 w-full"
         disabled={!hasChanges || isSaving}
-        onClick={() => void handleSave()}
+        onClick={() => fireAndForget(handleSave())}
       >
         {isSaving ? "Gemmer…" : "Gem"}
       </Button>
