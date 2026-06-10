@@ -90,6 +90,17 @@ async def test_chat_ignores_spoofed_user_email_in_body(client: AsyncClient, as_s
 @pytest.mark.asyncio
 async def test_chat_request_rejects_client_api_keys(client: AsyncClient) -> None:
     """Client-supplied secret fields are ignored; env keys and no SSRF to client URL."""
+    captured_urls: list[str] = []
+
+    async def fake_post_openai(
+        url: str,
+        headers: dict[str, str],
+        messages: list[dict[str, str]],
+        model: str,
+    ) -> str:
+        captured_urls.append(url)
+        return "Svar fra OpenAI"
+
     with patch.dict("os.environ", {"OPENAI_API_KEY": "env-key"}, clear=True):
         payload = {
             "messages": [{"role": "user", "content": "Hej"}],
@@ -97,24 +108,14 @@ async def test_chat_request_rejects_client_api_keys(client: AsyncClient) -> None
             "openai_key": "client-supplied-key",
             "custom_router_url": "https://evil.example.com/v1/chat/completions",
         }
-        mock_res_json = {"choices": [{"message": {"content": "Svar fra OpenAI"}}]}
-        original_post = AsyncClient.post
-        captured_urls: list[str] = []
-
-        async def mock_post_fn(self, url, *args, **kwargs):
-            captured_urls.append(str(url))
-            if "api.openai.com" in str(url):
-                import httpx as httpx_mod
-                req = httpx_mod.Request("POST", url)
-                return Response(200, json=mock_res_json, request=req)
-            return await original_post(self, url, *args, **kwargs)
-
-        with patch("httpx.AsyncClient.post", mock_post_fn):
+        with patch("star_itsm_api.routers.chat._post_openai_chat", fake_post_openai):
             response = await client.post("/api/v1/chat", json=payload)
 
     assert response.status_code == 200
+    assert captured_urls
     assert any("api.openai.com" in url for url in captured_urls)
     assert not any("evil.example.com" in url for url in captured_urls)
+    assert "Svar fra OpenAI" in response.json()["response"]
 
 
 @pytest.mark.asyncio
@@ -156,3 +157,47 @@ async def test_execute_tool_update_status_non_staff_denied() -> None:
         )
     assert "medarbejdere" in result.lower()
     mock_update.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_gemini_error_response_never_leaks_api_key(client: AsyncClient) -> None:
+    """FINDING-108 — upstream failures must not expose GOOGLE_KEY in chat body."""
+    leaked_key = "AIzaSy-FAKE-LEAK-TEST-KEY-1234567890"
+    with patch.dict("os.environ", {"GOOGLE_KEY": leaked_key}, clear=False):
+        original_post = AsyncClient.post
+
+        async def boom_on_gemini(self, url, *args, **kwargs):
+            if "generativelanguage.googleapis.com" in str(url):
+                raise RuntimeError(
+                    f"Client error '404 Not Found' for url "
+                    f"'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={leaked_key}'"
+                )
+            return await original_post(self, url, *args, **kwargs)
+
+        with patch("star_itsm_api.routers.chat.httpx.AsyncClient.post", boom_on_gemini):
+            with patch(
+                "star_itsm_api.routers.chat.get_smart_mock_response",
+                AsyncMock(return_value="Simuleret svar."),
+            ):
+                response = await client.post(
+                    "/api/v1/chat",
+                    json={"messages": [{"role": "user", "content": "Hej"}]},
+                )
+
+    assert response.status_code == 200
+    body = response.json()["response"]
+    assert leaked_key not in body
+    assert "key=" not in body.lower()
+    assert "generativelanguage.googleapis.com" not in body
+
+
+def test_sanitize_client_error_message_redacts_secrets() -> None:
+    from star_itsm_api.routers.chat import _sanitize_client_error_message
+
+    raw = (
+        "404 for https://generativelanguage.googleapis.com/v1beta/models/x:generateContent?key=SECRET123"
+    )
+    cleaned = _sanitize_client_error_message(RuntimeError(raw))
+    assert "SECRET123" not in cleaned
+    assert "generativelanguage.googleapis.com" not in cleaned
+    assert "[upstream-api-endpoint]" in cleaned

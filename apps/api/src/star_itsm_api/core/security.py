@@ -179,7 +179,8 @@ def require_staff():
 
 
 def require_admin():
-    return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER)
+    """Config/user admin — supporter is staff but not a config admin (FINDING-114)."""
+    return require_roles(ROLE_ADMIN, ROLE_TOP_ADMIN)
 
 
 def require_admin_session():
@@ -190,7 +191,7 @@ def require_admin_session():
     """
 
     def _checker(user: User = Depends(get_current_user_session)) -> User:
-        if not user_has_any_role(user, ROLE_ADMIN, ROLE_TOP_ADMIN, ROLE_SUPPORTER):
+        if not user_has_any_role(user, ROLE_ADMIN, ROLE_TOP_ADMIN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=INSUFFICIENT_PERMISSIONS,

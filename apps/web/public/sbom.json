@@ -3,15 +3,15 @@
   "bomFormat": "CycloneDX",
   "specVersion": "1.6",
   "version": 1,
-  "serialNumber": "urn:uuid:3262fbc1-5645-458a-b21e-afe4bc20fbfd",
+  "serialNumber": "urn:uuid:ab69d3bf-db79-45bd-a968-2158dbd3cc09",
   "metadata": {
-    "timestamp": "2026-06-05T18:54:18.493Z",
+    "timestamp": "2026-06-10T15:18:32.521Z",
     "tools": {
       "components": [
         {
           "type": "application",
           "name": "npm",
-          "version": "11.12.1"
+          "version": "11.13.0"
         },
         {
           "type": "application",
@@ -378,185 +378,6 @@
     },
     {
       "type": "library",
-      "name": "core",
-      "group": "@emnapi",
-      "version": "1.10.0",
-      "bom-ref": "star-itsm-web@0.1.0|@emnapi/core@1.10.0",
-      "author": "toyobayashi",
-      "description": "emnapi core",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40emnapi/core@1.10.0",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/toyobayashi/emnapi.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/@emnapi/core/-/core-1.10.0.tgz",
-          "type": "distribution",
-          "hashes": [
-            {
-              "alg": "SHA-512",
-              "content": "caae8e909e29f360807cf974bbd99079b40728f26463b5ab22e936d3971362761efa4d99f18061d7516b6d11bf1fa8a18aba9c69c3a09760483bca323102de5f"
-            }
-          ],
-          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:development",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:extraneous",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/@emnapi/core"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "runtime",
-      "group": "@emnapi",
-      "version": "1.10.0",
-      "bom-ref": "star-itsm-web@0.1.0|@emnapi/runtime@1.10.0",
-      "author": "toyobayashi",
-      "description": "emnapi runtime",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40emnapi/runtime@1.10.0",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/toyobayashi/emnapi.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.10.0.tgz",
-          "type": "distribution",
-          "hashes": [
-            {
-              "alg": "SHA-512",
-              "content": "7b0bd8964f3ac54a06234cd044dabf982fb5e91d5078394a432db52a2de84985cd80b6f8e465753fa03433efecea7c82b8d0ea7b9569698f380735c6c156f014"
-            }
-          ],
-          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:extraneous",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/@emnapi/runtime"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "wasi-threads",
-      "group": "@emnapi",
-      "version": "1.2.1",
-      "bom-ref": "star-itsm-web@0.1.0|@emnapi/wasi-threads@1.2.1",
-      "author": "toyobayashi",
-      "description": "WASI threads proposal implementation in JavaScript",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40emnapi/wasi-threads@1.2.1",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/toyobayashi/emnapi.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/emnapi/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/@emnapi/wasi-threads/-/wasi-threads-1.2.1.tgz",
-          "type": "distribution",
-          "hashes": [
-            {
-              "alg": "SHA-512",
-              "content": "b93208ece605fbf31eb3f32b708398a79c8eb5230b056488a0b3e9720c22a6888a6e58ba937db6b5ca05b31a082313c3a96d35490180824a38133662d8136fdb"
-            }
-          ],
-          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:development",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:extraneous",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/@emnapi/wasi-threads"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "eslintrc",
       "group": "@eslint",
       "version": "3.3.5",
@@ -665,6 +486,62 @@
     },
     {
       "type": "library",
+      "name": "test",
+      "group": "@playwright",
+      "version": "1.60.0",
+      "bom-ref": "star-itsm-web@0.1.0|@playwright/test@1.60.0",
+      "author": "Microsoft Corporation",
+      "description": "A high-level API to automate web browsers",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40playwright/test@1.60.0",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/microsoft/playwright.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://playwright.dev",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/microsoft/playwright/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/@playwright/test/-/test-1.60.0.tgz",
+          "type": "distribution",
+          "hashes": [
+            {
+              "alg": "SHA-512",
+              "content": "3bbd726486c087f3f10cc3469ecdfb1870487eb564115ca7f805f221ae5d3937dbe3fc4dbd1595f95bff34c6cd0ad38307fa4eeef2e517639398c54b866afb02"
+            }
+          ],
+          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@playwright/test"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "postcss",
       "group": "@tailwindcss",
       "version": "4.3.0",
@@ -715,67 +592,6 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/@tailwindcss/postcss"
-        }
-      ]
-    },
-    {
-      "type": "library",
-      "name": "wasm-util",
-      "group": "@tybys",
-      "version": "0.10.2",
-      "bom-ref": "star-itsm-web@0.1.0|@tybys/wasm-util@0.10.2",
-      "author": "toyobayashi",
-      "description": "WASI polyfill for browser and some wasm util",
-      "scope": "optional",
-      "licenses": [
-        {
-          "license": {
-            "id": "MIT",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/%40tybys/wasm-util@0.10.2",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/toyobayashi/wasm-util.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/wasm-util#readme",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/toyobayashi/wasm-util/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/@tybys/wasm-util/-/wasm-util-0.10.2.tgz",
-          "type": "distribution",
-          "hashes": [
-            {
-              "alg": "SHA-512",
-              "content": "46806f2765f4c2e2a5585223af07df1b0d48a991ca42acc872129a69d6597e7369b00629da6334877e89b4f0a33430071a061ecffd79b8c0697c6c1c86188c82"
-            }
-          ],
-          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:development",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:extraneous",
-          "value": "true"
-        },
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/@tybys/wasm-util"
         }
       ]
     },
@@ -3091,57 +2907,6 @@
     },
     {
       "type": "library",
-      "name": "tslib",
-      "version": "2.8.1",
-      "bom-ref": "star-itsm-web@0.1.0|tslib@2.8.1",
-      "author": "Microsoft Corp.",
-      "description": "Runtime library for TypeScript helper functions",
-      "licenses": [
-        {
-          "license": {
-            "id": "0BSD",
-            "acknowledgement": "declared"
-          }
-        }
-      ],
-      "purl": "pkg:npm/tslib@2.8.1",
-      "externalReferences": [
-        {
-          "url": "git+https://github.com/Microsoft/tslib.git",
-          "type": "vcs",
-          "comment": "as detected from PackageJson property \"repository.url\""
-        },
-        {
-          "url": "https://www.typescriptlang.org/",
-          "type": "website",
-          "comment": "as detected from PackageJson property \"homepage\""
-        },
-        {
-          "url": "https://github.com/Microsoft/TypeScript/issues",
-          "type": "issue-tracker",
-          "comment": "as detected from PackageJson property \"bugs.url\""
-        },
-        {
-          "url": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
-          "type": "distribution",
-          "hashes": [
-            {
-              "alg": "SHA-512",
-              "content": "a0916ef781d06fe29576e49440bef09e99aa9df98bb0e03f9c087a6fa107d30084a0ad3f98f79753a737c0a0d5f373243ae1cf447b525ca294f7d2016b34bfdb"
-            }
-          ],
-          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
-        }
-      ],
-      "properties": [
-        {
-          "name": "cdx:npm:package:path",
-          "value": "node_modules/tslib"
-        }
-      ]
-    },
-    {
-      "type": "library",
       "name": "ajv",
       "version": "6.15.0",
       "bom-ref": "star-itsm-web@0.1.0|ajv@6.15.0",
@@ -3668,6 +3433,61 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/@standard-schema/utils"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "playwright",
+      "version": "1.60.0",
+      "bom-ref": "star-itsm-web@0.1.0|playwright@1.60.0",
+      "author": "Microsoft Corporation",
+      "description": "A high-level API to automate web browsers",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/playwright@1.60.0",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/microsoft/playwright.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://playwright.dev",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/microsoft/playwright/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/playwright/-/playwright-1.60.0.tgz",
+          "type": "distribution",
+          "hashes": [
+            {
+              "alg": "SHA-512",
+              "content": "86178776890cf1c76a09bd25704decfb34f8b785bebef8e91b1b199439e291aaf3c7cb52ccc79b87752216d82ac05c274e78d841cb32305f1e8b69823bfb6978"
+            }
+          ],
+          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/playwright"
         }
       ]
     },
@@ -12678,6 +12498,61 @@
     },
     {
       "type": "library",
+      "name": "playwright-core",
+      "version": "1.60.0",
+      "bom-ref": "star-itsm-web@0.1.0|playwright-core@1.60.0",
+      "author": "Microsoft Corporation",
+      "description": "A high-level API to automate web browsers",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/playwright-core@1.60.0",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/microsoft/playwright.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://playwright.dev",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/microsoft/playwright/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.60.0.tgz",
+          "type": "distribution",
+          "hashes": [
+            {
+              "alg": "SHA-512",
+              "content": "f5b5bacef5ff9b49446e04ca27a629a4e2b1f07dd538f04c382161da2ad714e4f805b1e0af1e613e3c0960b4f8d0bbbee2ab43dfaa8a73f1e7e7a4ad516e7b20"
+            }
+          ],
+          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        },
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/playwright-core"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "remapping",
       "group": "@jridgewell",
       "version": "2.3.5",
@@ -17300,6 +17175,57 @@
         {
           "name": "cdx:npm:package:path",
           "value": "node_modules/word-wrap"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "tslib",
+      "version": "2.8.1",
+      "bom-ref": "star-itsm-web@0.1.0|tslib@2.8.1",
+      "author": "Microsoft Corp.",
+      "description": "Runtime library for TypeScript helper functions",
+      "licenses": [
+        {
+          "license": {
+            "id": "0BSD",
+            "acknowledgement": "declared"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tslib@2.8.1",
+      "externalReferences": [
+        {
+          "url": "git+https://github.com/Microsoft/tslib.git",
+          "type": "vcs",
+          "comment": "as detected from PackageJson property \"repository.url\""
+        },
+        {
+          "url": "https://www.typescriptlang.org/",
+          "type": "website",
+          "comment": "as detected from PackageJson property \"homepage\""
+        },
+        {
+          "url": "https://github.com/Microsoft/TypeScript/issues",
+          "type": "issue-tracker",
+          "comment": "as detected from PackageJson property \"bugs.url\""
+        },
+        {
+          "url": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+          "type": "distribution",
+          "hashes": [
+            {
+              "alg": "SHA-512",
+              "content": "a0916ef781d06fe29576e49440bef09e99aa9df98bb0e03f9c087a6fa107d30084a0ad3f98f79753a737c0a0d5f373243ae1cf447b525ca294f7d2016b34bfdb"
+            }
+          ],
+          "comment": "as detected from npm-ls property \"resolved\" and property \"integrity\""
+        }
+      ],
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/tslib"
         }
       ]
     },
@@ -43170,13 +43096,10 @@
       "dependsOn": [
         "star-itsm-web@0.1.0|@base-ui/react@1.4.1",
         "star-itsm-web@0.1.0|@cyclonedx/cyclonedx-npm@4.2.1",
-        "star-itsm-web@0.1.0|@emnapi/core@1.10.0",
-        "star-itsm-web@0.1.0|@emnapi/runtime@1.10.0",
-        "star-itsm-web@0.1.0|@emnapi/wasi-threads@1.2.1",
         "star-itsm-web@0.1.0|@eslint/eslintrc@3.3.5",
         "star-itsm-web@0.1.0|@hookform/resolvers@5.2.2",
+        "star-itsm-web@0.1.0|@playwright/test@1.60.0",
         "star-itsm-web@0.1.0|@tailwindcss/postcss@4.3.0",
-        "star-itsm-web@0.1.0|@tybys/wasm-util@0.10.2",
         "star-itsm-web@0.1.0|@types/node@20.19.41",
         "star-itsm-web@0.1.0|@types/react-dom@19.2.3",
         "star-itsm-web@0.1.0|@types/react@19.2.14",
@@ -43254,25 +43177,6 @@
       "ref": "star-itsm-web@0.1.0|@cyclonedx/cyclonedx-npm@4.2.1|json-schema-traverse@1.0.0"
     },
     {
-      "ref": "star-itsm-web@0.1.0|@emnapi/core@1.10.0",
-      "dependsOn": [
-        "star-itsm-web@0.1.0|@emnapi/wasi-threads@1.2.1",
-        "star-itsm-web@0.1.0|tslib@2.8.1"
-      ]
-    },
-    {
-      "ref": "star-itsm-web@0.1.0|@emnapi/runtime@1.10.0",
-      "dependsOn": [
-        "star-itsm-web@0.1.0|tslib@2.8.1"
-      ]
-    },
-    {
-      "ref": "star-itsm-web@0.1.0|@emnapi/wasi-threads@1.2.1",
-      "dependsOn": [
-        "star-itsm-web@0.1.0|tslib@2.8.1"
-      ]
-    },
-    {
       "ref": "star-itsm-web@0.1.0|@eslint/eslintrc@3.3.5",
       "dependsOn": [
         "star-itsm-web@0.1.0|ajv@6.15.0",
@@ -43294,6 +43198,12 @@
       ]
     },
     {
+      "ref": "star-itsm-web@0.1.0|@playwright/test@1.60.0",
+      "dependsOn": [
+        "star-itsm-web@0.1.0|playwright@1.60.0"
+      ]
+    },
+    {
       "ref": "star-itsm-web@0.1.0|@tailwindcss/postcss@4.3.0",
       "dependsOn": [
         "star-itsm-web@0.1.0|@alloc/quick-lru@5.2.0",
@@ -43301,12 +43211,6 @@
         "star-itsm-web@0.1.0|@tailwindcss/oxide@4.3.0",
         "star-itsm-web@0.1.0|postcss@8.5.15",
         "star-itsm-web@0.1.0|tailwindcss@4.3.0"
-      ]
-    },
-    {
-      "ref": "star-itsm-web@0.1.0|@tybys/wasm-util@0.10.2",
-      "dependsOn": [
-        "star-itsm-web@0.1.0|tslib@2.8.1"
       ]
     },
     {
@@ -43427,6 +43331,7 @@
       "dependsOn": [
         "star-itsm-web@0.1.0|@next/env@15.5.18",
         "star-itsm-web@0.1.0|@next/swc-win32-x64-msvc@15.5.18",
+        "star-itsm-web@0.1.0|@playwright/test@1.60.0",
         "star-itsm-web@0.1.0|@swc/helpers@0.5.15",
         "star-itsm-web@0.1.0|caniuse-lite@1.0.30001793",
         "star-itsm-web@0.1.0|next@15.5.18|postcss@8.4.31",
@@ -43681,9 +43586,6 @@
       ]
     },
     {
-      "ref": "star-itsm-web@0.1.0|tslib@2.8.1"
-    },
-    {
       "ref": "star-itsm-web@0.1.0|ajv@6.15.0",
       "dependsOn": [
         "star-itsm-web@0.1.0|fast-deep-equal@3.1.3",
@@ -43736,6 +43638,12 @@
     },
     {
       "ref": "star-itsm-web@0.1.0|@standard-schema/utils@0.3.0"
+    },
+    {
+      "ref": "star-itsm-web@0.1.0|playwright@1.60.0",
+      "dependsOn": [
+        "star-itsm-web@0.1.0|playwright-core@1.60.0"
+      ]
     },
     {
       "ref": "star-itsm-web@0.1.0|@alloc/quick-lru@5.2.0"
@@ -44798,6 +44706,9 @@
       ]
     },
     {
+      "ref": "star-itsm-web@0.1.0|playwright-core@1.60.0"
+    },
+    {
       "ref": "star-itsm-web@0.1.0|@jridgewell/remapping@2.3.5",
       "dependsOn": [
         "star-itsm-web@0.1.0|@jridgewell/gen-mapping@0.3.13",
@@ -45340,6 +45251,9 @@
     },
     {
       "ref": "star-itsm-web@0.1.0|word-wrap@1.2.5"
+    },
+    {
+      "ref": "star-itsm-web@0.1.0|tslib@2.8.1"
     },
     {
       "ref": "star-itsm-web@0.1.0|@img/colour@1.1.0"

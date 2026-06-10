@@ -12,7 +12,10 @@ from star_itsm_api.core.security import (
 from star_itsm_api.models.user import User
 from star_itsm_api.services.user_roles import user_has_any_role, user_role_set
 
+# Operational admin (ticket visibility, org-scoped staff actions) — includes supporter.
 ADMIN_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_SUPPORTER})
+# User/config admin only — supporter must not list users or read /admin/* (FINDING-114).
+USER_MANAGEMENT_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN})
 STAFF_ROLES = frozenset({ROLE_TOP_ADMIN, ROLE_ADMIN, ROLE_AGENT, ROLE_SUPPORTER})
 
 
@@ -52,8 +55,8 @@ def has_full_ticket_visibility(user: User) -> bool:
 
 
 def can_manage_users(user: User) -> bool:
-    """Assign users and change configuration (admin + top admin)."""
-    return bool(user_role_set(user) & ADMIN_ROLES)
+    """Assign users and change configuration (admin + top admin only)."""
+    return bool(user_role_set(user) & USER_MANAGEMENT_ROLES)
 
 
 def can_export_tickets(user: User) -> bool:

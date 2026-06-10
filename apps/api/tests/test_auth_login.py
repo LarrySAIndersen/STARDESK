@@ -6,6 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
 from star_itsm_api.core.security import decode_access_token, verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
@@ -13,8 +14,8 @@ from star_itsm_api.models.user import User
 from star_itsm_api.routers import auth as auth_router
 
 LARRY_EMAIL = "larrysanders@example.dk"
-LARRY_PASSWORD = "password"
-LARRY_HASH = "$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC"
+LARRY_PASSWORD = PROTOTYPE_BOOTSTRAP_PASSWORD
+LARRY_HASH = "$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC"
 LARRY_ID = uuid.UUID("00000000-0000-0000-0000-000000000040")
 
 
@@ -66,6 +67,9 @@ async def login_client(
         "enforce_sole_top_admin_on_login",
         AsyncMock(return_value=None),
     )
+    monkeypatch.setattr(auth_router, "assert_login_allowed", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_failure", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_success", AsyncMock(return_value=None))
     app.dependency_overrides[require_db] = _fake_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
