@@ -30,6 +30,7 @@
     "sonar:hotspots:review": "node ./sonar-agent/review-sonar-hotspots.mjs",
     "sonar:scan": "node ./sonar-agent/run-sonar-scan.mjs",
     "sonar:agent:api": "node ./sonar-agent/run-sonar-agent.mjs api",
+    "sonar:agent:web": "node ./sonar-agent/run-sonar-agent.mjs web",
     "sonar:codemod:fastapi": "python ./sonar-agent/codemods/fastapi_router_style.py",
     "sonar:codemod:readonly-props": "node ./sonar-agent/codemods/react_readonly_props.mjs",
     "sonar:codemod:void-operator": "node ./sonar-agent/codemods/replace_void_operator.mjs",
