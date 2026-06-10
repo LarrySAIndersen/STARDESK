@@ -7,11 +7,12 @@ from sqlalchemy import or_, select
 
 from star_itsm_api.core.security import is_staff
 from star_itsm_api.db import async_session_factory
+from star_itsm_api.models.user import User
+from star_itsm_api.services.org_access import user_can_access_ticket
 from star_itsm_api.models.category import Category, Subcategory
 from star_itsm_api.models.comment import TicketComment
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
-from star_itsm_api.models.user import User
 from star_itsm_api.services.ticket_timestamps import apply_status_milestone_timestamps
 
 logger = logging.getLogger(__name__)
@@ -131,15 +132,11 @@ async def get_ticket_categories() -> str:
         return "\n".join(output)
 
 
-@mcp.tool()
-async def get_user_tickets(user_email: str) -> str:
-    """Hent de seneste supportsager for en specifik bruger baseret på deres e-mailadresse.
-    
-    Bruges til at tjekke status eller give opdateringer.
-    
-    Args:
-        user_email: Brugerens e-mailadresse (fx "jan.hansen@star.dk").
-    """
+async def get_user_tickets(user_email: str, *, caller: User) -> str:
+    """Hent supportsager for den autentificerede bruger (eller anden bruger for staff)."""
+    if not is_staff(caller):
+        user_email = caller.email
+
     if not async_session_factory:
         return "Database er ikke konfigureret."
         
@@ -233,7 +230,6 @@ async def search_historical_solutions(query: str) -> str:
         return "\n\n".join(output)
 
 
-@mcp.tool()
 async def create_ticket(
     user_email: str,
     title: str,
@@ -241,21 +237,11 @@ async def create_ticket(
     category_id: str | None = None,
     subcategory_id: str | None = None,
     priority: str = "medium",
-    ticket_type: str = "incident"
+    ticket_type: str = "incident",
+    *,
+    caller: User,
 ) -> str:
-    """Opret en ny supportsag (ticket) i STARdesk på vegne af en bruger.
-    
-    Hjælper med at oprette sagen direkte i systemet, når brugeren beder om det.
-    
-    Args:
-        user_email: Brugerens e-mailadresse (fx "sf01@example.dk").
-        title: Sagens kortfattede titel (mindst 3 tegn).
-        description: Detaljeret beskrivelse af problemet (mindst 10 tegn).
-        category_id: Valgfrit UUID-streng for sagens kategori.
-        subcategory_id: Valgfrit UUID-streng for sagens underkategori.
-        priority: Sagens prioritet ("critical", "high", "medium", "low"). Standard er "medium".
-        ticket_type: Sags-type ("incident", "service_request", "problem"). Standard er "incident".
-    """
+    """Opret en ny supportsag for den autentificerede bruger."""
     if not async_session_factory:
         return "Database er ikke konfigureret."
         
@@ -264,6 +250,8 @@ async def create_ticket(
         
     if len(description.strip()) < 10:
         return "Fejl: Beskrivelsen skal være mindst 10 tegn lang."
+
+    user_email = caller.email
 
     # Validate priority and ticket_type values
     if priority not in ["critical", "high", "medium", "low"]:
@@ -351,15 +339,8 @@ async def create_ticket(
         )
 
 
-@mcp.tool()
-async def get_ticket_by_number(ticket_number: str) -> str:
-    """Hent detaljer om en specifik supportsag via sagsnummer (fx INC-2026-00118).
-
-    Bruges af medarbejdere til at slå en sag op og se status, prioritet og titel.
-
-    Args:
-        ticket_number: Sagsnummeret (fx "INC-2026-00118").
-    """
+async def get_ticket_by_number(ticket_number: str, *, caller: User) -> str:
+    """Hent detaljer om en supportsag; adgang håndhæves via caller."""
     if not async_session_factory:
         return "Database er ikke konfigureret."
 
@@ -377,6 +358,9 @@ async def get_ticket_by_number(ticket_number: str) -> str:
 
         if not ticket:
             return f"Ingen sag fundet med sagsnummer '{normalized}'."
+
+        if not await user_can_access_ticket(db, caller, ticket):
+            return "Fejl: Du har ikke adgang til denne sag."
 
         reporter_stmt = select(User).where(User.id == ticket.reporter_user_id)
         reporter_result = await db.execute(reporter_stmt)
@@ -420,23 +404,15 @@ ALLOWED_STATUSES = frozenset({
 })
 
 
-@mcp.tool()
 async def update_ticket_status(
     ticket_number: str,
     status: str,
     actor_email: str,
     note: str | None = None,
+    *,
+    caller: User,
 ) -> str:
-    """Opdater status på en supportsag (fx luk, løs eller sæt i gang).
-
-    Kun tilgængelig for medarbejdere (agenter). Bekræft altid handlingen med brugeren før opdatering.
-
-    Args:
-        ticket_number: Sagsnummeret (fx "INC-2026-00118").
-        status: Ny status ("new", "assigned", "in_progress", "pending", "resolved", "closed", "cancelled").
-        actor_email: Medarbejderens e-mailadresse der udfører handlingen.
-        note: Valgfri kommentar der gemmes på sagen (fx lukningsnote).
-    """
+    """Opdater status på en supportsag; kun staff med adgang til sagen."""
     if not async_session_factory:
         return "Database er ikke konfigureret."
 
@@ -448,18 +424,12 @@ async def update_ticket_status(
         return f"Fejl: Ugyldig status '{status}'. Tilladte værdier: {allowed}."
 
     async with async_session_factory() as db:
-        actor_stmt = select(User).where(
-            User.email.ilike(actor_email.strip()),
-            User.deleted_at.is_(None),
-        )
-        actor_result = await db.execute(actor_stmt)
-        actor = actor_result.scalar_one_or_none()
-
-        if not actor or not is_staff(actor):
+        if not is_staff(caller):
             return (
                 "Fejl: Kun medarbejdere kan opdatere sagsstatus via Help-a-bot. "
                 "Log ind som agent for at udføre denne handling."
             )
+        actor = caller
 
         ticket_stmt = select(Ticket).where(
             Ticket.ticket_number.ilike(normalized_number),
@@ -470,6 +440,9 @@ async def update_ticket_status(
 
         if not ticket:
             return f"Ingen sag fundet med sagsnummer '{normalized_number}'."
+
+        if not await user_can_access_ticket(db, caller, ticket):
+            return "Fejl: Du har ikke adgang til denne sag."
 
         import uuid
         from datetime import UTC, datetime
