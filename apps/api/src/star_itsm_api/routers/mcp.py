@@ -231,7 +231,6 @@ async def search_historical_solutions(query: str) -> str:
 
 
 async def create_ticket(
-    user_email: str,
     title: str,
     description: str,
     category_id: str | None = None,

@@ -34,7 +34,7 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 TICKET_NUMBER_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 TICKET_REF_RE = re.compile(r"\b(INC|REQ|PRB|SR)-\d{4}-\d+\b", re.IGNORECASE)
 _SECRET_QUERY_RE = re.compile(
-    r"([?&](?:key|api[_-]?key|apikey|token|access_token)=)[^&\s\"']+",
+    r"([?&](?:key|api[_-]?key|token|access_token)=)[^&\s\"']+",
     re.IGNORECASE,
 )
 _UPSTREAM_URL_RE = re.compile(
@@ -249,7 +249,6 @@ async def try_short_command(
         if parsed:
             title, description = parsed
             return await create_ticket(
-                user_email=caller.email,
                 title=title,
                 description=description,
                 caller=caller,
@@ -401,7 +400,6 @@ async def _tool_search_solutions(args: dict[str, Any]) -> str:
 
 async def _tool_create_ticket(args: dict[str, Any], caller: User) -> str:
     return await create_ticket(
-        user_email=caller.email,
         title=args.get("title", ""),
         description=args.get("description", ""),
         category_id=args.get("category_id"),
@@ -487,7 +485,6 @@ async def _mock_try_create(user_msg: str, caller: User) -> str | None:
         desc = parts[1].strip() if len(parts) > 1 else "Oprettet via STARdesk-assistenten."
         if len(title) >= 3 and len(desc) >= 10:
             res = await create_ticket(
-                user_email=caller.email,
                 title=title,
                 description=desc,
                 caller=caller,
