@@ -259,8 +259,8 @@ async def test_chat_router_custom_url_reconstruction_success(client: AsyncClient
 
 @pytest.mark.asyncio
 async def test_execute_tool_search_historical_solutions() -> None:
-    from tests.conftest import FAKE_ADMIN
     from star_itsm_api.routers.chat import execute_tool
+    from tests.conftest import FAKE_ADMIN
     with patch(
         "star_itsm_api.routers.chat.search_historical_solutions",
         AsyncMock(return_value="### Test Solution\n**Løsningsresumé:** Nulstil VPN")
@@ -273,8 +273,8 @@ async def test_execute_tool_search_historical_solutions() -> None:
 
 @pytest.mark.asyncio
 async def test_execute_tool_create_ticket() -> None:
-    from tests.conftest import FAKE_ADMIN
     from star_itsm_api.routers.chat import execute_tool
+    from tests.conftest import FAKE_ADMIN
     with patch(
         "star_itsm_api.routers.chat.create_ticket",
         AsyncMock(return_value="Sagen blev oprettet med succes!\n\n**Sagsnummer:** INC-2026-00001")
@@ -290,8 +290,8 @@ async def test_execute_tool_create_ticket() -> None:
         assert "Sagen blev oprettet med succes" in res
         assert "INC-2026-00001" in res
         mock_create.assert_called_once()
-        assert mock_create.call_args.kwargs["user_email"] == "admin@example.dk"
         assert mock_create.call_args.kwargs["caller"] is FAKE_ADMIN
+        assert mock_create.call_args.kwargs["title"] == "Test sag"
 
 
 

@@ -2,8 +2,7 @@
 
 import uuid
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest

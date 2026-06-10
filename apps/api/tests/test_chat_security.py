@@ -6,12 +6,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
+from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.main import app
 from star_itsm_api.routers.chat import execute_tool
-
 
 FAKE_SUBMITTER = SimpleNamespace(
     id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -43,7 +42,7 @@ async def unauthenticated_client(override_db: AsyncMock) -> AsyncIterator[AsyncC
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    from tests.conftest import _fake_admin_user, _fake_admin_session
+    from tests.conftest import _fake_admin_session, _fake_admin_user
 
     app.dependency_overrides[get_current_user] = _fake_admin_user
     app.dependency_overrides[get_current_user_session] = _fake_admin_session
@@ -54,7 +53,7 @@ def as_submitter() -> AsyncIterator[None]:
     app.dependency_overrides[get_current_user] = lambda: FAKE_SUBMITTER
     app.dependency_overrides[get_current_user_session] = lambda: FAKE_SUBMITTER
     yield
-    from tests.conftest import _fake_admin_user, _fake_admin_session
+    from tests.conftest import _fake_admin_session, _fake_admin_user
 
     app.dependency_overrides[get_current_user] = _fake_admin_user
     app.dependency_overrides[get_current_user_session] = _fake_admin_session
@@ -136,8 +135,8 @@ async def test_execute_tool_create_ticket_uses_caller_not_body_email() -> None:
     assert "Oprettet" in result
     mock_create.assert_called_once()
     call_kwargs = mock_create.call_args.kwargs
-    assert call_kwargs["user_email"] == "sf01@example.dk"
     assert call_kwargs["caller"] is FAKE_SUBMITTER
+    assert "user_email" not in call_kwargs
 
 
 @pytest.mark.asyncio

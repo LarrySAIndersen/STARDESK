@@ -7,7 +7,6 @@ from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
-from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
 from star_itsm_api.core.security import verify_password
 from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
