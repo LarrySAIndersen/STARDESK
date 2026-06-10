@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import AsyncClient
 
-from tests.conftest import FAKE_ADMIN
 from star_itsm_api.models.chatbot_message import ChatbotMessage
 from star_itsm_api.routers.chat import (
     ChatPageContext,
@@ -17,6 +16,7 @@ from star_itsm_api.routers.chat import (
     try_page_context_command,
     try_short_command,
 )
+from tests.conftest import FAKE_ADMIN
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,6 @@ async def test_try_short_command_opret_sag_with_dash() -> None:
         )
     assert result == "Oprettet INC-2026-00099"
     mock_create.assert_awaited_once_with(
-        user_email="admin@example.dk",
         title="Printer fejl",
         description="Den udskriver kun tomme sider",
         caller=FAKE_ADMIN,
