@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useState } from "react";
 import { StickyNote } from "lucide-react";
 
@@ -37,7 +39,7 @@ export function TicketPostItsPanel({
   }, [ticketId]);
 
   useEffect(() => {
-    void refresh();
+    fireAndForget(refresh());
   }, [refresh]);
 
   const detach = async (noteId: string) => {
@@ -91,7 +93,7 @@ export function TicketPostItsPanel({
                     variant="ghost"
                     size="sm"
                     className="ml-auto h-7 px-2 text-xs"
-                    onClick={() => void detach(note.id).catch(() => {})}
+                    onClick={() => fireAndForget(detach(note.id).catch(() => {}))}
                   >
                     Fjern fra sag
                   </Button>

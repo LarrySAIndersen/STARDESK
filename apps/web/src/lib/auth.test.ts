@@ -1,14 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  canExportTickets,
+  canManageUsers,
+  canViewImprovements,
+  clearSession,
+  getClientToken,
+  getClientUser,
   hasAgentShellAccess,
+  hydrateClientSession,
   isAdmin,
   isStaff,
+  isStardeskReviewer,
   isSubmitter,
+  isTopAdmin,
   normalizeUserRole,
   parseUserFromCookie,
   resolveUserRole,
   resolveUserRoles,
+  setClientSessionCache,
 } from "./auth";
 import type { User } from "@/types/user";
 
@@ -82,6 +92,18 @@ describe("parseUserFromCookie", () => {
     expect(parseUserFromCookie("not-json")).toBeNull();
     expect(parseUserFromCookie(JSON.stringify({ display_name: "No email" }))).toBeNull();
   });
+
+  it("coerces roles array and password flags from cookie JSON", () => {
+    const user = makeUser({
+      email: "multi@example.dk",
+      roles: ["agent", "admin"],
+      must_change_password: true,
+      password_policy_exempt: false,
+    });
+    const parsed = parseUserFromCookie(JSON.stringify(user));
+    expect(parsed?.roles).toEqual(["agent", "admin"]);
+    expect(parsed?.must_change_password).toBe(true);
+  });
 });
 
 describe("role guards", () => {
@@ -102,5 +124,88 @@ describe("role guards", () => {
   it("hasAgentShellAccess includes stardesk_reviewer", () => {
     expect(hasAgentShellAccess(makeUser({ role: "stardesk_reviewer" }))).toBe(true);
     expect(hasAgentShellAccess(makeUser({ role: "end_user" }))).toBe(false);
+  });
+
+  it("isStardeskReviewer detects reviewer role", () => {
+    expect(isStardeskReviewer(makeUser({ role: "stardesk_reviewer" }))).toBe(true);
+    expect(isStardeskReviewer(makeUser({ role: "agent" }))).toBe(false);
+  });
+
+  it("canManageUsers and canExportTickets follow admin/staff rules", () => {
+    expect(canManageUsers(makeUser({ role: "admin" }))).toBe(true);
+    expect(canManageUsers(makeUser({ role: "agent" }))).toBe(false);
+    expect(canExportTickets(makeUser({ role: "agent" }))).toBe(true);
+    expect(canExportTickets(makeUser({ role: "end_user" }))).toBe(false);
+  });
+
+  it("canViewImprovements is staff-only", () => {
+    expect(canViewImprovements(makeUser({ role: "agent" }))).toBe(true);
+    expect(canViewImprovements(makeUser({ role: "stardesk_reviewer" }))).toBe(false);
+  });
+
+  it("isTopAdmin delegates to nav visibility helper", () => {
+    expect(isTopAdmin(makeUser({ role: "top_admin" }))).toBe(true);
+    expect(isTopAdmin(makeUser({ role: "agent" }))).toBe(false);
+  });
+});
+
+describe("client session cache", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+    setClientSessionCache(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchMock.mockReset();
+    setClientSessionCache(null);
+  });
+
+  it("getClientToken is always null (HttpOnly cookies)", () => {
+    expect(getClientToken()).toBeNull();
+  });
+
+  it("setClientSessionCache and getClientUser round-trip", () => {
+    const user = makeUser({ email: "cache@example.dk" });
+    setClientSessionCache(user);
+    expect(getClientUser()?.email).toBe("cache@example.dk");
+  });
+
+  it("hydrateClientSession loads user from BFF session endpoint", async () => {
+    vi.stubGlobal("window", {} as Window);
+    const user = makeUser({ email: "hydrated@example.dk" });
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ user }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(hydrateClientSession()).resolves.toEqual(user);
+    expect(getClientUser()?.email).toBe("hydrated@example.dk");
+  });
+
+  it("hydrateClientSession clears cache on non-OK response", async () => {
+    vi.stubGlobal("window", {} as Window);
+    setClientSessionCache(makeUser());
+    fetchMock.mockResolvedValue(new Response(null, { status: 401 }));
+
+    await expect(hydrateClientSession()).resolves.toBeNull();
+    expect(getClientUser()).toBeNull();
+  });
+
+  it("clearSession posts logout and clears cache", async () => {
+    vi.stubGlobal("window", {} as Window);
+    setClientSessionCache(makeUser());
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    await clearSession();
+    expect(getClientUser()).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/logout",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
   });
 });

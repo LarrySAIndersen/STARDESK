@@ -1,0 +1,67 @@
+---
+description: STARDESK arbejdsproces – ADR, spec og testdisciplin er styrende for kodeændring
+alwaysApply: true
+---
+
+# STARDESK: ADR / Spec / testdisciplin
+
+## Før du ændrer kode
+
+1. Læs den relevante spec. Prioritet:
+   - Feature-spec i `docs/specs/` (oprettes efter behov; brug `docs/specs/template.md`)
+   - Indtil spec findes: `docs/design-decisions.md`, `docs/data-model.md`, `docs/api-reference.md`
+   - Domæne-/integrationsdocs i `docs/` (fx `docs/integrations-slack.md`)
+2. Tjek `docs/adr/` for beslutninger der berører området. Følg accepterede ADR'er.
+3. Find eksisterende tests før du ændrer adfærd — se **Testopsætning** nedenfor.
+
+## Repo-struktur (reference)
+
+| Område | Sti | Konvention |
+|--------|-----|------------|
+| Web (Next.js 15) | `apps/web/src/` | App Router: `app/`, UI: `components/`, klient: `lib/` |
+| API (FastAPI) | `apps/api/src/star_itsm_api/` | `routers/`, `services/`, `schemas/`, `models/`, `core/` |
+| API-tests | `apps/api/tests/` | `test_<område>.py`, fælles fixtures i `conftest.py` |
+| Web unit-tests | `apps/web/src/**/*.test.ts` | Vitest (`npm run test`) |
+| Web e2e | `apps/web/e2e/*.spec.ts` | Playwright (`npm run test:e2e`) |
+| DB schema | `init.sql`, `apps/api/alembic/`, `apps/api/src/star_itsm_api/sql/migrations/` | Seed-SQL i `docs/seed-*.sql` |
+| Constitution (sikkerhed/perf/kvalitet) | `workboard/constitution/` | Debate-first — se `stardesk-constitution-paradigme.mdc` |
+| Arkitekturoversigt | `ARCHITECTURE.md`, `docs/environments.md` | Deploy og miljøer |
+
+**Navngivning:** Python `snake_case` / PascalCase klasser; TypeScript camelCase / PascalCase komponenter; DB-tabeller plural `snake_case`; REST under `/api/v1/`.
+
+## Testopsætning (faktisk — ikke pytest-bdd)
+
+Der findes **ingen** Gherkin-filer i `features/` og **ingen** pytest-bdd i dag. Acceptkriterier dækkes således:
+
+| Lag | Kommando | Placering | CI / gate |
+|-----|----------|-----------|-----------|
+| API | `cd apps/api && uv run pytest -q` | `apps/api/tests/test_*.py` | `security.yml`, coverage ≥ 85 % |
+| Web unit | `cd apps/web && npm run test:coverage` | `*.test.ts(x)` ved siden af kilde | CI + SonarCloud LCOV (`fix_lcov_for_sonar.py`); ny kode ≥ 80 % |
+| Web e2e | `cd apps/web && npm run test:e2e` | `apps/web/e2e/` | Deliverable gate `--full` |
+| Hello-world | `bash scripts/run-deliverable-gate.sh` | — | Obligatorisk før handoff (`--full` ved UI/auth) |
+
+**Auth-regression (obligatorisk for nye endpoints):** mindst ét test der forventer **401 uden token**. Mønster i `apps/api/tests/conftest.py`: default `client` er autentificeret via `dependency_overrides`; brug `unauthenticated_client`-fixture (se `test_chat_security.py`) eller fjern override eksplicit.
+
+Ny feature-spec bør liste hvilke `test_*.py` / `*.spec.ts`-filer der dækker acceptkriterierne — ikke antage Gherkin.
+
+## Arkitekturbeslutninger (ADR)
+
+- Støder du på et valg der ikke er dækket af en accepteret ADR (nyt bibliotek, ændret auth-flow, ny datamodel-tilgang, ekstern afhængighed, AI/MCP-sikkerhed), så implementér **ikke**. Skriv et ADR-udkast (`docs/adr/0000-template.md`, status: **Foreslået**) og afvent menneskelig godkendelse.
+- Redigér aldrig en accepteret ADR. Ny beslutning = ny ADR.
+- Eksisterende uformelle valg står i `docs/design-decisions.md` — skal gradvist formaliseres som ADR'er.
+
+## Implementering
+
+- Koden skal matche spec'en. Afviger spec'en fra virkeligheden, foreslå spec-opdatering først — ændr ikke koden "forbi" spec'en.
+- Følg sikkerhedsinvarianter i `.cursor/rules/00-security-invariants.mdc` (server-afledt identitet, ingen client-supplied secrets/URL'er til upstream).
+- PR kun mod **`staging`** — se `docs/pr-only-period.md` og `docs/staging-batch-policy.md`.
+
+## Forbudt uden eksplicit menneskelig godkendelse
+
+- **Alembic-revisioner og schema-ændringer** (foreslå kun; CI kører `alembic upgrade head` på merge til `main` — se `docs/deploy.md`)
+- Ændringer i `.cursor/`, CI/CD-filer, `pyproject.toml` / `package.json`
+- Sletning af filer eller mapper
+
+## PR-krav
+
+Hver PR refererer: relevant spec eller `docs/design-decisions.md`-afsnit, evt. ADR-numre, og hvilke testfiler (`apps/api/tests/…`, `apps/web/src/**/*.test.ts`, `apps/web/e2e/…`) der dækker ændringen. Web-PRs: kør `npm run test:coverage` — Sonar kræver ≥ 80 % dækning på ny kode.

@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 
 import { apiGet } from "@/lib/api";
@@ -62,17 +64,17 @@ export function useBoardDataSync({
   }, [setTickets, setTeams, onError]);
 
   useEffect(() => {
-    void refreshNow();
+    fireAndForget(refreshNow());
     const intervalId = window.setInterval(() => {
-      void refreshNow();
+      fireAndForget(refreshNow());
     }, BOARD_POLL_MS);
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        void refreshNow();
+        fireAndForget(refreshNow());
       }
     };
     const onChanged = () => {
-      void refreshNow();
+      fireAndForget(refreshNow());
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener(BOARD_TICKETS_CHANGED, onChanged);

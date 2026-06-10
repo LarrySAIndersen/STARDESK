@@ -4,10 +4,22 @@ import {
   ApiError,
   apiDelete,
   apiGet,
+  apiPatch,
   apiPost,
+  apiPostForm,
   apiPostNoContent,
+  apiPut,
   attachmentDownloadUrl,
 } from "./api";
+
+describe("ApiError", () => {
+  it("stores status and message", () => {
+    const error = new ApiError(403, "Forbidden");
+    expect(error.name).toBe("ApiError");
+    expect(error.status).toBe(403);
+    expect(error.message).toBe("Forbidden");
+  });
+});
 
 describe("attachmentDownloadUrl", () => {
   it("builds proxy download path for ticket attachments", () => {
@@ -127,5 +139,89 @@ describe("api client", () => {
     );
 
     await expect(apiDelete("/api/v1/tickets/missing")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("apiPut sends JSON body and parses response", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: "1", title: "Updated" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(apiPut<{ id: string; title: string }>("/api/v1/tickets/1", { title: "Updated" })).resolves.toEqual({
+      id: "1",
+      title: "Updated",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/tickets/1",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ title: "Updated" }),
+      }),
+    );
+  });
+
+  it("apiPatch sends JSON body and parses response", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ status: "open" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(apiPatch<{ status: string }>("/api/v1/tickets/1", { status: "open" })).resolves.toEqual({
+      status: "open",
+    });
+  });
+
+  it("apiPostForm sends FormData without forcing Content-Type", async () => {
+    const formData = new FormData();
+    formData.append("file", new Blob(["x"]), "x.txt");
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ id: "att-1" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(apiPostForm<{ id: string }>("/api/v1/attachments", formData)).resolves.toEqual({
+      id: "att-1",
+    });
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(formData);
+    expect(init.headers).not.toHaveProperty("Content-Type");
+  });
+
+  it("throws ApiError with mapped message on non-401 failures", async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Validation failed" }), {
+        status: 422,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(apiGet("/api/v1/tickets")).rejects.toMatchObject({
+      status: 422,
+      message: "Validation failed",
+    });
+  });
+
+  it("normalizes paths missing a leading slash on the server", async () => {
+    const originalWindow = globalThis.window;
+    // @ts-expect-error — simulate SSR (no window)
+    delete globalThis.window;
+
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await apiGet("api/v1/health");
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/health", expect.any(Object));
+
+    globalThis.window = originalWindow;
   });
 });

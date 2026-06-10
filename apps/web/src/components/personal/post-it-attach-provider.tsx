@@ -1,5 +1,7 @@
 "use client";
 
+import { fireAndForget } from "@/lib/fire-and-forget";
+
 import {
   createContext,
   useCallback,
@@ -23,16 +25,16 @@ import type { PersonalNote, PersonalNoteUpdate } from "@/types/personal";
 
 export type PersonalNoteVisibility = "private" | "team";
 
-type PendingAttach = {
+type PendingAttach = Readonly<{
   noteId: string;
   ticketId: string;
   ticketNumber: string;
   ticketTitle: string;
-};
+}>;
 
-type PostItAttachContextValue = {
+type PostItAttachContextValue = Readonly<{
   requestAttach: (pending: PendingAttach) => void;
-};
+}>;
 
 const PostItAttachContext = createContext<PostItAttachContextValue | null>(null);
 
@@ -180,7 +182,7 @@ export function PostItAttachProvider({
               <Button type="button" variant="outline" onClick={close} disabled={busy}>
                 Annuller
               </Button>
-              <Button type="button" onClick={() => void confirm()} disabled={busy}>
+              <Button type="button" onClick={() => fireAndForget(confirm())} disabled={busy}>
                 {busy ? "Fastgør…" : "Fastgør på sag"}
               </Button>
             </div>

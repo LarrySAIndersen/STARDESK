@@ -197,6 +197,60 @@ function Test-StardeskVercelProtectedUrl {
     return ($Url -match '\.vercel\.app$')
 }
 
+function Get-StardeskVercelProjectContext {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$VercelProjectDir
+    )
+
+    $projectJsonPath = Join-Path $VercelProjectDir ".vercel\project.json"
+    if (-not (Test-Path -LiteralPath $projectJsonPath)) {
+        throw "Missing $projectJsonPath — link the Vercel project (see docs/staging-vercel-preview-env.md)."
+    }
+
+    $project = Get-Content -LiteralPath $projectJsonPath -Raw | ConvertFrom-Json
+    return @{
+        ProjectDir = (Resolve-Path $VercelProjectDir).Path
+        OrgId      = [string]$project.orgId
+        ProjectId  = [string]$project.projectId
+    }
+}
+
+function Invoke-StardeskVercelCli {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$VercelProjectDir,
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$CliArgs
+    )
+
+    $ctx = Get-StardeskVercelProjectContext -VercelProjectDir $VercelProjectDir
+    $prevOrg = $env:VERCEL_ORG_ID
+    $prevProject = $env:VERCEL_PROJECT_ID
+    $env:VERCEL_ORG_ID = $ctx.OrgId
+    $env:VERCEL_PROJECT_ID = $ctx.ProjectId
+
+    Push-Location $ctx.ProjectDir
+    try {
+        & npx --yes vercel@latest @CliArgs 2>&1
+    }
+    finally {
+        Pop-Location
+        if ($null -eq $prevOrg) {
+            Remove-Item Env:VERCEL_ORG_ID -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:VERCEL_ORG_ID = $prevOrg
+        }
+        if ($null -eq $prevProject) {
+            Remove-Item Env:VERCEL_PROJECT_ID -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:VERCEL_PROJECT_ID = $prevProject
+        }
+    }
+}
+
 function Get-StardeskVercelProtectionBypass {
     param(
         [Parameter(Mandatory = $true)][string]$DeploymentUrl,
@@ -206,28 +260,27 @@ function Get-StardeskVercelProtectionBypass {
     if ($env:VERCEL_PROTECTION_BYPASS) {
         return $env:VERCEL_PROTECTION_BYPASS
     }
+    if ($env:VERCEL_AUTOMATION_BYPASS_SECRET) {
+        return $env:VERCEL_AUTOMATION_BYPASS_SECRET
+    }
 
-    $apiDir = if ($VercelProjectDir) { $VercelProjectDir } else {
+    $projectDir = if ($VercelProjectDir) { $VercelProjectDir } else {
         Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $apiDir ".vercel\project.json"))) {
-        throw "Link apps/api to Vercel (vercel link) or set VERCEL_PROTECTION_BYPASS for protected Preview gates."
+
+    $raw = Invoke-StardeskVercelCli -VercelProjectDir $projectDir `
+        curl --yes /health --deployment $DeploymentUrl
+
+    foreach ($line in @($raw | ForEach-Object { "$_" })) {
+        if ($line -match 'protection bypass token(?: from project settings)?:\s*(\S+)') {
+            return $Matches[1]
+        }
+        if ($line -match 'x-vercel-protection-bypass[=:\s]+(\S+)') {
+            return $Matches[1]
+        }
     }
 
-    Push-Location $apiDir
-    try {
-        $raw = & vercel curl --yes --deployment $DeploymentUrl -- "/health" 2>&1
-    }
-    finally {
-        Pop-Location
-    }
-
-    $line = $raw | Where-Object { $_ -match 'protection bypass token' } | Select-Object -First 1
-    if ($line -match 'bypass token(?: from project settings)?:\s*(\S+)') {
-        return $Matches[1]
-    }
-
-    throw "Could not read Vercel protection bypass token from vercel curl. Set VERCEL_PROTECTION_BYPASS manually."
+    throw "Could not read Vercel protection bypass token from vercel curl. Set VERCEL_PROTECTION_BYPASS or VERCEL_AUTOMATION_BYPASS_SECRET."
 }
 
 function Invoke-StardeskVercelCurl {
@@ -241,33 +294,32 @@ function Invoke-StardeskVercelCurl {
         [string]$VercelProjectDir
     )
 
-    $apiDir = if ($VercelProjectDir) { $VercelProjectDir } else {
+    $projectDir = if ($VercelProjectDir) { $VercelProjectDir } else {
         Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
     }
 
-    Push-Location $apiDir
-    try {
-        if ($BodyJson) {
-            $tmp = Join-Path $env:TEMP ("stardesk-curl-{0}.json" -f [guid]::NewGuid().ToString("N"))
-            Set-Content -LiteralPath $tmp -Value $BodyJson -Encoding utf8
-            try {
-                $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" -X $Method `
-                    -H "Content-Type: application/json" --data-binary "@$tmp" 2>&1
-            }
-            finally {
-                Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
-            }
+    if ($BodyJson) {
+        $tmp = Join-Path $env:TEMP ("stardesk-curl-{0}.json" -f [guid]::NewGuid().ToString("N"))
+        Set-Content -LiteralPath $tmp -Value $BodyJson -Encoding utf8
+        try {
+            $raw = Invoke-StardeskVercelCli -VercelProjectDir $projectDir `
+                curl --yes $Path --deployment $DeploymentUrl -- `
+                --request $Method `
+                -H "Content-Type: application/json" `
+                --data-binary "@$tmp"
         }
-        elseif ($Headers.Authorization) {
-            $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" `
-                -H "Authorization: $($Headers.Authorization)" 2>&1
-        }
-        else {
-            $raw = & vercel curl --yes --deployment $DeploymentUrl -- "$Path" 2>&1
+        finally {
+            Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
         }
     }
-    finally {
-        Pop-Location
+    elseif ($Headers.Authorization) {
+        $raw = Invoke-StardeskVercelCli -VercelProjectDir $projectDir `
+            curl --yes $Path --deployment $DeploymentUrl -- `
+            -H "Authorization: $($Headers.Authorization)"
+    }
+    else {
+        $raw = Invoke-StardeskVercelCli -VercelProjectDir $projectDir `
+            curl --yes $Path --deployment $DeploymentUrl
     }
 
     $lines = @($raw | ForEach-Object { "$_" })
@@ -291,6 +343,13 @@ function Invoke-StardeskApiRequest {
         [hashtable]$Headers = @{},
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession
     )
+
+    # Vercel Preview deployments require authentication — use CLI curl (npx) directly.
+    if (Test-StardeskVercelProtectedUrl -Url $ApiUrl) {
+        $projectDir = Join-Path (Get-StardeskRepoRoot -StartDir $PSScriptRoot) "apps\api"
+        return Invoke-StardeskVercelCurl -DeploymentUrl $ApiUrl -Path $Path -Method $Method `
+            -BodyJson $BodyJson -Headers $Headers -VercelProjectDir $projectDir
+    }
 
     $uri = "$($ApiUrl.TrimEnd('/'))$Path"
     $params = @{
