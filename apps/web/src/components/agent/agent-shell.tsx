@@ -39,11 +39,19 @@ function AgentShellInner({
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebarCollapsed();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { open: chatOpen } = useChatWorkspace();
+  const { open: chatOpen, closeChat } = useChatWorkspace();
   const staff = isStaff(user ?? null);
+  const isChatPage = pathname === "/chat";
+  const showChatPanel = staff && chatOpen && !isChatPage;
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
+
+  useEffect(() => {
+    if (isChatPage) {
+      closeChat();
+    }
+  }, [isChatPage, closeChat]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -72,8 +80,8 @@ function AgentShellInner({
       <AgentShellColumns
         collapsed={collapsed}
         onToggle={toggle}
-        chatOpen={staff && chatOpen}
-        chatPanel={staff ? <ChatWorkspacePanel /> : undefined}
+        chatOpen={showChatPanel}
+        chatPanel={staff ? <ChatWorkspacePanel layout="panel" /> : undefined}
         sidebar={
           <AgentSidebar
             user={user}

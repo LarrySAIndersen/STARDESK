@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { usePathname } from "next/navigation";
+
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 
 const STORAGE_KEY = "stardesk_team_chat_open";
@@ -37,6 +39,8 @@ export function ChatWorkspaceProvider({
   children: ReactNode;
   enabled?: boolean;
 }) {
+  const pathname = usePathname();
+  const isChatPage = pathname === "/chat";
   const [open, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
@@ -62,7 +66,10 @@ export function ChatWorkspaceProvider({
   const openChat = useCallback(() => persist(true), [persist]);
   const closeChat = useCallback(() => persist(false), [persist]);
 
-  useKeyboardShortcut("c", toggle, { shift: true, enabled: enabled && hydrated });
+  useKeyboardShortcut("c", toggle, {
+    shift: true,
+    enabled: enabled && hydrated && !isChatPage,
+  });
 
   const value = useMemo(
     () => ({
