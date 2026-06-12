@@ -392,6 +392,32 @@ async def ensure_team_chat_schema_current(
         logger.exception("team_chat schema sync failed — team chat endpoints may return 500")
 
 
+async def ensure_workspace_layout_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Ensure user_workspace_layouts table exists."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _table_exists(engine, "user_workspace_layouts"):
+            return
+        logger.warning("user_workspace_layouts table missing — applying SQL migration")
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "39_workspace-layout.sql",
+        )
+        if await _table_exists(engine, "user_workspace_layouts"):
+            logger.info("user_workspace_layouts schema sync completed")
+        else:
+            logger.error("user_workspace_layouts schema sync finished but table is still missing")
+    except Exception:
+        logger.exception(
+            "user_workspace_layouts schema sync failed — workspace landing may use defaults only",
+        )
+
+
 def _run_single_migration(database_url: str, filename: str) -> None:
     path = Path(__file__).resolve().parent.joinpath("sql", "migrations", filename)
     if not path.is_file():

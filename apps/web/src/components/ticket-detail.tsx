@@ -330,136 +330,15 @@ export function TicketDetailView({
 
   function renderStaffBelow(activeTicket: TicketDetail) {
     return (
-      <>
-        {activeTicket.routing && !activeTicket.routing.routing_ready ? (
-          <RoutingReadinessBanner routing={activeTicket.routing} />
-        ) : null}
-
-        {showLlmRail ? (
-          <WireAiBanner>
-            {activeTicket.routing?.suggested_team_name && !activeTicket.assigned_team_id
-              ? `AI foreslår ${activeTicket.routing.suggested_team_name} (${activeTicket.routing.routing_confidence ?? "—"}% match) — se panel nedenfor.`
-              : "AI foreslår lignende sager og tildeling — se panel nedenfor."}
-          </WireAiBanner>
-        ) : null}
-
-        {hasTicketConnections(activeTicket) ? (
-          <WireDetailCard title="Tilknyttede sager">
-            <Link
-              href={ticketOverviewHref(activeTicket.id)}
-              className="border-primary bg-primary/5 text-primary hover:bg-primary inline-flex items-center gap-2 rounded-[2px] border px-3 py-2 text-xs font-bold tracking-wide uppercase transition-colors hover:text-primary-foreground"
-            >
-              Oversigt / Tilknyttede sager
-            </Link>
-          </WireDetailCard>
-        ) : null}
-
-        {currentUser ? (
-          <TicketPostItsPanel ticketId={activeTicket.id} currentUserId={currentUser.id} />
-        ) : null}
-
-        <WireDetailCard title="Handlinger">
-          <div className="flex flex-wrap items-center gap-2">
-            <TicketDetailActions
-              ticketId={activeTicket.id}
-              currentStatus={activeTicket.status}
-            />
-            <TicketSlackPush
-              ticketId={activeTicket.id}
-              ticketNumber={activeTicket.ticket_number}
-              ticketTitle={activeTicket.title}
-            />
-          </div>
-          <div className="mt-4">
-            <KnowledgeArticlePromoteButton ticket={activeTicket} />
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {activeTicket.is_major ? <Badge variant="destructive">Stor sag</Badge> : null}
-            {activeTicket.is_security_ticket ? (
-              <Badge variant="outline" className="border-amber-600 text-amber-800">
-                Sikkerhedssag
-              </Badge>
-            ) : null}
-          </div>
-        </WireDetailCard>
-
-        {!metadataEditable ? (
-          <TicketDetailTopBand
-            ticket={activeTicket}
-            teams={teams}
-            categories={categories}
-            editableMetadata={false}
-            staffView={staff}
-          />
-        ) : null}
-
-        {(activeTicket.tags?.length ?? 0) > 0 ? (
-          <WireDetailCard title="Tags">
-            <TicketTagBadges tags={activeTicket.tags} emoji={activeTicket.emoji} maxTags={10} />
-          </WireDetailCard>
-        ) : null}
-
-        <WireDetailCard title="Billeder og vedhæftninger (redigering)">
-          <TicketCaseImageStripSection
-            ticketId={activeTicket.id}
-            attachments={activeTicket.attachments ?? []}
-            staffView={staff}
-          />
-        </WireDetailCard>
-
-        {(staff || (activeTicket.ticket_emails?.length ?? 0) > 0) ? (
-          <WireDetailCard title="E-mail tråd">
-            <TicketEmailThread
-              ticketId={activeTicket.id}
-              ticketNumber={activeTicket.ticket_number}
-              linkedAddress={activeTicket.linked_gmail_email}
-              emails={activeTicket.ticket_emails ?? []}
-            />
-          </WireDetailCard>
-        ) : null}
-
-        <TicketHierarchySection ticket={activeTicket} staffView={staff} />
-
-        {showLlmRail ? (
-          <TicketIntelligencePanel
-            ticketId={activeTicket.id}
-            intelligence={activeTicket.intelligence!}
-            routing={activeTicket.routing}
-          />
-        ) : null}
-
-        <TicketMetadataCard ticket={activeTicket} />
-
-        {activeTicket.timestamps && activeTicket.activity ? (
-          <WireDetailCard title="Aktivitet">
-            <TicketActivityPanel
-              timestamps={activeTicket.timestamps}
-              activity={activeTicket.activity}
-            />
-          </WireDetailCard>
-        ) : null}
-
-        {!metadataEditable ? (
-          <WireDetailCard title="Tildeling og status" id="ticket-assign">
-            <div className="space-y-4">
-              <TicketMetadataForm ticket={activeTicket} staff={staff} />
-              <TicketPriorityForm
-                ticketId={activeTicket.id}
-                currentPriority={activeTicket.priority}
-                routing={activeTicket.routing}
-              />
-              {teams.length === 0 ? (
-                <TicketAssignmentForm
-                  ticketId={activeTicket.id}
-                  teams={teams}
-                  currentTeamId={activeTicket.assigned_team_id}
-                  currentUserId={activeTicket.assigned_user_id}
-                />
-              ) : null}
-            </div>
-          </WireDetailCard>
-        ) : null}
-      </>
+      <StaffTicketDetailBelow
+        ticket={activeTicket}
+        currentUser={currentUser}
+        teams={teams}
+        categories={categories}
+        staff={staff}
+        metadataEditable={metadataEditable}
+        showLlmRail={Boolean(showLlmRail)}
+      />
     );
   }
 

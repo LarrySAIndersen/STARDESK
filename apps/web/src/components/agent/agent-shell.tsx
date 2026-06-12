@@ -45,14 +45,14 @@ function AgentShellInner({
   const isChatPage = pathname === "/chat";
   const showChatPanel = staff && chatOpen && !isChatPage;
 
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
+
   useEffect(() => {
     if (isChatPage) {
       closeChat();
     }
   }, [isChatPage, closeChat]);
-
-  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
-  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -164,4 +164,3 @@ export function AgentShell({
     </PageLayoutEditProvider>
   );
 }
-
