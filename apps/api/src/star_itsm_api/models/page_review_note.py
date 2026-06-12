@@ -20,6 +20,7 @@ class PageReviewNote(Base):
     position_x: Mapped[float] = mapped_column(Float, nullable=False)
     position_y: Mapped[float] = mapped_column(Float, nullable=False)
     position_selector: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    screenshot_storage_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),

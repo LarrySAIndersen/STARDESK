@@ -55,7 +55,22 @@ async def create_review_note(
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(require_reviewer),
 ) -> ReviewNoteRead:
-    return await review_notes.create_review_note(db, payload=payload, author=current_user)
+    try:
+        return await review_notes.create_review_note(db, payload=payload, author=current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/{note_id}/screenshot")
+async def download_review_note_screenshot(
+    note_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(require_note_viewer),
+):
+    try:
+        return await review_notes.get_review_note_screenshot(db, note_id=note_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Screenshot ikke fundet") from None
 
 
 @router.patch("/{note_id}")
