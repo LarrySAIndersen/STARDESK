@@ -4,17 +4,12 @@ import { MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { useChatWorkspaceOptional } from "@/components/team-chat/chat-workspace-provider";
 import { cn } from "@/lib/utils";
 
-/** Staff-only link to the full-page team chat (/chat). */
+/** @deprecated Use agent nav item `team-chat` (/chat) instead. */
 export function TeamChatNavButton({ collapsed }: { collapsed: boolean }) {
-  const chat = useChatWorkspaceOptional();
   const pathname = usePathname();
-  if (!chat) return null;
-
-  const onChatPage = pathname === "/chat";
-  const active = onChatPage || chat.open;
+  const active = pathname === "/chat";
 
   return (
     <Link
@@ -24,14 +19,9 @@ export function TeamChatNavButton({ collapsed }: { collapsed: boolean }) {
         active && "wire-nav-item--active",
         collapsed && "wire-nav-item--compact",
       )}
-      onClick={() => {
-        if (chat.open) {
-          chat.closeChat();
-        }
-      }}
       title="Team chat"
       aria-label="Team chat"
-      aria-current={onChatPage ? "page" : undefined}
+      aria-current={active ? "page" : undefined}
     >
       {collapsed ? (
         <MessageSquare className="size-[18px] shrink-0 opacity-70" aria-hidden />
