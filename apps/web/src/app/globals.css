@@ -1588,11 +1588,7 @@
   }
 
   .team-chat-workspace--page {
-    @apply mx-auto w-full max-w-4xl bg-transparent px-3 py-3 sm:px-4 sm:py-4;
-  }
-
-  .team-chat-workspace--page .team-chat-page-body {
-    @apply min-h-0 flex-1 overflow-hidden rounded-[2px] border border-[var(--gray-border)] bg-card shadow-sm;
+    @apply w-full bg-card;
   }
 
   .team-chat-workspace--dock .team-chat-channel-list {
@@ -1600,7 +1596,7 @@
   }
 
   .team-chat-workspace--page .team-chat-channel-list {
-    @apply w-[200px] shrink-0;
+    @apply w-[220px];
   }
 
   .team-chat-workspace-header {
