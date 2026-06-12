@@ -127,3 +127,62 @@ async def test_post_message(client: AsyncClient) -> None:
         )
     assert response.status_code == 201
     assert response.json()["messages"][0]["body"] == "Hej team"
+
+
+@pytest.mark.asyncio
+async def test_create_channel(client: AsyncClient) -> None:
+    sample = TeamChatChannelRead(
+        id=CHANNEL_ID,
+        name="projekt-a",
+        slug="projekt-a",
+        description=None,
+        is_private=True,
+        is_system=False,
+        channel_type="private",
+    )
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.create_channel",
+        AsyncMock(return_value=sample),
+    ):
+        response = await client.post(
+            "/api/v1/team-chat/channels",
+            json={"name": "projekt-a", "is_private": True},
+        )
+    assert response.status_code == 201
+    assert response.json()["slug"] == "projekt-a"
+
+
+@pytest.mark.asyncio
+async def test_list_staff(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.list_staff",
+        AsyncMock(return_value=[]),
+    ):
+        response = await client.get("/api/v1/team-chat/staff")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_poll_messages(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.list_messages",
+        AsyncMock(return_value=[]),
+    ):
+        response = await client.get(f"/api/v1/team-chat/channels/{CHANNEL_ID}/poll")
+    assert response.status_code == 200
+    assert response.json()["messages"] == []
+
+
+@pytest.mark.asyncio
+async def test_toggle_reaction(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.toggle_reaction",
+        AsyncMock(return_value=[{"emoji": "👍", "count": 1, "reacted_by_me": True}]),
+    ):
+        response = await client.post(
+            f"/api/v1/team-chat/messages/{MESSAGE_ID}/reactions",
+            json={"emoji": "👍"},
+        )
+    assert response.status_code == 200
+    assert response.json()[0]["emoji"] == "👍"
