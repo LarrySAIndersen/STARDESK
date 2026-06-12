@@ -168,11 +168,11 @@ async def get_user_tickets(user_email: str, *, caller: User) -> str:
         
         if not tickets:
             return (
-                f"Brugeren '{user.display_name}' ({user_email}) "
+                f"Brugeren '{user.display_name}' ({effective_email}) "
                 "har ingen supportsager i systemet."
             )
             
-        output = [f"Her er de seneste supportsager for {user.display_name} ({user_email}):"]
+        output = [f"Her er de seneste supportsager for {user.display_name} ({effective_email}):"]
         for t in tickets:
             created_str = (
                 t.created_at.strftime('%Y-%m-%d %H:%M')
@@ -258,9 +258,6 @@ async def create_ticket(
         priority = "medium"
     if ticket_type not in ["incident", "service_request", "problem"]:
         ticket_type = "incident"
-
-    import uuid
-    from datetime import UTC, datetime
 
     from star_itsm_api.services.org_access import get_user_organization_id
     from star_itsm_api.services.routing import apply_routing
