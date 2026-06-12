@@ -75,7 +75,6 @@ function AgentShellInner({
           collapsed={false}
           onToggle={closeMobileNav}
           onNavigate={closeMobileNav}
-          showTeamChat={staff}
         />
       </MobileNavDrawer>
       <AgentShellColumns
@@ -87,7 +86,6 @@ function AgentShellInner({
             showUsersNav={showUsersNav}
             collapsed={collapsed}
             onToggle={toggle}
-            showTeamChat={staff}
           />
         }
       >
