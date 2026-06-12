@@ -9,6 +9,8 @@ import {
   clampCorkZoom,
   sortBoardNotes,
   sortStackNotes,
+  noteTrayStackOffsetForIndex,
+  pickPersonalNoteColorId,
   stackOffsetForIndex,
   ticketById,
 } from "@/lib/personal-board-layout";
@@ -69,6 +71,11 @@ describe("personal-board-layout", () => {
     expect(clampCorkZoom(2)).toBe(CORK_MAX_ZOOM);
     expect(adjustCorkZoom(1, "in")).toBeGreaterThan(1);
     expect(adjustCorkZoom(1, "out")).toBeLessThan(1);
+  });
+
+  it("returns tray stack offsets and note color rotation", () => {
+    expect(noteTrayStackOffsetForIndex(0).rotate).toBe(-4);
+    expect(pickPersonalNoteColorId([{ id: "red" }, { id: "blue" }], 3)).toBe("blue");
   });
 
   it("returns stack offsets cyclically", () => {

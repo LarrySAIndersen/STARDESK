@@ -16,6 +16,14 @@ export const STACK_OFFSETS = [
   { rotate: 2.8, x: 4, y: 24 },
 ] as const;
 
+/** Tray stack on bulletin board — slightly different scatter than cork board pile. */
+export const NOTE_TRAY_STACK_OFFSETS = [
+  { rotate: -4, x: 0, y: 0 },
+  { rotate: 2.5, x: 5, y: 7 },
+  { rotate: -1.5, x: 9, y: 14 },
+  { rotate: 3, x: 3, y: 21 },
+] as const;
+
 export const CORK_MIN_ZOOM = 0.32;
 export const CORK_MAX_ZOOM = 1.75;
 export const CORK_DEFAULT_ZOOM = 0.32;
@@ -49,6 +57,18 @@ export function boardRotationForNote(note: PersonalNote, index: number) {
 
 export function stackOffsetForIndex(index: number) {
   return STACK_OFFSETS[index % STACK_OFFSETS.length];
+}
+
+export function noteTrayStackOffsetForIndex(index: number) {
+  return NOTE_TRAY_STACK_OFFSETS[index % NOTE_TRAY_STACK_OFFSETS.length];
+}
+
+export function pickPersonalNoteColorId(
+  colors: readonly { id: string }[],
+  noteCount: number,
+): string {
+  if (colors.length === 0) return "yellow";
+  return colors[noteCount % colors.length].id;
 }
 
 export function sortStackNotes(notes: PersonalNote[]): PersonalNote[] {

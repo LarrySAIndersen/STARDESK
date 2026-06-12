@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 import {
-  dateKey,
-  formatDateSeparator,
-  formatMessageTime,
-  senderInitials,
-} from "@/lib/team-chat/message-format";
+  teamChatThreadSubtitle,
+  teamChatThreadTitle,
+} from "@/lib/team-chat/channel-utils";
+import { buildTeamChatMessageListItems } from "@/lib/team-chat/message-merge";
+import { formatMessageTime, senderInitials } from "@/lib/team-chat/message-format";
 import type { TeamChatChannel, TeamChatMessage } from "@/types/team-chat";
 
 type ChatMessageListProps = Readonly<{
@@ -84,28 +84,7 @@ export function ChatMessageList({
   onToggleReaction,
   endRef,
 }: ChatMessageListProps) {
-  const grouped = useMemo(() => {
-    const items: Array<
-      | { type: "separator"; key: string; label: string }
-      | { type: "message"; key: string; message: TeamChatMessage }
-    > = [];
-    let lastDay: string | null = null;
-
-    for (const message of messages) {
-      const day = dateKey(message.created_at);
-      if (day !== lastDay) {
-        items.push({
-          type: "separator",
-          key: `sep-${day}`,
-          label: formatDateSeparator(message.created_at),
-        });
-        lastDay = day;
-      }
-      items.push({ type: "message", key: message.id, message });
-    }
-
-    return items;
-  }, [messages]);
+  const grouped = useMemo(() => buildTeamChatMessageListItems(messages), [messages]);
 
   if (messages.length === 0) {
     return (
@@ -203,21 +182,8 @@ export function ChatThreadHeader({
   channel: TeamChatChannel | null;
   onStartHuddle?: () => void;
 }) {
-  if (!channel) {
-    return (
-      <div className="team-chat-thread-header">
-        <Hash className="size-5 shrink-0 opacity-50" aria-hidden />
-        <div className="min-w-0">
-          <h2 className="team-chat-thread-title">STARchat</h2>
-          <p className="team-chat-thread-subtitle">Intern team-chat</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isDm = channel.channel_type === "dm";
-  const isBot = channel.channel_type === "bot";
-  const title = isDm || isBot ? channel.name : `#${channel.slug}`;
+  const isDm = channel?.channel_type === "dm";
+  const isBot = channel?.channel_type === "bot";
 
   return (
     <div className="team-chat-thread-header">
@@ -227,19 +193,10 @@ export function ChatThreadHeader({
         <Hash className="size-5 shrink-0 text-star-blue" aria-hidden />
       )}
       <div className="min-w-0 flex-1">
-        <h2 className="team-chat-thread-title">{title}</h2>
-        <p className="team-chat-thread-subtitle">
-          {channel.description ??
-            (isBot
-              ? "AI-assistent til intern support"
-              : isDm
-                ? "Direkte besked"
-                : channel.is_private
-                  ? "Privat kanal"
-                  : "Offentlig kanal")}
-        </p>
+        <h2 className="team-chat-thread-title">{teamChatThreadTitle(channel)}</h2>
+        <p className="team-chat-thread-subtitle">{teamChatThreadSubtitle(channel)}</p>
       </div>
-      {onStartHuddle && !isDm ? (
+      {onStartHuddle && channel && !isDm ? (
         <Button
           type="button"
           variant="outline"
