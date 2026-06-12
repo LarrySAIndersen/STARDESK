@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { apiGet, apiPatch } from "@/lib/api";
+import { apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
 
 function formatTimestamp(value: string): string {
@@ -76,7 +76,7 @@ export function ForbedringerPanel() {
         <div>
           <h1 className="wire-card-title text-xl">Forbedringer</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Gule sedler fra Stardesk Reviewer med side, person, kommentar og placering.
+            Gule sedler fra Stardesk Reviewer med side, person, kommentar, placering og skærmbillede.
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => fireAndForget(loadNotes())}>
@@ -145,6 +145,18 @@ export function ForbedringerPanel() {
               <span className="text-muted-foreground text-xs">{note.page_path}</span>
             </div>
             <p className="text-sm leading-relaxed">{note.comment}</p>
+            {note.has_screenshot ? (
+              <div className="space-y-1">
+                <p className="text-foreground text-xs font-medium">Skærmbillede</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={reviewNoteScreenshotUrl(note.id)}
+                  alt={`Skærmbillede for ${note.page_title || note.page_path}`}
+                  className="border-input max-h-64 max-w-full rounded-md border object-contain"
+                  loading="lazy"
+                />
+              </div>
+            ) : null}
             <dl className="text-muted-foreground grid gap-1 text-xs sm:grid-cols-3">
               <div>
                 <dt className="font-medium text-foreground">Person</dt>

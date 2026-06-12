@@ -9,6 +9,7 @@ import { StickyNote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { blobToBase64, captureReviewScreenshot } from "@/lib/capture-review-screenshot";
 import { isStaff, isStardeskReviewer } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
@@ -199,6 +200,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
     if (!draft || !pathname) return;
     setSaving(true);
     try {
+      const screenshotBlob = await captureReviewScreenshot();
       const payload: ReviewNoteCreatePayload = {
         page_path: pathname,
         page_title: pageTitleFromPath(pathname),
@@ -206,6 +208,9 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
         position_x: draft.x,
         position_y: draft.y,
       };
+      if (screenshotBlob) {
+        payload.screenshot_base64 = await blobToBase64(screenshotBlob);
+      }
       const created = await apiPost<ReviewNote>("/api/v1/review-notes", payload);
       setNotes((prev) => [created, ...prev]);
       setDraft(null);

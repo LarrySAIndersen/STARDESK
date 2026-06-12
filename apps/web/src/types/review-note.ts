@@ -12,6 +12,7 @@ export interface ReviewNote {
   created_by_name: string;
   created_by_email?: string | null;
   status: ReviewNoteStatus;
+  has_screenshot: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -23,4 +24,5 @@ export interface ReviewNoteCreatePayload {
   position_x: number;
   position_y: number;
   position_selector?: string | null;
+  screenshot_base64?: string;
 }

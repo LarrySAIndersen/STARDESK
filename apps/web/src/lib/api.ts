@@ -123,6 +123,10 @@ export function attachmentDownloadUrl(ticketId: string, attachmentId: string): s
   return `/api/proxy/v1/tickets/${ticketId}/attachments/${attachmentId}/download`;
 }
 
+export function reviewNoteScreenshotUrl(noteId: string): string {
+  return `/api/proxy/v1/review-notes/${noteId}/screenshot`;
+}
+
 export async function apiPut<T>(
   path: string,
   body: unknown,
