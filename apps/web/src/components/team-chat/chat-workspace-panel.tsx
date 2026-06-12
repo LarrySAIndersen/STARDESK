@@ -189,53 +189,6 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
     router.push("/chat");
   }, [closeChat, router]);
 
-  const channelHeader = (
-    <header className="team-chat-workspace-header">
-      <div className="min-w-0 flex-1">
-        <h2 className="truncate text-sm font-bold text-star-navy">{channelTitle}</h2>
-        <p className="text-muted-foreground text-[10px]">
-          {isPage ? "Intern team-chat" : "Ctrl+Shift+C · Magnetisk dock"}
-        </p>
-      </div>
-      {activeChannel && activeChannel.channel_type !== "dm" ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0"
-          aria-label="Start huddle"
-          title="Start huddle (mock)"
-          onClick={() => setHuddleOpen(true)}
-        >
-          <Video className="size-4" />
-        </Button>
-      ) : null}
-      {isDock ? (
-        <>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            aria-label="Åbn chat i fuld side"
-            title="Åbn chat i fuld side"
-            onClick={openFullPage}
-          >
-            <Maximize2 className="size-4" />
-          </Button>
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
-            onClick={closeChat}
-            aria-label="Luk chat"
-          >
-            <X className="size-4" />
-          </button>
-        </>
-      ) : null}
-    </header>
-  );
-
   return (
     <div
       className={cn(
@@ -244,14 +197,52 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         isDock && "team-chat-workspace--dock h-full",
       )}
     >
-      {!isPage ? channelHeader : null}
+      <header className="team-chat-workspace-header">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-bold text-star-navy">{channelTitle}</h2>
+          <p className="text-muted-foreground text-[10px]">
+            {isPage ? "Intern team-chat" : "Ctrl+Shift+C · Magnetisk dock"}
+          </p>
+        </div>
+        {activeChannel && activeChannel.channel_type !== "dm" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label="Start huddle"
+            title="Start huddle (mock)"
+            onClick={() => setHuddleOpen(true)}
+          >
+            <Video className="size-4" />
+          </Button>
+        ) : null}
+        {isDock ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              aria-label="Åbn chat i fuld side"
+              title="Åbn chat i fuld side"
+              onClick={openFullPage}
+            >
+              <Maximize2 className="size-4" />
+            </Button>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
+              onClick={closeChat}
+              aria-label="Luk chat"
+            >
+              <X className="size-4" />
+            </button>
+          </>
+        ) : null}
+      </header>
 
-      <div
-        className={cn(
-          "flex min-h-0 flex-1",
-          isPage && "team-chat-page-body",
-        )}
-      >
+      <div className="flex min-h-0 flex-1">
         <ChatChannelList
           channels={channels}
           activeChannelId={activeChannelId}
@@ -264,7 +255,6 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         />
 
         <div className="team-chat-thread flex min-h-0 min-w-0 flex-1 flex-col">
-          {isPage ? channelHeader : null}
           {loading ? (
             <p className="text-muted-foreground p-3 text-xs">Indlæser chat…</p>
           ) : null}
