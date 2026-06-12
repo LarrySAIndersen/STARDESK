@@ -2,29 +2,16 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import {
+  computeMouseGaze,
+  eyeOffset,
+  type HelpABotAvatarId,
+  isValidHelpABotAvatarId,
+} from "@/lib/help-a-bot-avatar-utils";
 import { cn } from "@/lib/utils";
 
-export type HelpABotAvatarId =
-  | "robot"
-  | "cat"
-  | "dog"
-  | "owl"
-  | "fox"
-  | "penguin"
-  | "bear"
-  | "frog"
-  | "bunny"
-  | "unicorn"
-  | "dragon"
-  | "fish"
-  | "bee"
-  | "octopus"
-  | "rocket"
-  | "star"
-  | "coffee"
-  | "lightbulb"
-  | "ghost"
-  | "alien";
+export type { HelpABotAvatarId };
+export { isValidHelpABotAvatarId };
 
 export type HelpABotAvatarDef = {
   id: HelpABotAvatarId;
@@ -59,12 +46,7 @@ export const HELP_A_BOT_AVATAR_STORAGE_KEY = "stardesk-helpabot-avatar";
 type Gaze = Readonly<{ x: number; y: number }>;
 
 const HEAD_ROTATE_MAX = 18;
-const PUPIL_OFFSET = 2.8;
 const STALK_ROTATE_MAX = 22;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
 
 function useMouseGaze(trackMouse: boolean) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,22 +63,15 @@ function useMouseGaze(trackMouse: boolean) {
         if (!element) return;
 
         const rect = element.getBoundingClientRect();
-        const dx = event.clientX - (rect.left + rect.width / 2);
-        const dy = event.clientY - (rect.top + rect.height / 2);
-        const distance = Math.hypot(dx, dy);
-        if (distance < 1) {
-          setGaze({ x: 0, y: 0 });
-          return;
-        }
-
-        const influence = Math.min(
-          1,
-          distance / (Math.max(window.innerWidth, window.innerHeight) * 0.35),
+        setGaze(
+          computeMouseGaze(
+            event.clientX,
+            event.clientY,
+            rect,
+            window.innerWidth,
+            window.innerHeight,
+          ),
         );
-        setGaze({
-          x: clamp((dx / distance) * influence, -1, 1),
-          y: clamp((dy / distance) * influence, -1, 1),
-        });
       });
     };
 
@@ -108,17 +83,6 @@ function useMouseGaze(trackMouse: boolean) {
   }, [trackMouse]);
 
   return { containerRef, gaze };
-}
-
-function eyeOffset(baseX: number, baseY: number, gaze: Gaze, scale = 1) {
-  const ox = gaze.x * PUPIL_OFFSET * scale;
-  const oy = gaze.y * PUPIL_OFFSET * scale;
-  return {
-    cx: baseX + ox,
-    cy: baseY + oy,
-    hx: baseX + ox - 1.5,
-    hy: baseY + oy - 1.5,
-  };
 }
 
 const AVATAR_ANIM_CSS = `
@@ -578,6 +542,3 @@ export function HelpABotAvatar({
   );
 }
 
-export function isValidHelpABotAvatarId(value: string): value is HelpABotAvatarId {
-  return HELP_A_BOT_AVATARS.some((a) => a.id === value);
-}

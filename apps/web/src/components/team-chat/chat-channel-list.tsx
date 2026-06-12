@@ -8,6 +8,10 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPost } from "@/lib/api";
+import {
+  splitTeamChatChannels,
+  teamChatChannelLabel,
+} from "@/lib/team-chat/channel-utils";
 import { cn } from "@/lib/utils";
 import type { TeamChatChannel, TeamChatStaff } from "@/types/team-chat";
 
@@ -16,21 +20,6 @@ function channelIcon(ch: TeamChatChannel) {
   if (ch.channel_type === "dm") return UserRound;
   if (ch.is_private) return Lock;
   return Hash;
-}
-
-function channelLabel(ch: TeamChatChannel): string {
-  if (ch.channel_type === "dm") return ch.name;
-  if (ch.channel_type === "bot") return ch.name;
-  return ch.slug;
-}
-
-function matchesQuery(ch: TeamChatChannel, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return (
-    channelLabel(ch).toLowerCase().includes(q) ||
-    (ch.description?.toLowerCase().includes(q) ?? false)
-  );
 }
 
 export function ChatChannelList({
@@ -58,20 +47,8 @@ export function ChatChannelList({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const publicChannels = useMemo(
-    () =>
-      channels.filter(
-        (c) =>
-          (c.channel_type === "public" || c.channel_type === "bot") && matchesQuery(c, search),
-      ),
-    [channels, search],
-  );
-  const dmChannels = useMemo(
-    () => channels.filter((c) => c.channel_type === "dm" && matchesQuery(c, search)),
-    [channels, search],
-  );
-  const privateChannels = useMemo(
-    () => channels.filter((c) => c.channel_type === "private" && matchesQuery(c, search)),
+  const { publicChannels, dmChannels, privateChannels } = useMemo(
+    () => splitTeamChatChannels(channels, search),
     [channels, search],
   );
 
@@ -129,7 +106,7 @@ export function ChatChannelList({
         onClick={() => onSelect(ch.id)}
       >
         <Icon className="team-chat-channel-icon size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1 truncate text-left">{channelLabel(ch)}</span>
+        <span className="min-w-0 flex-1 truncate text-left">{teamChatChannelLabel(ch)}</span>
         {unread ? (
           <span className="team-chat-unread-badge" aria-label={`${ch.unread_count} ulæste`}>
             {ch.unread_count > 99 ? "99+" : ch.unread_count}

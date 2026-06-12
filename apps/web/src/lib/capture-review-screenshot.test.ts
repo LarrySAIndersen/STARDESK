@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { blobToBase64, shouldIgnoreCaptureElement } from "@/lib/capture-review-screenshot";
+import {
+  blobToBase64,
+  scheduleReviewScreenshotCapture,
+  shouldIgnoreCaptureElement,
+} from "@/lib/capture-review-screenshot";
 
 describe("shouldIgnoreCaptureElement", () => {
   afterEach(() => {
@@ -9,7 +13,7 @@ describe("shouldIgnoreCaptureElement", () => {
 
   it("ignores review overlay nodes", () => {
     class MockHTMLElement {
-      classList = { contains: () => false };
+      classList = { contains: (_name: string) => false };
     }
     vi.stubGlobal("HTMLElement", MockHTMLElement);
 
@@ -22,6 +26,22 @@ describe("shouldIgnoreCaptureElement", () => {
     const plain = new MockHTMLElement();
     expect(shouldIgnoreCaptureElement(plain as unknown as Element)).toBe(false);
     expect(shouldIgnoreCaptureElement({} as Element)).toBe(false);
+  });
+});
+
+describe("scheduleReviewScreenshotCapture", () => {
+  it("returns cancel handler without invoking capture immediately", () => {
+    vi.stubGlobal("window", {
+      requestIdleCallback: undefined,
+      setTimeout: vi.fn(() => 1),
+      clearTimeout: vi.fn(),
+    });
+    const onCaptured = vi.fn();
+    const cancel = scheduleReviewScreenshotCapture(onCaptured);
+    expect(onCaptured).not.toHaveBeenCalled();
+    cancel();
+    expect(window.clearTimeout).toHaveBeenCalledWith(1);
+    vi.unstubAllGlobals();
   });
 });
 
