@@ -1,8 +1,14 @@
 "use client";
 
+import { useId } from "react";
 import { Video, X } from "lucide-react";
 
+import {
+  AccessibleModalBackdrop,
+  AccessibleModalPanel,
+} from "@/components/ui/accessible-modal-shell";
 import { Button } from "@/components/ui/button";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 const MOCK_PARTICIPANTS = [
   { initials: "AK", name: "Anna K." },
@@ -19,19 +25,27 @@ export function ChatHuddleMock({
   onClose: () => void;
   channelName: string;
 }) {
+  const titleId = useId();
+  const trapRef = useFocusTrap(open);
+
   if (!open) return null;
 
   return (
-    <div className="team-chat-huddle-backdrop" role="presentation" onClick={onClose}>
-      <div
+    <AccessibleModalBackdrop
+      onClose={onClose}
+      unstyled
+      className="team-chat-huddle-backdrop"
+      dismissClassName="absolute inset-0 border-0 bg-transparent p-0"
+      dismissLabel="Luk huddle"
+    >
+      <AccessibleModalPanel
+        trapRef={trapRef}
+        titleId={titleId}
+        onClose={onClose}
         className="team-chat-huddle-dialog"
-        role="dialog"
-        aria-label={`Huddle i ${channelName}`}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
       >
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-star-navy">
+          <h2 id={titleId} className="flex items-center gap-2 text-sm font-bold text-star-navy">
             <Video className="size-4" aria-hidden />
             Huddle — #{channelName}
           </h2>
@@ -66,7 +80,7 @@ export function ChatHuddleMock({
             Forlad huddle
           </Button>
         </div>
-      </div>
-    </div>
+      </AccessibleModalPanel>
+    </AccessibleModalBackdrop>
   );
 }
