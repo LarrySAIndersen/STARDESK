@@ -1511,76 +1511,13 @@
     @apply border-star-blue/30 bg-star-blue-light text-star-navy mr-auto max-w-[90%];
   }
 
-  /* Locked top bar + magnetically docked team chat */
-  .team-chat-shell-header {
-    @apply sticky top-0 z-30 shrink-0 bg-card;
-    box-shadow: 0 1px 0 var(--gray-border);
-  }
-
-  .team-chat-shell-header .wire-topbar {
-    position: relative;
-    top: auto;
-    z-index: 1;
-  }
-
-  .wire-topbar-team-chat-btn {
-    @apply text-muted-foreground hover:bg-accent hover:text-foreground flex size-8 items-center justify-center rounded-sm border border-border bg-muted/40 transition-all duration-200;
-  }
-
-  .wire-topbar-team-chat-btn--active {
-    @apply border-star-blue/50 bg-star-blue-light text-star-navy shadow-[0_0_0_2px_rgb(59_130_246/0.2)];
-  }
-
-  .team-chat-dock {
-    @apply overflow-hidden border-t border-[var(--gray-border)] bg-card;
-    max-height: 0;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition:
-      max-height 0.38s cubic-bezier(0.34, 1.2, 0.64, 1),
-      opacity 0.28s ease,
-      transform 0.38s cubic-bezier(0.34, 1.2, 0.64, 1);
-    will-change: max-height, transform, opacity;
-  }
-
-  .team-chat-dock--open {
-    max-height: min(42vh, 420px);
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .team-chat-dock--snap .team-chat-dock__inner {
-    animation: team-chat-magnetic-snap 0.52s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  @keyframes team-chat-magnetic-snap {
-    0% {
-      transform: translateY(-14px) scale(0.985);
-    }
-    55% {
-      transform: translateY(5px) scale(1.005);
-    }
-    100% {
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  .team-chat-dock__inner {
-    height: min(42vh, 420px);
-    min-height: 260px;
-  }
-
-  /* Internal team chat workspace (Slack-like) */
+  /* Internal team chat workspace (Slack-like) — full page at /chat only */
   .team-chat-workspace {
     @apply bg-card;
   }
 
-  .team-chat-workspace--dock .team-chat-channel-list {
-    @apply w-[180px];
-  }
-
   .team-chat-workspace--page .team-chat-channel-list {
-    @apply w-[220px];
+    @apply w-[260px];
   }
 
   .team-chat-workspace-header {
