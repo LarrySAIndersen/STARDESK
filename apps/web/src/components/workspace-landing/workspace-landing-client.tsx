@@ -19,9 +19,16 @@ import {
 } from "@/components/workspace-landing/workspace-landing-toolbar";
 import { Button } from "@/components/ui/button";
 import {
-  definitionForKind,
-  nextWidgetOrder,
-} from "@/lib/workspace-landing/catalog";
+  applySpaceWidgetUpdate,
+  buildSpaceHref,
+  createWidgetInstance,
+  hideWidgetInstance,
+  moveWidgetInstance,
+  needsPostItProvider,
+  parseWorkspaceSpace,
+  toggleWidgetSpan,
+  visibleWidgetInstances,
+} from "@/lib/workspace-landing/layout-utils";
 import {
   readWorkspaceLanding,
   resetWorkspaceLanding,
@@ -33,7 +40,7 @@ import type {
   WorkspaceWidgetInstance,
   WorkspaceWidgetKind,
 } from "@/lib/workspace-landing/types";
-import { apiGet } from "@/lib/api";
+import { loadTeamChatDirectory, loadTeamChatStaff } from "@/lib/team-chat/directory";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban, type PersonalNote } from "@/types/personal";
 import type { UserTicketsGrouped } from "@/types/admin-user";
@@ -56,17 +63,6 @@ type WorkspaceLandingClientProps = Readonly<{
   notesLoadFailed: boolean;
 }>;
 
-function parseSpace(value: string | null): WorkspaceSpace {
-  return value === "team" ? "team" : "personal";
-}
-
-function reorderInstances(instances: WorkspaceWidgetInstance[]): WorkspaceWidgetInstance[] {
-  return instances
-    .filter((item) => !item.hidden)
-    .sort((a, b) => a.order - b.order)
-    .map((item, index) => ({ ...item, order: index }));
-}
-
 function TeamChatWidgetPreview() {
   const { openChat, setActiveChannelId } = useChatWorkspace();
   const [channels, setChannels] = useState<TeamChatChannel[]>([]);
@@ -79,10 +75,7 @@ function TeamChatWidgetPreview() {
       (async () => {
         setLoading(true);
         try {
-          const [channelData, staffData] = await Promise.all([
-            apiGet<TeamChatChannel[]>("/api/v1/team-chat/channels"),
-            apiGet<TeamChatStaff[]>("/api/v1/team-chat/staff"),
-          ]);
+          const { channels: channelData, staff: staffData } = await loadTeamChatDirectory();
           setChannels(channelData);
           setStaff(staffData);
         } catch {
@@ -132,9 +125,7 @@ function TeamMembersWidget() {
 
   useEffect(() => {
     fireAndForget(
-      apiGet<TeamChatStaff[]>("/api/v1/team-chat/staff")
-        .then(setStaff)
-        .finally(() => setLoading(false)),
+      loadTeamChatStaff().then(setStaff).finally(() => setLoading(false)),
     );
   }, []);
 
@@ -175,7 +166,7 @@ export function WorkspaceLandingClient({
 }: WorkspaceLandingClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialSpace = parseSpace(searchParams.get("space"));
+  const initialSpace = parseWorkspaceSpace(searchParams.get("space"));
 
   const [space, setSpace] = useState<WorkspaceSpace>(initialSpace);
   const [editMode, setEditMode] = useState(false);
@@ -186,7 +177,7 @@ export function WorkspaceLandingClient({
   const [kanban, setKanban] = useState(initialKanban);
 
   useEffect(() => {
-    setSpace(parseSpace(searchParams.get("space")));
+    setSpace(parseWorkspaceSpace(searchParams.get("space")));
   }, [searchParams]);
 
   const persistLayout = useCallback(
@@ -199,10 +190,7 @@ export function WorkspaceLandingClient({
 
   const updateSpaceWidgets = useCallback(
     (spaceKey: WorkspaceSpace, updater: (items: WorkspaceWidgetInstance[]) => WorkspaceWidgetInstance[]) => {
-      persistLayout({
-        ...layout,
-        [spaceKey]: reorderInstances(updater(layout[spaceKey])),
-      });
+      persistLayout(applySpaceWidgetUpdate(layout, spaceKey, updater));
     },
     [layout, persistLayout],
   );
@@ -210,26 +198,14 @@ export function WorkspaceLandingClient({
   const handleSpaceChange = useCallback(
     (next: WorkspaceSpace) => {
       setSpace(next);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("space", next);
-      router.replace(`/?${params.toString()}`, { scroll: false });
+      router.replace(buildSpaceHref(next, searchParams.toString()), { scroll: false });
     },
     [router, searchParams],
   );
 
   const handleAddWidget = useCallback(
     (kind: WorkspaceWidgetKind) => {
-      const def = definitionForKind(kind);
-      updateSpaceWidgets(space, (items) => [
-        ...items,
-        {
-          instanceId: `${kind}-${Date.now()}`,
-          kind,
-          order: nextWidgetOrder(items),
-          span: def.defaultSpan,
-          hidden: false,
-        },
-      ]);
+      updateSpaceWidgets(space, (items) => [...items, createWidgetInstance(kind, items)]);
     },
     [space, updateSpaceWidgets],
   );
@@ -246,13 +222,11 @@ export function WorkspaceLandingClient({
   }, []);
 
   const visibleWidgets = useMemo(
-    () => layout[space].filter((item) => !item.hidden).sort((a, b) => a.order - b.order),
+    () => visibleWidgetInstances(layout[space]),
     [layout, space],
   );
 
-  const hasPersonalNotesWidget = visibleWidgets.some((w) => w.kind === "personal-notes");
-  const hasPersonalKanbanWidget = visibleWidgets.some((w) => w.kind === "personal-kanban");
-  const needsPostItProvider = hasPersonalNotesWidget || hasPersonalKanbanWidget;
+  const showPostItProvider = needsPostItProvider(visibleWidgets);
 
   const renderWidget = (instance: WorkspaceWidgetInstance) => {
     switch (instance.kind) {
@@ -327,32 +301,18 @@ export function WorkspaceLandingClient({
             instance={instance}
             editMode={editMode}
             onMove={(direction) => {
-              updateSpaceWidgets(space, (items) => {
-                const sorted = [...items].sort((a, b) => a.order - b.order);
-                const index = sorted.findIndex((item) => item.instanceId === instance.instanceId);
-                const target = index + direction;
-                if (index < 0 || target < 0 || target >= sorted.length) return items;
-                const next = [...sorted];
-                const temp = next[index].order;
-                next[index] = { ...next[index], order: next[target].order };
-                next[target] = { ...next[target], order: temp };
-                return next;
-              });
+              updateSpaceWidgets(space, (items) =>
+                moveWidgetInstance(items, instance.instanceId, direction),
+              );
             }}
             onToggleSpan={() => {
               updateSpaceWidgets(space, (items) =>
-                items.map((item) =>
-                  item.instanceId === instance.instanceId
-                    ? { ...item, span: item.span === "full" ? "half" : "full" }
-                    : item,
-                ),
+                toggleWidgetSpan(items, instance.instanceId),
               );
             }}
             onHide={() => {
               updateSpaceWidgets(space, (items) =>
-                items.map((item) =>
-                  item.instanceId === instance.instanceId ? { ...item, hidden: true } : item,
-                ),
+                hideWidgetInstance(items, instance.instanceId),
               );
             }}
           >
@@ -376,7 +336,7 @@ export function WorkspaceLandingClient({
         userDisplayName={user.display_name}
       />
       <div className="wire-scroll-content min-h-0 flex-1 p-5">
-        {needsPostItProvider ? (
+        {showPostItProvider ? (
           <PostItAttachProvider
             onNoteUpdated={(note) =>
               setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)))
