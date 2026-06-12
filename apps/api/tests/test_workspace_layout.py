@@ -15,7 +15,7 @@ from star_itsm_api.core.security import (
     get_current_user_session,
 )
 from star_itsm_api.main import app
-from star_itsm_api.schemas.workspace_layout import WorkspaceLandingRead, WorkspaceLandingLayout
+from star_itsm_api.schemas.workspace_layout import WorkspaceLandingLayout, WorkspaceLandingRead
 from star_itsm_api.services import workspace_layout_service
 
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,11 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from star_itsm_api.models.user import User
 from star_itsm_api.models.workspace_layout import WORKSPACE_LAYOUT_VERSION, UserWorkspaceLayout
 from star_itsm_api.schemas.workspace_layout import (
+    WORKSPACE_WIDGET_KINDS,
     WorkspaceLandingLayout,
     WorkspaceLandingRead,
     WorkspaceLandingUpdate,
     WorkspaceWidgetInstance,
-    WORKSPACE_WIDGET_KINDS,
 )
 
 DEFAULT_WORKSPACE_LAYOUT = WorkspaceLandingLayout(
