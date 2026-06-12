@@ -1,4 +1,5 @@
-import { createElement, type RefObject } from "react";
+/* eslint-disable react/no-children-prop -- createElement with typed function components requires children in props */
+import { createElement, type ReactNode, type RefObject } from "react";
 import { Video, X } from "lucide-react";
 
 import {
@@ -13,6 +14,17 @@ export const HUDDLE_MOCK_PARTICIPANTS = [
   { initials: "DU", name: "Dig" },
 ] as const;
 
+function huddleParticipantTiles(): ReactNode[] {
+  return HUDDLE_MOCK_PARTICIPANTS.map((participant) =>
+    createElement(
+      "div",
+      { key: participant.initials, className: "team-chat-huddle-tile" },
+      createElement("span", { className: "team-chat-huddle-avatar" }, participant.initials),
+      createElement("span", { className: "text-[11px] font-medium" }, participant.name),
+    ),
+  );
+}
+
 export function renderChatHuddleMockContent({
   channelName,
   titleId,
@@ -24,23 +36,12 @@ export function renderChatHuddleMockContent({
   trapRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
 }) {
-  return createElement(
-    AccessibleModalBackdrop,
-    {
-      onClose,
-      unstyled: true,
-      className: "team-chat-huddle-backdrop",
-      dismissClassName: "absolute inset-0 border-0 bg-transparent p-0",
-      dismissLabel: "Luk huddle",
-    },
-    createElement(
-      AccessibleModalPanel,
-      {
-        trapRef,
-        titleId,
-        onClose,
-        className: "team-chat-huddle-dialog",
-      },
+  const panel = createElement(AccessibleModalPanel, {
+    trapRef,
+    titleId,
+    onClose,
+    className: "team-chat-huddle-dialog",
+    children: [
       createElement(
         "header",
         { className: "mb-3 flex items-center justify-between gap-2" },
@@ -66,18 +67,7 @@ export function renderChatHuddleMockContent({
         { className: "text-muted-foreground mb-3 text-xs" },
         "Video-mockup — rigtig WebRTC-integration kommer senere.",
       ),
-      createElement(
-        "div",
-        { className: "team-chat-huddle-grid" },
-        ...HUDDLE_MOCK_PARTICIPANTS.map((participant) =>
-          createElement(
-            "div",
-            { key: participant.initials, className: "team-chat-huddle-tile" },
-            createElement("span", { className: "team-chat-huddle-avatar" }, participant.initials),
-            createElement("span", { className: "text-[11px] font-medium" }, participant.name),
-          ),
-        ),
-      ),
+      createElement("div", { className: "team-chat-huddle-grid" }, ...huddleParticipantTiles()),
       createElement(
         "div",
         { className: "mt-4 flex flex-wrap gap-2" },
@@ -89,6 +79,15 @@ export function renderChatHuddleMockContent({
           "Forlad huddle",
         ),
       ),
-    ),
-  );
+    ],
+  });
+
+  return createElement(AccessibleModalBackdrop, {
+    onClose,
+    unstyled: true,
+    className: "team-chat-huddle-backdrop",
+    dismissClassName: "absolute inset-0 border-0 bg-transparent p-0",
+    dismissLabel: "Luk huddle",
+    children: panel,
+  });
 }
