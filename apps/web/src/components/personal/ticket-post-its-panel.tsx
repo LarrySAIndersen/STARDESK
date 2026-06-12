@@ -9,12 +9,9 @@ import { EditablePostItFields } from "@/components/personal/editable-post-it-fie
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch } from "@/lib/api";
 import { personalNoteColorClass } from "@/lib/personal-note-colors";
+import { personalNoteVisibilityLabel } from "@/lib/personal-note-visibility";
 import { cn } from "@/lib/utils";
-import type { PersonalNote, PersonalNoteVisibility } from "@/types/personal";
-
-function visibilityLabel(visibility: PersonalNoteVisibility | string | null | undefined): string {
-  return visibility === "team" ? "Alle på sagen" : "Kun mig";
-}
+import type { PersonalNote } from "@/types/personal";
 
 export function TicketPostItsPanel({
   ticketId,
@@ -82,7 +79,7 @@ export function TicketPostItsPanel({
             >
               <div className="ticket-post-its-panel__meta">
                 <span className="ticket-post-its-panel__visibility">
-                  {visibilityLabel(note.visibility)}
+                  {personalNoteVisibilityLabel(note.visibility)}
                 </span>
                 {note.author_name && !isOwner ? (
                   <span className="text-muted-foreground text-xs">{note.author_name}</span>

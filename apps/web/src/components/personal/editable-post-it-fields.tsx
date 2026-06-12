@@ -15,6 +15,10 @@ import {
   resolveNoteColorId,
   type PersonalNoteColorId,
 } from "@/lib/personal-note-colors";
+import {
+  personalNoteVisibilityLabel,
+  trimmedNoteField,
+} from "@/lib/personal-note-visibility";
 import { cn } from "@/lib/utils";
 import type {
   PersonalNote,
@@ -61,14 +65,14 @@ export function EditablePostItFields({
   );
 
   const saveTitle = useCallback(() => {
-    const trimmed = title.trim();
-    if (!trimmed || trimmed === note.title) return;
+    const trimmed = trimmedNoteField(title, note.title);
+    if (!trimmed) return;
     fireAndForget(patch({ title: trimmed }).catch(() => {}));
   }, [note.title, patch, title]);
 
   const saveContent = useCallback(() => {
-    const trimmed = content.trim();
-    if (trimmed === note.content) return;
+    const trimmed = trimmedNoteField(content, note.content, 0);
+    if (trimmed === null) return;
     fireAndForget(patch({ content: trimmed }).catch(() => {}));
   }, [content, note.content, patch]);
 
@@ -121,7 +125,7 @@ export function EditablePostItFields({
           ) : null}
           {note.ticket_id ? (
             <span className="post-it-edit__visibility-badge">
-              {note.visibility === "team" ? "Alle på sagen" : "Kun mig"}
+              {personalNoteVisibilityLabel(note.visibility)}
             </span>
           ) : null}
         </div>
@@ -158,7 +162,7 @@ export function EditablePostItFields({
         ) : null}
         {note.ticket_id ? (
           <span className="post-it-edit__visibility-badge">
-            {note.visibility === "team" ? "Alle på sagen" : "Kun mig"}
+            {personalNoteVisibilityLabel(note.visibility)}
           </span>
         ) : null}
       </div>

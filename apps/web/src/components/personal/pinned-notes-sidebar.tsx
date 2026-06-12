@@ -7,14 +7,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Pin, StickyNote } from "lucide-react";
 
 import { apiGet } from "@/lib/api";
+import { ticketById } from "@/lib/personal-board-layout";
 import { personalNoteColorClass } from "@/lib/personal-note-colors";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban, type PersonalNote } from "@/types/personal";
 import type { Ticket } from "@/types/ticket";
-
-function ticketById(tickets: Ticket[], id: string): Ticket | undefined {
-  return tickets.find((t) => t.id === id);
-}
 
 export function PinnedNotesSidebar({ collapsed }: { collapsed: boolean }) {
   const [notes, setNotes] = useState<PersonalNote[]>([]);

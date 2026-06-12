@@ -20,9 +20,9 @@ import { EditablePostItFields } from "@/components/personal/editable-post-it-fie
 import { PersonalNoteStack } from "@/components/personal/personal-note-stack";
 import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
 import { personalNoteColorClass } from "@/lib/personal-note-colors";
+import { ticketById } from "@/lib/personal-board-layout";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban, type PersonalNote } from "@/types/personal";
-import type { Ticket as TicketType } from "@/types/ticket";
 
 const PINNED_QUEUE_COLUMN = PERSONAL_KANBAN_COLUMNS[0];
 
@@ -34,10 +34,6 @@ const NOTE_SCATTER = [
   { rotate: -0.8, shift: "ml-1" },
   { rotate: 1.4, shift: "ml-2" },
 ] as const;
-
-function ticketById(tickets: TicketType[], id: string): TicketType | undefined {
-  return tickets.find((t) => t.id === id);
-}
 
 function BulletinPushpin({ className }: { className?: string }) {
   return <span className={cn("bulletin-pushpin", className)} aria-hidden />;

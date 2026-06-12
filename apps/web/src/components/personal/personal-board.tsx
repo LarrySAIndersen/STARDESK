@@ -17,49 +17,22 @@ import {
   personalNoteColorClass,
   type PersonalNoteColorId,
 } from "@/lib/personal-note-colors";
+import {
+  adjustCorkZoom,
+  boardPositionForNote,
+  boardRotationForNote,
+  CORK_DEFAULT_ZOOM,
+  CORK_MAX_ZOOM,
+  CORK_MIN_ZOOM,
+  sortBoardNotes,
+  sortStackNotes,
+  stackOffsetForIndex,
+  ticketById,
+} from "@/lib/personal-board-layout";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban, type PersonalNote } from "@/types/personal";
-import type { Ticket as TicketType } from "@/types/ticket";
 
 const PINNED_QUEUE_COLUMN = PERSONAL_KANBAN_COLUMNS[0];
-
-const STACK_OFFSETS = [
-  { rotate: -3.5, x: 0, y: 0 },
-  { rotate: 2.2, x: 6, y: 8 },
-  { rotate: -1.8, x: 10, y: 16 },
-  { rotate: 2.8, x: 4, y: 24 },
-] as const;
-
-const BOARD_FALLBACK_POSITIONS = [
-  { x: 24, y: 28, rotate: -2.4 },
-  { x: 210, y: 48, rotate: 1.8 },
-  { x: 120, y: 140, rotate: -1.1 },
-  { x: 300, y: 120, rotate: 2.2 },
-  { x: 48, y: 220, rotate: -0.8 },
-  { x: 240, y: 240, rotate: 1.4 },
-] as const;
-
-const CORK_MIN_ZOOM = 0.32;
-const CORK_MAX_ZOOM = 1.75;
-const CORK_DEFAULT_ZOOM = 0.32;
-const CORK_ZOOM_STEP = 0.08;
-
-function ticketById(tickets: TicketType[], id: string): TicketType | undefined {
-  return tickets.find((t) => t.id === id);
-}
-
-function boardPositionForNote(note: PersonalNote, index: number) {
-  if (note.board_x != null && note.board_y != null) {
-    return { x: note.board_x, y: note.board_y };
-  }
-  const fallback = BOARD_FALLBACK_POSITIONS[index % BOARD_FALLBACK_POSITIONS.length];
-  return { x: fallback.x, y: fallback.y };
-}
-
-function boardRotationForNote(note: PersonalNote, index: number) {
-  const fallback = BOARD_FALLBACK_POSITIONS[index % BOARD_FALLBACK_POSITIONS.length];
-  return fallback.rotate;
-}
 
 export function PersonalBoard({
   notes,
@@ -86,21 +59,9 @@ export function PersonalBoard({
     panY: number;
   } | null>(null);
 
-  const stackNotes = useMemo(
-    () =>
-      [...notes]
-        .filter((n) => !n.is_pinned)
-        .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at)),
-    [notes],
-  );
+  const stackNotes = useMemo(() => sortStackNotes(notes), [notes]);
 
-  const boardNotes = useMemo(
-    () =>
-      [...notes]
-        .filter((n) => n.is_pinned)
-        .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at)),
-    [notes],
-  );
+  const boardNotes = useMemo(() => sortBoardNotes(notes), [notes]);
 
   const queueTickets = useMemo(() => {
     const cards = kanban.cards
@@ -229,9 +190,8 @@ export function PersonalBoard({
 
   const handleCorkWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
-    const delta = event.deltaY > 0 ? -CORK_ZOOM_STEP : CORK_ZOOM_STEP;
     setCorkZoom((current) =>
-      Math.min(CORK_MAX_ZOOM, Math.max(CORK_MIN_ZOOM, current + delta)),
+      adjustCorkZoom(current, event.deltaY > 0 ? "out" : "in"),
     );
   }, []);
 
@@ -275,11 +235,11 @@ export function PersonalBoard({
   }, []);
 
   const zoomCorkIn = useCallback(() => {
-    setCorkZoom((current) => Math.min(CORK_MAX_ZOOM, current + CORK_ZOOM_STEP));
+    setCorkZoom((current) => adjustCorkZoom(current, "in"));
   }, []);
 
   const zoomCorkOut = useCallback(() => {
-    setCorkZoom((current) => Math.max(CORK_MIN_ZOOM, current - CORK_ZOOM_STEP));
+    setCorkZoom((current) => adjustCorkZoom(current, "out"));
   }, []);
 
   const draggingNote = drag ? notes.find((n) => n.id === drag.noteId) : undefined;
@@ -334,7 +294,7 @@ export function PersonalBoard({
               <>
                 {underStackNotes.map((note, index) => {
                   const layerIndex = stackNotes.length - 1 - index;
-                  const offset = STACK_OFFSETS[layerIndex] ?? STACK_OFFSETS[3];
+                  const offset = stackOffsetForIndex(layerIndex);
                   return (
                     <div
                       key={note.id}

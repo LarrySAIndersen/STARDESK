@@ -1,6 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { blobToBase64 } from "@/lib/capture-review-screenshot";
+import { blobToBase64, shouldIgnoreCaptureElement } from "@/lib/capture-review-screenshot";
+
+describe("shouldIgnoreCaptureElement", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("ignores review overlay nodes", () => {
+    class MockHTMLElement {
+      classList = { contains: () => false };
+    }
+    vi.stubGlobal("HTMLElement", MockHTMLElement);
+
+    const overlay = new MockHTMLElement();
+    overlay.classList = {
+      contains: (name: string) => name === "review-notes-layer",
+    };
+    expect(shouldIgnoreCaptureElement(overlay as unknown as Element)).toBe(true);
+
+    const plain = new MockHTMLElement();
+    expect(shouldIgnoreCaptureElement(plain as unknown as Element)).toBe(false);
+    expect(shouldIgnoreCaptureElement({} as Element)).toBe(false);
+  });
+});
 
 describe("blobToBase64", () => {
   it("encodes blob bytes as base64 via FileReader", async () => {
