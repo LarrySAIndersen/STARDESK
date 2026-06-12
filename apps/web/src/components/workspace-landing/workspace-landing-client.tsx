@@ -17,7 +17,6 @@ import {
   WorkspaceLandingToolbar,
   WorkspaceWidgetShell,
 } from "@/components/workspace-landing/workspace-landing-toolbar";
-import { Button } from "@/components/ui/button";
 import {
   applySpaceWidgetUpdate,
   buildSpaceHref,
@@ -64,7 +63,8 @@ type WorkspaceLandingClientProps = Readonly<{
 }>;
 
 function TeamChatWidgetPreview() {
-  const { openChat, setActiveChannelId } = useChatWorkspace();
+  const router = useRouter();
+  const { setActiveChannelId } = useChatWorkspace();
   const [channels, setChannels] = useState<TeamChatChannel[]>([]);
   const [staff, setStaff] = useState<TeamChatStaff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,17 +102,17 @@ function TeamChatWidgetPreview() {
         staff={staff}
         onSelect={(id) => {
           setActiveChannelId(id);
-          openChat();
+          router.push("/chat");
         }}
         onChannelCreated={(ch) => setChannels((prev) => [...prev, ch])}
         onDmCreated={(ch) => setChannels((prev) => [...prev, ch])}
       />
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={() => openChat()}>
-          Åbn chat-panelet
-        </Button>
-        <Link href="/chat" className="text-star-blue text-sm font-medium hover:underline">
-          Fuld teamchat →
+        <Link
+          href="/chat"
+          className="border-input bg-background hover:bg-accent inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium"
+        >
+          Åbn teamchat
         </Link>
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
   Plus,
   LayoutGrid,
   LayoutTemplate,
+  MessagesSquare,
   StickyNote,
   Ticket,
   Shield,
@@ -60,6 +61,9 @@ export function buildAgentNavItems(options: {
       : []),
     ...(staff
       ? [{ id: "backlog", href: "/backlog", label: "Backlog", icon: Inbox }]
+      : []),
+    ...(staff
+      ? [{ id: "team-chat", href: "/chat", label: "Chat", icon: MessagesSquare }]
       : []),
     { id: "tickets", href: "/tickets", label: "Alle sager", icon: Ticket },
     { id: "tickets-new", href: "/tickets/new", label: "Ny sag", icon: Plus },
