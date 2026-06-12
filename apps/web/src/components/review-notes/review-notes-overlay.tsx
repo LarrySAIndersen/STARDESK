@@ -14,6 +14,7 @@ import {
   scheduleReviewScreenshotCapture,
 } from "@/lib/capture-review-screenshot";
 import { isStaff, isStardeskReviewer } from "@/lib/auth";
+import { isForbedringerAdminPath } from "@/lib/review-notes-paths";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
 import type { User } from "@/types/user";
@@ -152,6 +153,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   const staff = isStaff(user);
   const canPlaceNotes = reviewer;
   const canViewNotes = reviewer || staff;
+  const overlayActive = canViewNotes && !isForbedringerAdminPath(pathname);
 
   const [reviewMode, setReviewMode] = useState(reviewer);
   const [notes, setNotes] = useState<ReviewNote[]>([]);
@@ -163,7 +165,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   const screenshotPendingRef = useRef(false);
 
   const loadNotes = useCallback(async () => {
-    if (!canViewNotes || !pathname) return;
+    if (!overlayActive || !pathname) return;
     try {
       const data = await apiGet<ReviewNote[]>(
         `/api/v1/review-notes?page_path=${encodeURIComponent(pathname)}`,
@@ -173,7 +175,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
     } catch {
       setLoadError("Kunne ikke hente sedler på siden.");
     }
-  }, [canViewNotes, pathname]);
+  }, [overlayActive, pathname]);
 
   useEffect(() => {
     fireAndForget(loadNotes());
@@ -186,7 +188,16 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   }, [reviewer]);
 
   useEffect(() => {
-    if (!draft) {
+    if (!overlayActive) {
+      setDraft(null);
+    }
+  }, [overlayActive]);
+
+  const draftPositionKey =
+    draft != null ? `${draft.x},${draft.y}` : null;
+
+  useEffect(() => {
+    if (!overlayActive || draftPositionKey == null) {
       draftScreenshotRef.current = null;
       setScreenshotPending(false);
       return;
@@ -202,9 +213,9 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
     });
 
     return cancelCapture;
-  }, [draft]);
+  }, [draftPositionKey, overlayActive]);
 
-  if (!canViewNotes || pathname === "/forbedringer") {
+  if (!overlayActive) {
     return null;
   }
 
@@ -313,7 +324,9 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             draft={draft}
             saving={saving}
             screenshotPending={screenshotPending}
-            onChange={(comment) => setDraft({ ...draft, comment })}
+            onChange={(comment) =>
+              setDraft((prev) => (prev ? { ...prev, comment } : null))
+            }
             onCancel={() => setDraft(null)}
             onSave={() => fireAndForget(saveDraft())}
           />
