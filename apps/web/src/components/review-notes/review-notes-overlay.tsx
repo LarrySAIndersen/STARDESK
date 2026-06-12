@@ -2,14 +2,17 @@
 
 import { fireAndForget } from "@/lib/fire-and-forget";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPatch, apiPost } from "@/lib/api";
-import { blobToBase64, captureReviewScreenshot } from "@/lib/capture-review-screenshot";
+import {
+  blobToBase64,
+  scheduleReviewScreenshotCapture,
+} from "@/lib/capture-review-screenshot";
 import { isStaff, isStardeskReviewer } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
@@ -95,12 +98,14 @@ function ReviewNotePin({
 function ReviewNoteComposer({
   draft,
   saving,
+  screenshotPending,
   onChange,
   onCancel,
   onSave,
 }: {
   draft: DraftNote;
   saving: boolean;
+  screenshotPending: boolean;
   onChange: (comment: string) => void;
   onCancel: () => void;
   onSave: () => void;
@@ -134,7 +139,7 @@ function ReviewNoteComposer({
           onClick={onSave}
           disabled={saving || draft.comment.trim().length === 0}
         >
-          {saving ? "Gemmer…" : "Gem seddel"}
+          {saving ? "Gemmer…" : screenshotPending ? "Gem seddel (foto…)" : "Gem seddel"}
         </Button>
       </div>
     </div>
@@ -152,7 +157,10 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   const [notes, setNotes] = useState<ReviewNote[]>([]);
   const [draft, setDraft] = useState<DraftNote | null>(null);
   const [saving, setSaving] = useState(false);
+  const [screenshotPending, setScreenshotPending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const draftScreenshotRef = useRef<Blob | null>(null);
+  const screenshotPendingRef = useRef(false);
 
   const loadNotes = useCallback(async () => {
     if (!canViewNotes || !pathname) return;
@@ -177,6 +185,25 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
     }
   }, [reviewer]);
 
+  useEffect(() => {
+    if (!draft) {
+      draftScreenshotRef.current = null;
+      setScreenshotPending(false);
+      return;
+    }
+
+    draftScreenshotRef.current = null;
+    screenshotPendingRef.current = true;
+    setScreenshotPending(true);
+    const cancelCapture = scheduleReviewScreenshotCapture((blob) => {
+      draftScreenshotRef.current = blob;
+      screenshotPendingRef.current = false;
+      setScreenshotPending(false);
+    });
+
+    return cancelCapture;
+  }, [draft]);
+
   if (!canViewNotes || pathname === "/forbedringer") {
     return null;
   }
@@ -196,11 +223,27 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
     });
   };
 
+  const waitForDraftScreenshot = async (timeoutMs: number): Promise<Blob | null> => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      if (draftScreenshotRef.current) {
+        return draftScreenshotRef.current;
+      }
+      if (!screenshotPendingRef.current) {
+        return draftScreenshotRef.current;
+      }
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 50);
+      });
+    }
+    return draftScreenshotRef.current;
+  };
+
   const saveDraft = async () => {
     if (!draft || !pathname) return;
     setSaving(true);
     try {
-      const screenshotBlob = await captureReviewScreenshot();
+      const screenshotBlob = await waitForDraftScreenshot(4_000);
       const payload: ReviewNoteCreatePayload = {
         page_path: pathname,
         page_title: pageTitleFromPath(pathname),
@@ -269,6 +312,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
           <ReviewNoteComposer
             draft={draft}
             saving={saving}
+            screenshotPending={screenshotPending}
             onChange={(comment) => setDraft({ ...draft, comment })}
             onCancel={() => setDraft(null)}
             onSave={() => fireAndForget(saveDraft())}
