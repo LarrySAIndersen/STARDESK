@@ -94,6 +94,8 @@ Download from a workflow run: **Actions → Security → api-security → Artifa
 
 **CI (dedicated):** `.github/workflows/sonarcloud.yml` — same flow as a standalone job.
 
+**Quality gate in CI:** Scanner waits via `-Dsonar.qualitygate.wait=true` (not the separate `sonarqube-quality-gate-action`, which 403/404'd against scan v7). LCOV rewrite in `security.yml` must run from repo root (`working-directory: .`) so `apps/web/coverage/lcov.info` resolves correctly.
+
 **Required GitHub secret:** `SONAR` (SonarCloud PAT — same as Sonar hotspots workflow). Without it the Sonar scan step fails (auth error).
 
 SonarCloud project: [LarrySAIndersen_STARDESK](https://sonarcloud.io/project/overview?id=LarrySAIndersen_STARDESK)
