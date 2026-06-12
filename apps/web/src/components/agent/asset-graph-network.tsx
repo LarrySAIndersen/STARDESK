@@ -292,7 +292,7 @@ export function AssetGraphNetwork({
                 selectedId && (edge.source === selectedId || edge.target === selectedId);
 
               const dimmed = selectedId && !active;
-              const accentNode = edge.source === selectedId ? target : source;
+              const accentNode = edge.target === selectedId ? source : target;
               const accentTheme = getCategoryTheme(accentNode.categorySystemId);
 
               return (
@@ -364,7 +364,7 @@ export function AssetGraphNetwork({
                     className="wire-asset-graph-bubble"
                     fill={fill}
                     stroke={stroke}
-                    strokeWidth={isSelected ? 3 : isNeighbor ? 2 : isSystem ? 2 : 1.5}
+                    strokeWidth={isSelected ? 3 : isNeighbor || isSystem ? 2 : 1.5}
                     strokeDasharray={isNeighbor ? "4 2" : undefined}
                   />
                   <text
