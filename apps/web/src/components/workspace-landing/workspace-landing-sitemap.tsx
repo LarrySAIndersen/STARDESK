@@ -20,54 +20,28 @@ import { WORKSPACE_WIDGET_CATALOG, definitionForKind } from "@/lib/workspace-lan
 import {
   buildWorkspaceHref,
   resolveWorkspaceBackHref,
-  visibleWidgetInstances,
 } from "@/lib/workspace-landing/layout-utils";
+import {
+  buildSitemapEntries,
+  filterSitemapEntries,
+  type SitemapEntry,
+  type SitemapStatusFilter,
+} from "@/lib/workspace-landing/sitemap-utils";
 import { SPACE_VISUALS, visualForKind } from "@/lib/workspace-landing/sitemap-visuals";
 import type {
   WorkspaceLandingConfig,
   WorkspaceSpace,
-  WorkspaceWidgetDefinition,
   WorkspaceWidgetInstance,
 } from "@/lib/workspace-landing/types";
 import { cn } from "@/lib/utils";
 
 type SpaceFilter = "all" | WorkspaceSpace;
-type StatusFilter = "all" | "active" | "inactive";
-
-type SitemapEntry = WorkspaceWidgetDefinition & {
-  instance: WorkspaceWidgetInstance | undefined;
-  active: boolean;
-};
 
 type WorkspaceLandingSitemapProps = Readonly<{
   space: WorkspaceSpace;
   layout: WorkspaceLandingConfig;
   searchParams: string;
 }>;
-
-function normalizeSearch(value: string): string {
-  return value.trim().toLowerCase();
-}
-
-function matchesSearch(entry: SitemapEntry, query: string): boolean {
-  if (!query) return true;
-  return (
-    entry.label.toLowerCase().includes(query) ||
-    entry.description.toLowerCase().includes(query) ||
-    entry.kind.toLowerCase().includes(query)
-  );
-}
-
-function buildEntries(
-  spaceKey: WorkspaceSpace,
-  instances: WorkspaceWidgetInstance[],
-): SitemapEntry[] {
-  const visible = visibleWidgetInstances(instances);
-  return WORKSPACE_WIDGET_CATALOG.filter((item) => item.space === spaceKey).map((definition) => {
-    const instance = visible.find((item) => item.kind === definition.kind);
-    return { ...definition, instance, active: Boolean(instance) };
-  });
-}
 
 function entryHref(
   entry: SitemapEntry,
@@ -259,26 +233,16 @@ export function WorkspaceLandingSitemap({
   const backHref = resolveWorkspaceBackHref("sitemap", space, null, searchParams);
   const [query, setQuery] = useState("");
   const [spaceFilter, setSpaceFilter] = useState<SpaceFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<SitemapStatusFilter>("all");
 
   const personalEntries = useMemo(
-    () => buildEntries("personal", layout.personal),
+    () => buildSitemapEntries("personal", layout.personal),
     [layout.personal],
   );
-  const teamEntries = useMemo(() => buildEntries("team", layout.team), [layout.team]);
+  const teamEntries = useMemo(() => buildSitemapEntries("team", layout.team), [layout.team]);
 
-  const normalizedQuery = normalizeSearch(query);
-
-  const filterEntries = (entries: SitemapEntry[]) =>
-    entries.filter((entry) => {
-      if (!matchesSearch(entry, normalizedQuery)) return false;
-      if (statusFilter === "active" && !entry.active) return false;
-      if (statusFilter === "inactive" && entry.active) return false;
-      return true;
-    });
-
-  const filteredPersonal = filterEntries(personalEntries);
-  const filteredTeam = filterEntries(teamEntries);
+  const filteredPersonal = filterSitemapEntries(personalEntries, query, statusFilter);
+  const filteredTeam = filterSitemapEntries(teamEntries, query, statusFilter);
   const totalActive =
     personalEntries.filter((e) => e.active).length + teamEntries.filter((e) => e.active).length;
   const totalCatalog = WORKSPACE_WIDGET_CATALOG.length;
