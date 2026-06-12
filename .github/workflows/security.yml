@@ -59,7 +59,7 @@ jobs:
           npm ci
           npm run test:coverage
       - name: Rewrite LCOV paths for SonarCloud
-        run: python scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
+        run: python ../../scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
       - name: SonarCloud Scan (coverage import)
         uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7.1.0
         with:
