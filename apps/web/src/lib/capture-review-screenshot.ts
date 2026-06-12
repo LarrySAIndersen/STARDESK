@@ -28,7 +28,7 @@ function restoreReviewUi(hidden: HTMLElement[]): void {
   }
 }
 
-function shouldIgnoreCaptureElement(element: Element): boolean {
+export function shouldIgnoreCaptureElement(element: Element): boolean {
   if (!(element instanceof HTMLElement)) {
     return false;
   }

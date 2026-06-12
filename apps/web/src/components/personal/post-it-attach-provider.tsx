@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiPatch } from "@/lib/api";
 import { readDraggedNoteId } from "@/lib/personal-board-dnd";
+import { buildPostItAttachUpdate } from "@/lib/personal-note-visibility";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, PersonalNoteUpdate } from "@/types/personal";
 
@@ -108,10 +109,7 @@ export function PostItAttachProvider({
     setBusy(true);
     setError(null);
     try {
-      const payload: PersonalNoteUpdate = {
-        ticket_id: pending.ticketId,
-        visibility,
-      };
+      const payload: PersonalNoteUpdate = buildPostItAttachUpdate(pending.ticketId, visibility);
       const updated = await apiPatch<PersonalNote>(
         `/api/v1/personal/notes/${pending.noteId}`,
         payload,

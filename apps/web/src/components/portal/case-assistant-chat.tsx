@@ -38,6 +38,25 @@ import {
   isValidHelpABotAvatarId,
   type HelpABotAvatarId,
 } from "@/components/portal/help-a-bot-icon";
+import {
+  buildChatApiPayload,
+  buildChatArchiveUrl,
+  clampFabPosition,
+  clampPanelSize,
+  createChatMessage,
+  FAB_POS_STORAGE_KEY,
+  getCaseAssistantBotLabels,
+  getDefaultFabPosition,
+  getDefaultPanelPosition,
+  MOCK_SPEECH_SAMPLE,
+  PANEL_POS_STORAGE_KEY,
+  PANEL_SIZE_PRESETS,
+  PANEL_SIZE_STORAGE_KEY,
+  parseStoredPanelSize,
+  parseStoredPoint,
+  resolvePanelSizeForPreset,
+  type PanelSizePreset,
+} from "@/lib/case-assistant-chat-panel";
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -58,36 +77,6 @@ type ChatMessage = Readonly<{
   role: "user" | "assistant";
   body: string;
 }>;
-
-type PanelSizePreset = "compact" | "normal" | "expanded";
-
-const PANEL_SIZE_PRESETS: Record<PanelSizePreset, { width: number; height: number }> = {
-  compact: { width: 340, height: 420 },
-  normal: { width: 400, height: 550 },
-  expanded: { width: 620, height: 720 },
-};
-
-const PANEL_POS_STORAGE_KEY = "stardesk-helpabot-pos";
-const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
-const FAB_POS_STORAGE_KEY = "stardesk-helpabot-fab-pos";
-const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
-
-function clampPanelSize(width: number, height: number) {
-  if (typeof window === "undefined") {
-    return { width, height };
-  }
-  return {
-    width: Math.min(Math.max(width, 300), Math.floor(window.innerWidth * 0.92)),
-    height: Math.min(Math.max(height, 360), Math.floor(window.innerHeight * 0.88)),
-  };
-}
-
-function getExpandedHeight() {
-  if (typeof window === "undefined") {
-    return PANEL_SIZE_PRESETS.expanded.height;
-  }
-  return Math.min(PANEL_SIZE_PRESETS.expanded.height, Math.floor(window.innerHeight * 0.85));
-}
 
 export function CaseAssistantChat({
   user,
@@ -118,11 +107,7 @@ export function CaseAssistantChat({
     () => buildCaseAssistantApiPageContext(pageContext, pageTicket),
     [pageContext, pageTicket],
   );
-  const botName = staff ? "Help-a-bot" : "Sag-assistent";
-  const botSub = staff 
-    ? "Spørg om systemer, fagsager og procedurer" 
-    : "Spørg om dine sager, systemer og vejledninger";
-  const fabLabel = staff ? "Help-a-bot" : "Spørg om sager";
+  const { botName, botSub, fabLabel } = getCaseAssistantBotLabels(staff);
 
   const [useName, setUseName] = useState(true);
   const [useAvatar, setUseAvatar] = useState(true);
@@ -160,16 +145,12 @@ export function CaseAssistantChat({
     setLoadingArchive(true);
     setArchiveError(null);
     try {
-      let url = `/api/v1/chat/messages?user_email=${encodeURIComponent(user.email)}`;
-      if (searchQuery) {
-        url += `&q=${encodeURIComponent(searchQuery)}`;
-      }
-      if (filterCategory && filterCategory !== "Alle") {
-        url += `&category=${encodeURIComponent(filterCategory)}`;
-      }
-      if (onlyBookmarked) {
-        url += `&only_bookmarked=true`;
-      }
+      const url = buildChatArchiveUrl({
+        userEmail: user.email,
+        searchQuery,
+        filterCategory,
+        onlyBookmarked,
+      });
       const data = await apiGet<ArchivedMessage[]>(url);
       setArchivedMessages(data);
     } catch (err) {
@@ -183,37 +164,22 @@ export function CaseAssistantChat({
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const storedPos = localStorage.getItem(PANEL_POS_STORAGE_KEY);
-      const storedFabPos = localStorage.getItem(FAB_POS_STORAGE_KEY);
+      const storedPos = parseStoredPoint(localStorage.getItem(PANEL_POS_STORAGE_KEY));
+      const storedFabPos = parseStoredPoint(localStorage.getItem(FAB_POS_STORAGE_KEY));
       const storedAvatar = localStorage.getItem(HELP_A_BOT_AVATAR_STORAGE_KEY);
-      const storedSize = localStorage.getItem(PANEL_SIZE_STORAGE_KEY);
+      const storedSize = parseStoredPanelSize(localStorage.getItem(PANEL_SIZE_STORAGE_KEY));
       if (storedPos) {
-        const parsed = JSON.parse(storedPos) as { x: number; y: number };
-        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-          setPanelPos(parsed);
-        }
+        setPanelPos(storedPos);
       }
       if (storedFabPos) {
-        const parsed = JSON.parse(storedFabPos) as { x: number; y: number };
-        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
-          setFabPos(parsed);
-        }
+        setFabPos(storedFabPos);
       }
       if (storedAvatar && isValidHelpABotAvatarId(storedAvatar)) {
         setSelectedAvatarId(storedAvatar);
       }
       if (storedSize) {
-        const parsed = JSON.parse(storedSize) as {
-          preset?: PanelSizePreset;
-          width?: number;
-          height?: number;
-        };
-        if (parsed.preset && PANEL_SIZE_PRESETS[parsed.preset]) {
-          setPanelPreset(parsed.preset);
-          const preset = PANEL_SIZE_PRESETS[parsed.preset];
-          const height = parsed.preset === "expanded" ? getExpandedHeight() : preset.height;
-          setPanelSize(clampPanelSize(parsed.width ?? preset.width, parsed.height ?? height));
-        }
+        setPanelPreset(storedSize.preset);
+        setPanelSize({ width: storedSize.width, height: storedSize.height });
       }
     } catch {
       // ignore corrupt storage
@@ -244,37 +210,19 @@ export function CaseAssistantChat({
   }, [selectedAvatarId]);
 
   const applyPreset = useCallback((preset: PanelSizePreset) => {
-    const base = PANEL_SIZE_PRESETS[preset];
-    const height = preset === "expanded" ? getExpandedHeight() : base.height;
     setPanelPreset(preset);
-    setPanelSize(clampPanelSize(base.width, height));
+    setPanelSize(resolvePanelSizeForPreset(preset));
   }, []);
 
-  const getDefaultPanelPos = useCallback(() => {
-    if (typeof window === "undefined") {
-      return { x: 20, y: 80 };
-    }
-    return {
-      x: Math.max(16, window.innerWidth - panelSize.width - 20),
-      y: Math.max(16, window.innerHeight - panelSize.height - 84),
-    };
-  }, [panelSize.height, panelSize.width]);
+  const resolvedPanelPos =
+    panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
 
-  const resolvedPanelPos = panelPos ?? getDefaultPanelPos();
-
-  const getDefaultFabPos = useCallback(() => {
-    if (typeof window === "undefined") {
-      return { x: 20, y: 500 };
-    }
-    const fabWidth = fabRef.current?.offsetWidth ?? 180;
-    const fabHeight = fabRef.current?.offsetHeight ?? 52;
-    return {
-      x: Math.max(16, window.innerWidth - fabWidth - 20),
-      y: Math.max(16, window.innerHeight - fabHeight - 84),
-    };
-  }, []);
-
-  const resolvedFabPos = fabPos ?? getDefaultFabPos();
+  const resolvedFabPos =
+    fabPos ??
+    getDefaultFabPosition(
+      fabRef.current?.offsetWidth ?? 180,
+      fabRef.current?.offsetHeight ?? 52,
+    );
 
   const handleAvatarDoubleClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -290,7 +238,12 @@ export function CaseAssistantChat({
     (e: React.MouseEvent<HTMLElement>) => {
       if (e.button !== 0 || !staff) return;
       e.preventDefault();
-      const origin = fabPos ?? getDefaultFabPos();
+      const origin =
+        fabPos ??
+        getDefaultFabPosition(
+          fabRef.current?.offsetWidth ?? 180,
+          fabRef.current?.offsetHeight ?? 52,
+        );
       fabDragMovedRef.current = false;
       fabDragStateRef.current = {
         startX: e.clientX,
@@ -313,14 +266,9 @@ export function CaseAssistantChat({
 
         const fabWidth = fabRef.current?.offsetWidth ?? 180;
         const fabHeight = fabRef.current?.offsetHeight ?? 52;
-        const nextX = drag.originX + dx;
-        const nextY = drag.originY + dy;
-        const maxX = Math.max(0, window.innerWidth - fabWidth);
-        const maxY = Math.max(0, window.innerHeight - fabHeight);
-        setFabPos({
-          x: Math.min(Math.max(0, nextX), maxX),
-          y: Math.min(Math.max(0, nextY), maxY),
-        });
+        setFabPos(
+          clampFabPosition(drag.originX + dx, drag.originY + dy, fabWidth, fabHeight),
+        );
       }
 
       function onUp() {
@@ -335,7 +283,7 @@ export function CaseAssistantChat({
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [fabPos, getDefaultFabPos, staff],
+    [fabPos, staff],
   );
 
   const handleFabClick = useCallback(() => {
@@ -353,7 +301,8 @@ export function CaseAssistantChat({
     (e: React.MouseEvent<HTMLElement>) => {
       if (e.button !== 0) return;
       e.preventDefault();
-      const origin = panelPos ?? getDefaultPanelPos();
+      const origin =
+        panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
       dragStateRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -383,7 +332,7 @@ export function CaseAssistantChat({
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [getDefaultPanelPos, panelPos, panelSize.height, panelSize.width],
+    [panelPos, panelSize.height, panelSize.width],
   );
 
   const handlePanelResizeStart = useCallback(
@@ -615,11 +564,7 @@ export function CaseAssistantChat({
     const trimmed = (messageOverride ?? draft).trim();
     if (!trimmed || loading) return;
 
-    const userMsg: ChatMessage = {
-      id: `msg-${Date.now()}-user`,
-      role: "user",
-      body: trimmed
-    };
+    const userMsg = createChatMessage("user", trimmed, "-user");
 
     setMessages((prev) => [...prev, userMsg]);
     if (!messageOverride) {
@@ -628,11 +573,6 @@ export function CaseAssistantChat({
     setLoading(true);
 
     try {
-      const chatHistory = messages.concat(userMsg).map((m) => ({
-        role: m.role,
-        content: m.body
-      }));
-
       const customUrl = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-url") : null;
       const customModel = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-model") : null;
       const customKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-custom-key") : null;
@@ -642,29 +582,32 @@ export function CaseAssistantChat({
       const anthropicKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-anthropic-key") : null;
       const googleKey = typeof window !== "undefined" ? localStorage.getItem("stardesk-chatbot-google-key") : null;
 
-      const res = await apiPost<{ response: string }>("/api/v1/chat", {
-        messages: chatHistory,
-        user_email: user?.email || null,
-        user_name: useName ? (user?.display_name || null) : null,
-        model_override: activeModel,
-        custom_router_url: customUrl,
-        custom_router_key: customKey,
-        custom_router_model: customModel,
-        custom_router_header_type: customHeader,
-        session_id: chatSessionId || null,
-        openai_key: openaiKey,
-        anthropic_key: anthropicKey,
-        google_key: googleKey,
-        page_context: apiPageContext,
+      const payload = buildChatApiPayload({
+        messages: messages.concat(userMsg),
+        userEmail: user?.email,
+        userDisplayName: user?.display_name,
+        useName,
+        activeModel,
+        chatSessionId,
+        pageContext: apiPageContext,
+        customRouter: {
+          url: customUrl,
+          key: customKey,
+          model: customModel,
+          headerType: customHeader,
+        },
+        providerKeys: {
+          openai: openaiKey,
+          anthropic: anthropicKey,
+          google: googleKey,
+        },
       });
+
+      const res = await apiPost<{ response: string }>("/api/v1/chat", payload);
 
       setMessages((prev) => [
         ...prev,
-        {
-          id: `msg-${Date.now()}-assistant`,
-          role: "assistant",
-          body: res.response
-        }
+        createChatMessage("assistant", res.response, "-assistant"),
       ]);
     } catch (err) {
       console.error("Chat error:", err);

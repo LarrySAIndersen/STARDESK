@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatChannelList } from "@/components/team-chat/chat-channel-list";
 import { ChatEmojiPicker } from "@/components/team-chat/chat-emoji-picker";
 import { ChatHuddleMock } from "@/components/team-chat/chat-huddle-mock";
+import { ChatMessageList, ChatThreadHeader } from "@/components/team-chat/chat-message-list";
 import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,11 +20,6 @@ import type { TeamChatChannel, TeamChatMessage, TeamChatStaff } from "@/types/te
 const POLL_MS = 4000;
 
 type MessagesResponse = Readonly<{ messages: TeamChatMessage[] }>;
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
 
 function mergeMessages(prev: TeamChatMessage[], incoming: TeamChatMessage[]): TeamChatMessage[] {
   const map = new Map(prev.map((m) => [m.id, m]));
@@ -178,12 +174,6 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
     setDraft((d) => `${d}${emoji}`);
   }, []);
 
-  const channelTitle = activeChannel
-    ? activeChannel.channel_type === "dm"
-      ? activeChannel.name
-      : `#${activeChannel.slug}`
-    : "Chat";
-
   const openFullPage = useCallback(() => {
     closeChat();
     router.push("/chat");
@@ -197,56 +187,53 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         isDock && "team-chat-workspace--dock h-full",
       )}
     >
-      <header className="team-chat-workspace-header">
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-sm font-bold text-star-navy">{channelTitle}</h2>
-          <p className="text-muted-foreground text-[10px]">
-            {isPage ? "Intern team-chat" : "Ctrl+Shift+C · Magnetisk dock"}
-          </p>
-        </div>
-        {activeChannel && activeChannel.channel_type !== "dm" ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-8 shrink-0"
-            aria-label="Start huddle"
-            title="Start huddle (mock)"
-            onClick={() => setHuddleOpen(true)}
-          >
-            <Video className="size-4" />
-          </Button>
-        ) : null}
-        {isDock ? (
-          <>
+      {isDock ? (
+        <header className="team-chat-workspace-header team-chat-workspace-header--dock">
+          <div className="min-w-0 flex-1">
+            <p className="team-chat-dock-label">STARchat</p>
+            <p className="text-muted-foreground text-xs">Ctrl+Shift+C · Magnetisk dock</p>
+          </div>
+          {activeChannel && activeChannel.channel_type !== "dm" ? (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="size-8 shrink-0"
-              aria-label="Åbn chat i fuld side"
-              title="Åbn chat i fuld side"
-              onClick={openFullPage}
+              aria-label="Start huddle"
+              title="Start huddle (mock)"
+              onClick={() => setHuddleOpen(true)}
             >
-              <Maximize2 className="size-4" />
+              <Video className="size-4" />
             </Button>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
-              onClick={closeChat}
-              aria-label="Luk chat"
-            >
-              <X className="size-4" />
-            </button>
-          </>
-        ) : null}
-      </header>
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 shrink-0"
+            aria-label="Åbn chat i fuld side"
+            title="Åbn chat i fuld side"
+            onClick={openFullPage}
+          >
+            <Maximize2 className="size-4" />
+          </Button>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
+            onClick={closeChat}
+            aria-label="Luk chat"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
+      ) : null}
 
       <div className="flex min-h-0 flex-1">
         <ChatChannelList
           channels={channels}
           activeChannelId={activeChannelId}
           staff={staff}
+          layout={layout}
           onSelect={setActiveChannelId}
           onChannelCreated={(ch) => setChannels((prev) => [...prev, ch])}
           onDmCreated={(ch) =>
@@ -255,99 +242,70 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         />
 
         <div className="team-chat-thread flex min-h-0 min-w-0 flex-1 flex-col">
+          <ChatThreadHeader
+            channel={activeChannel}
+            onStartHuddle={
+              activeChannel && activeChannel.channel_type !== "dm"
+                ? () => setHuddleOpen(true)
+                : undefined
+            }
+          />
+
           {loading ? (
-            <p className="text-muted-foreground p-3 text-xs">Indlæser chat…</p>
+            <div className="team-chat-loading" aria-busy="true" aria-label="Indlæser chat">
+              <div className="team-chat-loading-bar" />
+              <p className="text-muted-foreground text-sm">Indlæser beskeder…</p>
+            </div>
           ) : null}
 
           {error ? (
-            <p className="text-destructive px-3 py-1 text-xs" role="alert">
+            <p className="team-chat-error" role="alert">
               {error}
             </p>
           ) : null}
 
-          <div className="team-chat-messages flex-1 overflow-y-auto px-3 py-2">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={cn(
-                  "team-chat-msg group",
-                  m.is_own && "team-chat-msg--own",
-                  m.is_bot && "team-chat-msg--bot",
-                )}
-              >
-                <div className="team-chat-msg-meta">
-                  <span className="font-semibold">{m.sender_display_name}</span>
-                  <span className="text-muted-foreground">{formatTime(m.created_at)}</span>
-                </div>
-                <p className="team-chat-msg-body whitespace-pre-wrap">{m.body}</p>
-                {m.tool_call_meta?.tools_used ? (
-                  <p className="team-chat-tool-badge text-[10px]">🔧 Tool calling aktiv</p>
-                ) : null}
-                {m.reactions.length > 0 ? (
-                  <div className="team-chat-reactions">
-                    {m.reactions.map((r) => (
-                      <button
-                        key={r.emoji}
-                        type="button"
-                        className={cn(
-                          "team-chat-reaction",
-                          r.reacted_by_me && "team-chat-reaction--mine",
-                        )}
-                        onClick={() => fireAndForget(toggleReaction(m.id, r.emoji))}
-                      >
-                        {r.emoji} {r.count}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="team-chat-quick-react">
-                  {["👍", "❤️", "😂", "🎉"].map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      className="team-chat-quick-react-btn"
-                      aria-label={`Reager med ${emoji}`}
-                      onClick={() => fireAndForget(toggleReaction(m.id, emoji))}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div ref={endRef} />
-          </div>
+          <ChatMessageList
+            messages={messages}
+            activeChannel={activeChannel}
+            onToggleReaction={toggleReaction}
+            endRef={endRef}
+          />
 
           <footer className="team-chat-composer">
-            <ChatEmojiPicker onPick={insertEmoji} />
-            <Textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={
-                activeChannel?.channel_type === "bot"
-                  ? "Spørg Help-a-bot…"
-                  : "Skriv en besked…"
-              }
-              rows={2}
-              disabled={!activeChannelId || sending}
-              className="min-h-[2.5rem] flex-1 resize-none text-sm"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  fireAndForget(sendMessage());
+            <div className="team-chat-composer-box">
+              <ChatEmojiPicker onPick={insertEmoji} />
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder={
+                  activeChannel?.channel_type === "bot"
+                    ? "Spørg Help-a-bot…"
+                    : `Skriv en besked${activeChannel ? ` i ${activeChannel.channel_type === "dm" ? activeChannel.name : `#${activeChannel.slug}`}` : ""}…`
                 }
-              }}
-            />
-            <Button
-              type="button"
-              size="icon"
-              className="shrink-0"
-              disabled={!activeChannelId || sending || !draft.trim()}
-              onClick={() => fireAndForget(sendMessage())}
-              aria-label="Send besked"
-            >
-              <Send className="size-4" />
-            </Button>
+                rows={2}
+                disabled={!activeChannelId || sending}
+                className="team-chat-composer-input min-h-[2.75rem] flex-1 resize-none border-0 bg-transparent text-sm shadow-none focus-visible:ring-0"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    fireAndForget(sendMessage());
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="icon"
+                className="team-chat-send-btn shrink-0"
+                disabled={!activeChannelId || sending || !draft.trim()}
+                onClick={() => fireAndForget(sendMessage())}
+                aria-label="Send besked"
+              >
+                <Send className="size-4" />
+              </Button>
+            </div>
+            <p className="team-chat-composer-hint">
+              <kbd>Enter</kbd> send · <kbd>Shift</kbd>+<kbd>Enter</kbd> ny linje
+            </p>
           </footer>
         </div>
       </div>

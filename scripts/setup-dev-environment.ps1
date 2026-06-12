@@ -15,6 +15,8 @@ param(
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "lib/windows-dev.ps1")
 
+Ensure-StardeskGitBashOnPath | Out-Null
+
 $RepoRoot = Get-StardeskRepoRoot -StartDir $PSScriptRoot
 $ApiDir = Join-Path $RepoRoot "apps\api"
 $WebDir = Join-Path $RepoRoot "apps\web"

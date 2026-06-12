@@ -21,7 +21,10 @@ function Get-StardeskRepoRoot {
 }
 
 function Get-StardeskGitBash {
+    $localGit = Join-Path $env:LOCALAPPDATA "Programs\Git"
     $candidates = @(
+        (Join-Path $localGit "bin\bash.exe"),
+        (Join-Path $localGit "usr\bin\bash.exe"),
         ${env:ProgramFiles} + "\Git\bin\bash.exe",
         ${env:ProgramFiles} + "\Git\usr\bin\bash.exe",
         ${env:ProgramFiles(x86)} + "\Git\bin\bash.exe"
@@ -32,6 +35,35 @@ function Get-StardeskGitBash {
         }
     }
     return $null
+}
+
+function Ensure-StardeskGitBashOnPath {
+    $bash = Get-StardeskGitBash
+    if (-not $bash) {
+        throw "Git Bash not found. Install Git for Windows from https://git-scm.com/download/win"
+    }
+
+    $gitBin = Split-Path $bash -Parent
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    $pathParts = @($userPath -split ";" | Where-Object { $_ })
+    $normalizedBin = ($gitBin -replace "\\", "/").TrimEnd("/").ToLowerInvariant()
+
+    $alreadyPresent = $pathParts | Where-Object {
+        (($_ -replace "\\", "/").TrimEnd("/").ToLowerInvariant()) -eq $normalizedBin
+    }
+
+    if (-not $alreadyPresent) {
+        $updated = @($gitBin) + $pathParts
+        $newPath = ($updated | Where-Object { $_ }) -join ";"
+        [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+        Write-Host "Added Git Bash to user PATH: $gitBin"
+    }
+
+    if ($env:Path -notlike "*$gitBin*") {
+        $env:Path = "$gitBin;$env:Path"
+    }
+
+    return $bash
 }
 
 function Import-StardeskDotEnv {
