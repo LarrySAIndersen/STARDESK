@@ -422,3 +422,110 @@ async def test_create_user_assign_top_admin_forbidden_for_admin(
     )
 
     assert response.status_code == 403
+
+
+_ADMIN_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000030")
+
+
+@pytest.mark.asyncio
+async def test_users_meta_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    from star_itsm_api.schemas.user_admin import OrganizationOption, RoleOption, UserAdminMeta
+
+    org_id = uuid.uuid4()
+    meta = UserAdminMeta(
+        roles=[RoleOption(value="agent", label="Agent")],
+        organizations=[OrganizationOption(id=org_id, name="STAR")],
+    )
+    with (
+        patch(
+            "star_itsm_api.routers.users.list_organizations",
+            new_callable=AsyncMock,
+            return_value=[SimpleNamespace(id=org_id, name="STAR")],
+        ),
+        patch(
+            "star_itsm_api.routers.users.build_admin_meta",
+            return_value=meta,
+        ),
+    ):
+        response = await api_client.get("/api/v1/users/meta")
+
+    assert response.status_code == 200
+    assert response.json()["organizations"][0]["name"] == "STAR"
+
+
+@pytest.mark.asyncio
+async def test_get_user_tickets_for_self(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    from star_itsm_api.schemas.user_admin import UserTicketsGroupedRead
+
+    grouped = UserTicketsGroupedRead()
+    with (
+        patch(
+            "star_itsm_api.routers.users.get_user_admin",
+            new_callable=AsyncMock,
+            return_value=SimpleNamespace(id=_ADMIN_USER_ID),
+        ),
+        patch(
+            "star_itsm_api.routers.users.list_user_tickets_grouped",
+            new_callable=AsyncMock,
+            return_value=grouped,
+        ),
+    ):
+        response = await api_client.get(f"/api/v1/users/{_ADMIN_USER_ID}/tickets")
+
+    assert response.status_code == 200
+    assert response.json()["reported"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_user_avatar_not_found(api_client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.users.resolve_avatar_file",
+        return_value=None,
+    ):
+        response = await api_client.get(f"/api/v1/users/{TARGET_USER_ID}/avatar")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_my_avatar_success(
+    override_db: AsyncMock,
+    api_client: AsyncClient,
+) -> None:
+    from star_itsm_api.schemas.auth import UserRead
+
+    user_read = UserRead(
+        id=_ADMIN_USER_ID,
+        email="admin@example.dk",
+        display_name="Admin Bruger",
+        role="admin",
+        role_label="Administrator",
+        must_change_password=False,
+        organization_id=None,
+        organization_name=None,
+    )
+    with (
+        patch(
+            "star_itsm_api.routers.users.save_user_avatar",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "star_itsm_api.routers.users.user_to_read",
+            return_value=user_read,
+        ),
+        patch(
+            "star_itsm_api.routers.users.get_user_organization_id",
+            return_value=None,
+        ),
+    ):
+        response = await api_client.post(
+            "/api/v1/users/me/avatar",
+            files={"file": ("avatar.png", b"fake-image", "image/png")},
+        )
+    assert response.status_code == 200
+    assert response.json()["email"] == "admin@example.dk"
