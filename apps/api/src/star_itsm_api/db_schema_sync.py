@@ -368,6 +368,30 @@ async def ensure_login_throttle_schema_current(
         logger.exception("login_throttle schema sync failed — login rate limit may not work")
 
 
+async def ensure_team_chat_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Ensure team chat workspace tables exist."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _table_exists(engine, "team_chat_channels"):
+            return
+        logger.warning("team_chat_channels table missing — applying SQL migration")
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "38_team-chat.sql",
+        )
+        if await _table_exists(engine, "team_chat_channels"):
+            logger.info("team_chat schema sync completed")
+        else:
+            logger.error("team_chat schema sync finished but table is still missing")
+    except Exception:
+        logger.exception("team_chat schema sync failed — team chat endpoints may return 500")
+
+
 def _run_single_migration(database_url: str, filename: str) -> None:
     path = Path(__file__).resolve().parent.joinpath("sql", "migrations", filename)
     if not path.is_file():
