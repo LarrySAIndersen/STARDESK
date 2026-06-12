@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
 import { AgentMainLoading } from "@/components/agent/agent-main-loading";
-import { AgentWorkspace } from "@/components/agent-workspace";
+import { WorkspaceLanding } from "@/components/workspace-landing/workspace-landing";
 import { EndUserTicketPortal } from "@/components/end-user-ticket-portal";
 import { TicketListShell } from "@/components/ticket-list-shell";
 import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
@@ -41,7 +41,7 @@ export default async function HomePage() {
     return (
       <TicketListShell>
         <Suspense fallback={<AgentMainLoading />}>
-          <AgentWorkspace />
+          <WorkspaceLanding />
         </Suspense>
       </TicketListShell>
     );

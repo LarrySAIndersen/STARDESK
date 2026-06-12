@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AgentClock } from "@/components/agent/agent-clock";
 import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
+import { TeamChatTopBarButton } from "@/components/team-chat/team-chat-top-bar-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { resolveUserAvatar } from "@/lib/user-avatar";
@@ -34,6 +35,7 @@ const TITLES: Record<string, string> = {
   "/integrations/slack": "Slack",
   "/integrations/jira": "Jira",
   "/integrations/topdesk": "TOPdesk",
+  "/chat": "Chat",
 };
 
 function titleForPath(pathname: string): string {
@@ -54,11 +56,13 @@ export function AgentTopBar({
   actions,
   user,
   onOpenNav,
+  showTeamChat = false,
 }: {
   title?: string;
   actions?: React.ReactNode;
   user?: User | null;
   onOpenNav?: () => void;
+  showTeamChat?: boolean;
 }) {
   const pathname = usePathname();
   const displayTitle = title ?? titleForPath(pathname);
@@ -82,6 +86,7 @@ export function AgentTopBar({
         </h1>
       </div>
       <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
+        {showTeamChat ? <TeamChatTopBarButton /> : null}
         <ApiHealthIndicator />
         <AgentClock />
         <ThemeToggle />
