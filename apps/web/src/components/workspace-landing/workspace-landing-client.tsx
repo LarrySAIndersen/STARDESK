@@ -14,7 +14,6 @@ import { MyTicketsSection, PersonalKanbanBoard } from "@/components/personal/per
 import { ChatChannelList } from "@/components/team-chat/chat-channel-list";
 import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider";
 import {
-  WorkspaceLandingSitemap,
   WorkspaceWidgetFocusHeader,
 } from "@/components/workspace-landing/workspace-landing-sitemap";
 import { WorkspaceLandingSideNav } from "@/components/workspace-landing/workspace-landing-side-nav";
