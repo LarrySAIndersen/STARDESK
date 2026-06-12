@@ -9,7 +9,7 @@ type ApiWorkspaceWidgetInstance = {
   hidden: boolean;
 };
 
-type ApiWorkspaceLandingRead = {
+export type ApiWorkspaceLandingRead = {
   user_id: string;
   layout: {
     personal: ApiWorkspaceWidgetInstance[];
@@ -17,6 +17,13 @@ type ApiWorkspaceLandingRead = {
   };
   layout_version: number;
   updated_at: string;
+};
+
+export type WorkspaceLandingRecord = {
+  userId: string;
+  layout: WorkspaceLandingConfig;
+  layoutVersion: number;
+  updatedAt: string;
 };
 
 function toClientInstance(item: ApiWorkspaceWidgetInstance): WorkspaceWidgetInstance {
@@ -48,10 +55,24 @@ export function mapApiLayoutToClient(
   };
 }
 
+function mapApiRecord(data: ApiWorkspaceLandingRead): WorkspaceLandingRecord {
+  return {
+    userId: data.user_id,
+    layout: mapApiLayoutToClient(data.layout),
+    layoutVersion: data.layout_version,
+    updatedAt: data.updated_at,
+  };
+}
+
 export async function fetchWorkspaceLandingFromApi(): Promise<WorkspaceLandingConfig | null> {
+  const record = await fetchWorkspaceLandingRecord();
+  return record?.layout ?? null;
+}
+
+export async function fetchWorkspaceLandingRecord(): Promise<WorkspaceLandingRecord | null> {
   try {
     const data = await apiGet<ApiWorkspaceLandingRead>("/api/v1/workspace/landing");
-    return mapApiLayoutToClient(data.layout);
+    return mapApiRecord(data);
   } catch {
     return null;
   }

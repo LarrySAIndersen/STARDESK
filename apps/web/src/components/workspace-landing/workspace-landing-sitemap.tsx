@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   CircleDashed,
+  Database,
   LayoutGrid,
   Search,
   Sparkles,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { WorkspaceBackLink } from "@/components/workspace-landing/workspace-back-link";
+import { WorkspaceSitemapDatamodel } from "@/components/workspace-landing/workspace-sitemap-datamodel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WORKSPACE_WIDGET_CATALOG, definitionForKind } from "@/lib/workspace-landing/catalog";
@@ -28,6 +30,7 @@ import {
   type SitemapStatusFilter,
 } from "@/lib/workspace-landing/sitemap-utils";
 import { SPACE_VISUALS, visualForKind } from "@/lib/workspace-landing/sitemap-visuals";
+import type { WorkspaceLandingRecord } from "@/lib/workspace-landing/api";
 import type {
   WorkspaceLandingConfig,
   WorkspaceSpace,
@@ -36,11 +39,15 @@ import type {
 import { cn } from "@/lib/utils";
 
 type SpaceFilter = "all" | WorkspaceSpace;
+type SitemapPageView = "elements" | "datamodel";
 
 type WorkspaceLandingSitemapProps = Readonly<{
+  userId: string;
   space: WorkspaceSpace;
   layout: WorkspaceLandingConfig;
   searchParams: string;
+  landingRecord: WorkspaceLandingRecord | null;
+  landingLoading: boolean;
 }>;
 
 function entryHref(
@@ -226,11 +233,15 @@ function MapIcon() {
 }
 
 export function WorkspaceLandingSitemap({
+  userId,
   space,
   layout,
   searchParams,
+  landingRecord,
+  landingLoading,
 }: WorkspaceLandingSitemapProps) {
   const backHref = resolveWorkspaceBackHref("sitemap", space, null, searchParams);
+  const [pageView, setPageView] = useState<SitemapPageView>("elements");
   const [query, setQuery] = useState("");
   const [spaceFilter, setSpaceFilter] = useState<SpaceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<SitemapStatusFilter>("all");
@@ -264,25 +275,59 @@ export function WorkspaceLandingSitemap({
           <h1 className="workspace-sitemap-hero__title">Sitemap</h1>
           <p className="workspace-sitemap-hero__lead">
             Interaktivt kort over alle widgets i dit arbejdsrum. Søg, filtrer og klik for at åbne
-            et element.
+            et element — eller se database-datamodel med live id&apos;er.
           </p>
         </div>
-        <div className="workspace-sitemap-hero__stats">
-          <div className="workspace-sitemap-stat">
-            <span className="workspace-sitemap-stat__value">{totalActive}</span>
-            <span className="workspace-sitemap-stat__label">Aktive</span>
+        <div className="workspace-sitemap-hero__aside">
+          <div className="workspace-sitemap-tabs workspace-sitemap-tabs--page" role="tablist" aria-label="Sitemap visning">
+            {(
+              [
+                ["elements", "Elementer", LayoutGrid],
+                ["datamodel", "Datamodel", Database],
+              ] as const
+            ).map(([id, label, Icon]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={pageView === id}
+                className={cn(
+                  "workspace-sitemap-tabs__btn workspace-sitemap-tabs__btn--page",
+                  pageView === id && "workspace-sitemap-tabs__btn--active",
+                )}
+                onClick={() => setPageView(id)}
+              >
+                <Icon className="size-3.5" aria-hidden />
+                {label}
+              </button>
+            ))}
           </div>
-          <div className="workspace-sitemap-stat">
-            <span className="workspace-sitemap-stat__value">{totalCatalog}</span>
-            <span className="workspace-sitemap-stat__label">I alt</span>
-          </div>
-          <div className="workspace-sitemap-stat">
-            <span className="workspace-sitemap-stat__value">{visibleCount}</span>
-            <span className="workspace-sitemap-stat__label">Vises nu</span>
+          <div className="workspace-sitemap-hero__stats">
+            <div className="workspace-sitemap-stat">
+              <span className="workspace-sitemap-stat__value">{totalActive}</span>
+              <span className="workspace-sitemap-stat__label">Aktive</span>
+            </div>
+            <div className="workspace-sitemap-stat">
+              <span className="workspace-sitemap-stat__value">{totalCatalog}</span>
+              <span className="workspace-sitemap-stat__label">I alt</span>
+            </div>
+            <div className="workspace-sitemap-stat">
+              <span className="workspace-sitemap-stat__value">{visibleCount}</span>
+              <span className="workspace-sitemap-stat__label">Vises nu</span>
+            </div>
           </div>
         </div>
       </header>
 
+      {pageView === "datamodel" ? (
+        <WorkspaceSitemapDatamodel
+          userId={userId}
+          layout={layout}
+          record={landingRecord}
+          loading={landingLoading}
+        />
+      ) : (
+        <>
       <SitemapMiniMap
         personalActive={personalEntries.filter((e) => e.active).length}
         teamActive={teamEntries.filter((e) => e.active).length}
@@ -382,6 +427,8 @@ export function WorkspaceLandingSitemap({
             <SitemapSection spaceKey="team" entries={filteredTeam} searchParams={searchParams} />
           ) : null}
         </div>
+      )}
+        </>
       )}
     </div>
   );
