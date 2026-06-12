@@ -10,6 +10,7 @@ from star_itsm_api.core.password_policy import (
     validate_password_for_user,
 )
 from star_itsm_api.core.prototype_credentials import documented_prototype_password
+from star_itsm_api.core.request_client import client_ip_from_request
 from star_itsm_api.core.security import (
     create_access_token,
     get_current_user_session,
@@ -17,7 +18,7 @@ from star_itsm_api.core.security import (
     hash_password,
     verify_password,
 )
-from star_itsm_api.core.request_client import client_ip_from_request
+from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.auth import (
@@ -28,7 +29,6 @@ from star_itsm_api.schemas.auth import (
     UserRead,
     user_to_read,
 )
-from star_itsm_api.deps import require_db
 from star_itsm_api.services.login_throttle import (
     assert_login_allowed,
     on_login_failure,
