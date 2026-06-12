@@ -58,10 +58,14 @@ describe("applyBacklogTableFilters", () => {
 
   it("filters ticket type", () => {
     expect(
-      applyBacklogTableFilters(tickets, {
-        ...DEFAULT_BACKLOG_TABLE_FILTERS,
-        ticket_type: "problem",
-      }).map((t) => t.id),
+      applyBacklogTableFilters(
+        tickets,
+        {
+          ...DEFAULT_BACKLOG_TABLE_FILTERS,
+          ticket_type: "problem",
+        },
+        undefined,
+      ).map((t) => t.id),
     ).toEqual(["open"]);
   });
 });
