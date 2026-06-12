@@ -5,6 +5,8 @@ const REVIEW_CAPTURE_HIDE_SELECTORS = [
   ".review-note-popover",
 ] as const;
 
+const CAPTURE_DEFER_MS = 80;
+
 function hideReviewUi(): HTMLElement[] {
   const hidden: HTMLElement[] = [];
   for (const selector of REVIEW_CAPTURE_HIDE_SELECTORS) {
@@ -26,96 +28,54 @@ function restoreReviewUi(hidden: HTMLElement[]): void {
   }
 }
 
-function cloneWithInlineStyles(source: Element): HTMLElement {
-  if (!(source instanceof HTMLElement)) {
-    return source.cloneNode(true) as HTMLElement;
+function shouldIgnoreCaptureElement(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) {
+    return false;
   }
-
-  const clone = source.cloneNode(false) as HTMLElement;
-  const computed = window.getComputedStyle(source);
-  for (let index = 0; index < computed.length; index += 1) {
-    const property = computed.item(index);
-    clone.style.setProperty(
-      property,
-      computed.getPropertyValue(property),
-      computed.getPropertyPriority(property),
-    );
-  }
-
-  for (const child of source.childNodes) {
-    if (child instanceof Element) {
-      clone.appendChild(cloneWithInlineStyles(child));
-    } else {
-      clone.appendChild(child.cloneNode(true));
-    }
-  }
-
-  return clone;
+  return (
+    element.classList.contains("review-notes-layer") ||
+    element.classList.contains("review-notes-toolbar") ||
+    element.classList.contains("review-note-composer") ||
+    element.classList.contains("review-note-popover")
+  );
 }
 
-async function elementToPngBlob(element: HTMLElement): Promise<Blob | null> {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  const scale = Math.min(window.devicePixelRatio || 1, 2);
-  const scrollX = window.scrollX;
-  const scrollY = window.scrollY;
+async function loadHtml2Canvas() {
+  const html2canvasModule = await import("html2canvas");
+  return html2canvasModule.default;
+}
 
-  const clone = cloneWithInlineStyles(element);
-  clone.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-  clone.style.margin = "0";
-  clone.style.width = `${width}px`;
-  clone.style.height = `${height}px`;
-  clone.style.transform = `translate(${-scrollX}px, ${-scrollY}px)`;
-  clone.style.transformOrigin = "top left";
+async function captureTargetToPngBlob(target: HTMLElement): Promise<Blob | null> {
+  const html2canvas = await loadHtml2Canvas();
+  const scale = Math.min(window.devicePixelRatio || 1, 1.25);
+  const canvas = await html2canvas(target, {
+    logging: false,
+    useCORS: true,
+    scale,
+    ignoreElements: shouldIgnoreCaptureElement,
+    scrollX: -window.scrollX,
+    scrollY: -window.scrollY,
+    windowWidth: document.documentElement.clientWidth,
+    windowHeight: document.documentElement.clientHeight,
+  });
 
-  const wrapper = document.createElement("div");
-  wrapper.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-  wrapper.style.width = `${width}px`;
-  wrapper.style.height = `${height}px`;
-  wrapper.style.overflow = "hidden";
-  wrapper.appendChild(clone);
+  return await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), "image/png", 0.85);
+  });
+}
 
-  const svgMarkup = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <foreignObject width="100%" height="100%">
-        ${new XMLSerializer().serializeToString(wrapper)}
-      </foreignObject>
-    </svg>`;
-
-  const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-  const objectUrl = URL.createObjectURL(svgBlob);
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("Screenshot render failed"));
-      img.src = objectUrl;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(width * scale);
-    canvas.height = Math.round(height * scale);
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return null;
-    }
-    context.scale(scale, scale);
-    context.drawImage(image, 0, 0, width, height);
-
-    return await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), "image/png", 0.92);
-    });
-  } catch {
-    return null;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
+function captureRootElement(): HTMLElement | null {
+  return document.getElementById("main-content") ?? document.body;
 }
 
 /** Capture the current viewport as PNG, hiding review overlay UI first. */
 export async function captureReviewScreenshot(): Promise<Blob | null> {
   if (typeof document === "undefined") {
+    return null;
+  }
+
+  const target = captureRootElement();
+  if (!target) {
     return null;
   }
 
@@ -125,18 +85,51 @@ export async function captureReviewScreenshot(): Promise<Blob | null> {
   });
 
   try {
-    return await elementToPngBlob(document.body);
+    return await captureTargetToPngBlob(target);
+  } catch {
+    return null;
   } finally {
     restoreReviewUi(hidden);
   }
 }
 
+/** Defer capture so click handlers can paint UI before heavy work starts. */
+export function scheduleReviewScreenshotCapture(
+  onCaptured: (blob: Blob | null) => void,
+): () => void {
+  let cancelled = false;
+  const timer = window.setTimeout(() => {
+    if (cancelled) {
+      return;
+    }
+    void captureReviewScreenshot().then((blob) => {
+      if (!cancelled) {
+        onCaptured(blob);
+      }
+    });
+  }, CAPTURE_DEFER_MS);
+
+  return () => {
+    cancelled = true;
+    window.clearTimeout(timer);
+  };
+}
+
 export async function blobToBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]!);
-  }
-  return btoa(binary);
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== "string") {
+        reject(new Error("Failed to encode screenshot"));
+        return;
+      }
+      const commaIndex = dataUrl.indexOf(",");
+      resolve(commaIndex >= 0 ? dataUrl.slice(commaIndex + 1) : dataUrl);
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("Failed to read screenshot"));
+    };
+    reader.readAsDataURL(blob);
+  });
 }

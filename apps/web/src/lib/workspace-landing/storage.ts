@@ -1,3 +1,4 @@
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { DEFAULT_WORKSPACE_LANDING } from "@/lib/workspace-landing/catalog";
 import { saveWorkspaceLandingToApi } from "@/lib/workspace-landing/api";
 import type { WorkspaceLandingConfig, WorkspaceWidgetInstance } from "@/lib/workspace-landing/types";
@@ -56,7 +57,7 @@ export function writeWorkspaceLanding(userId: string, config: WorkspaceLandingCo
   window.dispatchEvent(
     new CustomEvent(WORKSPACE_LANDING_CHANGED_EVENT, { detail: { userId } }),
   );
-  void saveWorkspaceLandingToApi(config);
+  fireAndForget(saveWorkspaceLandingToApi(config));
 }
 
 export function resetWorkspaceLanding(userId: string): WorkspaceLandingConfig {
