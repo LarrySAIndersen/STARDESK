@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
-from star_itsm_api.routers.tickets import _ensure_ticket_access, _apply_metadata_classification
+
+from star_itsm_api.routers.tickets import _apply_metadata_classification, _ensure_ticket_access
 from tests.conftest import FAKE_ADMIN
 
 
