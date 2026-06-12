@@ -26,6 +26,7 @@ export function ForbedringerSubnav() {
           <Link
             key={link.href}
             href={link.href}
+            prefetch={false}
             className={cn(
               "rounded-[2px] px-3 py-1.5 text-[13px] font-medium transition-colors",
               active
