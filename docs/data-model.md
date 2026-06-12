@@ -167,3 +167,53 @@ Se `init.sql` — bruges ved oprettelse af sag.
 ## TypeScript-spejl (frontend)
 
 `apps/web/src/types/ticket.ts`, `user.ts`, `team.ts` — hold synkron med API Pydantic schemas i `apps/api/src/star_itsm_api/schemas/`.
+
+## Workspace landing (arbejdsrum / sitemap)
+
+Per-bruger widget-layout for forsiden (`/`) og sitemap (`/sitemap`). Erstatter/localStorage-sync mod API.
+
+### `user_workspace_layouts`
+
+| Kolonne | Type | Note |
+|---------|------|------|
+| user_id | UUID | PK, FK → users ON DELETE CASCADE |
+| layout | JSONB | `{ personal: WorkspaceWidgetInstance[], team: WorkspaceWidgetInstance[] }` |
+| layout_version | INTEGER | Schema-version (default 1) |
+| created_at | TIMESTAMPTZ | |
+| updated_at | TIMESTAMPTZ | |
+
+### `layout.personal` / `layout.team` — widget-instans
+
+| Felt | Type | Note |
+|------|------|------|
+| instance_id | string | Stabil id (fx `personal-dashboard-0`) |
+| kind | string | Se widget-katalog nedenfor |
+| order | integer | Visningsrækkefølge (0-baseret) |
+| span | `full` \| `half` | Kolonnebredde på overblik |
+| hidden | boolean | Skjult fra overblik/sitemap |
+
+### Widget-kinds (`kind`)
+
+| Kind | Space | Beskrivelse |
+|------|-------|-------------|
+| `personal-dashboard` | personal | Driftsdashboard (KPI) |
+| `dispatch-queue` | personal | Fordeling af nye sager |
+| `personal-notes` | personal | Post-it tavle |
+| `personal-kanban` | personal | Min kanban |
+| `my-tickets` | personal | Mine sager |
+| `team-dashboard` | team | Team-dashboard |
+| `team-chat` | team | Teamchat-genvej |
+| `team-members` | team | Team online |
+| `team-dispatch` | team | Team-kø |
+
+### API
+
+| Metode | Sti | Auth |
+|--------|-----|------|
+| GET | `/api/v1/workspace/landing` | Staff |
+| PUT | `/api/v1/workspace/landing` | Staff |
+| POST | `/api/v1/workspace/landing/reset` | Staff |
+
+SQL: `apps/api/src/star_itsm_api/sql/migrations/39_workspace-layout.sql`  
+Model: `models/workspace_layout.py`  
+Alembic-revision: **afventer godkendelse** (brug SQL-migration + `db_schema_sync` indtil da).

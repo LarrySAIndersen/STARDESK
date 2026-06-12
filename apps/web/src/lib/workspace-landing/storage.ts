@@ -1,4 +1,5 @@
 import { DEFAULT_WORKSPACE_LANDING } from "@/lib/workspace-landing/catalog";
+import { saveWorkspaceLandingToApi } from "@/lib/workspace-landing/api";
 import type { WorkspaceLandingConfig, WorkspaceWidgetInstance } from "@/lib/workspace-landing/types";
 
 const STORAGE_PREFIX = "stardesk-workspace-landing:v1:";
@@ -55,6 +56,7 @@ export function writeWorkspaceLanding(userId: string, config: WorkspaceLandingCo
   window.dispatchEvent(
     new CustomEvent(WORKSPACE_LANDING_CHANGED_EVENT, { detail: { userId } }),
   );
+  void saveWorkspaceLandingToApi(config);
 }
 
 export function resetWorkspaceLanding(userId: string): WorkspaceLandingConfig {
