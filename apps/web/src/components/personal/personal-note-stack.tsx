@@ -15,19 +15,17 @@ import {
   shouldBlockNoteDrag,
 } from "@/lib/personal-board-dnd";
 import {
+  noteTrayStackOffsetForIndex,
+  pickPersonalNoteColorId,
+  sortStackNotes,
+} from "@/lib/personal-board-layout";
+import {
   PERSONAL_NOTE_COLORS,
   personalNoteColorClass,
   type PersonalNoteColorId,
 } from "@/lib/personal-note-colors";
 import { cn } from "@/lib/utils";
 import type { PersonalNote } from "@/types/personal";
-
-const STACK_OFFSETS = [
-  { rotate: -4, x: 0, y: 0 },
-  { rotate: 2.5, x: 5, y: 7 },
-  { rotate: -1.5, x: 9, y: 14 },
-  { rotate: 3, x: 3, y: 21 },
-] as const;
 
 export function PersonalNoteStack({
   notes,
@@ -41,20 +39,13 @@ export function PersonalNoteStack({
   const [stackDragOver, setStackDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const trayNotes = useMemo(
-    () =>
-      [...notes]
-        .filter((n) => !n.is_pinned)
-        .sort((a, b) => a.sort_order - b.sort_order || b.updated_at.localeCompare(a.updated_at)),
-    [notes],
-  );
+  const trayNotes = useMemo(() => sortStackNotes(notes), [notes]);
 
   const createFreshNote = useCallback(async () => {
     if (busy) return;
     setBusy(true);
     try {
-      const color = PERSONAL_NOTE_COLORS[notes.length % PERSONAL_NOTE_COLORS.length]
-        .id as PersonalNoteColorId;
+      const color = pickPersonalNoteColorId(PERSONAL_NOTE_COLORS, notes.length) as PersonalNoteColorId;
       const created = await apiPost<PersonalNote>("/api/v1/personal/notes", {
         title: "Ny seddel",
         content: "",
@@ -113,7 +104,7 @@ export function PersonalNoteStack({
 
       <div className="post-it-stack__pile">
         {padLayers.map((color, index) => {
-          const offset = STACK_OFFSETS[trayNotes.length + index] ?? STACK_OFFSETS[3];
+          const offset = noteTrayStackOffsetForIndex(trayNotes.length + index);
           return (
             <div
               key={`pad-${color.id}`}
@@ -132,7 +123,7 @@ export function PersonalNoteStack({
 
         {underNotes.map((note, index) => {
           const layerIndex = trayNotes.length - 1 - index;
-          const offset = STACK_OFFSETS[layerIndex] ?? STACK_OFFSETS[3];
+          const offset = noteTrayStackOffsetForIndex(layerIndex);
           return (
             <div
               key={note.id}

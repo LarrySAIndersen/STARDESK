@@ -14,22 +14,14 @@ import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost } from "@/lib/api";
+import { pickDefaultTeamChatChannel } from "@/lib/team-chat/channel-utils";
+import { mergeTeamChatMessages } from "@/lib/team-chat/message-merge";
 import { cn } from "@/lib/utils";
 import type { TeamChatChannel, TeamChatMessage, TeamChatStaff } from "@/types/team-chat";
 
 const POLL_MS = 4000;
 
 type MessagesResponse = Readonly<{ messages: TeamChatMessage[] }>;
-
-function mergeMessages(prev: TeamChatMessage[], incoming: TeamChatMessage[]): TeamChatMessage[] {
-  const map = new Map(prev.map((m) => [m.id, m]));
-  for (const m of incoming) {
-    map.set(m.id, m);
-  }
-  return [...map.values()].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-}
 
 type ChatWorkspacePanelProps = Readonly<{
   layout?: "page" | "dock";
@@ -58,8 +50,10 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
       const data = await apiGet<TeamChatChannel[]>("/api/v1/team-chat/channels");
       setChannels(data);
       if (!activeChannelId && data.length > 0) {
-        const general = data.find((c) => c.slug === "general") ?? data[0];
-        setActiveChannelId(general.id);
+        const defaultChannel = pickDefaultTeamChatChannel(data);
+        if (defaultChannel) {
+          setActiveChannelId(defaultChannel.id);
+        }
       }
     } catch {
       setError("Kunne ikke hente kanaler.");
@@ -81,7 +75,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
       `/api/v1/team-chat/channels/${channelId}/messages${qs}`,
     );
     if (after) {
-      setMessages((prev) => mergeMessages(prev, data.messages));
+      setMessages((prev) => mergeTeamChatMessages(prev, data.messages));
     } else {
       setMessages(data.messages);
     }
@@ -123,7 +117,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         )
           .then((data) => {
             if (data.messages.length > 0) {
-              setMessages((prev) => mergeMessages(prev, data.messages));
+              setMessages((prev) => mergeTeamChatMessages(prev, data.messages));
               lastPollRef.current = data.messages[data.messages.length - 1].created_at;
             }
           })
@@ -144,7 +138,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         `/api/v1/team-chat/channels/${activeChannelId}/messages`,
         { body: text },
       );
-      setMessages((prev) => mergeMessages(prev, data.messages));
+      setMessages((prev) => mergeTeamChatMessages(prev, data.messages));
       if (data.messages.length > 0) {
         lastPollRef.current = data.messages[data.messages.length - 1].created_at;
       }
