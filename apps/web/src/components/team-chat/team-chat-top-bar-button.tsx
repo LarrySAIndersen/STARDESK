@@ -1,28 +1,39 @@
 "use client";
 
 import { MessageSquare } from "lucide-react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useChatWorkspaceOptional } from "@/components/team-chat/chat-workspace-provider";
 import { cn } from "@/lib/utils";
 
-/** @deprecated Chat lives at /chat only — use left nav link instead. */
+/** Staff-only toggle — magnetically docks chat below the locked top bar. */
 export function TeamChatTopBarButton() {
+  const chat = useChatWorkspaceOptional();
   const pathname = usePathname();
-  const active = pathname === "/chat";
+  if (!chat) return null;
+
+  const onChatPage = pathname === "/chat";
+  const active = onChatPage || chat.open;
 
   return (
-    <Link
-      href="/chat"
+    <button
+      type="button"
       className={cn(
         "wire-topbar-team-chat-btn",
         active && "wire-topbar-team-chat-btn--active",
       )}
+      onClick={() => {
+        if (!onChatPage) {
+          chat.toggle();
+        }
+      }}
+      disabled={onChatPage}
       aria-label="Team chat"
-      aria-current={active ? "page" : undefined}
-      title="Team chat"
+      aria-pressed={onChatPage ? undefined : chat.open}
+      aria-current={onChatPage ? "page" : undefined}
+      title={onChatPage ? "Team chat (fuld side)" : "Team chat (Ctrl+Shift+C)"}
     >
       <MessageSquare className="size-4" aria-hidden />
-    </Link>
+    </button>
   );
 }

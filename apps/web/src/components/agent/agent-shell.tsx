@@ -14,7 +14,12 @@ import { PageLayoutEditMainChrome } from "@/components/page-layout/page-layout-e
 import { canEditPageLayout } from "@/lib/page-layout/access";
 import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
-import { ChatWorkspaceProvider } from "@/components/team-chat/chat-workspace-provider";
+import { ChatWorkspacePanel } from "@/components/team-chat/chat-workspace-panel";
+import { TeamChatDock } from "@/components/team-chat/team-chat-dock";
+import {
+  ChatWorkspaceProvider,
+  useChatWorkspaceOptional,
+} from "@/components/team-chat/chat-workspace-provider";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import { isStaff } from "@/lib/auth";
 import type { User } from "@/types/user";
@@ -35,6 +40,10 @@ function AgentShellInner({
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebarCollapsed();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const chat = useChatWorkspaceOptional();
+  const staff = isStaff(user ?? null);
+  const isChatPage = pathname === "/chat";
+  const showChatDock = staff && (chat?.open ?? false) && !isChatPage;
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
@@ -75,12 +84,20 @@ function AgentShellInner({
         }
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-          <AgentTopBar
-            title={topBarTitle}
-            actions={topBarActions}
-            user={user}
-            onOpenNav={openMobileNav}
-          />
+          <div className="team-chat-shell-header">
+            <AgentTopBar
+              title={topBarTitle}
+              actions={topBarActions}
+              user={user}
+              onOpenNav={openMobileNav}
+              showTeamChat={staff}
+            />
+            {staff ? (
+              <TeamChatDock open={showChatDock}>
+                <ChatWorkspacePanel layout="dock" />
+              </TeamChatDock>
+            ) : null}
+          </div>
           <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
             <ReviewNotesOverlay user={user ?? null} />
@@ -117,7 +134,7 @@ export function AgentShell({
     >
       <div className="agent-shell wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
         {staff ? (
-          <ChatWorkspaceProvider>
+          <ChatWorkspaceProvider enabled={staff}>
             <AgentShellInner
               topBarTitle={topBarTitle}
               topBarActions={topBarActions}
