@@ -14,19 +14,26 @@ import { MyTicketsSection, PersonalKanbanBoard } from "@/components/personal/per
 import { ChatChannelList } from "@/components/team-chat/chat-channel-list";
 import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider";
 import {
+  WorkspaceLandingSitemap,
+  WorkspaceWidgetFocusHeader,
+} from "@/components/workspace-landing/workspace-landing-sitemap";
+import { WorkspaceLandingSideNav } from "@/components/workspace-landing/workspace-landing-side-nav";
+import {
   WorkspaceLandingToolbar,
   WorkspaceWidgetShell,
 } from "@/components/workspace-landing/workspace-landing-toolbar";
 import {
   applySpaceWidgetUpdate,
-  buildSpaceHref,
+  buildWorkspaceHref,
   createWidgetInstance,
   hideWidgetInstance,
   moveWidgetInstance,
   needsPostItProvider,
   parseWorkspaceSpace,
+  parseWorkspaceView,
   toggleWidgetSpan,
   visibleWidgetInstances,
+  WORKSPACE_SITEMAP_PATH,
 } from "@/lib/workspace-landing/layout-utils";
 import {
   readWorkspaceLanding,
@@ -166,9 +173,13 @@ export function WorkspaceLandingClient({
 }: WorkspaceLandingClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const initialSpace = parseWorkspaceSpace(searchParams.get("space"));
+  const initialView = parseWorkspaceView(searchParams.get("view"), searchParams.get("widget"));
+  const widgetParam = searchParams.get("widget");
 
   const [space, setSpace] = useState<WorkspaceSpace>(initialSpace);
+  const [view, setView] = useState(initialView);
   const [editMode, setEditMode] = useState(false);
   const [layout, setLayout] = useState<WorkspaceLandingConfig>(() =>
     readWorkspaceLanding(user.id),
@@ -177,8 +188,19 @@ export function WorkspaceLandingClient({
   const [kanban, setKanban] = useState(initialKanban);
 
   useEffect(() => {
+    if (searchParams.get("view") === "sitemap") {
+      router.replace(WORKSPACE_SITEMAP_PATH);
+      return;
+    }
     setSpace(parseWorkspaceSpace(searchParams.get("space")));
-  }, [searchParams]);
+    setView(parseWorkspaceView(searchParams.get("view"), searchParams.get("widget")));
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (view !== "grid" && editMode) {
+      setEditMode(false);
+    }
+  }, [view, editMode]);
 
   const persistLayout = useCallback(
     (next: WorkspaceLandingConfig) => {
@@ -198,9 +220,17 @@ export function WorkspaceLandingClient({
   const handleSpaceChange = useCallback(
     (next: WorkspaceSpace) => {
       setSpace(next);
-      router.replace(buildSpaceHref(next, searchParams.toString()), { scroll: false });
+      router.replace(
+        buildWorkspaceHref({
+          space: next,
+          view,
+          widgetInstanceId: view === "widget" ? widgetParam ?? undefined : undefined,
+          preserveParams: searchParamsString,
+        }),
+        { scroll: false },
+      );
     },
-    [router, searchParams],
+    [router, searchParamsString, view, widgetParam],
   );
 
   const handleAddWidget = useCallback(
@@ -226,7 +256,16 @@ export function WorkspaceLandingClient({
     [layout, space],
   );
 
-  const showPostItProvider = needsPostItProvider(visibleWidgets);
+  const focusedWidget = useMemo(() => {
+    if (view !== "widget" || !widgetParam) {
+      return null;
+    }
+    return visibleWidgets.find((item) => item.instanceId === widgetParam) ?? null;
+  }, [view, widgetParam, visibleWidgets]);
+
+  const showPostItProvider = needsPostItProvider(
+    view === "widget" && focusedWidget ? [focusedWidget] : visibleWidgets,
+  );
 
   const renderWidget = (instance: WorkspaceWidgetInstance) => {
     switch (instance.kind) {
@@ -324,29 +363,80 @@ export function WorkspaceLandingClient({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <WorkspaceLandingToolbar
+    <div className="flex min-h-0 flex-1">
+      <WorkspaceLandingSideNav
         space={space}
-        onSpaceChange={handleSpaceChange}
-        editMode={editMode}
-        onEditModeChange={setEditMode}
+        view={view}
         widgets={layout[space]}
-        onAddWidget={handleAddWidget}
-        onResetLayout={handleResetLayout}
-        userDisplayName={user.display_name}
+        activeWidgetId={focusedWidget?.instanceId}
+        searchParams={searchParamsString}
       />
-      <div className="wire-scroll-content min-h-0 flex-1 p-5">
-        {showPostItProvider ? (
-          <PostItAttachProvider
-            onNoteUpdated={(note) =>
-              setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)))
-            }
-          >
-            {widgetGrid}
-          </PostItAttachProvider>
-        ) : (
-          widgetGrid
-        )}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {view === "grid" ? (
+          <WorkspaceLandingToolbar
+            space={space}
+            onSpaceChange={handleSpaceChange}
+            editMode={editMode}
+            onEditModeChange={setEditMode}
+            widgets={layout[space]}
+            onAddWidget={handleAddWidget}
+            onResetLayout={handleResetLayout}
+            userDisplayName={user.display_name}
+          />
+        ) : null}
+        <div className="wire-scroll-content min-h-0 flex-1 p-5">
+          {view === "widget" && focusedWidget ? (
+            <div className="workspace-widget-focus">
+              <WorkspaceWidgetFocusHeader
+                instance={focusedWidget}
+                space={space}
+                fromParam={searchParams.get("from")}
+                searchParams={searchParamsString}
+              />
+              <div className="workspace-widget-focus__content mt-4 rounded border border-[var(--gray-border)] bg-card p-4 sm:p-5">
+                {showPostItProvider ? (
+                  <PostItAttachProvider
+                    onNoteUpdated={(note) =>
+                      setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)))
+                    }
+                  >
+                    {renderWidget(focusedWidget)}
+                  </PostItAttachProvider>
+                ) : (
+                  renderWidget(focusedWidget)
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {view === "widget" && !focusedWidget ? (
+            <div className="workspace-landing-empty rounded border border-dashed border-[var(--gray-border)] bg-muted/20 p-8 text-center">
+              <p className="text-muted-foreground text-sm">
+                Elementet findes ikke eller er skjult. Gå tilbage til overblikket.
+              </p>
+              <Link
+                href={buildWorkspaceHref({ space, view: "grid", preserveParams: searchParamsString })}
+                className="text-star-blue mt-3 inline-block text-sm font-medium hover:underline"
+              >
+                Tilbage til overblik
+              </Link>
+            </div>
+          ) : null}
+
+          {view === "grid" ? (
+            showPostItProvider ? (
+              <PostItAttachProvider
+                onNoteUpdated={(note) =>
+                  setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)))
+                }
+              >
+                {widgetGrid}
+              </PostItAttachProvider>
+            ) : (
+              widgetGrid
+            )
+          ) : null}
+        </div>
       </div>
     </div>
   );

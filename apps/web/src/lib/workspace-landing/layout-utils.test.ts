@@ -4,12 +4,15 @@ import { DEFAULT_WORKSPACE_LANDING } from "@/lib/workspace-landing/catalog";
 import {
   applySpaceWidgetUpdate,
   buildSpaceHref,
+  buildWorkspaceHref,
   createWidgetInstance,
   hideWidgetInstance,
   moveWidgetInstance,
   needsPostItProvider,
   parseWorkspaceSpace,
+  parseWorkspaceView,
   reorderWidgetInstances,
+  resolveWorkspaceBackHref,
   toggleWidgetSpan,
   visibleWidgetInstances,
 } from "@/lib/workspace-landing/layout-utils";
@@ -79,5 +82,32 @@ describe("widget layout helpers", () => {
   it("detects post-it provider requirement", () => {
     expect(needsPostItProvider(sample)).toBe(true);
     expect(needsPostItProvider(DEFAULT_WORKSPACE_LANDING.team)).toBe(false);
+  });
+});
+
+describe("workspace navigation hrefs", () => {
+  it("parses view from query params", () => {
+    expect(parseWorkspaceView(null, null)).toBe("grid");
+    expect(parseWorkspaceView("sitemap", null)).toBe("sitemap");
+    expect(parseWorkspaceView(null, "personal-dashboard-0")).toBe("widget");
+  });
+
+  it("builds grid, sitemap and widget hrefs", () => {
+    expect(buildWorkspaceHref({ space: "personal", view: "grid" })).toBe("/?space=personal");
+    expect(buildWorkspaceHref({ space: "team", view: "sitemap" })).toBe("/sitemap");
+    expect(
+      buildWorkspaceHref({
+        space: "personal",
+        view: "widget",
+        widgetInstanceId: "abc-1",
+        from: "sitemap",
+      }),
+    ).toBe("/?space=personal&widget=abc-1&from=sitemap");
+  });
+
+  it("resolves back href from widget and sitemap views", () => {
+    expect(resolveWorkspaceBackHref("sitemap", "personal", null)).toBe("/?space=personal");
+    expect(resolveWorkspaceBackHref("widget", "team", "sitemap")).toBe("/sitemap");
+    expect(resolveWorkspaceBackHref("widget", "personal", null)).toBe("/?space=personal");
   });
 });
