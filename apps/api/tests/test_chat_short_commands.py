@@ -34,7 +34,6 @@ async def test_try_short_command_close_ticket_with_note() -> None:
     mock_update.assert_awaited_once_with(
         ticket_number="INC-2026-00042",
         status="closed",
-        actor_email="admin@example.dk",
         note="Kunden bekræftede løsning",
         caller=FAKE_ADMIN,
     )
@@ -55,7 +54,6 @@ async def test_try_short_command_resolve_ticket() -> None:
     mock_update.assert_awaited_once_with(
         ticket_number="INC-2026-00042",
         status="resolved",
-        actor_email="admin@example.dk",
         note=None,
         caller=FAKE_ADMIN,
     )

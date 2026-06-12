@@ -188,7 +188,6 @@ async def _short_command_close(msg: str, lower: str, ticket_number: str, caller:
         return await update_ticket_status(
             ticket_number=ticket_number,
             status="closed",
-            actor_email=caller.email,
             note=note,
             caller=caller,
         )
@@ -201,7 +200,6 @@ async def _short_command_resolve(lower: str, ticket_number: str, caller: User) -
             return await update_ticket_status(
                 ticket_number=ticket_number,
                 status="resolved",
-                actor_email=caller.email,
                 note=None,
                 caller=caller,
             )
@@ -419,7 +417,6 @@ async def _tool_update_status(args: dict[str, Any], caller: User) -> str:
     return await update_ticket_status(
         ticket_number=args.get("ticket_number", ""),
         status=args.get("status", ""),
-        actor_email=caller.email,
         note=args.get("note"),
         caller=caller,
     )
