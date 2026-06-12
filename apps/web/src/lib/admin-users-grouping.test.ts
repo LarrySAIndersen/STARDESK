@@ -89,7 +89,7 @@ describe("applyAdminUsersListFilters", () => {
       id: "inactive",
       display_name: "Zeta",
       is_active: false,
-      roles: ["customer"],
+      roles: ["end_user"],
       team_ids: [],
       team_names: [],
     }),
