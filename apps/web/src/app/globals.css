@@ -1579,12 +1579,28 @@
     @apply bg-card;
   }
 
+  .team-chat-page-root {
+    @apply min-h-0 flex-1;
+  }
+
+  #main-content > div:has(.team-chat-page-root) {
+    @apply overflow-hidden;
+  }
+
+  .team-chat-workspace--page {
+    @apply mx-auto w-full max-w-4xl bg-transparent px-3 py-3 sm:px-4 sm:py-4;
+  }
+
+  .team-chat-workspace--page .team-chat-page-body {
+    @apply min-h-0 flex-1 overflow-hidden rounded-[2px] border border-[var(--gray-border)] bg-card shadow-sm;
+  }
+
   .team-chat-workspace--dock .team-chat-channel-list {
     @apply w-[180px];
   }
 
   .team-chat-workspace--page .team-chat-channel-list {
-    @apply w-[260px];
+    @apply w-[200px] shrink-0;
   }
 
   .team-chat-workspace-header {
@@ -1620,7 +1636,7 @@
   }
 
   .team-chat-thread {
-    @apply min-w-0 bg-card;
+    @apply min-h-0 min-w-0 bg-card;
   }
 
   .team-chat-msg {
@@ -1639,8 +1655,12 @@
     @apply mb-0.5 flex items-center gap-2 text-[10px];
   }
 
+  .team-chat-messages {
+    @apply min-h-0 flex-1 overflow-y-auto;
+  }
+
   .team-chat-msg-body {
-    @apply text-[13px] leading-snug text-star-navy;
+    @apply text-foreground text-[13px] leading-snug;
   }
 
   .team-chat-tool-badge {

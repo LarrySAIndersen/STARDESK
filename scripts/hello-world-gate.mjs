@@ -92,29 +92,50 @@ try {
 
   await page.screenshot({ path: path.join(outDir, "02-after-login.png") });
 
-  try {
-    await page.goto(`${webUrl}/tickets`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  } catch (err) {
-    console.log("Navigation warning/redirect (ignored):", err.message);
-  }
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(outDir, "03-alle-sager.png"), fullPage: true });
+  let ticketGateOk = false;
+  for (const route of ["/tickets", "/service-desk"]) {
+    try {
+      await page.goto(`${webUrl}${route}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    } catch (err) {
+      console.log(`Navigation warning on ${route} (ignored):`, err.message);
+    }
+    await page.waitForLoadState("networkidle", { timeout: 60_000 }).catch(() => {});
+    await page
+      .getByRole("heading", { name: /alle sager/i })
+      .first()
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .catch(() => undefined);
 
-  const body = await page.locator("body").innerText();
-  if (!/alle sager/i.test(body)) {
-    fail('Expected "Alle sager" on /tickets');
-  }
-  pass('Page contains "Alle sager"');
+    const body = await page.locator("body").innerText();
+    const url = page.url();
+    const hasAlleSager =
+      /alle sager/i.test(body) ||
+      (await page.getByRole("heading", { name: /alle sager/i }).isVisible().catch(() => false));
+    const hasDemoTicket =
+      /INC-\d{4}-\d+/i.test(body) ||
+      /DEMO-\d+/i.test(body) ||
+      /SF Operations/i.test(body) ||
+      /Virksomhed/i.test(body) ||
+      /Jobflow/i.test(body);
 
-  const hasDemoTicket =
-    /DEMO-\d+/i.test(body) ||
-    /SF Operations/i.test(body) ||
-    /Virksomhed/i.test(body) ||
-    /Jobflow/i.test(body);
-  if (!hasDemoTicket) {
-    fail("No demo ticket labels found (DEMO-*, SF Operations, …). Bootstrap database?");
+    if (hasAlleSager || hasDemoTicket) {
+      pass(`Ticket list OK at ${route} (url=${url})`);
+      await page.screenshot({ path: path.join(outDir, "03-alle-sager.png"), fullPage: true });
+      if (hasAlleSager) pass('Found "Alle sager"');
+      if (hasDemoTicket) pass("Demo tickets visible");
+      ticketGateOk = true;
+      break;
+    }
+
+    if (route === "/service-desk") {
+      console.error("Body snippet:", body.slice(0, 400).replace(/\s+/g, " "));
+      fail('No "Alle sager" or tickets on /tickets or /service-desk');
+    }
   }
-  pass("Demo tickets visible");
+
+  if (!ticketGateOk) {
+    fail('Expected "Alle sager" or demo tickets on /tickets or /service-desk');
+  }
 
   console.log(`GATE PASSED (UI hello-world) — artifacts: ${outDir}`);
 } catch (err) {

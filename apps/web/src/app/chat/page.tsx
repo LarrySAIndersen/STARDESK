@@ -16,8 +16,8 @@ export default async function TeamChatPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <ChatWorkspacePanel />
+    <div className="team-chat-page-root flex min-h-0 flex-1 flex-col overflow-hidden">
+      <ChatWorkspacePanel layout="page" />
     </div>
   );
 }
