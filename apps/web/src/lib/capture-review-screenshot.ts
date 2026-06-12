@@ -98,7 +98,8 @@ export function scheduleReviewScreenshotCapture(
   onCaptured: (blob: Blob | null) => void,
 ): () => void {
   let cancelled = false;
-  const timer = window.setTimeout(() => {
+
+  const runCapture = () => {
     if (cancelled) {
       return;
     }
@@ -107,8 +108,17 @@ export function scheduleReviewScreenshotCapture(
         onCaptured(blob);
       }
     });
-  }, CAPTURE_DEFER_MS);
+  };
 
+  if (typeof window.requestIdleCallback === "function") {
+    const idleId = window.requestIdleCallback(runCapture, { timeout: 2_000 });
+    return () => {
+      cancelled = true;
+      window.cancelIdleCallback(idleId);
+    };
+  }
+
+  const timer = window.setTimeout(runCapture, CAPTURE_DEFER_MS);
   return () => {
     cancelled = true;
     window.clearTimeout(timer);
