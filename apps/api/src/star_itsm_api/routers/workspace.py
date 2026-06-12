@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.security import get_current_user, require_staff
+from star_itsm_api.core.security import require_staff
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.workspace_layout import WorkspaceLandingRead, WorkspaceLandingUpdate
