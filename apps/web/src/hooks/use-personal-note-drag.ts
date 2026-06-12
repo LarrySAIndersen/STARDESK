@@ -27,11 +27,26 @@ function readBoardPosition(
   clientX: number,
   clientY: number,
 ): { boardX: number; boardY: number } {
-  const rect = target.getBoundingClientRect();
-  const maxX = Math.max(0, rect.width - BOARD_NOTE_WIDTH);
-  const maxY = Math.max(0, rect.height - BOARD_NOTE_HEIGHT);
-  const boardX = Math.min(maxX, Math.max(0, clientX - rect.left - BOARD_NOTE_WIDTH / 2));
-  const boardY = Math.min(maxY, Math.max(0, clientY - rect.top - 24));
+  const viewport = target.closest("[data-cork-viewport]") as HTMLElement | null;
+  const host = viewport ?? target;
+  const rect = host.getBoundingClientRect();
+  const zoom = viewport ? parseFloat(viewport.dataset.boardZoom ?? "1") : 1;
+  const panX = viewport ? parseFloat(viewport.dataset.boardPanX ?? "0") : 0;
+  const panY = viewport ? parseFloat(viewport.dataset.boardPanY ?? "0") : 0;
+
+  const canvas = viewport?.querySelector(
+    "[data-cork-canvas]",
+  ) as HTMLElement | null;
+  const canvasWidth = canvas?.offsetWidth ?? rect.width / zoom;
+  const canvasHeight = canvas?.offsetHeight ?? rect.height / zoom;
+
+  const canvasX = (clientX - rect.left - panX) / zoom;
+  const canvasY = (clientY - rect.top - panY) / zoom;
+
+  const maxX = Math.max(0, canvasWidth - BOARD_NOTE_WIDTH);
+  const maxY = Math.max(0, canvasHeight - BOARD_NOTE_HEIGHT);
+  const boardX = Math.min(maxX, Math.max(0, canvasX - BOARD_NOTE_WIDTH / 2));
+  const boardY = Math.min(maxY, Math.max(0, canvasY - 24));
   return { boardX, boardY };
 }
 

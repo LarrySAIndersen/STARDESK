@@ -3,8 +3,8 @@
 import { fireAndForget } from "@/lib/fire-and-forget";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
-import { Plus, StickyNote, Ticket, X } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
+import { Plus, StickyNote, Ticket, X, ZoomIn, ZoomOut } from "lucide-react";
 
 import { PersonalNoteCard } from "@/components/personal/personal-note-card";
 import { usePostItAttach } from "@/components/personal/post-it-attach-provider";
@@ -39,6 +39,11 @@ const BOARD_FALLBACK_POSITIONS = [
   { x: 240, y: 240, rotate: 1.4 },
 ] as const;
 
+const CORK_MIN_ZOOM = 0.32;
+const CORK_MAX_ZOOM = 1.75;
+const CORK_DEFAULT_ZOOM = 0.32;
+const CORK_ZOOM_STEP = 0.08;
+
 function ticketById(tickets: TicketType[], id: string): TicketType | undefined {
   return tickets.find((t) => t.id === id);
 }
@@ -72,6 +77,14 @@ export function PersonalBoard({
   const { requestAttach } = usePostItAttach();
   const [busy, setBusy] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [corkZoom, setCorkZoom] = useState(CORK_DEFAULT_ZOOM);
+  const [corkPan, setCorkPan] = useState({ x: 0, y: 0 });
+  const corkPanDragRef = useRef<{
+    x: number;
+    y: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
 
   const stackNotes = useMemo(
     () =>
@@ -214,7 +227,63 @@ export function PersonalBoard({
 
   const { drag, startDrag, isZoneActive, isDragging } = usePersonalNoteDrag(handleDrop);
 
+  const handleCorkWheel = useCallback((event: WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -CORK_ZOOM_STEP : CORK_ZOOM_STEP;
+    setCorkZoom((current) =>
+      Math.min(CORK_MAX_ZOOM, Math.max(CORK_MIN_ZOOM, current + delta)),
+    );
+  }, []);
+
+  const handleCorkPointerDown = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || isDragging) return;
+      if (
+        (event.target as HTMLElement).closest(
+          ".min-side-board__cork-note, .min-side-note, button, input, textarea, a, [data-no-drag]",
+        )
+      ) {
+        return;
+      }
+      corkPanDragRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        panX: corkPan.x,
+        panY: corkPan.y,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [corkPan.x, corkPan.y, isDragging],
+  );
+
+  const handleCorkPointerMove = useCallback((event: PointerEvent<HTMLDivElement>) => {
+    const panDrag = corkPanDragRef.current;
+    if (!panDrag) return;
+    setCorkPan({
+      x: panDrag.panX + (event.clientX - panDrag.x),
+      y: panDrag.panY + (event.clientY - panDrag.y),
+    });
+  }, []);
+
+  const handleCorkPointerUp = useCallback(() => {
+    corkPanDragRef.current = null;
+  }, []);
+
+  const resetCorkView = useCallback(() => {
+    setCorkZoom(CORK_DEFAULT_ZOOM);
+    setCorkPan({ x: 0, y: 0 });
+  }, []);
+
+  const zoomCorkIn = useCallback(() => {
+    setCorkZoom((current) => Math.min(CORK_MAX_ZOOM, current + CORK_ZOOM_STEP));
+  }, []);
+
+  const zoomCorkOut = useCallback(() => {
+    setCorkZoom((current) => Math.max(CORK_MIN_ZOOM, current - CORK_ZOOM_STEP));
+  }, []);
+
   const draggingNote = drag ? notes.find((n) => n.id === drag.noteId) : undefined;
+  const corkZoomLabel = `${Math.round(corkZoom * 100)}%`;
   const topStackNote = stackNotes[0];
   const underStackNotes = stackNotes.slice(1, 4);
 
@@ -227,7 +296,7 @@ export function PersonalBoard({
           <span className="min-side-board__count">{boardNotes.length + queueTickets.length}</span>
         </div>
         <p className="min-side-board__subtitle">
-          Træk idéer fra bunken til korken — eller fastgør dem på en sag til højre.
+          Træk idéer fra bunken til korken — scroll på tavlen for at zoome ind.
         </p>
       </header>
 
@@ -325,45 +394,102 @@ export function PersonalBoard({
             "min-side-board__zone min-side-board__zone--cork",
             isZoneActive("board") && "min-side-board__zone--active",
           )}
-          data-note-drop="board"
         >
-          <p className="min-side-board__zone-label">Opslagstavle</p>
-          <div className="min-side-board__cork-surface">
-            {boardNotes.length === 0 ? (
-              <div className="min-side-board__cork-empty">
-                <p className="min-side-board__cork-empty-title">Slip idéer her</p>
-                <p className="min-side-board__cork-empty-hint">
-                  Brug grebet på sedlen og træk den hertil.
-                </p>
-              </div>
-            ) : null}
-            {boardNotes.map((note, index) => {
-              const position = boardPositionForNote(note, index);
-              const rotate = boardRotationForNote(note, index);
-              return (
-                <div
-                  key={note.id}
-                  className={cn(
-                    "min-side-board__cork-note",
-                    drag?.noteId === note.id && "min-side-board__cork-note--dragging",
-                  )}
-                  style={{
-                    left: position.x,
-                    top: position.y,
-                    transform: `rotate(${rotate}deg)`,
-                    zIndex: drag?.noteId === note.id ? 1 : index + 2,
-                  }}
-                >
-                  <PersonalNoteCard
-                    note={note}
-                    variant="board"
-                    dragging={drag?.noteId === note.id}
-                    onNoteUpdated={updateNote}
-                    onDragStart={startDrag}
-                  />
+          <div className="min-side-board__cork-header">
+            <p className="min-side-board__zone-label">Opslagstavle</p>
+            <div className="min-side-board__cork-zoom-controls">
+              <span className="min-side-board__cork-zoom-label">{corkZoomLabel}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="min-side-board__cork-zoom-btn"
+                aria-label="Zoom ud"
+                onClick={zoomCorkOut}
+                disabled={corkZoom <= CORK_MIN_ZOOM}
+              >
+                <ZoomOut className="size-3.5" aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="min-side-board__cork-zoom-btn"
+                aria-label="Zoom ind"
+                onClick={zoomCorkIn}
+                disabled={corkZoom >= CORK_MAX_ZOOM}
+              >
+                <ZoomIn className="size-3.5" aria-hidden />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-side-board__cork-reset-btn"
+                onClick={resetCorkView}
+              >
+                Nulstil
+              </Button>
+            </div>
+          </div>
+          <div
+            className="min-side-board__cork-viewport"
+            data-cork-viewport
+            data-note-drop="board"
+            data-board-zoom={corkZoom}
+            data-board-pan-x={corkPan.x}
+            data-board-pan-y={corkPan.y}
+            onWheel={handleCorkWheel}
+            onPointerDown={handleCorkPointerDown}
+            onPointerMove={handleCorkPointerMove}
+            onPointerUp={handleCorkPointerUp}
+            onPointerCancel={handleCorkPointerUp}
+            aria-label="Opslagstavle — scroll for at zoome, træk for at panorere"
+          >
+            <div
+              className="min-side-board__cork-canvas"
+              data-cork-canvas
+              style={{
+                transform: `translate(${corkPan.x}px, ${corkPan.y}px) scale(${corkZoom})`,
+              }}
+            >
+              {boardNotes.length === 0 ? (
+                <div className="min-side-board__cork-empty">
+                  <p className="min-side-board__cork-empty-title">Slip idéer her</p>
+                  <p className="min-side-board__cork-empty-hint">
+                    Brug grebet på sedlen og træk den hertil.
+                  </p>
                 </div>
-              );
-            })}
+              ) : null}
+              {boardNotes.map((note, index) => {
+                const position = boardPositionForNote(note, index);
+                const rotate = boardRotationForNote(note, index);
+                return (
+                  <div
+                    key={note.id}
+                    className={cn(
+                      "min-side-board__cork-note",
+                      drag?.noteId === note.id && "min-side-board__cork-note--dragging",
+                    )}
+                    style={{
+                      left: position.x,
+                      top: position.y,
+                      transform: `rotate(${rotate}deg)`,
+                      zIndex: drag?.noteId === note.id ? 1 : index + 2,
+                    }}
+                  >
+                    <PersonalNoteCard
+                      note={note}
+                      variant="board"
+                      dragging={drag?.noteId === note.id}
+                      onNoteUpdated={updateNote}
+                      onDragStart={startDrag}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <p className="min-side-board__cork-zoom-hint">Scroll for at zoome · træk for at flytte</p>
           </div>
         </div>
 
