@@ -45,14 +45,14 @@ function AgentShellInner({
   const isChatPage = pathname === "/chat";
   const showChatPanel = staff && chatOpen && !isChatPage;
 
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
+
   useEffect(() => {
     if (isChatPage) {
       closeChat();
     }
   }, [isChatPage, closeChat]);
-
-  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
-  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -75,6 +75,7 @@ function AgentShellInner({
           collapsed={false}
           onToggle={closeMobileNav}
           onNavigate={closeMobileNav}
+          showTeamChat={staff}
         />
       </MobileNavDrawer>
       <AgentShellColumns
@@ -86,6 +87,7 @@ function AgentShellInner({
             showUsersNav={showUsersNav}
             collapsed={collapsed}
             onToggle={toggle}
+            showTeamChat={staff}
           />
         }
       >
@@ -164,4 +166,3 @@ export function AgentShell({
     </PageLayoutEditProvider>
   );
 }
-
