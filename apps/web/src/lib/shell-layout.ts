@@ -5,11 +5,13 @@ export const SHELL_WIDTHS_STORAGE_KEY = "stardesk-shell-widths";
 export const PORTAL_SHELL_WIDTHS_STORAGE_KEY = "stardesk-portal-shell-widths";
 
 export const SHELL_PANEL_NAV = "nav";
+export const SHELL_PANEL_CHAT = "chat";
 export const SHELL_PANEL_MAIN = "main";
 export const PORTAL_PANEL_NAV = "portal-nav";
 export const PORTAL_PANEL_MAIN = "portal-main";
 
 export const SHELL_NAV = { default: 210, min: 160, max: 280 } as const;
+export const SHELL_CHAT = { default: 420, min: 320, max: 560 } as const;
 export const PORTAL_NAV = { default: 220, min: 200, max: 280 } as const;
 
 /** Icon-only rail width when the left nav is collapsed (~1 cm). */

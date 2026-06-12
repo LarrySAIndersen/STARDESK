@@ -1,4 +1,6 @@
 import logging
+import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 from mcp.server.fastmcp import FastMCP
@@ -134,21 +136,20 @@ async def get_ticket_categories() -> str:
 
 async def get_user_tickets(user_email: str, *, caller: User) -> str:
     """Hent supportsager for den autentificerede bruger (eller anden bruger for staff)."""
-    if not is_staff(caller):
-        user_email = caller.email
+    effective_email = user_email if is_staff(caller) else caller.email
 
     if not async_session_factory:
         return "Database er ikke konfigureret."
         
     async with async_session_factory() as db:
         # Find user by email
-        user_stmt = select(User).where(User.email.ilike(user_email), User.deleted_at.is_(None))
+        user_stmt = select(User).where(User.email.ilike(effective_email), User.deleted_at.is_(None))
         user_result = await db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
         
         if not user:
             return (
-                f"Brugeren med e-mail '{user_email}' "
+                f"Brugeren med e-mail '{effective_email}' "
                 "blev ikke fundet i systemet."
             )
             
@@ -250,7 +251,7 @@ async def create_ticket(
     if len(description.strip()) < 10:
         return "Fejl: Beskrivelsen skal være mindst 10 tegn lang."
 
-    user_email = caller.email
+    owner_email = caller.email
 
     # Validate priority and ticket_type values
     if priority not in ["critical", "high", "medium", "low"]:
@@ -268,12 +269,12 @@ async def create_ticket(
 
     async with async_session_factory() as db:
         # Find user by email
-        user_stmt = select(User).where(User.email.ilike(user_email), User.deleted_at.is_(None))
+        user_stmt = select(User).where(User.email.ilike(owner_email), User.deleted_at.is_(None))
         user_result = await db.execute(user_stmt)
         user = user_result.scalar_one_or_none()
         
         if not user:
-            return f"Fejl: Brugeren med e-mail '{user_email}' blev ikke fundet i systemet."
+            return f"Fejl: Brugeren med e-mail '{owner_email}' blev ikke fundet i systemet."
 
         cat_uuid = None
         subcat_uuid = None
@@ -441,9 +442,6 @@ async def update_ticket_status(
 
         if not await user_can_access_ticket(db, caller, ticket):
             return "Fejl: Du har ikke adgang til denne sag."
-
-        import uuid
-        from datetime import UTC, datetime
 
         previous_status = ticket.status
         now = datetime.now(UTC)
