@@ -11,6 +11,7 @@ import {
 } from "react";
 
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
+import { readTeamChatOpenFromStorage } from "@/lib/team-chat-utils";
 
 const STORAGE_KEY = "stardesk_team_chat_open";
 
@@ -27,7 +28,7 @@ const ChatWorkspaceContext = createContext<ChatWorkspaceContextValue | null>(nul
 
 function readStoredOpen(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(STORAGE_KEY) === "true";
+  return readTeamChatOpenFromStorage(localStorage.getItem(STORAGE_KEY));
 }
 
 export function ChatWorkspaceProvider({

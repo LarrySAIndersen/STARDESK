@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from star_itsm_api.models.team_chat import CHANNEL_BOT, CHANNEL_PUBLIC
+from star_itsm_api.models.team_chat import CHANNEL_BOT, CHANNEL_PRIVATE, CHANNEL_PUBLIC
 from star_itsm_api.schemas.team_chat import TeamChatChannelCreate
 from star_itsm_api.services import team_chat as svc
 from star_itsm_api.services.org_access import IntegrationOrganizationError
@@ -239,6 +239,169 @@ async def test_toggle_reaction_unknown_message() -> None:
     mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     with pytest.raises(ValueError, match="message_not_found"):
         await svc.toggle_reaction(mock_db, uuid.uuid4(), FAKE_AGENT, "👍")
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_dm_user_not_found() -> None:
+    mock_db = AsyncMock()
+    with patch(
+        "star_itsm_api.services.team_chat.resolve_org_id",
+        AsyncMock(return_value=ORG_ID),
+    ):
+        mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
+        with pytest.raises(ValueError, match="user_not_found"):
+            await svc.get_or_create_dm(mock_db, FAKE_AGENT, OTHER_USER_ID)
+
+
+@pytest.mark.asyncio
+async def test_get_or_create_dm_creates_new_channel() -> None:
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    other_user = MagicMock()
+    other_user.id = OTHER_USER_ID
+
+    channel = MagicMock()
+    channel.id = CHANNEL_ID
+    channel.name = "Lars"
+    channel.slug = "dm-x"
+    channel.description = None
+    channel.is_private = True
+    channel.is_system = False
+    channel.channel_type = "dm"
+
+    async def _refresh(obj: object) -> None:
+        if hasattr(obj, "id") and getattr(obj, "id", None) is None:
+            obj.id = CHANNEL_ID  # type: ignore[attr-defined]
+
+    mock_db.refresh = AsyncMock(side_effect=_refresh)
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalar_one_or_none=lambda: other_user),
+            MagicMock(scalar_one_or_none=lambda: None),
+        ]
+    )
+
+    with patch(
+        "star_itsm_api.services.team_chat.resolve_org_id",
+        AsyncMock(return_value=ORG_ID),
+    ):
+        with patch(
+            "star_itsm_api.services.team_chat._user_display",
+            AsyncMock(return_value="Lars"),
+        ):
+            result = await svc.get_or_create_dm(mock_db, FAKE_AGENT, OTHER_USER_ID)
+
+    assert result.name == "Lars"
+    mock_db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_toggle_reaction_adds_reaction() -> None:
+    mock_db = AsyncMock()
+    msg = MagicMock()
+    msg.id = MESSAGE_ID
+    msg.channel_id = CHANNEL_ID
+    channel = _channel()
+
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalar_one_or_none=lambda: msg),
+            MagicMock(scalar_one_or_none=lambda: None),
+            MagicMock(all=lambda: [(MESSAGE_ID, "👍", 1, True)]),
+        ]
+    )
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+
+    with patch(
+        "star_itsm_api.services.team_chat.get_channel_for_user",
+        AsyncMock(return_value=channel),
+    ):
+        reactions = await svc.toggle_reaction(mock_db, MESSAGE_ID, FAKE_AGENT, "👍")
+
+    assert reactions[0].emoji == "👍"
+    assert reactions[0].reacted_by_me is True
+
+
+@pytest.mark.asyncio
+async def test_post_message_channel_not_found() -> None:
+    mock_db = AsyncMock()
+    with patch(
+        "star_itsm_api.services.team_chat.get_channel_for_user",
+        AsyncMock(return_value=None),
+    ):
+        with pytest.raises(ValueError, match="channel_not_found"):
+            await svc.post_message(mock_db, CHANNEL_ID, FAKE_AGENT, "Hej")
+
+
+@pytest.mark.asyncio
+async def test_create_channel_private_adds_member() -> None:
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
+    mock_db.add = MagicMock()
+    mock_db.flush = AsyncMock()
+    mock_db.commit = AsyncMock()
+
+    async def _refresh(channel: object) -> None:
+        channel.id = CHANNEL_ID  # type: ignore[attr-defined]
+        channel.name = "Secret"  # type: ignore[attr-defined]
+        channel.slug = "secret"  # type: ignore[attr-defined]
+        channel.description = None  # type: ignore[attr-defined]
+        channel.is_private = True  # type: ignore[attr-defined]
+        channel.is_system = False  # type: ignore[attr-defined]
+        channel.channel_type = CHANNEL_PRIVATE  # type: ignore[attr-defined]
+
+    mock_db.refresh = AsyncMock(side_effect=_refresh)
+
+    with patch(
+        "star_itsm_api.services.team_chat.resolve_org_id",
+        AsyncMock(return_value=ORG_ID),
+    ):
+        created = await svc.create_channel(
+            mock_db,
+            FAKE_AGENT,
+            TeamChatChannelCreate(name="Secret", is_private=True),
+        )
+
+    assert created.is_private is True
+    assert mock_db.add.call_count >= 2
+
+
+@pytest.mark.asyncio
+async def test_list_messages_returns_reads() -> None:
+    mock_db = AsyncMock()
+    channel = _channel()
+    msg = MagicMock()
+    msg.id = MESSAGE_ID
+    msg.channel_id = CHANNEL_ID
+    msg.user_id = USER_ID
+    msg.body = "Hej"
+    msg.is_bot = False
+    msg.tool_call_meta = None
+    msg.created_at = datetime.now(UTC)
+
+    mock_db.execute = AsyncMock(
+        side_effect=[
+            MagicMock(scalars=lambda: MagicMock(all=lambda: [msg])),
+            MagicMock(all=lambda: []),
+        ]
+    )
+
+    with patch(
+        "star_itsm_api.services.team_chat.get_channel_for_user",
+        AsyncMock(return_value=channel),
+    ):
+        with patch(
+            "star_itsm_api.services.team_chat._user_display",
+            AsyncMock(return_value="Agent Test"),
+        ):
+            messages = await svc.list_messages(mock_db, CHANNEL_ID, FAKE_AGENT)
+
+    assert len(messages) == 1
+    assert messages[0].body == "Hej"
 
 
 @pytest.mark.asyncio

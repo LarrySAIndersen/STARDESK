@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { partitionTeamChatChannels, teamChatChannelLabel } from "@/lib/team-chat-utils";
 import type { TeamChatChannel, TeamChatStaff } from "@/types/team-chat";
 
 function channelIcon(ch: TeamChatChannel) {
@@ -19,9 +20,7 @@ function channelIcon(ch: TeamChatChannel) {
 }
 
 function channelLabel(ch: TeamChatChannel): string {
-  if (ch.channel_type === "dm") return ch.name;
-  if (ch.channel_type === "bot") return ch.name;
-  return ch.slug;
+  return teamChatChannelLabel(ch);
 }
 
 export function ChatChannelList({
@@ -46,11 +45,7 @@ export function ChatChannelList({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const publicChannels = channels.filter(
-    (c) => c.channel_type === "public" || c.channel_type === "bot",
-  );
-  const dmChannels = channels.filter((c) => c.channel_type === "dm");
-  const privateChannels = channels.filter((c) => c.channel_type === "private");
+  const { publicChannels, privateChannels, dmChannels } = partitionTeamChatChannels(channels);
 
   const createChannel = useCallback(async () => {
     const trimmed = name.trim();

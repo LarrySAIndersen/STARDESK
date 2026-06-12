@@ -186,3 +186,84 @@ async def test_toggle_reaction(client: AsyncClient) -> None:
         )
     assert response.status_code == 200
     assert response.json()[0]["emoji"] == "👍"
+
+
+@pytest.mark.asyncio
+async def test_get_messages_channel_not_found(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.list_messages",
+        AsyncMock(return_value=[]),
+    ):
+        with patch(
+            "star_itsm_api.routers.team_chat.chat_svc.get_channel_for_user",
+            AsyncMock(return_value=None),
+        ):
+            response = await client.get(
+                f"/api/v1/team-chat/channels/{CHANNEL_ID}/messages",
+            )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_post_message_empty_body(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.post_message",
+        AsyncMock(side_effect=ValueError("empty_body")),
+    ):
+        response = await client.post(
+            f"/api/v1/team-chat/channels/{CHANNEL_ID}/messages",
+            json={"body": "   "},
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_post_message_channel_not_found(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.post_message",
+        AsyncMock(side_effect=ValueError("channel_not_found")),
+    ):
+        response = await client.post(
+            f"/api/v1/team-chat/channels/{CHANNEL_ID}/messages",
+            json={"body": "Hej"},
+        )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_toggle_reaction_message_not_found(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.toggle_reaction",
+        AsyncMock(side_effect=ValueError("message_not_found")),
+    ):
+        response = await client.post(
+            f"/api/v1/team-chat/messages/{MESSAGE_ID}/reactions",
+            json={"emoji": "👍"},
+        )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_dm_self_rejected(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.get_or_create_dm",
+        AsyncMock(side_effect=ValueError("self_dm")),
+    ):
+        response = await client.post(
+            "/api/v1/team-chat/dm",
+            json={"user_id": str(FAKE_AGENT.id)},
+        )
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_create_dm_user_not_found(client: AsyncClient) -> None:
+    with patch(
+        "star_itsm_api.routers.team_chat.chat_svc.get_or_create_dm",
+        AsyncMock(side_effect=ValueError("user_not_found")),
+    ):
+        response = await client.post(
+            "/api/v1/team-chat/dm",
+            json={"user_id": str(uuid.uuid4())},
+        )
+    assert response.status_code == 404

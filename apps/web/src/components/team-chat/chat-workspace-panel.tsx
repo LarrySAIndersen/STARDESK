@@ -12,27 +12,19 @@ import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { apiGet, apiPost } from "@/lib/api";
+import {
+  buildTeamChatMessagesUrl,
+  buildTeamChatPollUrl,
+  formatTeamChatTime,
+  mergeTeamChatMessages,
+  pickDefaultTeamChatChannel,
+} from "@/lib/team-chat-utils";
 import { cn } from "@/lib/utils";
 import type { TeamChatChannel, TeamChatMessage, TeamChatStaff } from "@/types/team-chat";
 
 const POLL_MS = 4000;
 
 type MessagesResponse = Readonly<{ messages: TeamChatMessage[] }>;
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function mergeMessages(prev: TeamChatMessage[], incoming: TeamChatMessage[]): TeamChatMessage[] {
-  const map = new Map(prev.map((m) => [m.id, m]));
-  for (const m of incoming) {
-    map.set(m.id, m);
-  }
-  return [...map.values()].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-}
 
 export function ChatWorkspacePanel() {
   const { closeChat, activeChannelId, setActiveChannelId } = useChatWorkspace();
@@ -54,8 +46,8 @@ export function ChatWorkspacePanel() {
       const data = await apiGet<TeamChatChannel[]>("/api/v1/team-chat/channels");
       setChannels(data);
       if (!activeChannelId && data.length > 0) {
-        const general = data.find((c) => c.slug === "general") ?? data[0];
-        setActiveChannelId(general.id);
+        const general = pickDefaultTeamChatChannel(data);
+        if (general) setActiveChannelId(general.id);
       }
     } catch {
       setError("Kunne ikke hente kanaler.");
@@ -72,12 +64,9 @@ export function ChatWorkspacePanel() {
   }, []);
 
   const loadMessages = useCallback(async (channelId: string, after?: string | null) => {
-    const qs = after ? `?after=${encodeURIComponent(after)}` : "";
-    const data = await apiGet<MessagesResponse>(
-      `/api/v1/team-chat/channels/${channelId}/messages${qs}`,
-    );
+    const data = await apiGet<MessagesResponse>(buildTeamChatMessagesUrl(channelId, after));
     if (after) {
-      setMessages((prev) => mergeMessages(prev, data.messages));
+      setMessages((prev) => mergeTeamChatMessages(prev, data.messages));
     } else {
       setMessages(data.messages);
     }
@@ -114,12 +103,10 @@ export function ChatWorkspacePanel() {
     const id = window.setInterval(() => {
       const after = lastPollRef.current;
       fireAndForget(
-        apiGet<MessagesResponse>(
-          `/api/v1/team-chat/channels/${activeChannelId}/poll${after ? `?after=${encodeURIComponent(after)}` : ""}`,
-        )
+        apiGet<MessagesResponse>(buildTeamChatPollUrl(activeChannelId, after))
           .then((data) => {
             if (data.messages.length > 0) {
-              setMessages((prev) => mergeMessages(prev, data.messages));
+              setMessages((prev) => mergeTeamChatMessages(prev, data.messages));
               lastPollRef.current = data.messages[data.messages.length - 1].created_at;
             }
           })
@@ -241,7 +228,7 @@ export function ChatWorkspacePanel() {
               >
                 <div className="team-chat-msg-meta">
                   <span className="font-semibold">{m.sender_display_name}</span>
-                  <span className="text-muted-foreground">{formatTime(m.created_at)}</span>
+                  <span className="text-muted-foreground">{formatTeamChatTime(m.created_at)}</span>
                 </div>
                 <p className="team-chat-msg-body whitespace-pre-wrap">{m.body}</p>
                 {m.tool_call_meta?.tools_used ? (
