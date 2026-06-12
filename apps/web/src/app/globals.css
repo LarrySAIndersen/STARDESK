@@ -1511,6 +1511,143 @@
     @apply border-star-blue/30 bg-star-blue-light text-star-navy mr-auto max-w-[90%];
   }
 
+  /* Internal team chat workspace (Slack-like) */
+  .team-chat-workspace {
+    @apply bg-card;
+  }
+
+  .team-chat-workspace-header {
+    @apply flex shrink-0 items-center gap-2 border-b border-[var(--gray-border)] px-3 py-2;
+  }
+
+  .team-chat-channel-list {
+    @apply flex w-[140px] shrink-0 flex-col border-r border-[var(--gray-border)] bg-[var(--gray-bg)]/50;
+  }
+
+  .team-chat-channel-list-header {
+    @apply flex items-center justify-between px-2 py-1.5;
+  }
+
+  .team-chat-channel-section-label {
+    @apply text-muted-foreground px-2 pt-1 text-[9px] font-bold tracking-wide uppercase;
+  }
+
+  .team-chat-channel-section {
+    @apply flex flex-col gap-0.5 px-1;
+  }
+
+  .team-chat-channel-row {
+    @apply text-star-navy hover:bg-star-blue-light/50 flex w-full items-center gap-1.5 rounded-[2px] px-2 py-1 text-[11px];
+  }
+
+  .team-chat-channel-row--active {
+    @apply bg-star-blue-light font-semibold text-star-navy;
+  }
+
+  .team-chat-dm-pick {
+    @apply hover:bg-star-blue-light/50 rounded-[2px];
+  }
+
+  .team-chat-thread {
+    @apply min-w-0 bg-card;
+  }
+
+  .team-chat-msg {
+    @apply mb-3 max-w-[95%];
+  }
+
+  .team-chat-msg--own {
+    @apply ml-auto text-right;
+  }
+
+  .team-chat-msg--bot {
+    @apply border-star-blue/20 bg-star-blue-light/40 max-w-[95%] rounded-[2px] border px-2 py-1.5;
+  }
+
+  .team-chat-msg-meta {
+    @apply mb-0.5 flex items-center gap-2 text-[10px];
+  }
+
+  .team-chat-msg-body {
+    @apply text-[13px] leading-snug text-star-navy;
+  }
+
+  .team-chat-tool-badge {
+    @apply text-star-blue mt-1 font-medium;
+  }
+
+  .team-chat-reactions {
+    @apply mt-1 flex flex-wrap gap-1;
+  }
+
+  .team-chat-reaction {
+    @apply border border-[var(--gray-border)] bg-[var(--gray-bg)] rounded-full px-1.5 py-0.5 text-[11px];
+  }
+
+  .team-chat-reaction--mine {
+    @apply border-star-blue/40 bg-star-blue-light;
+  }
+
+  .team-chat-quick-react {
+    @apply mt-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100;
+  }
+
+  .team-chat-msg:hover .team-chat-quick-react {
+    @apply opacity-100;
+  }
+
+  .team-chat-quick-react-btn {
+    @apply hover:bg-muted rounded px-1 text-[12px];
+  }
+
+  .team-chat-composer {
+    @apply flex shrink-0 items-end gap-1 border-t border-[var(--gray-border)] p-2;
+  }
+
+  .team-chat-emoji-popover {
+    @apply border-border bg-popover absolute bottom-full left-0 z-50 mb-1 w-[240px] rounded-[2px] border p-2 shadow-lg;
+  }
+
+  .team-chat-emoji-tabs {
+    @apply mb-2 flex flex-wrap gap-1;
+  }
+
+  .team-chat-emoji-tab {
+    @apply text-muted-foreground hover:text-foreground rounded px-1 py-0.5 text-[9px];
+  }
+
+  .team-chat-emoji-tab--active {
+    @apply bg-star-blue-light text-star-navy font-semibold;
+  }
+
+  .team-chat-emoji-grid {
+    @apply grid max-h-36 grid-cols-8 gap-0.5 overflow-y-auto;
+  }
+
+  .team-chat-emoji-btn {
+    @apply hover:bg-muted rounded p-1 text-base leading-none;
+  }
+
+  .team-chat-huddle-backdrop {
+    @apply fixed inset-0 z-[500] flex items-center justify-center bg-black/40 p-4;
+  }
+
+  .team-chat-huddle-dialog {
+    @apply border-border bg-card w-full max-w-md rounded-[2px] border p-4 shadow-xl;
+  }
+
+  .team-chat-huddle-grid {
+    @apply grid grid-cols-2 gap-2;
+  }
+
+  .team-chat-huddle-tile {
+    @apply bg-muted flex aspect-video flex-col items-center justify-center gap-2 rounded-[2px];
+  }
+
+  .team-chat-huddle-avatar {
+    @apply bg-star-navy flex size-12 items-center justify-center rounded-full text-sm font-bold text-white;
+  }
+
   /* Portal mock case assistant (above SF live chat FAB) */
   .case-assistant-fab {
     @apply bg-star-blue fixed right-5 bottom-[5.25rem] z-[399] flex items-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-star-blue;

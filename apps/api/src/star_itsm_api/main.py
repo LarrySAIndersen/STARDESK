@@ -13,6 +13,7 @@ from star_itsm_api.db_schema_sync import (
     ensure_login_throttle_schema_current,
     ensure_personal_notes_schema_current,
     ensure_prototype_staff_accounts_current,
+    ensure_team_chat_schema_current,
     ensure_ticket_schema_current,
 )
 from star_itsm_api.middleware.security_headers import SecurityHeadersMiddleware
@@ -36,6 +37,7 @@ from star_itsm_api.routers import (
     sf_chat,
     slack,
     sub_causes,
+    team_chat,
     teams,
     tickets,
     users,
@@ -60,6 +62,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_kundeportal_2_role_current(engine, settings.database_url)
         await ensure_prototype_staff_accounts_current(engine, settings.database_url)
         await ensure_ticket_schema_current(engine, settings.database_url)
+        await ensure_team_chat_schema_current(engine, settings.database_url)
     yield
 
 
@@ -113,3 +116,4 @@ app.include_router(admin.router, prefix=API_V1_PREFIX)
 app.include_router(sf_chat.router, prefix=API_V1_PREFIX)
 app.include_router(mcp.router, prefix=API_V1_PREFIX)
 app.include_router(chat.router, prefix=API_V1_PREFIX)
+app.include_router(team_chat.router, prefix=API_V1_PREFIX)
