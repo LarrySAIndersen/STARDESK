@@ -41,8 +41,8 @@ function shouldIgnoreCaptureElement(element: Element): boolean {
 }
 
 async function loadHtml2Canvas() {
-  const html2canvasModule = await import("html2canvas");
-  return html2canvasModule.default;
+  const importedHtml2Canvas = await import("html2canvas");
+  return importedHtml2Canvas.default;
 }
 
 async function captureTargetToPngBlob(target: HTMLElement): Promise<Blob | null> {
