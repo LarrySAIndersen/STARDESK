@@ -28,6 +28,7 @@ export function ChatHuddleMock({
         role="dialog"
         aria-label={`Huddle i ${channelName}`}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <header className="mb-3 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-sm font-bold text-star-navy">

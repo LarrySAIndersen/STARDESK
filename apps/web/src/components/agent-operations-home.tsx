@@ -23,10 +23,13 @@ export function AgentOperationsHome({
   initialDashboard,
   initialScope,
   user,
+  embedded = false,
 }: {
   initialDashboard: OperationsDashboard;
   initialScope: DashboardScope;
   user: User | null;
+  /** When true, omit page heading — used inside workspace widgets. */
+  embedded?: boolean;
 }) {
   const [scope, setScope] = useState<DashboardScope>(initialScope);
   const [dashboard, setDashboard] = useState(initialDashboard);
@@ -78,15 +81,20 @@ export function AgentOperationsHome({
   const tabs: DashboardScope[] = showAllScope ? [...SCOPE_TABS, "all"] : SCOPE_TABS;
 
   return (
-    <div className="border-b border-[var(--gray-border)] px-5 py-5">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-star-navy text-xl font-bold tracking-tight">Driftsdashboard</h1>
-          <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
-            {DASHBOARD_SCOPE_DESCRIPTIONS[scope]}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className={cn(!embedded && "border-b border-[var(--gray-border)] px-5 py-5", embedded && "space-y-4")}>
+      <div className={cn("flex flex-wrap items-end justify-between gap-3", !embedded && "mb-4")}>
+        {embedded ? null : (
+          <div>
+            <h1 className="text-star-navy text-xl font-bold tracking-tight">Driftsdashboard</h1>
+            <p className="text-muted-foreground mt-1 max-w-2xl text-sm">
+              {DASHBOARD_SCOPE_DESCRIPTIONS[scope]}
+            </p>
+          </div>
+        )}
+        <div className={cn("flex flex-wrap items-center gap-2", embedded && "w-full justify-between")}>
+          {embedded ? (
+            <p className="text-muted-foreground text-xs">{DASHBOARD_SCOPE_DESCRIPTIONS[scope]}</p>
+          ) : null}
           <div
             className="flex flex-wrap gap-1 rounded-lg border border-[var(--gray-border)] bg-white p-1"
             role="tablist"

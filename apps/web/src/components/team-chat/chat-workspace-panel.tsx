@@ -2,7 +2,8 @@
 
 import { fireAndForget } from "@/lib/fire-and-forget";
 
-import { Send, Video, X } from "lucide-react";
+import { Maximize2, Send, Video, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatChannelList } from "@/components/team-chat/chat-channel-list";
@@ -34,8 +35,15 @@ function mergeMessages(prev: TeamChatMessage[], incoming: TeamChatMessage[]): Te
   );
 }
 
-export function ChatWorkspacePanel() {
+type ChatWorkspacePanelProps = Readonly<{
+  layout?: "panel" | "page" | "dock";
+}>;
+
+export function ChatWorkspacePanel({ layout = "panel" }: ChatWorkspacePanelProps) {
+  const router = useRouter();
   const { closeChat, activeChannelId, setActiveChannelId } = useChatWorkspace();
+  const isPage = layout === "page";
+  const isDock = layout === "dock";
   const [channels, setChannels] = useState<TeamChatChannel[]>([]);
   const [staff, setStaff] = useState<TeamChatStaff[]>([]);
   const [messages, setMessages] = useState<TeamChatMessage[]>([]);
@@ -176,12 +184,29 @@ export function ChatWorkspacePanel() {
       : `#${activeChannel.slug}`
     : "Chat";
 
+  const openFullPage = useCallback(() => {
+    closeChat();
+    router.push("/chat");
+  }, [closeChat, router]);
+
   return (
-    <div className="team-chat-workspace flex h-full min-h-0 flex-col">
+    <div
+      className={cn(
+        "team-chat-workspace flex h-full min-h-0 flex-col",
+        isPage && "team-chat-workspace--page",
+        isDock && "team-chat-workspace--dock",
+      )}
+    >
       <header className="team-chat-workspace-header">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-bold text-star-navy">{channelTitle}</h2>
-          <p className="text-muted-foreground text-[10px]">Ctrl+Shift+C · Intern chat</p>
+          <p className="text-muted-foreground text-[10px]">
+            {isPage
+              ? "Intern team-chat"
+              : isDock
+                ? "Ctrl+Shift+C · Magnetisk dock"
+                : "Ctrl+Shift+C · Intern chat"}
+          </p>
         </div>
         {activeChannel && activeChannel.channel_type !== "dm" ? (
           <Button
@@ -196,14 +221,29 @@ export function ChatWorkspacePanel() {
             <Video className="size-4" />
           </Button>
         ) : null}
-        <button
-          type="button"
-          className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
-          onClick={closeChat}
-          aria-label="Luk chat"
-        >
-          <X className="size-4" />
-        </button>
+        {!isPage ? (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0"
+              aria-label="Åbn chat i fuld side"
+              title="Åbn chat i fuld side"
+              onClick={openFullPage}
+            >
+              <Maximize2 className="size-4" />
+            </Button>
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
+              onClick={closeChat}
+              aria-label="Luk chat"
+            >
+              <X className="size-4" />
+            </button>
+          </>
+        ) : null}
       </header>
 
       <div className="flex min-h-0 flex-1">

@@ -15,6 +15,7 @@ import { canEditPageLayout } from "@/lib/page-layout/access";
 import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { ChatWorkspacePanel } from "@/components/team-chat/chat-workspace-panel";
+import { TeamChatDock } from "@/components/team-chat/team-chat-dock";
 import {
   ChatWorkspaceProvider,
   useChatWorkspace,
@@ -39,8 +40,16 @@ function AgentShellInner({
   const pathname = usePathname();
   const { collapsed, toggle } = useSidebarCollapsed();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { open: chatOpen } = useChatWorkspace();
+  const { open: chatOpen, closeChat } = useChatWorkspace();
   const staff = isStaff(user ?? null);
+  const isChatPage = pathname === "/chat";
+  const showChatPanel = staff && chatOpen && !isChatPage;
+
+  useEffect(() => {
+    if (isChatPage) {
+      closeChat();
+    }
+  }, [isChatPage, closeChat]);
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
@@ -66,31 +75,35 @@ function AgentShellInner({
           collapsed={false}
           onToggle={closeMobileNav}
           onNavigate={closeMobileNav}
-          showTeamChat={staff}
         />
       </MobileNavDrawer>
       <AgentShellColumns
         collapsed={collapsed}
         onToggle={toggle}
-        chatOpen={staff && chatOpen}
-        chatPanel={staff ? <ChatWorkspacePanel /> : undefined}
         sidebar={
           <AgentSidebar
             user={user}
             showUsersNav={showUsersNav}
             collapsed={collapsed}
             onToggle={toggle}
-            showTeamChat={staff}
           />
         }
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-          <AgentTopBar
-            title={topBarTitle}
-            actions={topBarActions}
-            user={user}
-            onOpenNav={openMobileNav}
-          />
+          <div className="team-chat-shell-header">
+            <AgentTopBar
+              title={topBarTitle}
+              actions={topBarActions}
+              user={user}
+              onOpenNav={openMobileNav}
+              showTeamChat={staff}
+            />
+            {staff ? (
+              <TeamChatDock open={showChatPanel}>
+                <ChatWorkspacePanel layout="dock" />
+              </TeamChatDock>
+            ) : null}
+          </div>
           <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
             <ReviewNotesOverlay user={user ?? null} />

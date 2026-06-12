@@ -10,7 +10,6 @@ import { CollapsibleNavSection } from "@/components/agent/collapsible-nav-sectio
 import { NavVisibilityEye } from "@/components/agent/nav-visibility-eye";
 import { PinnedNotesSidebar } from "@/components/personal/pinned-notes-sidebar";
 import { IntegrationSidebarLinks } from "@/components/integrations/integration-sidebar-links";
-import { TeamChatNavButton } from "@/components/team-chat/team-chat-nav-button";
 import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
 import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
 import { SidebarUiModeSwitch } from "@/components/sidebar-ui-mode-switch";
@@ -212,14 +211,12 @@ export function AgentSidebar({
   collapsed = false,
   onToggle,
   onNavigate,
-  showTeamChat = false,
 }: {
   user?: User | null;
   showUsersNav?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
   onNavigate?: () => void;
-  showTeamChat?: boolean;
 }) {
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
@@ -459,11 +456,6 @@ export function AgentSidebar({
         className="flex flex-1 flex-col overflow-y-auto py-1"
         aria-label="Hovednavigation"
       >
-        {showTeamChat ? (
-          <div className="border-b border-[var(--gray-border)] px-1 pb-1">
-            <TeamChatNavButton collapsed={collapsed} />
-          </div>
-        ) : null}
         {hydrated
           ? grouped.map((section) => {
               const label = sectionLabel(section.sectionId);
