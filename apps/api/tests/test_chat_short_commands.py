@@ -421,3 +421,137 @@ def test_build_chat_system_prompt_includes_page_context() -> None:
 async def test_chat_delete_session_invalid_id(api_client: AsyncClient) -> None:
     response = await api_client.delete("/api/v1/chat/sessions/not-a-uuid")
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_try_page_context_command_status_phrase() -> None:
+    page_context = ChatPageContext(
+        page_path="/tickets/abc",
+        page_label="Sagsdetaljer",
+        ticket_number="INC-2026-00118",
+        ticket_title="Printer fejl",
+    )
+    with patch(
+        "star_itsm_api.routers.chat.get_ticket_by_number",
+        new_callable=AsyncMock,
+        return_value="INC-2026-00118: status new",
+    ) as mock_lookup:
+        result = await try_page_context_command("hvad er status", page_context, FAKE_ADMIN)
+    assert result is not None
+    assert "INC-2026-00118" in result
+    mock_lookup.assert_awaited_once_with("INC-2026-00118", caller=FAKE_ADMIN)
+
+
+def test_parse_short_create_payload_with_colon_and_dash() -> None:
+    from star_itsm_api.routers.chat import _parse_short_create_payload
+
+    parsed = _parse_short_create_payload("opret: Printer fejl - Den printer tomt")
+    assert parsed == ("Printer fejl", "Den printer tomt")
+
+
+def test_parse_short_create_payload_single_word_description() -> None:
+    from star_itsm_api.routers.chat import _parse_short_create_payload
+
+    parsed = _parse_short_create_payload("opret Printerproblem uden bindestreg")
+    assert parsed is not None
+    assert parsed[0] == "Printerproblem uden bindestreg"
+    assert "Help-a-bot" in parsed[1]
+
+
+@pytest.mark.asyncio
+async def test_get_smart_mock_empty_user_message() -> None:
+    from star_itsm_api.routers.chat import get_smart_mock_response
+
+    request = ChatRequest(messages=[])
+    response = await get_smart_mock_response(request, FAKE_ADMIN)
+    assert "Help-a-bot" in response
+    assert FAKE_ADMIN.display_name in response
+
+
+@pytest.mark.asyncio
+async def test_get_smart_mock_opret_sag_keywords() -> None:
+    from star_itsm_api.routers.chat import get_smart_mock_response
+
+    request = ChatRequest(
+        messages=[{"role": "user", "content": "jeg vil opret sag om printer"}],
+    )
+    with patch(
+        "star_itsm_api.routers.chat._mock_try_create",
+        new_callable=AsyncMock,
+        return_value=None,
+    ):
+        response = await get_smart_mock_response(request, FAKE_ADMIN)
+    assert "opret" in response.lower()
+
+
+@pytest.mark.asyncio
+async def test_get_smart_mock_knowledge_search_results() -> None:
+    from star_itsm_api.routers.chat import get_smart_mock_response
+
+    request = ChatRequest(messages=[{"role": "user", "content": "hjælp med vpn"}])
+    with patch(
+        "star_itsm_api.routers.chat._mock_search_knowledge",
+        new_callable=AsyncMock,
+        return_value=(["### VPN"], ["### Old fix"]),
+    ):
+        response = await get_smart_mock_response(request, FAKE_ADMIN)
+    assert "VPN" in response
+    assert "Tidligere Løsninger" in response
+
+
+def test_infer_chat_category_vpn() -> None:
+    from star_itsm_api.routers.chat import _infer_chat_category
+
+    assert _infer_chat_category("Brug VPN til at forbinde", "vpn problem") == "VPN"
+
+
+def test_extract_ticket_ref_from_response() -> None:
+    from star_itsm_api.routers.chat import _extract_ticket_ref
+
+    ref = _extract_ticket_ref("Sagen INC-2026-00042 er lukket", None)
+    assert ref == "INC-2026-00042"
+
+
+@pytest.mark.asyncio
+async def test_log_chatbot_message_persists(override_db: AsyncMock) -> None:
+    from star_itsm_api.routers.chat import log_chatbot_message
+
+    await log_chatbot_message(
+        db=override_db,
+        session_str=str(uuid.uuid4()),
+        user_id=FAKE_ADMIN.id,
+        sender="user",
+        sender_name="Anna",
+        body="Hej",
+        category="VPN",
+        ticket_ref="INC-2026-00001",
+    )
+    override_db.add.assert_called_once()
+    override_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_log_chatbot_message_skips_without_db() -> None:
+    from star_itsm_api.routers.chat import log_chatbot_message
+
+    await log_chatbot_message(
+        db=None,
+        session_str=None,
+        user_id=FAKE_ADMIN.id,
+        sender="user",
+        sender_name="Anna",
+        body="Hej",
+    )
+
+
+def test_build_chat_system_prompt_with_page_kind() -> None:
+    prompt = build_chat_system_prompt(
+        "Anna",
+        ChatPageContext(
+            page_path="/kanban",
+            page_label="Kanban",
+            page_kind="kanban",
+        ),
+    )
+    assert "Kanban" in prompt
+    assert "kanban" in prompt.lower() or "Kanban" in prompt
