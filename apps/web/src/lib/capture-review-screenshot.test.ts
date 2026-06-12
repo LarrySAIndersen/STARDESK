@@ -9,7 +9,8 @@ describe("blobToBase64", () => {
       onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
       onerror: ((this: FileReader, ev: ProgressEvent<FileReader>) => unknown) | null = null;
 
-      readAsDataURL(_blob: Blob): void {
+      readAsDataURL(blob: Blob): void {
+        void blob;
         this.result = "data:image/png;base64,iVBORw0KGgo=";
         this.onload?.call(this as unknown as FileReader, {} as ProgressEvent<FileReader>);
       }
