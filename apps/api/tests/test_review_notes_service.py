@@ -21,6 +21,7 @@ def _note_row(**kw: object) -> SimpleNamespace:
         "position_x": 12.0,
         "position_y": 34.0,
         "position_selector": None,
+        "screenshot_storage_key": None,
         "created_by_user_id": uuid.uuid4(),
         "status": "open",
         "created_at": now,

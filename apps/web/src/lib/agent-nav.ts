@@ -13,6 +13,7 @@ import {
   Plus,
   LayoutGrid,
   LayoutTemplate,
+  Map,
   MessagesSquare,
   StickyNote,
   Ticket,
@@ -53,6 +54,9 @@ export function buildAgentNavItems(options: {
   const { staff, showAdmin, showForbedringer = false } = options;
   return [
     { id: "dashboard", href: "/", label: "Hjem", icon: LayoutDashboard },
+    ...(staff
+      ? [{ id: "sitemap", href: "/sitemap", label: "Sitemap", icon: Map }]
+      : []),
     ...(staff
       ? [{ id: "service-desk", href: "/service-desk", label: "Service Desk", icon: Headset }]
       : []),

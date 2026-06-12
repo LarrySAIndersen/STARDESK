@@ -6,8 +6,73 @@ import type {
   WorkspaceWidgetKind,
 } from "@/lib/workspace-landing/types";
 
+export type WorkspaceLandingView = "grid" | "sitemap" | "widget";
+
+export const WORKSPACE_SITEMAP_PATH = "/sitemap";
+
 export function parseWorkspaceSpace(value: string | null): WorkspaceSpace {
   return value === "team" ? "team" : "personal";
+}
+
+export function parseWorkspaceView(
+  viewParam: string | null,
+  widgetParam: string | null,
+): WorkspaceLandingView {
+  if (widgetParam) {
+    return "widget";
+  }
+  if (viewParam === "sitemap") {
+    return "sitemap";
+  }
+  return "grid";
+}
+
+export function buildWorkspaceHref(options: {
+  space?: WorkspaceSpace;
+  view?: WorkspaceLandingView;
+  widgetInstanceId?: string;
+  from?: WorkspaceLandingView;
+  preserveParams?: string;
+}): string {
+  const params = new URLSearchParams(options.preserveParams ?? "");
+  if (options.space) {
+    params.set("space", options.space);
+  }
+  params.delete("view");
+  params.delete("widget");
+  params.delete("from");
+
+  if (options.view === "sitemap") {
+    return WORKSPACE_SITEMAP_PATH;
+  }
+
+  if (options.view === "widget" && options.widgetInstanceId) {
+    params.set("widget", options.widgetInstanceId);
+    if (options.from && options.from !== "grid") {
+      params.set("from", options.from);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+export function resolveWorkspaceBackHref(
+  view: WorkspaceLandingView,
+  space: WorkspaceSpace,
+  fromParam: string | null,
+  preserveParams?: string,
+): string {
+  if (view === "widget") {
+    if (fromParam === "sitemap") {
+      return WORKSPACE_SITEMAP_PATH;
+    }
+    return buildWorkspaceHref({ space, view: "grid", preserveParams });
+  }
+  if (view === "sitemap") {
+    return buildWorkspaceHref({ space, view: "grid", preserveParams });
+  }
+  return buildWorkspaceHref({ space, view: "grid", preserveParams });
 }
 
 export function reorderWidgetInstances(

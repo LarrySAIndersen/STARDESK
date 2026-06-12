@@ -418,6 +418,44 @@ async def ensure_workspace_layout_schema_current(
         )
 
 
+async def ensure_review_note_screenshot_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Ensure page_review_notes has screenshot_storage_key."""
+    if engine is None or not database_url:
+        return
+    try:
+        if await _schema_has_column(
+            engine,
+            "screenshot_storage_key",
+            table_name="page_review_notes",
+        ):
+            return
+        logger.warning(
+            "page_review_notes.screenshot_storage_key missing — applying SQL migration",
+        )
+        await asyncio.to_thread(
+            _run_single_migration,
+            database_url,
+            "40_review-note-screenshot.sql",
+        )
+        if await _schema_has_column(
+            engine,
+            "screenshot_storage_key",
+            table_name="page_review_notes",
+        ):
+            logger.info("page_review_notes screenshot schema sync completed")
+        else:
+            logger.error(
+                "page_review_notes screenshot schema sync finished but column is still missing",
+            )
+    except Exception:
+        logger.exception(
+            "page_review_notes screenshot schema sync failed — screenshots may not persist",
+        )
+
+
 def _run_single_migration(database_url: str, filename: str) -> None:
     path = Path(__file__).resolve().parent.joinpath("sql", "migrations", filename)
     if not path.is_file():

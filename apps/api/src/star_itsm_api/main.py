@@ -13,6 +13,7 @@ from star_itsm_api.db_schema_sync import (
     ensure_login_throttle_schema_current,
     ensure_personal_notes_schema_current,
     ensure_prototype_staff_accounts_current,
+    ensure_review_note_screenshot_schema_current,
     ensure_team_chat_schema_current,
     ensure_ticket_schema_current,
     ensure_workspace_layout_schema_current,
@@ -66,6 +67,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await ensure_ticket_schema_current(engine, settings.database_url)
         await ensure_team_chat_schema_current(engine, settings.database_url)
         await ensure_workspace_layout_schema_current(engine, settings.database_url)
+        await ensure_review_note_screenshot_schema_current(engine, settings.database_url)
     yield
 
 

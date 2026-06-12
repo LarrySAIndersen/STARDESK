@@ -1,12 +1,13 @@
 """API tests for Stardesk Reviewer page review notes."""
 
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.security import (
     ROLE_AGENT,
@@ -16,6 +17,14 @@ from star_itsm_api.core.security import (
 )
 from star_itsm_api.main import app
 from star_itsm_api.services import review_notes as review_notes_service
+
+
+@pytest.fixture
+async def unauthenticated_client(override_db: AsyncMock) -> AsyncIterator[AsyncClient]:
+    app.dependency_overrides.pop(get_current_user, None)
+    app.dependency_overrides.pop(get_current_user_session, None)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        yield ac
 
 
 def _reviewer_user() -> SimpleNamespace:
@@ -75,6 +84,7 @@ async def test_create_review_note_happy_path(
             position_y=340.0,
             position_selector=None,
             status="open",
+            has_screenshot=False,
             created_by_user_id=reviewer.id,
             created_by_name=reviewer.display_name,
             created_by_email=reviewer.email,
@@ -155,6 +165,7 @@ async def test_list_review_notes_for_staff(
                 position_y=80.0,
                 position_selector=None,
                 status="open",
+                has_screenshot=False,
                 created_by_user_id=uuid.uuid4(),
                 created_by_name="Rita Reviewer",
                 created_by_email="reviewer@example.dk",
@@ -173,3 +184,13 @@ async def test_list_review_notes_for_staff(
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["page_title"] == "Service Desk"
+
+
+@pytest.mark.asyncio
+async def test_download_review_note_screenshot_requires_auth(
+    unauthenticated_client: AsyncClient,
+) -> None:
+    response = await unauthenticated_client.get(
+        f"/api/v1/review-notes/{uuid.uuid4()}/screenshot",
+    )
+    assert response.status_code == 401
