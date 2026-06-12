@@ -36,13 +36,14 @@ function mergeMessages(prev: TeamChatMessage[], incoming: TeamChatMessage[]): Te
 }
 
 type ChatWorkspacePanelProps = Readonly<{
-  layout?: "panel" | "page";
+  layout?: "panel" | "page" | "dock";
 }>;
 
 export function ChatWorkspacePanel({ layout = "panel" }: ChatWorkspacePanelProps) {
   const router = useRouter();
   const { closeChat, activeChannelId, setActiveChannelId } = useChatWorkspace();
   const isPage = layout === "page";
+  const isDock = layout === "dock";
   const [channels, setChannels] = useState<TeamChatChannel[]>([]);
   const [staff, setStaff] = useState<TeamChatStaff[]>([]);
   const [messages, setMessages] = useState<TeamChatMessage[]>([]);
@@ -193,13 +194,18 @@ export function ChatWorkspacePanel({ layout = "panel" }: ChatWorkspacePanelProps
       className={cn(
         "team-chat-workspace flex h-full min-h-0 flex-col",
         isPage && "team-chat-workspace--page",
+        isDock && "team-chat-workspace--dock",
       )}
     >
       <header className="team-chat-workspace-header">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-sm font-bold text-star-navy">{channelTitle}</h2>
           <p className="text-muted-foreground text-[10px]">
-            {isPage ? "Intern team-chat" : "Ctrl+Shift+C · Intern chat"}
+            {isPage
+              ? "Intern team-chat"
+              : isDock
+                ? "Ctrl+Shift+C · Magnetisk dock"
+                : "Ctrl+Shift+C · Intern chat"}
           </p>
         </div>
         {activeChannel && activeChannel.channel_type !== "dm" ? (

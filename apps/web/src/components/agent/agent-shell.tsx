@@ -15,6 +15,7 @@ import { canEditPageLayout } from "@/lib/page-layout/access";
 import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { ChatWorkspacePanel } from "@/components/team-chat/chat-workspace-panel";
+import { TeamChatDock } from "@/components/team-chat/team-chat-dock";
 import {
   ChatWorkspaceProvider,
   useChatWorkspace,
@@ -80,8 +81,6 @@ function AgentShellInner({
       <AgentShellColumns
         collapsed={collapsed}
         onToggle={toggle}
-        chatOpen={showChatPanel}
-        chatPanel={staff ? <ChatWorkspacePanel layout="panel" /> : undefined}
         sidebar={
           <AgentSidebar
             user={user}
@@ -93,12 +92,20 @@ function AgentShellInner({
         }
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-          <AgentTopBar
-            title={topBarTitle}
-            actions={topBarActions}
-            user={user}
-            onOpenNav={openMobileNav}
-          />
+          <div className="team-chat-shell-header">
+            <AgentTopBar
+              title={topBarTitle}
+              actions={topBarActions}
+              user={user}
+              onOpenNav={openMobileNav}
+              showTeamChat={staff}
+            />
+            {staff ? (
+              <TeamChatDock open={showChatPanel}>
+                <ChatWorkspacePanel layout="dock" />
+              </TeamChatDock>
+            ) : null}
+          </div>
           <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
             <ReviewNotesOverlay user={user ?? null} />
@@ -159,4 +166,3 @@ export function AgentShell({
     </PageLayoutEditProvider>
   );
 }
-
