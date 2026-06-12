@@ -14,8 +14,92 @@ import { PageLayoutEditMainChrome } from "@/components/page-layout/page-layout-e
 import { canEditPageLayout } from "@/lib/page-layout/access";
 import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
+import { ChatWorkspacePanel } from "@/components/team-chat/chat-workspace-panel";
+import {
+  ChatWorkspaceProvider,
+  useChatWorkspace,
+} from "@/components/team-chat/chat-workspace-provider";
 import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
+import { isStaff } from "@/lib/auth";
 import type { User } from "@/types/user";
+
+function AgentShellInner({
+  children,
+  topBarTitle,
+  topBarActions,
+  user,
+  showUsersNav,
+}: {
+  children: React.ReactNode;
+  topBarTitle?: string;
+  topBarActions?: React.ReactNode;
+  user?: User | null;
+  showUsersNav?: boolean;
+}) {
+  const pathname = usePathname();
+  const { collapsed, toggle } = useSidebarCollapsed();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { open: chatOpen } = useChatWorkspace();
+  const staff = isStaff(user ?? null);
+
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.getElementById("main-content")?.scrollTo(0, 0);
+  }, [pathname]);
+
+  useEffect(() => {
+    closeMobileNav();
+  }, [pathname, closeMobileNav]);
+
+  return (
+    <>
+      <PageLayoutEditToolbar />
+      <AgentBrandHeader />
+      <div className="wire-shell-accent" aria-hidden="true" />
+      <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} title="Navigation">
+        <AgentSidebar
+          user={user}
+          showUsersNav={showUsersNav}
+          collapsed={false}
+          onToggle={closeMobileNav}
+          onNavigate={closeMobileNav}
+          showTeamChat={staff}
+        />
+      </MobileNavDrawer>
+      <AgentShellColumns
+        collapsed={collapsed}
+        onToggle={toggle}
+        chatOpen={staff && chatOpen}
+        chatPanel={staff ? <ChatWorkspacePanel /> : undefined}
+        sidebar={
+          <AgentSidebar
+            user={user}
+            showUsersNav={showUsersNav}
+            collapsed={collapsed}
+            onToggle={toggle}
+            showTeamChat={staff}
+          />
+        }
+      >
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+          <AgentTopBar
+            title={topBarTitle}
+            actions={topBarActions}
+            user={user}
+            onOpenNav={openMobileNav}
+          />
+          <PageLayoutEditMainChrome>
+            <AgentErrorBoundary>{children}</AgentErrorBoundary>
+            <ReviewNotesOverlay user={user ?? null} />
+          </PageLayoutEditMainChrome>
+        </div>
+      </AgentShellColumns>
+    </>
+  );
+}
 
 export function AgentShell({
   children,
@@ -34,66 +118,37 @@ export function AgentShell({
   /** Server-resolved layout design mode — same pattern as showUsersNav. */
   showPageLayoutEdit?: boolean;
 }) {
-  const pathname = usePathname();
-  const { collapsed, toggle } = useSidebarCollapsed();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
-  const openMobileNav = useCallback(() => setMobileNavOpen(true), []);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    document.getElementById("main-content")?.scrollTo(0, 0);
-  }, [pathname]);
-
-  useEffect(() => {
-    closeMobileNav();
-  }, [pathname, closeMobileNav]);
+  const staff = isStaff(user ?? null);
 
   return (
     <PageLayoutEditProvider
       user={user ?? null}
       canEditFromServer={showPageLayoutEdit ?? canEditPageLayout(user ?? null)}
     >
-    <div className="agent-shell wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <PageLayoutEditToolbar />
-      <AgentBrandHeader />
-      <div className="wire-shell-accent" aria-hidden="true" />
-      <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} title="Navigation">
-        <AgentSidebar
-          user={user}
-          showUsersNav={showUsersNav}
-          collapsed={false}
-          onToggle={closeMobileNav}
-          onNavigate={closeMobileNav}
-        />
-      </MobileNavDrawer>
-      <AgentShellColumns
-        collapsed={collapsed}
-        onToggle={toggle}
-        sidebar={
-          <AgentSidebar
+      <div className="agent-shell wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+        {staff ? (
+          <ChatWorkspaceProvider enabled={staff}>
+            <AgentShellInner
+              topBarTitle={topBarTitle}
+              topBarActions={topBarActions}
+              user={user}
+              showUsersNav={showUsersNav}
+            >
+              {children}
+            </AgentShellInner>
+          </ChatWorkspaceProvider>
+        ) : (
+          <AgentShellInner
+            topBarTitle={topBarTitle}
+            topBarActions={topBarActions}
             user={user}
             showUsersNav={showUsersNav}
-            collapsed={collapsed}
-            onToggle={toggle}
-          />
-        }
-      >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-          <AgentTopBar
-            title={topBarTitle}
-            actions={topBarActions}
-            user={user}
-            onOpenNav={openMobileNav}
-          />
-          <PageLayoutEditMainChrome>
-            <AgentErrorBoundary>{children}</AgentErrorBoundary>
-            <ReviewNotesOverlay user={user ?? null} />
-          </PageLayoutEditMainChrome>
-        </div>
-      </AgentShellColumns>
-    </div>
+          >
+            {children}
+          </AgentShellInner>
+        )}
+      </div>
     </PageLayoutEditProvider>
   );
 }
+
