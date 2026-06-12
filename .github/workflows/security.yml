@@ -59,22 +59,19 @@ jobs:
           npm ci
           npm run test:coverage
       - name: Rewrite LCOV paths for SonarCloud
-        run: python ../../scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
+        working-directory: .
+        run: python scripts/fix_lcov_for_sonar.py apps/web/coverage/lcov.info
       - name: SonarCloud Scan (coverage import)
-        uses: SonarSource/sonarqube-scan-action@299e4b793aaa83bf2aba7c9c14bedbb485688ec4  # v7.1.0
+        uses: SonarSource/sonarqube-scan-action@v7.1.0
         with:
           args: >
             -Dsonar.python.version=3.12
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=600
         env:
           SONAR_TOKEN: ${{ secrets.SONAR }}
+          SONAR_HOST_URL: https://sonarcloud.io
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1.1.0
-        timeout-minutes: 10
-        with:
-          pollingTimeoutSec: 600
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR }}
       - name: Bandit (SAST)
         run: bandit -r src -ll -q
       - name: pip-audit (dependencies)
