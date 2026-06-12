@@ -45,6 +45,18 @@ describe("resolveCaseAssistantPageContext", () => {
     const ctx = resolveCaseAssistantPageContext("/kanban/board-1");
     expect(ctx.kind).toBe("kanban");
   });
+
+  it("detects dashboard and backlog pages", () => {
+    expect(resolveCaseAssistantPageContext("/").kind).toBe("dashboard");
+    expect(resolveCaseAssistantPageContext("/backlog").kind).toBe("backlog");
+    expect(resolveCaseAssistantPageContext("/min-side").pageLabel).toBe("Min side");
+  });
+
+  it("detects portal and knowledge pages", () => {
+    expect(resolveCaseAssistantPageContext("/portal").kind).toBe("portal");
+    expect(resolveCaseAssistantPageContext("/knowledge").kind).toBe("knowledge");
+    expect(resolveCaseAssistantPageContext("/tickets/new").kind).toBe("create-ticket");
+  });
 });
 
 describe("buildCaseAssistantWelcome", () => {
@@ -98,5 +110,29 @@ describe("getCaseAssistantQuickActions", () => {
     });
 
     expect(actions.some((action) => action.label === "Forklar KPI'er")).toBe(true);
+  });
+
+  it("includes backlog help on backlog pages", () => {
+    const pageContext = resolveCaseAssistantPageContext("/backlog");
+    const actions = getCaseAssistantQuickActions({
+      staff: true,
+      pageContext,
+    });
+
+    expect(actions.some((action) => action.label === "Prioritering")).toBe(true);
+  });
+});
+
+describe("buildCaseAssistantWelcome portal", () => {
+  it("welcomes portal users on min-side", () => {
+    const pageContext = resolveCaseAssistantPageContext("/min-side");
+    const welcome = buildCaseAssistantWelcome({
+      staff: false,
+      displayName: "Borger",
+      pageContext,
+    });
+
+    expect(welcome).toContain("Borger");
+    expect(welcome.toLowerCase()).toMatch(/sag|hjælp/);
   });
 });

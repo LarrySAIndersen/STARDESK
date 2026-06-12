@@ -19,16 +19,13 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { apiDelete, apiPatch, apiPost } from "@/lib/api";
 import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
 import { PERSONAL_KANBAN_DRAG_MIME } from "@/lib/personal-board-dnd";
+import { ticketById } from "@/lib/personal-board-layout";
 import { cn } from "@/lib/utils";
 import { PERSONAL_KANBAN_COLUMNS, type PersonalKanban } from "@/types/personal";
 
 const PINNED_QUEUE_COLUMN = PERSONAL_KANBAN_COLUMNS[0];
 import type { Ticket } from "@/types/ticket";
 import type { UserTicketsGrouped } from "@/types/admin-user";
-
-function ticketById(tickets: Ticket[], id: string): Ticket | undefined {
-  return tickets.find((t) => t.id === id);
-}
 
 export function PersonalKanbanBoard({
   kanban,

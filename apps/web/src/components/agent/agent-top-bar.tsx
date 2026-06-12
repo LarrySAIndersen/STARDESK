@@ -35,7 +35,7 @@ const TITLES: Record<string, string> = {
   "/integrations/slack": "Slack",
   "/integrations/jira": "Jira",
   "/integrations/topdesk": "TOPdesk",
-  "/chat": "Chat",
+  "/chat": "STARchat",
 };
 
 function titleForPath(pathname: string): string {

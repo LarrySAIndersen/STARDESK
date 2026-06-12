@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 
 import { ClassicShell } from "@/components/classic/classic-shell";
 import { ClientSessionHydrator } from "@/components/client-session-hydrator";
-import { SfChatShellClient } from "@/components/sf-chat/sf-chat-shell-client";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 
@@ -33,7 +32,6 @@ export async function ClassicShellWrapper({
       <ClassicShell title={title} user={currentUser}>
         {children}
       </ClassicShell>
-      <SfChatShellClient user={currentUser} />
     </>
   );
 }

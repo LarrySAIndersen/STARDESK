@@ -44,4 +44,53 @@ describe("resolvePersonalNoteDropTarget", () => {
     } as unknown as HTMLElement;
     expect(resolvePersonalNoteDropTarget([inner])).toEqual({ zone: "board" });
   });
+
+  it("computes board coordinates from pointer position", () => {
+    const canvas = {
+      offsetWidth: 800,
+      offsetHeight: 600,
+    } as HTMLElement;
+
+    const viewport = {
+      dataset: {
+        boardZoom: "0.5",
+        boardPanX: "10",
+        boardPanY: "20",
+        noteDrop: "board",
+      },
+      getBoundingClientRect: () => ({
+        left: 100,
+        top: 50,
+        right: 900,
+        bottom: 650,
+        width: 800,
+        height: 600,
+        x: 100,
+        y: 50,
+        toJSON: () => ({}),
+      }),
+      closest: () => null,
+      querySelector: (selector: string) =>
+        selector === "[data-cork-canvas]" ? canvas : null,
+    } as unknown as HTMLElement;
+
+    viewport.closest = (selector: string) =>
+      selector === "[data-cork-viewport]" ? viewport : null;
+
+    const boardZone = {
+      dataset: { noteDrop: "board" },
+      closest: (selector: string) => {
+        if (selector === "[data-note-drop]") return boardZone as HTMLElement;
+        if (selector === "[data-cork-viewport]") return viewport;
+        return null;
+      },
+    } as unknown as HTMLElement;
+
+    const result = resolvePersonalNoteDropTarget([boardZone], 300, 200);
+    expect(result?.zone).toBe("board");
+    expect(result?.boardX).toBeGreaterThanOrEqual(0);
+    expect(result?.boardY).toBeGreaterThanOrEqual(0);
+    expect(result?.boardX).toBeLessThanOrEqual(624);
+    expect(result?.boardY).toBeLessThanOrEqual(480);
+  });
 });
