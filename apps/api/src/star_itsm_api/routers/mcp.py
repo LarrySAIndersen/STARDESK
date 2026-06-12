@@ -407,7 +407,6 @@ ALLOWED_STATUSES = frozenset({
 async def update_ticket_status(
     ticket_number: str,
     status: str,
-    _actor_email: str,
     note: str | None = None,
     *,
     caller: User,
