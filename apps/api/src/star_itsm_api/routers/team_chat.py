@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import require_staff
 from star_itsm_api.deps import require_db
@@ -11,7 +12,6 @@ from star_itsm_api.schemas.team_chat import (
     TeamChatChannelRead,
     TeamChatDmCreate,
     TeamChatMessageCreate,
-    TeamChatMessageRead,
     TeamChatMessagesRead,
     TeamChatPollRead,
     TeamChatReactionRead,
@@ -20,7 +20,6 @@ from star_itsm_api.schemas.team_chat import (
 )
 from star_itsm_api.services import team_chat as chat_svc
 from star_itsm_api.services.org_access import IntegrationOrganizationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/team-chat", tags=["team-chat"])
 
