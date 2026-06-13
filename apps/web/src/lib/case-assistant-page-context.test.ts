@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCaseAssistantWelcome,
+  buildCaseAssistantWelcomeMessages,
   getCaseAssistantQuickActions,
   resolveCaseAssistantPageContext,
 } from "@/lib/case-assistant-page-context";
@@ -48,6 +49,7 @@ describe("resolveCaseAssistantPageContext", () => {
 
   it("detects dashboard and backlog pages", () => {
     expect(resolveCaseAssistantPageContext("/").kind).toBe("dashboard");
+    expect(resolveCaseAssistantPageContext("/").pageLabel).toBe("Hjem");
     expect(resolveCaseAssistantPageContext("/backlog").kind).toBe("backlog");
     expect(resolveCaseAssistantPageContext("/min-side").pageLabel).toBe("Min side");
   });
@@ -56,6 +58,13 @@ describe("resolveCaseAssistantPageContext", () => {
     expect(resolveCaseAssistantPageContext("/portal").kind).toBe("portal");
     expect(resolveCaseAssistantPageContext("/knowledge").kind).toBe("knowledge");
     expect(resolveCaseAssistantPageContext("/tickets/new").kind).toBe("create-ticket");
+  });
+
+  it("detects workspace hub pages", () => {
+    expect(resolveCaseAssistantPageContext("/projekter").pageLabel).toBe("Projekter");
+    expect(resolveCaseAssistantPageContext("/arbejdsrum").pageLabel).toBe("Arbejdsrum");
+    expect(resolveCaseAssistantPageContext("/teamwiki").pageLabel).toBe("Teamwiki");
+    expect(resolveCaseAssistantPageContext("/chat").pageLabel).toBe("Chat");
   });
 });
 
@@ -73,7 +82,20 @@ describe("buildCaseAssistantWelcome", () => {
     });
 
     expect(welcome).toContain("INC-2026-00118");
-    expect(welcome).toContain("Opsummere sagen");
+    expect(welcome.toLowerCase()).toContain("opsummering");
+  });
+
+  it("splits general and page-specific welcome messages", () => {
+    const pageContext = resolveCaseAssistantPageContext("/");
+    const { general, pageSpecific } = buildCaseAssistantWelcomeMessages({
+      staff: true,
+      displayName: "Anna Agent",
+      pageContext,
+    });
+
+    expect(general).toContain("Hvad kan jeg hjælpe med");
+    expect(pageSpecific).toContain("Hjem");
+    expect(pageSpecific.endsWith("?")).toBe(true);
   });
 
   it("offers reports help on the reports page", () => {
@@ -85,11 +107,21 @@ describe("buildCaseAssistantWelcome", () => {
     });
 
     expect(welcome).toContain("Rapporter");
-    expect(welcome).toContain("KPI");
+    expect(welcome.toLowerCase()).toContain("kpi");
   });
 });
 
 describe("getCaseAssistantQuickActions", () => {
+  it("starts with a general help action", () => {
+    const pageContext = resolveCaseAssistantPageContext("/reports");
+    const actions = getCaseAssistantQuickActions({
+      staff: true,
+      pageContext,
+    });
+
+    expect(actions[0]?.label).toBe("Generel hjælp");
+  });
+
   it("includes summarize action on ticket pages", () => {
     const pageContext = resolveCaseAssistantPageContext(`/tickets/${ticketId}`);
     const actions = getCaseAssistantQuickActions({

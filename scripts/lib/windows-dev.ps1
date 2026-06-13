@@ -76,8 +76,11 @@ function Import-StardeskDotEnv {
         return
     }
 
-    Get-Content -LiteralPath $Path | ForEach-Object {
+    Get-Content -LiteralPath $Path -Encoding utf8 | ForEach-Object {
         $line = $_.Trim()
+        if ($line.Length -gt 0 -and [int][char]$line[0] -eq 0xFEFF) {
+            $line = $line.Substring(1).Trim()
+        }
         if (-not $line -or $line.StartsWith("#")) {
             return
         }

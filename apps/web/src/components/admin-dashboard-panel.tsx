@@ -77,7 +77,7 @@ export function AdminDashboardPanel({ currentUserRole }: { currentUserRole: User
           <h2 className="text-star-navy text-lg font-semibold">Dataimport</h2>
         </div>
         <p className="text-muted-foreground max-w-2xl text-sm">
-          Importer brugere og TOPdesk-sager fra CSV eller JSON. Brugerimport er flyttet hertil fra
+          Importer brugere og sager fra CSV eller JSON. Brugerimport er flyttet hertil fra
           brugerlisten.
         </p>
 
@@ -88,7 +88,7 @@ export function AdminDashboardPanel({ currentUserRole }: { currentUserRole: User
               <div>
                 <h3 className="text-star-navy font-semibold">Importer brugere</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  CSV fra TOPdesk eller Excel med e-mail, navn, rolle, grupper og organisation.
+                  CSV fra Excel eller andet system med e-mail, navn, rolle, grupper og organisation.
                 </p>
               </div>
             </div>
@@ -106,7 +106,7 @@ export function AdminDashboardPanel({ currentUserRole }: { currentUserRole: User
             <div className="flex items-start gap-3">
               <Ticket className="text-star-navy mt-0.5 size-5 shrink-0" aria-hidden />
               <div>
-                <h3 className="text-star-navy font-semibold">Importer TOPdesk-sager</h3>
+                <h3 className="text-star-navy font-semibold">Importer sager</h3>
                 <p className="text-muted-foreground mt-1 text-sm">
                   CSV eller JSON med titel, beskrivelse, sagsnummer, status, prioritet, kategori og
                   gruppe.

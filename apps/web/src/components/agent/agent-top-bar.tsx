@@ -3,20 +3,22 @@
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-import { AgentClock } from "@/components/agent/agent-clock";
-import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
-import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
-import { TeamChatTopBarButton } from "@/components/team-chat/team-chat-top-bar-button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AgentTopBarActions } from "@/components/agent/agent-top-bar-actions";
+import { HistoryBackButton } from "@/components/navigation/history-back-button";
+import { SidebarCollapseToggle } from "@/components/sidebar-collapse-toggle";
+import { useShellNavPanelToggle } from "@/components/shell-nav-panel-context";
+import { useIsLgUp } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
-import { resolveUserAvatar } from "@/lib/user-avatar";
 import type { User } from "@/types/user";
 
 const TITLES: Record<string, string> = {
   "/": "Dashboard",
   "/service-desk": "Service Desk",
+  "/projekter": "Projektoversigt",
   "/kanban": "Kanban",
   "/backlog": "Backlog",
+  "/sitemap": "Sitemap",
+  "/arbejdsrum": "Arbejdsrum",
   "/tickets": "Alle sager",
   "/tickets/new": "Ny sag",
   "/aktiver": "Aktiver",
@@ -57,21 +59,37 @@ export function AgentTopBar({
   user,
   onOpenNav,
   showTeamChat = false,
+  hideActions = false,
+  chromeTitle = false,
+  navCollapsed = false,
+  onToggleNav,
 }: {
   title?: string;
   actions?: React.ReactNode;
   user?: User | null;
   onOpenNav?: () => void;
   showTeamChat?: boolean;
+  /** Utilities live in blue chrome — only page title remains here. */
+  hideActions?: boolean;
+  /** Slim title row: collapse + back + title flush left. */
+  chromeTitle?: boolean;
+  navCollapsed?: boolean;
+  onToggleNav?: () => void;
 }) {
   const pathname = usePathname();
+  const isLgUp = useIsLgUp();
+  const toggleNav = useShellNavPanelToggle(onToggleNav ?? (() => undefined));
   const displayTitle = title ?? titleForPath(pathname);
-  const resolvedUser = user ? (resolveUserAvatar(user) ?? user) : null;
+  const showDesktopNavToggle = chromeTitle && isLgUp && onToggleNav;
 
   return (
-    <header className="wire-topbar">
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        {onOpenNav ? (
+    <header className={cn("wire-topbar", chromeTitle && "wire-topbar--chrome")}>
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+        {showDesktopNavToggle ? (
+          <SidebarCollapseToggle collapsed={navCollapsed} onToggle={toggleNav} />
+        ) : null}
+        <HistoryBackButton />
+        {!onOpenNav ? null : (
           <button
             type="button"
             onClick={onOpenNav}
@@ -80,19 +98,18 @@ export function AgentTopBar({
           >
             <Menu className="size-5" aria-hidden />
           </button>
-        ) : null}
+        )}
         <h1 className={cn("wire-topbar-title min-w-0", onOpenNav && "flex-1")}>
           {displayTitle}
         </h1>
       </div>
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
-        {showTeamChat ? <TeamChatTopBarButton /> : null}
-        <ApiHealthIndicator />
-        <AgentClock />
-        <ThemeToggle />
-        {actions}
-        {resolvedUser ? <TopBarUserMenu user={resolvedUser} /> : null}
-      </div>
+      {hideActions ? null : (
+        <AgentTopBarActions
+          user={user}
+          showTeamChat={showTeamChat}
+          actions={actions}
+        />
+      )}
     </header>
   );
 }

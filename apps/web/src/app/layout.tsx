@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Inter } from "next/font/google";
+import { IBM_Plex_Mono, Inter, Source_Serif_4 } from "next/font/google";
 
 import { AgentShellWrapper } from "@/components/agent/agent-shell-wrapper";
 import { EnvironmentBanner } from "@/components/environment-banner";
@@ -21,6 +21,12 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
+const sourceSerif = Source_Serif_4({
+  variable: "--font-home-serif",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
 const envTitleSuffix = ` [${getEnvironmentShortLabel()}]`;
 
 export const metadata: Metadata = {
@@ -36,7 +42,7 @@ export default function RootLayout({
   return (
     <html lang="da" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${ibmPlexMono.variable} font-sans flex min-h-dvh flex-col overflow-x-hidden antialiased`}
+        className={`${inter.variable} ${ibmPlexMono.variable} ${sourceSerif.variable} font-sans flex min-h-dvh flex-col overflow-x-hidden antialiased`}
       >
         <ThemeProvider>
           <EnvironmentBanner />

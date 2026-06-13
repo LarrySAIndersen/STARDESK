@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: Readonly<{ className?: string }>) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -17,7 +17,7 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <div
-        className="border-star-blue/30 flex h-7 w-[7.25rem] rounded-sm border"
+        className={cn("border-star-blue/30 flex h-7 w-[7.25rem] rounded-sm border", className)}
         aria-hidden
       />
     );
@@ -29,7 +29,10 @@ export function ThemeToggle() {
     <div
       role="group"
       aria-label="Vælg tema"
-      className="border-border flex overflow-hidden rounded-sm border bg-muted/30"
+      className={cn(
+        "border-border flex overflow-hidden rounded-sm border bg-muted/30",
+        className,
+      )}
     >
       <button
         type="button"

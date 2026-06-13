@@ -1,10 +1,12 @@
 import type { AgentNavItem } from "@/lib/agent-nav";
 
 export const NAV_LAYOUT_STORAGE_KEY = "stardesk-nav-layout";
-export const NAV_LAYOUT_VERSION = 1;
+/** Bump when default nav order/sections change so saved layouts pick up new items. */
+export const NAV_LAYOUT_VERSION = 2;
 
 export type NavSectionId =
   | "main"
+  | "projekt"
   | "graenseflade"
   | "forbedringer"
   | "administration"
@@ -18,6 +20,7 @@ export type NavSectionDef = {
 
 export const NAV_SECTIONS: NavSectionDef[] = [
   { id: "main", label: null },
+  { id: "projekt", label: "Projekt" },
   { id: "graenseflade", label: "Grænseflade" },
   { id: "forbedringer", label: "Forbedringer" },
   { id: "administration", label: "Administration" },
@@ -41,6 +44,7 @@ const SECTION_LABEL_TO_ID: Record<string, NavSectionId> = {
   Integration: "integration",
   Grænseflade: "graenseflade",
   Forbedringer: "forbedringer",
+  Projekt: "projekt",
 };
 
 export function defaultSectionForItem(item: AgentNavItem): NavSectionId {
@@ -118,7 +122,21 @@ export function sanitizeNavLayout(
     if (seen.has(entry.id)) {
       continue;
     }
-    uniqueEntries.push(entry);
+    const defaultIndex = defaultLayout.entries.findIndex((candidate) => candidate.id === entry.id);
+    let insertAt = uniqueEntries.length;
+    for (let index = defaultIndex - 1; index >= 0; index -= 1) {
+      const precedingId = defaultLayout.entries[index]?.id;
+      if (!precedingId) {
+        continue;
+      }
+      const precedingIndex = uniqueEntries.findIndex((candidate) => candidate.id === precedingId);
+      if (precedingIndex >= 0) {
+        insertAt = precedingIndex + 1;
+        break;
+      }
+    }
+    uniqueEntries.splice(insertAt, 0, entry);
+    seen.add(entry.id);
   }
 
   return { version: NAV_LAYOUT_VERSION, entries: uniqueEntries };

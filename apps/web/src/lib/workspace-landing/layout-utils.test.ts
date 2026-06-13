@@ -76,7 +76,7 @@ describe("widget layout helpers", () => {
   });
 
   it("builds space href with query params", () => {
-    expect(buildSpaceHref("team", "foo=bar")).toBe("/?foo=bar&space=team");
+    expect(buildSpaceHref("team", "foo=bar")).toBe("/arbejdsrum?foo=bar&space=team");
   });
 
   it("detects post-it provider requirement", () => {
@@ -93,7 +93,9 @@ describe("workspace navigation hrefs", () => {
   });
 
   it("builds grid, sitemap and widget hrefs", () => {
-    expect(buildWorkspaceHref({ space: "personal", view: "grid" })).toBe("/?space=personal");
+    expect(buildWorkspaceHref({ space: "personal", view: "grid" })).toBe(
+      "/arbejdsrum?space=personal",
+    );
     expect(buildWorkspaceHref({ space: "team", view: "sitemap" })).toBe("/sitemap");
     expect(
       buildWorkspaceHref({
@@ -102,12 +104,16 @@ describe("workspace navigation hrefs", () => {
         widgetInstanceId: "abc-1",
         from: "sitemap",
       }),
-    ).toBe("/?space=personal&widget=abc-1&from=sitemap");
+    ).toBe("/arbejdsrum?space=personal&widget=abc-1&from=sitemap");
   });
 
   it("resolves back href from widget and sitemap views", () => {
-    expect(resolveWorkspaceBackHref("sitemap", "personal", null)).toBe("/?space=personal");
+    expect(resolveWorkspaceBackHref("sitemap", "personal", null)).toBe(
+      "/arbejdsrum?space=personal",
+    );
     expect(resolveWorkspaceBackHref("widget", "team", "sitemap")).toBe("/sitemap");
-    expect(resolveWorkspaceBackHref("widget", "personal", null)).toBe("/?space=personal");
+    expect(resolveWorkspaceBackHref("widget", "personal", null)).toBe(
+      "/arbejdsrum?space=personal",
+    );
   });
 });

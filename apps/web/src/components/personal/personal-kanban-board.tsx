@@ -75,6 +75,18 @@ export function PersonalKanbanBoard({
     [hiddenColumns, kanban.columns],
   );
 
+  const showPinnedQueueStrip = hiddenColumns.includes(PINNED_QUEUE_COLUMN);
+
+  const queueTickets = useMemo(() => {
+    const cards = (cardsByColumn.get(PINNED_QUEUE_COLUMN) ?? []).sort(
+      (a, b) => a.sort_order - b.sort_order,
+    );
+    return cards.flatMap((card) => {
+      const ticket = ticketById(kanban.tickets, card.ticket_id);
+      return ticket ? [{ ticket, ticketId: card.ticket_id }] : [];
+    });
+  }, [cardsByColumn, kanban.tickets]);
+
   const placeTicketInColumn = useCallback(
     async (ticketId: string, columnName: string) => {
       setBusy(true);
@@ -117,6 +129,51 @@ export function PersonalKanbanBoard({
           sager).
         </p>
       </div>
+
+      {showPinnedQueueStrip && queueTickets.length > 0 ? (
+        <div
+          className="rounded-lg border border-dashed p-3"
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const ticketId = e.dataTransfer.getData(PERSONAL_KANBAN_DRAG_MIME);
+            setDragTicketId(null);
+            if (ticketId) fireAndForget(placeTicketInColumn(ticketId, PINNED_QUEUE_COLUMN));
+          }}
+        >
+          <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase">
+            Fastgjorte sager
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {queueTickets.map(({ ticket, ticketId }, index) => (
+              <li key={ticketId}>
+                <div
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(PERSONAL_KANBAN_DRAG_MIME, ticketId);
+                    setDragTicketId(ticketId);
+                  }}
+                  onDragEnd={() => setDragTicketId(null)}
+                  className={cn(
+                    "bulletin-ticket-chip group cursor-grab active:cursor-grabbing",
+                    index % 2 === 0 ? "-rotate-1" : "rotate-1",
+                  )}
+                >
+                  <span className="bulletin-pushpin bulletin-pushpin--chip" aria-hidden />
+                  <span className="bulletin-ticket-chip__number">{ticket.ticket_number}</span>
+                  <span className="bulletin-ticket-chip__title">{ticket.title.slice(0, 36)}</span>
+                  <span className="bulletin-ticket-chip__add text-[10px] font-semibold text-[#1a7a44]">
+                    Fastgjort
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {availableTickets.length > 0 ? (
         <div className="rounded-lg border border-dashed p-3">

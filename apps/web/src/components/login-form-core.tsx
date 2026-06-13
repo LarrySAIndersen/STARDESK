@@ -159,7 +159,7 @@ export function LoginFormCore({
                   <span>
                     <span className="font-medium">Klassisk visning</span>
                     <span className="text-muted-foreground block text-xs">
-                      TOPdesk-lignende moduler (Incidents, Changes, …) — kun for medarbejdere
+                      Klassisk ITSM-moduler (Incidents, Changes, …) — kun for medarbejdere
                     </span>
                   </span>
                 </label>

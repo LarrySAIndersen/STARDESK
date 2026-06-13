@@ -1,16 +1,16 @@
-# Classic UI — TOPdesk parity map (from screendumps)
+# Classic UI — parity map (from screendumps)
 
-Reference for building `/classic/*` closer to STAR’s current TOPdesk workflow. Same PostgreSQL data and `/api/v1/*` — different shell, navigation, and density.
+Reference for building `/classic/*` closer to STAR’s klassiske ITSM-arbejdsgang. Same PostgreSQL data and `/api/v1/*` — different shell, navigation, and density.
 
 **Status:** Planning. Scaffold exists (`/classic`, module lists, minimal detail). Next builds follow this document.
 
-**Data model reference:** `docs/topdesk-itsm-data-model-mapping.md` — TOPdesk concepts mapped to PostgreSQL tables and API gaps.
+**Data model reference:** `docs/classic-itsm-data-model-mapping.md` — reference ITSM concepts mapped to PostgreSQL tables and API gaps.
 
 **Your decisions (confirmed):**
 
 | Topic | Decision |
 |--------|----------|
-| TOPdesk walkthrough | In progress — screendumps 1–10 received; more may follow |
+| Screendump walkthrough | In progress — screendumps 1–10 received; more may follow |
 | Separate Changes domain | No — keep `service_request` mapping for now |
 | `users.ui_mode` in DB | Yes — planned |
 | Rich classic ticket detail | Yes — tabs + actions + timeline |
@@ -39,9 +39,9 @@ This is the **highest-impact** difference from the current single-page Next.js r
 
 ---
 
-## Screen map: TOPdesk → STARdesk classic
+## Screen map: Reference UI → STARdesk classic
 
-| # | TOPdesk screen | Screendump | Classic route (target) | Data source (today) |
+| # | Reference screen | Screendump | Classic route (target) | Data source (today) |
 |---|----------------|------------|------------------------|---------------------|
 | 1 | Personal home / widgets | Photo 1 | `/classic` | Tickets counts, news TBD, saved filters TBD |
 | 2 | Saved filter list (e.g. SF - Sikkerhedshændelser) | Photo 2 | `/classic/lists/[filterId]` or `/classic/incidents?filter=…` | `GET /api/v1/tickets?…` + client filter |
@@ -62,7 +62,7 @@ This is the **highest-impact** difference from the current single-page Next.js r
 ### Photo 1 — Home dashboard
 
 - Dark **left rail**: Søg, Bogmærker, Referencekort, Ny Second line-sag, Vidensbase.
-- **TOPdesk menu** (blue) + **tab row** (home icon tab).
+- **Module menu** (blue) + **tab row** (home icon tab).
 - Widgets: Opgaver, Hovedsider (blue tiles), Sikkerhed (saved filters), Seneste nyheder.
 - **Classic v2:** Replace tile-only home with widget grid + same left rail + work tabs.
 
@@ -103,7 +103,7 @@ This is the **highest-impact** difference from the current single-page Next.js r
 
 ### Overblik (grid, top right)
 
-| TOPdesk | STARdesk classic |
+| Reference UI | STARdesk classic |
 |---------|------------------|
 | Grid → blue menu | `ClassicOverviewMenuButton` |
 | Forside | `goHome()` → `/classic` |
@@ -115,7 +115,7 @@ This is the **highest-impact** difference from the current single-page Next.js r
 
 ### Notifikation (bell, top right)
 
-| TOPdesk | STARdesk classic |
+| Reference UI | STARdesk classic |
 |---------|------------------|
 | Bell → modal “Notifikation” | `ClassicTopBarTools` → `ClassicNotificationModal` |
 | 4 checkboxes (3 on, group-assignment off by default) | Same labels; `localStorage` per `user.id` |
@@ -127,9 +127,9 @@ Delivery of in-app/email notifications from these flags is **not wired** yet —
 
 ### User card — Mine indstillinger (gear / tandhjul, top right)
 
-Opened from **gear icon** next to profile in TOPdesk top bar (same area as calendar/notifications in dumps).
+Opened from **gear icon** next to profile in the classic top bar (same area as calendar/notifications in dumps).
 
-| TOPdesk section | STARdesk today | Classic target |
+| Reference section | STARdesk today | Classic target |
 |-----------------|----------------|----------------|
 | Tab “Mine indstillinger” + × | Staff: `TopBarUserMenu` → “Se mere” → `/users/{id}` | `/classic/settings` (work tab) |
 | Overblik: visningsmuligheder (rød/i dag, kursiv, forfald…) | — | **Gap** — `user_preferences` JSON or localStorage v1 |
@@ -151,7 +151,7 @@ You noted: physical asset and org external users belong to. Please attach when r
 
 **Likely STARdesk mapping:**
 
-| TOPdesk concept | STARdesk today |
+| Reference concept | STARdesk today |
 |-----------------|----------------|
 | Filial / org | `User.organization_id`, `organization_name` |
 | Lokation / asset | CMDB assets (`/aktiver`, `AssetSystem`) — link ticket ↔ asset TBD |
@@ -202,4 +202,4 @@ After screenshot: person drawer + org + optional asset link from ticket.
 
 - Change management as separate DB entity.
 - Drag-and-drop assignment in classic UI.
-- Full TOPdesk Ejendomshåndtering / Grunddata modules (only stubs in navigator unless you prioritise them).
+- Full Ejendomshåndtering / Grunddata reference modules (only stubs in navigator unless you prioritise them).

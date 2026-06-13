@@ -23,6 +23,8 @@ type AgentShellColumnsProps = Readonly<{
   children: ReactNode;
   collapsed: boolean;
   onToggle: () => void;
+  /** Home landing: no vertical rule between nav and main content. */
+  hideNavSeparator?: boolean;
 }>;
 
 const FALLBACK_LAYOUT_NAV_ONLY = {
@@ -34,6 +36,7 @@ export function AgentShellColumns({
   children,
   collapsed,
   onToggle,
+  hideNavSeparator = false,
 }: AgentShellColumnsProps) {
   const isLgUp = useIsLgUp();
   const navPanelRef = usePanelRef();
@@ -82,7 +85,10 @@ export function AgentShellColumns({
           >
             <div className="relative h-full min-h-0">{sidebar}</div>
           </Panel>
-          <ShellResizeSeparator disabled={collapsed} hidden={collapsed} />
+          <ShellResizeSeparator
+            disabled={collapsed}
+            hidden={collapsed || hideNavSeparator}
+          />
           <Panel id={SHELL_PANEL_MAIN} minSize={240} className={cn("flex min-h-0 min-w-0 flex-col")}>
             {children}
           </Panel>

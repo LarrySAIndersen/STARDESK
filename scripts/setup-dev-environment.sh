@@ -79,7 +79,8 @@ echo "==> API unit tests"
 cd "$API_DIR"
 set -a
 # shellcheck disable=SC1091
-[[ -f .env ]] && source .env
+source "$ROOT/scripts/lib/source-dotenv.sh"
+stardesk_source_dotenv .env
 set +a
 "$API_PYTEST" -q --tb=no -q 2>&1 | tail -3
 

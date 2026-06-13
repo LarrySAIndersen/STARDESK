@@ -7,13 +7,16 @@ import {
   PendingImageAttachments,
   usePendingImageAttachments,
 } from "@/components/pending-image-attachments";
+import { MentionTextarea } from "@/components/ticket/mention-textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiPost } from "@/lib/api";
 import { IMAGE_ONLY_COMMENT_BODY } from "@/lib/comment-bodies";
 import { uploadTicketAttachments } from "@/lib/upload-ticket-attachments";
+import { dispatchMentionsOverviewChanged } from "@/types/ticket-internal-chat";
 import type { Comment, CommentVisibility } from "@/types/comment";
+import type { Team } from "@/types/team";
 
 export function CommentForm({
   ticketId,
@@ -26,6 +29,7 @@ export function CommentForm({
   onPaste: onPasteProp,
   externalPending,
   onSubmitted,
+  teams = [],
 }: {
   ticketId: string;
   /** Agent/admin: choose internal vs external (customer portal). */
@@ -44,6 +48,8 @@ export function CommentForm({
     clear: () => void;
   };
   onSubmitted?: () => void;
+  /** Staff @mention autocomplete (Alle sager / sagdetalje). */
+  teams?: Team[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -83,6 +89,9 @@ export function CommentForm({
       setBroadcastToChildren(false);
       clear();
       onSubmitted?.();
+      if (staffMode && body.includes("@")) {
+        dispatchMentionsOverviewChanged();
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kunne ikke gemme kommentar");
@@ -181,20 +190,44 @@ export function CommentForm({
               : "Din besked"}
           </Label>
         ) : null}
-        <Textarea
-          id="comment-body"
-          rows={compact ? 3 : 4}
-          value={body}
-          onChange={(event) => setBody(event.target.value)}
-          onPaste={onPaste}
-          placeholder={
-            staffMode
-              ? visibility === "internal"
-                ? "Intern note til kolleger…"
-                : "Besked til indmelder (vises i kundeportalen)…"
-              : "Skriv en opdatering…"
-          }
-        />
+        {staffMode && teams.length > 0 ? (
+          <MentionTextarea
+            id="comment-body"
+            rows={compact ? 3 : 4}
+            value={body}
+            onChange={setBody}
+            onPaste={onPaste}
+            teams={teams}
+            placeholder={
+              visibility === "internal"
+                ? "Intern note til kolleger… brug @ for at nævne"
+                : "Besked til indmelder… brug @ for at nævne kolleger internt"
+            }
+            disabled={isSubmitting}
+          />
+        ) : (
+          <Textarea
+            id="comment-body"
+            rows={compact ? 3 : 4}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            onPaste={onPaste}
+            aria-label={
+              staffMode
+                ? visibility === "internal"
+                  ? "Intern note"
+                  : "Ekstern opdatering"
+                : "Din besked"
+            }
+            placeholder={
+              staffMode
+                ? visibility === "internal"
+                  ? "Intern note til kolleger…"
+                  : "Besked til indmelder (vises i kundeportalen)…"
+                : "Skriv en opdatering…"
+            }
+          />
+        )}
         {hidePendingPreview ? null : (
           <PendingImageAttachments files={pendingImages} onRemove={internalPending.removeAt} />
         )}

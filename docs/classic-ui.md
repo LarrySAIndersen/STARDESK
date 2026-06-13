@@ -1,4 +1,4 @@
-# Classic UI flow (TOPdesk-style)
+# Classic UI flow (klassisk ITSM-stil)
 
 Parallel staff experience at `/classic/*` — same API and database as the modern wireframe UI.
 
@@ -26,9 +26,9 @@ Parallel staff experience at `/classic/*` — same API and database as the moder
 - Classic top bar: **Moderne STARdesk**
 - Modern sidebar: **Klassisk visning** → `/classic`
 
-## TOPdesk parity spec
+## Classic UI parity spec
 
-See **`docs/classic-ui-topdesk-parity.md`** — screen map from screendumps 1–10, faneblade (× close) requirement, and phased build order.
+See **`docs/classic-ui-parity-map.md`** — screen map from screendumps 1–10, faneblade (× close) requirement, and phased build order.
 
 ## Next implementation (agreed)
 

@@ -70,7 +70,9 @@ export function PortalLoggedInAs({
   const nameClass = industrialChrome
     ? "font-medium text-white"
     : "font-medium text-star-navy dark:text-foreground";
-  const prefixClass = industrialChrome ? "text-[#94a3b8]" : "text-[#64748b] dark:text-muted-foreground";
+  const prefixClass = industrialChrome
+    ? "text-white/90"
+    : "text-[#64748b] dark:text-muted-foreground";
 
   return (
     <div

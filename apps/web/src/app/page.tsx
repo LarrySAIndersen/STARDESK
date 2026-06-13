@@ -1,13 +1,9 @@
-import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/login-form";
-import { AgentMainLoading } from "@/components/agent/agent-main-loading";
-import { WorkspaceLanding } from "@/components/workspace-landing/workspace-landing";
-import { EndUserTicketPortal } from "@/components/end-user-ticket-portal";
+import { HomeLandingPage } from "@/components/home-landing/home-landing-page";
 import { TicketListShell } from "@/components/ticket-list-shell";
-import { TicketListSkeleton } from "@/components/ticket-list-skeleton";
 import { getServerUser } from "@/lib/auth-server";
 import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import {
@@ -33,6 +29,14 @@ export default async function HomePage() {
   const currentUser = await getServerUser();
   const staff = isStaff(currentUser);
 
+  if (!currentUser) {
+    return (
+      <div className="star-page px-6 py-10">
+        <LoginForm />
+      </div>
+    );
+  }
+
   if (staff && parseUiMode(cookieStore.get(UI_MODE_COOKIE)?.value) === "classic") {
     redirect(classicHomePath());
   }
@@ -40,20 +44,14 @@ export default async function HomePage() {
   if (staff) {
     return (
       <TicketListShell>
-        <Suspense fallback={<AgentMainLoading />}>
-          <WorkspaceLanding />
-        </Suspense>
+        <HomeLandingPage user={currentUser} />
       </TicketListShell>
     );
   }
 
   return (
     <main className="star-page">
-      <Suspense fallback={<TicketListSkeleton />}>
-        <TicketListShell>
-          <EndUserTicketPortal currentUser={currentUser} />
-        </TicketListShell>
-      </Suspense>
+      <HomeLandingPage user={currentUser} />
     </main>
   );
 }

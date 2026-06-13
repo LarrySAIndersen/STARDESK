@@ -2,10 +2,10 @@
 
 import { fireAndForget } from "@/lib/fire-and-forget";
 
-import { Bot, Hash, MessageSquareText, Video } from "lucide-react";
+import { Bot, Hash, MessageSquareText } from "lucide-react";
 import { useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
+import { StarmeetComingSoonButton } from "@/components/team-chat/starmeet-coming-soon-button";
 
 import { cn } from "@/lib/utils";
 import {
@@ -177,13 +177,23 @@ export function ChatMessageList({
 
 export function ChatThreadHeader({
   channel,
-  onStartHuddle,
-}: {
+}: Readonly<{
   channel: TeamChatChannel | null;
-  onStartHuddle?: () => void;
-}) {
-  const isDm = channel?.channel_type === "dm";
-  const isBot = channel?.channel_type === "bot";
+}>) {
+  if (!channel) {
+    return (
+      <div className="team-chat-thread-header">
+        <Hash className="size-5 shrink-0 opacity-50" aria-hidden />
+        <div className="min-w-0">
+          <h2 className="team-chat-thread-title">STARchat</h2>
+          <p className="team-chat-thread-subtitle">Intern team-chat</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isDm = channel.channel_type === "dm";
+  const isBot = channel.channel_type === "bot";
 
   return (
     <div className="team-chat-thread-header">
@@ -196,18 +206,7 @@ export function ChatThreadHeader({
         <h2 className="team-chat-thread-title">{teamChatThreadTitle(channel)}</h2>
         <p className="team-chat-thread-subtitle">{teamChatThreadSubtitle(channel)}</p>
       </div>
-      {onStartHuddle && channel && !isDm ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="team-chat-huddle-btn shrink-0"
-          onClick={onStartHuddle}
-        >
-          <Video className="size-4" aria-hidden />
-          Huddle
-        </Button>
-      ) : null}
+      {!isDm && !isBot ? <StarmeetComingSoonButton /> : null}
     </div>
   );
 }

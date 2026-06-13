@@ -12,6 +12,7 @@ CHANNEL_PUBLIC = "public"
 CHANNEL_PRIVATE = "private"
 CHANNEL_DM = "dm"
 CHANNEL_BOT = "bot"
+CHANNEL_TICKET = "ticket"
 
 
 class TeamChatChannel(Base):
@@ -32,6 +33,11 @@ class TeamChatChannel(Base):
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("tickets.id", ondelete="CASCADE"),
         nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -58,6 +64,11 @@ class TeamChatChannelMember(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
+    )
+    invited_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
     )
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
