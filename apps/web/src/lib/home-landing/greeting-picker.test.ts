@@ -8,7 +8,6 @@ import {
   formatHomeLandingGreeting,
   getTimeSlot,
   pickHomeLandingGreeting,
-  type TimeSlot,
 } from "./greeting-picker";
 import { HOME_LANDING_GREETING_COUNT } from "./greetings";
 
