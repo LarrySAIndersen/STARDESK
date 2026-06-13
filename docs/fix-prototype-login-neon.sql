@@ -37,7 +37,30 @@ SET password_hash = '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZ
     updated_at = NOW()
 WHERE email LIKE '%@example.dk';
 
--- 3) Ensure Benny exists (was missing in seed)
+-- 3) Ensure Larry + Benny exist (staging often missing Larry)
+INSERT INTO users (
+    id, email, display_name, role, is_active, password_hash,
+    must_change_password, password_policy_exempt, ui_mode
+) VALUES (
+    '00000000-0000-0000-0000-000000000040',
+    'larrysanders@example.dk',
+    'Larrysanders',
+    'admin',
+    TRUE,
+    '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC',
+    FALSE,
+    TRUE,
+    'modern'
+)
+ON CONFLICT (email) DO UPDATE SET
+    password_hash = EXCLUDED.password_hash,
+    is_active = TRUE,
+    deleted_at = NULL,
+    must_change_password = FALSE,
+    password_policy_exempt = TRUE,
+    ui_mode = COALESCE(users.ui_mode, EXCLUDED.ui_mode),
+    updated_at = NOW();
+
 INSERT INTO users (
     id, email, display_name, role, is_active, password_hash,
     must_change_password, password_policy_exempt, ui_mode
