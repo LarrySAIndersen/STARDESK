@@ -19,6 +19,8 @@ spec:
     spec:
       automountServiceAccountToken: false
       restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: schema-sync
           image: stardesk-api:latest
