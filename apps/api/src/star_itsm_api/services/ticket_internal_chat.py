@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.security import is_staff
@@ -19,14 +19,16 @@ from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_stakeholder import TicketStakeholder
 from star_itsm_api.models.user import User
 from star_itsm_api.schemas.ticket_internal_chat import (
-    PersonalMentionsOverviewRead,
     PersonalMentionItemRead,
-    TicketInternalChatInviteRequest,
+    PersonalMentionsOverviewRead,
     TicketInternalChatRead,
 )
 from star_itsm_api.services.org_access import resolve_integration_organization_id
 from star_itsm_api.services.team_chat import _message_reads, _user_display, post_message
-from star_itsm_api.services.ticket_stakeholders import upsert_stakeholder, validate_stakeholder_user_ids
+from star_itsm_api.services.ticket_stakeholders import (
+    upsert_stakeholder,
+    validate_stakeholder_user_ids,
+)
 
 
 def _now() -> datetime:
@@ -209,7 +211,7 @@ async def get_ticket_internal_chat_read(
     ticket: Ticket,
     user: User,
 ) -> TicketInternalChatRead | None:
-    org_id = await _require_staff_user(db, user)
+    await _require_staff_user(db, user)
     channel = await get_ticket_channel(db, ticket.id)
     if channel is None:
         return TicketInternalChatRead(
