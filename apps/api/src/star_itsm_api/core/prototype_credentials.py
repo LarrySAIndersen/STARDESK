@@ -11,7 +11,10 @@ def documented_prototype_password(email: str) -> str | None:
     normalized = email.lower().strip()
     if not normalized.endswith("@example.dk"):
         return None
-    return get_prototype_bootstrap_password()
+    try:
+        return get_prototype_bootstrap_password()
+    except RuntimeError:
+        return None
 
 
 def prototype_bootstrap_password_hash() -> str:

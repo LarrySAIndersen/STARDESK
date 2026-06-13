@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy.exc import ProgrammingError
 
 from star_itsm_api.core.config import settings
 from star_itsm_api.core.demo import PROTOTYPE_BOOTSTRAP_PASSWORD
@@ -21,6 +22,13 @@ from star_itsm_api.services import login_throttle as throttle_service
 
 LARRY_EMAIL = "larrysanders@example.dk"
 LARRY_ID = uuid.UUID("00000000-0000-0000-0000-000000000040")
+
+
+@pytest.fixture(autouse=True)
+def _reset_login_throttle_missing_flag() -> None:
+    throttle_service._login_throttle_table_missing = False
+    yield
+    throttle_service._login_throttle_table_missing = False
 
 
 @pytest.fixture(autouse=True)
@@ -164,6 +172,40 @@ async def test_lockout_resets_prototype_password_hash(
 
     assert user.password_hash != "old-hash"
     assert verify_password(PROTOTYPE_BOOTSTRAP_PASSWORD, user.password_hash)
+
+
+@pytest.mark.asyncio
+async def test_assert_login_allowed_skips_when_table_missing() -> None:
+    db = AsyncMock()
+    db.rollback = AsyncMock()
+    err = ProgrammingError(
+        "select",
+        {},
+        Exception('relation "login_throttle" does not exist'),
+    )
+    db.execute = AsyncMock(side_effect=err)
+
+    await throttle_service.assert_login_allowed(db, "any@example.dk", "203.0.113.1")
+
+    db.rollback.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_assert_login_allowed_skips_on_dbapi_error() -> None:
+    from sqlalchemy.exc import DBAPIError
+
+    db = AsyncMock()
+    db.rollback = AsyncMock()
+    err = DBAPIError(
+        "select",
+        {},
+        Exception('relation "login_throttle" does not exist'),
+    )
+    db.execute = AsyncMock(side_effect=err)
+
+    await throttle_service.assert_login_allowed(db, "any@example.dk", "203.0.113.2")
+
+    db.rollback.assert_awaited_once()
 
 
 @pytest.mark.asyncio
