@@ -13,7 +13,10 @@ describe("openCaseAssistant", () => {
 
   it("dispatches open event with draft and focus", () => {
     const handler = vi.fn<(event: CustomEvent<CaseAssistantOpenDetail>) => void>();
-    window.addEventListener(CASE_ASSISTANT_OPEN_EVENT, handler as EventListener);
+    const onEvent = (event: Event) => {
+      handler(event as CustomEvent<CaseAssistantOpenDetail>);
+    };
+    window.addEventListener(CASE_ASSISTANT_OPEN_EVENT, onEvent);
 
     openCaseAssistant({ draft: "Hej STARbot", focusInput: true });
 
@@ -24,6 +27,6 @@ describe("openCaseAssistant", () => {
       autoSend: false,
     });
 
-    window.removeEventListener(CASE_ASSISTANT_OPEN_EVENT, handler as EventListener);
+    window.removeEventListener(CASE_ASSISTANT_OPEN_EVENT, onEvent);
   });
 });
