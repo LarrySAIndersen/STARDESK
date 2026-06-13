@@ -17,6 +17,8 @@ spec:
         app: stardesk-web
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: web
           image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"
