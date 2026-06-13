@@ -54,7 +54,13 @@ function UserActionLinks({
   );
 }
 
-export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
+export function TopBarUserMenu({
+  user: userFromServer,
+  variant = "default",
+}: Readonly<{
+  user: User;
+  variant?: "default" | "chrome";
+}>) {
   const router = useRouter();
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -93,37 +99,57 @@ export function TopBarUserMenu({ user: userFromServer }: { user: User }) {
   }
 
   const profileHref = userProfileHref(user);
+  const chrome = variant === "chrome";
 
   return (
     <>
-      <div className="wire-topbar-user" aria-label="Brugerkonto">
+      <div
+        className={cn("wire-topbar-user", chrome && "wire-topbar-user--chrome")}
+        aria-label="Brugerkonto"
+      >
         <div className="wire-topbar-user-identity">
           <UserAvatar user={user} size="md" />
-          <PortalLoggedInAs user={user} variant="topbar" showAvatar={false} />
+          <PortalLoggedInAs
+            user={user}
+            variant="topbar"
+            showAvatar={false}
+            industrialChrome={chrome}
+          />
         </div>
 
         <nav
-          className="wire-topbar-user-actions hidden lg:flex"
+          className={cn(
+            "wire-topbar-user-actions hidden lg:flex",
+            chrome && "wire-topbar-user-actions--chrome",
+          )}
           aria-label="Brugerkonto"
         >
           <UserActionLinks
             profileHref={profileHref}
             onChangeAvatar={() => setAvatarOpen(true)}
             onLogout={() => fireAndForget(logout())}
+            className={chrome ? "wire-topbar-user-action--chrome" : undefined}
           />
         </nav>
 
         <div className="relative lg:hidden" ref={menuRef}>
           <button
             type="button"
-            className="wire-topbar-user-menu-trigger"
+            className={cn(
+              "wire-topbar-user-menu-trigger",
+              chrome && "wire-topbar-user-menu-trigger--chrome",
+            )}
             aria-expanded={menuOpen}
             aria-controls={menuId}
             onClick={() => setMenuOpen((open) => !open)}
           >
             <span className="sr-only">Brugermenu</span>
             <ChevronDown
-              className={cn("size-4 text-[var(--gray-mid)] transition-transform", menuOpen && "rotate-180")}
+              className={cn(
+                "size-4 transition-transform",
+                chrome ? "text-white/85" : "text-[var(--gray-mid)]",
+                menuOpen && "rotate-180",
+              )}
               aria-hidden
             />
           </button>

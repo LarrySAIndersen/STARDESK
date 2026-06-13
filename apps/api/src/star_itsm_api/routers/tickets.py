@@ -155,6 +155,16 @@ from star_itsm_api.services.ticket_stakeholders import (
     upsert_stakeholder,
     validate_stakeholder_user_ids,
 )
+from star_itsm_api.schemas.ticket_internal_chat import (
+    TicketInternalChatInviteRequest,
+    TicketInternalChatMessageCreate,
+    TicketInternalChatRead,
+)
+from star_itsm_api.services.ticket_internal_chat import (
+    get_ticket_internal_chat_read,
+    invite_user_to_ticket_internal_chat,
+    post_ticket_internal_chat_message,
+)
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,
     maybe_set_assigned_at,
@@ -1710,3 +1720,86 @@ async def upsert_comment_reaction(
     )
     await db.commit()
     return summary
+
+
+@router.get("/{ticket_id}/internal-chat", response_model=TicketInternalChatRead)
+async def get_ticket_internal_chat(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketInternalChatRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        read = await get_ticket_internal_chat_read(db, ticket=ticket, user=current_user)
+    except ValueError as exc:
+        if str(exc) == "staff_only":
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if read is None:
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+    await db.commit()
+    return read
+
+
+@router.post("/{ticket_id}/internal-chat/invite", response_model=TicketInternalChatRead)
+async def invite_ticket_internal_chat(
+    ticket_id: uuid.UUID,
+    payload: TicketInternalChatInviteRequest,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketInternalChatRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        await invite_user_to_ticket_internal_chat(
+            db,
+            ticket=ticket,
+            inviter=current_user,
+            invitee_id=payload.user_id,
+            message=payload.message,
+            add_interested=True,
+        )
+        await db.commit()
+        read = await get_ticket_internal_chat_read(db, ticket=ticket, user=current_user)
+    except ValueError as exc:
+        code = str(exc)
+        if code == "staff_only":
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS) from exc
+        if code in ("self_invite", "Invalid user id in stakeholder list"):
+            raise HTTPException(status_code=400, detail=code) from exc
+        raise HTTPException(status_code=400, detail=code) from exc
+    if read is None:
+        raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS)
+    return read
+
+
+@router.post("/{ticket_id}/internal-chat/messages", response_model=TicketInternalChatRead)
+async def post_ticket_internal_chat_messages(
+    ticket_id: uuid.UUID,
+    payload: TicketInternalChatMessageCreate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_staff()),
+) -> TicketInternalChatRead:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
+    await _ensure_ticket_access(db, ticket, current_user)
+    try:
+        read = await post_ticket_internal_chat_message(
+            db,
+            ticket=ticket,
+            user=current_user,
+            body=payload.body,
+        )
+        await db.commit()
+    except ValueError as exc:
+        code = str(exc)
+        if code == "staff_only":
+            raise HTTPException(status_code=403, detail=INSUFFICIENT_PERMISSIONS) from exc
+        raise HTTPException(status_code=400, detail=code) from exc
+    return read

@@ -31,7 +31,7 @@ export async function ClassicHome() {
         <header className="classic-page__header">
           <h2 className="classic-page__title">Operatørstart</h2>
           <p className="classic-page__subtitle">
-            Modulopdeling i TOPdesk-stil — incidents, changes, problems og service requests.
+            Modulopdeling i klassisk ITSM-stil — incidents, changes, problems og service requests.
             Data hentes fra samme database som den moderne visning.
           </p>
         </header>

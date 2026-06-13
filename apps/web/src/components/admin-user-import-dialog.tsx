@@ -117,7 +117,7 @@ export function AdminUserImportDialog({
         </div>
 
         <p className="text-muted-foreground mt-2 text-sm">
-          Upload en CSV fra TOPdesk eller Excel. Kolonner: e-mail, navn, rolle (valgfri), grupper
+          Upload en CSV fra Excel eller andet system. Kolonner: e-mail, navn, rolle (valgfri), grupper
           (komma/semikolon), organisation (valgfri), aktiv (valgfri).
         </p>
 

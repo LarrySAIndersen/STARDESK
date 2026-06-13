@@ -17,7 +17,13 @@ function formatCopenhagenClock(now: Date): string {
 }
 
 /** Live wall clock (Copenhagen) so agents trust SLA timers. */
-export function AgentClock({ className }: { className?: string }) {
+export function AgentClock({
+  className,
+  variant = "default",
+}: {
+  className?: string;
+  variant?: "default" | "chrome";
+}) {
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -30,17 +36,29 @@ export function AgentClock({ className }: { className?: string }) {
     return null;
   }
 
+  const chrome = variant === "chrome";
+
   return (
     <time
       dateTime={now.toISOString()}
       className={cn(
-        "text-muted-foreground hidden sm:inline-flex items-baseline gap-1.5 font-mono text-xs tabular-nums",
+        "hidden sm:inline-flex items-baseline gap-1.5 font-mono text-xs tabular-nums",
+        chrome ? "text-white" : "text-muted-foreground",
         className,
       )}
       aria-label={`Klokken ${formatCopenhagenClock(now)}`}
     >
-      <span className="font-sans text-[10px] font-medium tracking-wide uppercase">Klokken</span>
-      <span className="text-foreground font-semibold">{formatCopenhagenClock(now)}</span>
+      <span
+        className={cn(
+          "font-sans text-[10px] font-medium tracking-wide uppercase",
+          chrome ? "text-white/85" : undefined,
+        )}
+      >
+        Klokken
+      </span>
+      <span className={cn("font-semibold", chrome ? "text-white" : "text-foreground")}>
+        {formatCopenhagenClock(now)}
+      </span>
     </time>
   );
 }

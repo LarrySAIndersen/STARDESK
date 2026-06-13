@@ -13,6 +13,9 @@ import type { Ticket } from "@/types/ticket";
 
 import { TicketPostItBadge } from "@/components/personal/ticket-post-it-badge";
 import { TicketPostItDropTarget } from "@/components/personal/post-it-attach-provider";
+import { TicketQuickInviteButton } from "@/components/ticket/ticket-quick-invite-button";
+import { TicketWatchEye } from "@/components/tickets/ticket-watch-eye";
+import type { Team } from "@/types/team";
 import { TICKET_DRAG_TYPE, setTicketDragData } from "@/lib/ticket-drag";
 
 export function WireframeTicketTable({
@@ -26,11 +29,21 @@ export function WireframeTicketTable({
   columnFilters,
   postItCounts,
   postItDropEnabled = false,
+  showWatchColumn = false,
+  watchingById,
+  onToggleWatch,
+  showInviteColumn = false,
+  inviteTeams = [],
 }: {
   tickets: Ticket[];
   draggable?: boolean;
   postItCounts?: Record<string, number>;
   postItDropEnabled?: boolean;
+  showWatchColumn?: boolean;
+  watchingById?: Record<string, boolean>;
+  onToggleWatch?: (ticketId: string) => void;
+  showInviteColumn?: boolean;
+  inviteTeams?: Team[];
   /** Service desk: show assigned group on each row. */
   showTeamColumn?: boolean;
   onRowClick?: (ticket: Ticket) => void;
@@ -40,9 +53,11 @@ export function WireframeTicketTable({
   /** Replaces static column headers (e.g. filter/sort row). */
   columnFilters?: ReactNode;
 }) {
-  const gridClass = showTeamColumn
-    ? "wire-table-grid-tickets-desk"
-    : "wire-table-grid-tickets";
+  const gridClass = cn(
+    showTeamColumn ? "wire-table-grid-tickets-desk" : "wire-table-grid-tickets",
+    showWatchColumn && "wire-table-grid-tickets--watch",
+    showInviteColumn && "wire-table-grid-tickets--invite",
+  );
   const router = useRouter();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const didDragRef = useRef(false);
@@ -56,6 +71,8 @@ export function WireframeTicketTable({
       <div className="wire-table-scroll wire-table-scroll--tickets">
       {columnFilters ?? (
         <div className={cn("wire-table-head", gridClass)} role="row">
+          {showWatchColumn ? <span aria-hidden /> : null}
+          {showInviteColumn ? <span aria-hidden /> : null}
           <span>Sagsnr</span>
           <span>Titel og tags</span>
           <span>Kilde</span>
@@ -110,6 +127,20 @@ export function WireframeTicketTable({
             }
           }}
         >
+          {showWatchColumn ? (
+            <span className="flex items-center justify-center">
+              <TicketWatchEye
+                watching={watchingById?.[ticket.id] ?? false}
+                onToggle={() => onToggleWatch?.(ticket.id)}
+                compact
+              />
+            </span>
+          ) : null}
+          {showInviteColumn && inviteTeams.length > 0 ? (
+            <span className="flex items-center justify-center">
+              <TicketQuickInviteButton ticketId={ticket.id} teams={inviteTeams} />
+            </span>
+          ) : null}
           <span className="text-[var(--gray-mid)] flex items-center gap-1 text-xs font-semibold">
             {ticket.ticket_number}
             <TicketPostItBadge count={postItCounts?.[ticket.id] ?? 0} />

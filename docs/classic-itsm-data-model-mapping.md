@@ -1,8 +1,8 @@
-# TOPdesk ITSM → STARdesk data model mapping
+# Legacy ITSM reference → STARdesk data model mapping
 
-How STAR’s current PostgreSQL schema relates to a typical **TOPdesk** implementation (Sagsstyring, second line, persons/assets). Use this when building `/classic/*` and when scoping API work — **no separate TOPdesk schema** exists in the repo today.
+How STAR’s current PostgreSQL schema relates to a typical **legacy ITSM** implementation (Sagsstyring, second line, persons/assets). Use this when building `/classic/*` and when scoping API work — **no separate legacy ITSM schema** exists in the repo today.
 
-**Sources checked:** `init.sql`, `apps/api/src/star_itsm_api/models/*`, `schemas/ticket.py`, `apps/web/src/types/*`, migrations under `sql/migrations/`, integration stub `TopdeskIntegrationConfig`.
+**Sources checked:** `init.sql`, `apps/api/src/star_itsm_api/models/*`, `schemas/ticket.py`, `apps/web/src/types/*`, migrations under `sql/migrations/`.
 
 ---
 
@@ -12,27 +12,27 @@ How STAR’s current PostgreSQL schema relates to a typical **TOPdesk** implemen
 |----------|---------|
 | **Strong** | Same concept, first-class table/field, used in API + UI |
 | **Partial** | Concept exists but different shape, JSONB, or UI-only |
-| **Gap** | TOPdesk has it; STARdesk needs extension or classic UI stub |
-| **N/A** | TOPdesk module not in scope (Ejendom full CMDB, Change calendar) |
+| **Gap** | Reference ITSM has it; STARdesk needs extension or classic UI stub |
+| **N/A** | Reference module not in scope (Ejendom full CMDB, Change calendar) |
 
-STARdesk is an **ITSM ticket-centric** model (incident / service_request / problem), not a full TOPdesk clone. Classic UI should **surface existing fields** and label gaps honestly.
+STARdesk is an **ITSM ticket-centric** model (incident / service_request / problem), not a full legacy ITSM clone. Classic UI should **surface existing fields** and label gaps honestly.
 
 ---
 
-## TOPdesk modules → STARdesk
+## Reference ITSM modules → STARdesk
 
-| TOPdesk module (photo 10) | STARdesk today | Notes |
+| Reference module (photo 10) | STARdesk today | Notes |
 |---------------------------|----------------|-------|
 | **Sagsstyring** | Core `tickets` + teams + SLA | Primary match |
 | **Videnshåndtering** | `tickets` with `is_knowledge_article` + `/knowledge` | Knowledge as ticket flag, not separate KB object |
-| **Ejendomshåndatering** | CMDB graph `/aktiver` (client catalog + API graph) | Not TOPdesk “location/card” model; environment on assets |
+| **Ejendomshåndatering** | CMDB graph `/aktiver` (client catalog + API graph) | Not legacy “location/card” model; environment on assets |
 | **Grunddata** | `categories`, `subcategories`, `sub_causes`, `teams`, `organizations` | Master data spread across tables |
 
 ---
 
-## Core call / incident (TOPdesk “Second line sag” / “Henvendelse”)
+## Core call / incident (reference “Second line sag” / “Henvendelse”)
 
-| TOPdesk (UI / dumps) | STARdesk table.column | API / type | Match |
+| Reference UI (screendumps) | STARdesk table.column | API / type | Match |
 |----------------------|------------------------|------------|-------|
 | Sag-nummer | `tickets.ticket_number` | `Ticket.ticket_number` | **Strong** |
 | Sag-type (Henvendelse, Incident, Bug, Service Request) | `tickets.ticket_type` | `incident` \| `service_request` \| `problem` | **Partial** — no separate `bug`; map to `incident` |
@@ -61,7 +61,7 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 
 ### Status label mapping (classic UI)
 
-| TOPdesk (examples) | STARdesk `status` |
+| Reference UI (examples) | STARdesk `status` |
 |--------------------|-------------------|
 | Tildelt | `assigned` |
 | I behandling | `in_progress` |
@@ -75,7 +75,7 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 
 ## First line vs second line
 
-| TOPdesk | STARdesk | Recommendation |
+| Reference UI | STARdesk | Recommendation |
 |---------|----------|----------------|
 | First line sag | Often `incident` + team **SF Service Desk** | Filter: `ticket_type=incident` AND `assigned_team` = desk team |
 | Second line sag | Same `tickets` row; different team/queue | Filter by `assigned_team_id` / routing rules, not separate table |
@@ -85,9 +85,9 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 
 ---
 
-## Change management (TOPdesk “Changes”)
+## Change management (reference “Changes”)
 
-| TOPdesk | STARdesk | Your decision |
+| Reference UI | STARdesk | Your decision |
 |---------|----------|---------------|
 | Change record | — | **No separate entity** for now |
 | Change ≈ service request | `ticket_type = service_request` | **Partial** — classic `/classic/changes` uses this |
@@ -97,7 +97,7 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 
 ## Problem management
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | Problem record | `ticket_type = problem` | **Strong** |
 | Link problem ↔ incidents | `problem_incident_links` | **Strong** (API exists) |
@@ -107,7 +107,7 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 
 ## User card / operator settings (gear → Mine indstillinger)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | Operator person record | `users` | **Strong** (identity) |
 | Mine indstillinger (preferences) | — | **Gap** — no `user_preferences` table |
@@ -116,13 +116,13 @@ STARdesk is an **ITSM ticket-centric** model (incident / service_request / probl
 | Log ud | `/api/auth/logout` | **Strong** |
 | Classic vs modern UI | Cookie only (today) | **Partial** → plan `users.ui_mode` on this screen in classic shell |
 
-TOPdesk treats the gear screen as the **logged-in operator’s card**, not a separate “person” in Links. In classic, gear should open the same concept for the session user (`GET /api/v1/users/me` or `/users/{self.id}`).
+The reference UI treats the gear screen as the **logged-in operator’s card**, not a separate “person” in Links. In classic, gear should open the same concept for the session user (`GET /api/v1/users/me` or `/users/{self.id}`).
 
 ---
 
 ## Persons, org, location (photo 5, photo 11)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | Person (fulde navn, telefon, jobtitel) | `users` | **Partial** — persons are users, not separate “card” |
 | Filial | `organizations.name` | **Partial** — flat org, no site tree |
@@ -143,7 +143,7 @@ Ticket  → tickets (+ optional future ticket↔asset link)
 
 ## Communication & attachments (photo 8)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | E-mails on card | `ticket_emails` | **Strong** (Gmail integration) |
 | Logposter | `ticket_comments` + `ticket_events` | **Strong** |
@@ -154,7 +154,7 @@ Ticket  → tickets (+ optional future ticket↔asset link)
 
 ## Audit trail (photo 9)
 
-| TOPdesk column | STARdesk | Match |
+| Reference UI column | STARdesk | Match |
 |----------------|----------|-------|
 | Dato/Tid | `ticket_events.created_at`, `activity[].occurred_at` | **Strong** |
 | Feltnavn | `event_type` + `payload` / `activity.label_da` | **Partial** |
@@ -168,7 +168,7 @@ Event types include: `ticket.status_changed`, `ticket.metadata_changed`, `ticket
 
 ## SLA & planning (photo 3–4)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | SLA / forfald | `sla_policies`, `sla_assignments`, due timestamps | **Strong** |
 | Varighed / totaler | Computed in services or `TicketTimestamps` | **Partial** |
@@ -177,21 +177,21 @@ Event types include: `ticket.status_changed`, `ticket.metadata_changed`, `ticket
 
 ---
 
-## Teams & operator groups (TOPdesk “Ansvarliggruppe”)
+## Teams & operator groups (reference “Ansvarliggruppe”)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | Operator group | `teams` | **Strong** |
 | Group members | `team_members` | **Strong** |
-| Operator group in integration config | `TopdeskIntegrationConfig.operator_group` | **Stub only** — sync not implemented |
+| Operator group in external sync config | — | **Gap** — no external ITSM sync configured |
 
 Seed teams in `init.sql` align with STAR naming: SF Service Desk, SF Infrastruktur, SF Operations, Applikation.
 
 ---
 
-## Knowledge (TOPdesk Videnshåndtering)
+## Knowledge (reference Videnshåndtering)
 
-| TOPdesk | STARdesk | Match |
+| Reference UI | STARdesk | Match |
 |---------|----------|-------|
 | Knowledge item | `tickets` where `is_knowledge_article=true` | **Partial** |
 | Visibility / status | `knowledge_status`, `knowledge_visibility` | **Strong** within ticket model |
@@ -200,7 +200,7 @@ Seed teams in `init.sql` align with STAR naming: SF Service Desk, SF Infrastrukt
 
 ## CMDB / assets (Ejendomshåndtering lite)
 
-| TOPdesk asset/CI | STARdesk | Match |
+| Reference asset/CI | STARdesk | Match |
 |------------------|----------|-------|
 | Configuration item | `AssetSystem`, `AssetSubsystem` | **Partial** — graph in API, not ticket-linked |
 | Environment (Produktion/Test) | `AssetDetail.environment` | **Strong** in CMDB |
@@ -209,25 +209,24 @@ Seed teams in `init.sql` align with STAR naming: SF Service Desk, SF Infrastrukt
 
 ---
 
-## Integrations (TOPdesk as external system)
+## Integrations (external systems)
 
 | Item | Location | Status |
 |------|----------|--------|
-| TOPdesk URL, API key, operator group | `TopdeskIntegrationConfig` in web localStorage + `/integrations/topdesk` | **UI stub** — “kommer snart” |
 | Jira, Gmail, Slack | `organization_integrations`, routers | Active/mock |
-| No TOPdesk sync tables | — | **Gap** — no imported TOPdesk IDs on tickets |
+| External ITSM sync | — | **Gap** — no bi-directional sync tables; use `routing_metadata.external_number` on import |
 
-If bi-directional sync is needed later: add `external_refs JSONB` on `tickets` e.g. `{ "topdesk": { "id": "...", "number": "..." } }`.
+If bi-directional sync is needed later: add `external_refs JSONB` on `tickets` e.g. `{ "legacy_itsm": { "id": "...", "number": "..." } }`.
 
 ---
 
-## JSONB extension point (TOPdesk custom fields without migrations)
+## JSONB extension point (legacy custom fields without migrations)
 
 ` tickets.routing_metadata` already exists. Suggested keys for classic parity **until** dedicated columns:
 
 ```json
 {
-  "topdesk": {
+  "classic_custom": {
     "environment": "Produktion",
     "environment_note": "",
     "closing_code": "Workaround",
@@ -263,7 +262,7 @@ Requires API PATCH to accept/merge `routing_metadata` on metadata update (verify
 1. **`GET /api/v1/tickets?ticket_type=incident`** — avoid loading 500 rows client-side.
 2. **Expose `organization_name` on ticket list** — for “Filial” column.
 3. **PATCH `routing_metadata`** on ticket (if not already) — Release/miljø/lukkekode.
-4. **`users.ui_mode`** — per your roadmap (not TOPdesk, but login flow).
+4. **`users.ui_mode`** — per your roadmap (login flow).
 5. **Optional `ticket.asset_id` or link table** — for photo 11 lokation (later).
 
 ---
@@ -304,12 +303,12 @@ erDiagram
 | Org | `apps/api/src/star_itsm_api/models/organization.py` |
 | CMDB | `apps/web/src/types/asset.ts`, `routers/assets.py` |
 | Classic modules | `apps/web/src/lib/classic-modules.ts` |
-| UI parity | `docs/classic-ui-topdesk-parity.md` |
+| UI parity | `docs/classic-ui-parity-map.md` |
 
 ---
 
 ## Conclusion
 
-STARdesk **already implements a coherent ITSM core** aligned with TOPdesk **Sagsstyring** (calls/incidents/problems, operators, groups, SLA, audit, email, partial org). Gaps are mostly **TOPdesk-specific fields** (lukkekode, miljø on card, release/milestone, person cards, work-area tabs) and **Change as a separate process** — which you deferred.
+STARdesk **already implements a coherent ITSM core** aligned with reference **Sagsstyring** (calls/incidents/problems, operators, groups, SLA, audit, email, partial org). Gaps are mostly **legacy-specific fields** (lukkekode, miljø on card, release/milestone, person cards, work-area tabs) and **Change as a separate process** — which you deferred.
 
 Classic UI should use **strong mappings first**, then `routing_metadata` + stubs for the rest, without pretending fields exist when they do not.

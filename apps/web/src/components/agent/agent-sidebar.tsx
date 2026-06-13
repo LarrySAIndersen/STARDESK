@@ -211,12 +211,15 @@ export function AgentSidebar({
   collapsed = false,
   onToggle,
   onNavigate,
+  chromeCompactNav = false,
 }: {
   user?: User | null;
   showUsersNav?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
   onNavigate?: () => void;
+  /** Blue chrome: no sidebar header row — collapse lives in page title bar. */
+  chromeCompactNav?: boolean;
 }) {
   const pathname = usePathname();
   const user = userFromServer ?? getClientUser();
@@ -283,7 +286,7 @@ export function AgentSidebar({
     <SidebarUiModeSwitch
       key={CLASSIC_UI_NAV_ID}
       targetMode="classic"
-      label="Klassisk grænseflade (TOPdesk)"
+      label="Klassisk grænseflade"
       icon={LayoutGrid}
       active={onClassicRoute}
       collapsed={collapsed}
@@ -319,7 +322,7 @@ export function AgentSidebar({
       onDrop={handleDropOnItem(CLASSIC_UI_NAV_ID, sectionId)}
     >
       <GripVertical className="text-muted-foreground size-3.5 shrink-0 opacity-70" aria-hidden />
-      <span>Klassisk grænseflade (TOPdesk)</span>
+      <span>Klassisk grænseflade</span>
     </div>
   );
 
@@ -403,17 +406,20 @@ export function AgentSidebar({
       className={cn(
         "wire-sidebar wire-sidebar--container flex flex-col",
         collapsed && "wire-sidebar--collapsed",
+        chromeCompactNav && "wire-sidebar--chrome",
       )}
       data-collapsed={collapsed ? "" : undefined}
     >
-      <div
-        className={cn(
-          "wire-shell-col-header wire-shell-col-header--nav flex shrink-0 items-center px-1",
-          collapsed ? "justify-center py-1" : "justify-end",
-        )}
-      >
-        {onToggle ? <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleNav} /> : null}
-      </div>
+      {!chromeCompactNav ? (
+        <div
+          className={cn(
+            "wire-shell-col-header wire-shell-col-header--nav flex shrink-0 items-center px-1",
+            collapsed ? "justify-center py-1" : "justify-end",
+          )}
+        >
+          {onToggle ? <SidebarCollapseToggle collapsed={collapsed} onToggle={toggleNav} /> : null}
+        </div>
+      ) : null}
 
       {topAdmin && !collapsed && !editMode ? (
         <div className="wire-sidebar-nav-legend border-b border-[var(--gray-border)]">

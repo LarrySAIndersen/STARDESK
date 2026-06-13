@@ -9,6 +9,7 @@ import { TicketDetailsEditableSidebar } from "@/components/portal/ticket/ticket-
 import { TicketDetailsSidebar } from "@/components/portal/ticket/ticket-details-sidebar";
 import { TicketHeader } from "@/components/portal/ticket/ticket-header";
 import { TicketCaseMessagesPanel } from "@/components/ticket/ticket-case-messages-panel";
+import { TicketInternalChatPanel } from "@/components/ticket/ticket-internal-chat-panel";
 import type { Category } from "@/types/category";
 import type { Team } from "@/types/team";
 import type { TicketDetail } from "@/types/ticket";
@@ -91,6 +92,7 @@ export function TicketCaseLayout({
                     ticketId={ticket.id}
                     staffMode
                     primaryNavy
+                    teams={teams}
                     canBroadcastToChildren={Boolean(
                       ticket.is_major && !ticket.parent_ticket_id,
                     )}
@@ -116,6 +118,15 @@ export function TicketCaseLayout({
             <TicketDetailsSidebar ticket={ticket} />
           )}
           {sidebarExtra}
+          {staffView && teams.length > 0 ? (
+            <div id="ticket-internal-chat" className="scroll-mt-6">
+              <TicketInternalChatPanel
+                ticketId={ticket.id}
+                ticketNumber={ticket.ticket_number}
+                teams={teams}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 

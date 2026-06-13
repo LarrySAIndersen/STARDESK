@@ -151,6 +151,22 @@ export async function apiPut<T>(
   return response.json() as Promise<T>;
 }
 
+export async function apiPutNoContent(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(resolveClientUrl(path), {
+    method: "PUT",
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...init?.headers,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await throwApiError(response);
+  }
+}
+
 export async function apiPatch<T>(
   path: string,
   body: unknown,

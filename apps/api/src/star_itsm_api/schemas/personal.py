@@ -61,6 +61,25 @@ class TicketPostItSummary(BaseModel):
     count: int
 
 
+class TicketWatchSummary(BaseModel):
+    ticket_id: UUID
+    watching: bool
+
+
+class WatchedTicketsRead(BaseModel):
+    ticket_ids: list[UUID] = Field(default_factory=list)
+    tickets: list[TicketRead] = Field(default_factory=list)
+
+
+class TicketWatchActivityRead(BaseModel):
+    ticket_id: UUID
+    ticket_number: str
+    title: str
+    event_type: str
+    summary_da: str
+    created_at: datetime
+
+
 # ── Personal kanban ─────────────────────────────────────────────────
 
 class PersonalKanbanAddCard(BaseModel):

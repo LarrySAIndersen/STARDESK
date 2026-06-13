@@ -121,7 +121,8 @@ fi
 
 set -a
 # shellcheck disable=SC1091
-[[ -f .env ]] && source .env
+source "$ROOT/scripts/lib/source-dotenv.sh"
+stardesk_source_dotenv .env
 set +a
 
 if [[ -z "${DATABASE_URL:-}" ]]; then

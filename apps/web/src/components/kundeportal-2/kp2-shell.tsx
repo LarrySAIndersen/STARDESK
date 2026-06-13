@@ -10,6 +10,8 @@ import type { ReactNode } from "react";
 
 
 
+import { HistoryBackButton } from "@/components/navigation/history-back-button";
+import { getClientUser, isStaff } from "@/lib/auth";
 import { KP2_BASE } from "@/lib/kundeportal-2/types";
 
 import { cn } from "@/lib/utils";
@@ -75,6 +77,7 @@ export function Kp2Shell({ children }: { children: ReactNode }) {
   const crumbs = buildBreadcrumbs(pathname);
 
   const showBreadcrumbs = crumbs.length > 1;
+  const showBackButton = isStaff(getClientUser());
 
 
 
@@ -82,7 +85,10 @@ export function Kp2Shell({ children }: { children: ReactNode }) {
 
     <div className={cn("kp2-app min-h-0", showBreadcrumbs && "kp2-app--subpage")}>
 
-      {showBreadcrumbs ? (
+      {(showBackButton || showBreadcrumbs) ? (
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        {showBackButton ? <HistoryBackButton /> : null}
+        {showBreadcrumbs ? (
 
         <nav className="portal-v2-breadcrumb mb-4" aria-label="Brødkrumme">
 
@@ -117,7 +123,8 @@ export function Kp2Shell({ children }: { children: ReactNode }) {
           })}
 
         </nav>
-
+        ) : null}
+      </div>
       ) : null}
 
       <div id="main-content">{children}</div>

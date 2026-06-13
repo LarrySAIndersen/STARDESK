@@ -2,13 +2,13 @@
 
 import { fireAndForget } from "@/lib/fire-and-forget";
 
-import { Maximize2, Send, Video, X } from "lucide-react";
+import { Maximize2, Send, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ChatChannelList } from "@/components/team-chat/chat-channel-list";
 import { ChatEmojiPicker } from "@/components/team-chat/chat-emoji-picker";
-import { ChatHuddleMock } from "@/components/team-chat/chat-huddle-mock";
+import { StarmeetComingSoonButton } from "@/components/team-chat/starmeet-coming-soon-button";
 import { ChatMessageList, ChatThreadHeader } from "@/components/team-chat/chat-message-list";
 import { useChatWorkspace } from "@/components/team-chat/chat-workspace-provider";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ const POLL_MS = 4000;
 type MessagesResponse = Readonly<{ messages: TeamChatMessage[] }>;
 
 type ChatWorkspacePanelProps = Readonly<{
-  layout?: "page" | "dock";
+  layout?: "page" | "dock" | "float";
 }>;
 
 export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps) {
@@ -32,13 +32,14 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
   const { closeChat, activeChannelId, setActiveChannelId } = useChatWorkspace();
   const isPage = layout === "page";
   const isDock = layout === "dock";
+  const isFloat = layout === "float";
+  const isOverlay = isDock || isFloat;
   const [channels, setChannels] = useState<TeamChatChannel[]>([]);
   const [staff, setStaff] = useState<TeamChatStaff[]>([]);
   const [messages, setMessages] = useState<TeamChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
-  const [huddleOpen, setHuddleOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const lastPollRef = useRef<string | null>(null);
@@ -179,26 +180,24 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         "team-chat-workspace flex min-h-0 flex-col",
         isPage && "team-chat-workspace--page flex-1",
         isDock && "team-chat-workspace--dock h-full",
+        isFloat && "team-chat-workspace--float h-full",
       )}
     >
-      {isDock ? (
+      {isOverlay ? (
         <header className="team-chat-workspace-header team-chat-workspace-header--dock">
           <div className="min-w-0 flex-1">
             <p className="team-chat-dock-label">STARchat</p>
-            <p className="text-muted-foreground text-xs">Ctrl+Shift+C · Magnetisk dock</p>
+            <p className="text-muted-foreground text-xs">
+              {isFloat
+                ? "Ctrl+Shift+C · Træk hvor som helst · Juster på kanter"
+                : "Ctrl+Shift+C · Magnetisk dock"}
+            </p>
           </div>
-          {activeChannel && activeChannel.channel_type !== "dm" ? (
-            <Button
-              type="button"
-              variant="ghost"
+          {activeChannel && activeChannel.channel_type !== "dm" && activeChannel.channel_type !== "bot" ? (
+            <StarmeetComingSoonButton
               size="icon"
-              className="size-8 shrink-0"
-              aria-label="Start huddle"
-              title="Start huddle (mock)"
-              onClick={() => setHuddleOpen(true)}
-            >
-              <Video className="size-4" />
-            </Button>
+              onPointerDown={(event) => event.stopPropagation()}
+            />
           ) : null}
           <Button
             type="button"
@@ -208,6 +207,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
             aria-label="Åbn chat i fuld side"
             title="Åbn chat i fuld side"
             onClick={openFullPage}
+            onPointerDown={(event) => event.stopPropagation()}
           >
             <Maximize2 className="size-4" />
           </Button>
@@ -216,6 +216,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
             className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1"
             onClick={closeChat}
             aria-label="Luk chat"
+            onPointerDown={(event) => event.stopPropagation()}
           >
             <X className="size-4" />
           </button>
@@ -236,14 +237,7 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
         />
 
         <div className="team-chat-thread flex min-h-0 min-w-0 flex-1 flex-col">
-          <ChatThreadHeader
-            channel={activeChannel}
-            onStartHuddle={
-              activeChannel && activeChannel.channel_type !== "dm"
-                ? () => setHuddleOpen(true)
-                : undefined
-            }
-          />
+          <ChatThreadHeader channel={activeChannel} />
 
           {loading ? (
             <div className="team-chat-loading" aria-busy="true" aria-label="Indlæser chat">
@@ -303,12 +297,6 @@ export function ChatWorkspacePanel({ layout = "page" }: ChatWorkspacePanelProps)
           </footer>
         </div>
       </div>
-
-      <ChatHuddleMock
-        open={huddleOpen}
-        onClose={() => setHuddleOpen(false)}
-        channelName={activeChannel?.slug ?? "kanal"}
-      />
     </div>
   );
 }

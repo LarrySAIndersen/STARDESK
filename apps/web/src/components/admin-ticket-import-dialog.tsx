@@ -113,7 +113,7 @@ export function AdminTicketImportDialog({
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-star-navy text-lg font-semibold">
-            Importer TOPdesk-sager
+            Importer sager
           </h2>
           <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label="Luk">
             ✕
@@ -121,7 +121,7 @@ export function AdminTicketImportDialog({
         </div>
 
         <p className="text-muted-foreground mt-2 text-sm">
-          Upload CSV eller JSON fra TOPdesk. Kolonner: titel, beskrivelse, sagsnummer, status,
+          Upload CSV eller JSON med sager. Kolonner: titel, beskrivelse, sagsnummer, status,
           prioritet, kategori, gruppe, indmelder (e-mail).
         </p>
 

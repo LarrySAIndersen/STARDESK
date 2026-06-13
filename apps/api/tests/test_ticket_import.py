@@ -62,7 +62,7 @@ def test_normalize_import_source_all_paths():
     assert normalize_import_source(None) == "email"
     assert normalize_import_source("  ") == "email"
     assert normalize_import_source("portal") == "portal"
-    assert normalize_import_source("topdesk") == "email"
+    assert normalize_import_source("import") == "email"
     assert normalize_import_source("whatever") == "email"
 
 
@@ -87,9 +87,9 @@ def test_ensure_description_variants():
     assert _ensure_description("A sufficiently long title", "") == "A sufficiently long title"
     assert _ensure_description("A sufficiently long title", None) == "A sufficiently long title"
     # short non-empty description is kept as the fallback base, then suffixed
-    assert _ensure_description("Some title", "hi") == "hi (importeret fra TOPdesk)"
+    assert _ensure_description("Some title", "hi") == "hi (importeret)"
     # both empty/short -> suffix appended
-    assert _ensure_description("abc", "") == "abc (importeret fra TOPdesk)"
+    assert _ensure_description("abc", "") == "abc (importeret)"
 
 
 def _exec(rows=None, scalar=None):
@@ -221,7 +221,7 @@ async def test_import_updates_existing_ticket(mock_routing, mock_gen, mock_sla):
 
     assert result.updated == 1
     assert existing.title == "Updated title"
-    assert existing.routing_metadata["import_source"] == "topdesk"
+    assert existing.routing_metadata["import_source"] == "bulk_import"
     assert existing.routing_metadata["external_number"] == "EXT-9"
     db.commit.assert_awaited()
 

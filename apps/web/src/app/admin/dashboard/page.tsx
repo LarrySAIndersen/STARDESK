@@ -24,7 +24,7 @@ export default async function AdminDashboardPage() {
           Administrativt dashboard
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          Import af brugere og TOPdesk-sager, samt genveje til administration.
+          Import af brugere og sager, samt genveje til administration.
         </p>
       </header>
       <AdminDashboardPanel currentUserRole={role} />

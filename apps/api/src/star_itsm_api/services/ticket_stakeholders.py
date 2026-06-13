@@ -438,4 +438,21 @@ async def process_comment_mentions(
             now=ts,
             metadata={"comment_id": str(comment_id)},
         )
+        await upsert_stakeholder(
+            db,
+            ticket_id=ticket_id,
+            user_id=user_id,
+            role="interested",
+            now=ts,
+        )
+    if mentioned_ids:
+        from star_itsm_api.services.ticket_internal_chat import sync_mentions_to_internal_chat
+
+        await sync_mentions_to_internal_chat(
+            db,
+            ticket_id=ticket_id,
+            author_user_id=author_user_id,
+            mentioned_ids=mentioned_ids,
+            body=body,
+        )
     return mentioned_ids

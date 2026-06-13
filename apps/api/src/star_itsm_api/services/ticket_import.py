@@ -1,4 +1,4 @@
-"""Bulk import of tickets from TOPdesk CSV/JSON export."""
+"""Bulk import of tickets from CSV/JSON export."""
 
 import uuid
 from dataclasses import dataclass
@@ -116,7 +116,7 @@ def normalize_import_source(raw: str | None) -> str:
     key = str(raw).strip().lower()
     if key in _VALID_SOURCES:
         return key
-    if key in ("topdesk", "import", "migration"):
+    if key in ("import", "migration"):
         return "email"
     return "email"
 
@@ -137,7 +137,7 @@ def _ensure_description(title: str, description: str | None) -> str:
     fallback = text or title.strip()
     if len(fallback) >= 10:
         return fallback
-    return f"{fallback} (importeret fra TOPdesk)"
+    return f"{fallback} (importeret)"
 
 
 async def _ticket_by_number(db: AsyncSession, ticket_number: str) -> Ticket | None:
@@ -328,7 +328,7 @@ async def _update_existing_import_ticket(
     existing.assigned_team_id = parsed.assigned_team_id
     existing.is_major = parsed.is_major
     meta = dict(existing.routing_metadata or {})
-    meta["import_source"] = "topdesk"
+    meta["import_source"] = "bulk_import"
     if parsed.external:
         meta["external_number"] = parsed.external
     existing.routing_metadata = meta
@@ -386,7 +386,7 @@ async def _create_import_ticket(
         is_security_ticket=False,
         parent_ticket_id=None,
         routing_metadata={
-            "import_source": "topdesk",
+            "import_source": "bulk_import",
             **({"external_number": parsed.external} if parsed.external else {}),
         },
         created_at=now,
@@ -405,7 +405,7 @@ async def _create_import_ticket(
             payload={
                 "ticket_number": ticket.ticket_number,
                 "source": "import",
-                "import_source": "topdesk",
+                "import_source": "bulk_import",
             },
             created_at=now,
         )

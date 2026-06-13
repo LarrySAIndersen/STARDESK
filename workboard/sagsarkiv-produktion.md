@@ -4,7 +4,7 @@ Opdateret: 2026-06-06 (tidslinje UX + produktkrav). Reference fra chat — hent 
 
 **Kontekst:** Sager er STARDESK’s vigtigste aktiv. Denne note beskriver hvad der allerede gemmes, hvad der mangler, og en anbefalet tre-lags strategi til produktion.
 
-**Relateret:** `docs/data-model.md`, `docs/topdesk-itsm-data-model-mapping.md`, `apps/api/src/star_itsm_api/services/ticket_export.py`, `ticket_import.py`
+**Relateret:** `docs/data-model.md`, `docs/classic-itsm-data-model-mapping.md`, `apps/api/src/star_itsm_api/services/ticket_export.py`, `ticket_import.py`
 
 ---
 
@@ -28,7 +28,7 @@ Vigtige detaljer:
 - **Ændringslog** — `ticket_events` med JSON `payload` er revisionsspor (bedre end kun “nuværende status”).
 - **Sagsforløb-tidslinje (UX)** — `StatusTimeline` viser Oprettet → Tildelt → I arbejde → Løst → Lukket med tidsstempler; data kommer fra `ticket.timestamps` (samme felter som arkiv).
 
-Det er nok til **drift og intern revision**, men ikke automatisk nok til **langtidsarkiv** eller **flytning til TOPdesk/ServiceNow/andet**.
+Det er nok til **drift og intern revision**, men ikke automatisk nok til **langtidsarkiv** eller **flytning til ServiceNow/andet eksternt system**.
 
 ---
 
@@ -75,8 +75,8 @@ Det er nok til **drift og intern revision**, men ikke automatisk nok til **langt
 3. **Ingen formel opbevaringspolitik i koden**  
    Der er ingen “arkivér efter 5 år” / “slet CPR efter X” — det skal besluttes som forretnings-/GDPR-politik.
 
-4. **Import findes (TOPdesk → STARDESK), ikke fuld eksport (STARDESK → andet)**  
-   `ticket_import.py` kan tage data **ind** fra TOPdesk CSV/JSON. Vejen **ud** til andre systemer er ikke færdigbygget som standardformat.
+4. **Import findes (CSV/JSON → STARDESK), ikke fuld eksport (STARDESK → andet)**  
+   `ticket_import.py` kan tage data **ind** fra CSV/JSON. Vejen **ud** til andre systemer er ikke færdigbygget som standardformat.
 
 ---
 
@@ -163,7 +163,7 @@ Excel kan stadig bruges til **rapportering**; JSON er til **arkiv og migration**
 | 2 | Vedhæftninger til blob (S3/Vercel Blob) | Filer overlever deploy/restart |
 | 3 | **Fuld sag-eksport API** (JSON per sag + bulk) | Revision + migration |
 | 4 | Planlagt job: lukkede sager → arkiv-bucket | Automatisk compliance |
-| 5 | `external_id` / `source_system` på tickets ved import | Sporbarhed TOPdesk ↔ STARDESK |
+| 5 | `external_id` / `source_system` på tickets ved import | Sporbarhed ekstern kilde ↔ STARDESK |
 | 6 | Beslut retention-politik (slet vs. arkivér) | GDPR + revision |
 
 ---
@@ -173,7 +173,7 @@ Excel kan stadig bruges til **rapportering**; JSON er til **arkiv og migration**
 | Behov | Løsning |
 |-------|---------|
 | **Revision** (revisor: “vis sag INC-2026-00042 fra oprettelse til luk”) | Hent sagspakke fra koldt arkiv **eller** query live DB: `tickets` + `ticket_events` + `ticket_comments` + `ticket_emails` + attachment-metadata |
-| **Flytning til andet system** | Brug JSON-pakken som kilde; map felter via `docs/topdesk-itsm-data-model-mapping.md` (omvendt retning). Import ind i STARDESK: `ticket_import.py` |
+| **Flytning til andet system** | Brug JSON-pakken som kilde; map felter via `docs/classic-itsm-data-model-mapping.md` (omvendt retning). Import ind i STARDESK: `ticket_import.py` |
 | **Daglig drift** | Neon + soft delete + `ticket_events` er nok |
 | **Langsigtet bevis** | Kun med lag 2+3 (periodisk eksport + kold storage) |
 
@@ -199,7 +199,7 @@ Til **revision og genbrug i andre systemer** mangler primært:
 |-----|-----------|
 | `GET /api/v1/reports/tickets/export` | Excel-liste (staff) — se `docs/demo-users-and-access.md` |
 | `apps/api/src/star_itsm_api/services/ticket_export.py` | Excel-bygger |
-| `apps/api/src/star_itsm_api/services/ticket_import.py` | Bulk import TOPdesk CSV/JSON |
+| `apps/api/src/star_itsm_api/services/ticket_import.py` | Bulk import CSV/JSON |
 | `apps/api/src/star_itsm_api/services/ticket_activity.py` | Events → danske labels |
 | `apps/api/src/star_itsm_api/models/ticket_event.py` | Audit-log model |
 | `apps/web/src/components/portal/ticket/status-timeline.tsx` | Sagsforløb-stepper (alle sager) |

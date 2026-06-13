@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +17,13 @@ from star_itsm_api.schemas.personal import (
     PersonalNoteRead,
     PersonalNoteUpdate,
     TicketPostItSummary,
+    TicketWatchActivityRead,
+    TicketWatchSummary,
+    WatchedTicketsRead,
 )
-from star_itsm_api.services import personal_service
+from star_itsm_api.schemas.ticket_internal_chat import PersonalMentionsOverviewRead
+from star_itsm_api.services import personal_service, ticket_watch_service
+from star_itsm_api.services.ticket_internal_chat import list_personal_mentions_overview
 
 router = APIRouter(prefix="/personal", tags=["personal"])
 
@@ -95,6 +101,69 @@ async def summarize_ticket_post_its(
     return await personal_service.summarize_ticket_post_its(db, current_user, ids)
 
 
+@router.get("/ticket-watch/ids")
+async def list_watched_ticket_ids(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[uuid.UUID]:
+    return await ticket_watch_service.list_watched_ticket_ids(db, current_user)
+
+
+@router.get("/ticket-watch/summary")
+async def summarize_ticket_watch(
+    ticket_ids: str = Query(..., min_length=36),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[TicketWatchSummary]:
+    ids: list[uuid.UUID] = []
+    for part in ticket_ids.split(","):
+        trimmed = part.strip()
+        if trimmed:
+            ids.append(uuid.UUID(trimmed))
+    return await ticket_watch_service.summarize_watch_state(db, current_user, ids)
+
+
+@router.get("/ticket-watch/tickets")
+async def list_watched_tickets(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> WatchedTicketsRead:
+    return await ticket_watch_service.list_watched_tickets(db, current_user)
+
+
+@router.get("/ticket-watch/updates")
+async def list_ticket_watch_updates(
+    since: datetime = Query(..., description="ISO 8601 timestamp — events after this time"),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[TicketWatchActivityRead]:
+    return await ticket_watch_service.list_watch_updates(db, current_user, since=since)
+
+
+@router.put("/tickets/{ticket_id}/watch", status_code=status.HTTP_204_NO_CONTENT)
+async def watch_ticket(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    try:
+        await ticket_watch_service.watch_ticket(db, current_user, ticket_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND) from None
+
+
+@router.delete("/tickets/{ticket_id}/watch", status_code=status.HTTP_204_NO_CONTENT)
+async def unwatch_ticket(
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    try:
+        await ticket_watch_service.unwatch_ticket(db, current_user, ticket_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND) from None
+
+
 @router.get("/kanban")
 async def get_kanban(
     db: AsyncSession = Depends(require_db),
@@ -153,3 +222,17 @@ async def remove_kanban_card(
         await personal_service.remove_kanban_card(db, current_user, ticket_id)
     except LookupError:
         raise HTTPException(status_code=404, detail=NOT_FOUND) from None
+
+
+@router.get("/mentions-overview", response_model=PersonalMentionsOverviewRead)
+async def get_personal_mentions_overview(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(default=30, ge=1, le=100),
+) -> PersonalMentionsOverviewRead:
+    try:
+        return await list_personal_mentions_overview(db, current_user, limit=limit)
+    except ValueError as exc:
+        if str(exc) == "staff_only":
+            raise HTTPException(status_code=403, detail="Kun for interne medarbejdere") from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

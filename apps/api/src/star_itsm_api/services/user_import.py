@@ -1,4 +1,4 @@
-"""Bulk import of users from CSV/JSON rows (e.g. TOPdesk person export)."""
+"""Bulk import of users from CSV/JSON rows (e.g. person export)."""
 
 import uuid
 from dataclasses import dataclass

@@ -1,7 +1,7 @@
 import { canManageUsers, isStaff } from "@/lib/auth";
 import type { User } from "@/types/user";
 
-/** UI flow preference: modern STARdesk wireframe vs classic (TOPdesk-style) modules. */
+/** UI flow preference: modern STARdesk wireframe vs classic ITSM-style modules. */
 export const UI_MODE_COOKIE = "stardesk_ui_mode";
 
 export type UiMode = "modern" | "classic";

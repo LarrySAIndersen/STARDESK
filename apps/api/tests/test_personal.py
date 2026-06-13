@@ -15,7 +15,7 @@ from star_itsm_api.core.security import (
     get_current_user_session,
 )
 from star_itsm_api.main import app
-from star_itsm_api.services import personal_service
+from star_itsm_api.services import personal_service, ticket_watch_service
 
 
 def _user(*, role: str) -> SimpleNamespace:
@@ -721,3 +721,51 @@ async def test_move_kanban_card_other_value_error(
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "unexpected"
+
+
+@pytest.mark.asyncio
+async def test_watch_ticket_endpoint(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        ticket_watch_service,
+        "watch_ticket",
+        AsyncMock(),
+    )
+
+    response = await api_client.put(f"/api/v1/personal/tickets/{ticket_id}/watch")
+    assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_unwatch_ticket_endpoint(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        ticket_watch_service,
+        "unwatch_ticket",
+        AsyncMock(),
+    )
+
+    response = await api_client.delete(f"/api/v1/personal/tickets/{ticket_id}/watch")
+    assert response.status_code == 204

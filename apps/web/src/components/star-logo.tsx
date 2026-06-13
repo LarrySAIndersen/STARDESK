@@ -50,10 +50,10 @@ export function StarLogo({
     <span className="flex min-w-0 items-center gap-3">
       {mark}
       <span className="hidden min-w-0 max-w-[11rem] flex-col leading-tight lg:flex">
-        <span className="text-[10px] font-semibold tracking-wide text-white/90 uppercase">
+        <span className="text-[10px] font-semibold tracking-wide text-white uppercase">
           STAR
         </span>
-        <span className="text-[9px] font-medium text-white/65">{ORG_SUBTITLE}</span>
+        <span className="text-[9px] font-medium text-white/90">{ORG_SUBTITLE}</span>
       </span>
     </span>
   );
