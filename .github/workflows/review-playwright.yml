@@ -41,9 +41,10 @@ jobs:
           TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           STARDESK_API_URL: ${{ secrets.STARDESK_API_URL }}
           STARDESK_API_TOKEN: ${{ secrets.STARDESK_API_TOKEN }}
+          TASK_NUMBER: ${{ github.event.inputs.task_number }}
         run: |
           node scripts/run-review-playwright-pipeline.mjs \
-            --task "${{ github.event.inputs.task_number }}" \
+            --task "$TASK_NUMBER" \
             --export-from-api \
             --push-to-api \
             --continue-on-failure
