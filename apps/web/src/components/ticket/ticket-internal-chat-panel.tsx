@@ -131,11 +131,13 @@ export function TicketInternalChatPanel({
         </p>
         <SearchableSelect
           valueId={null}
-          query={inviteQuery}
-          onQueryChange={setInviteQuery}
+          displayValue=""
           options={inviteOptions}
           placeholder="Søg kollega…"
+          emptyLabel="Ingen kollega fundet"
+          allowClear={false}
           disabled={sending}
+          onQueryChange={setInviteQuery}
           onSelect={(option) => fireAndForget(invitePerson(option))}
         />
       </div>
