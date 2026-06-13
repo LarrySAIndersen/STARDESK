@@ -4,6 +4,7 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from star_itsm_api.core.config import settings
 from star_itsm_api.core.demo import get_prototype_bootstrap_password
 from star_itsm_api.core.password_policy import (
     effective_must_change_password,
@@ -18,6 +19,8 @@ from star_itsm_api.core.security import (
     hash_password,
     verify_password,
 )
+from star_itsm_api.db import engine
+from star_itsm_api.db_schema_sync import ensure_login_throttle_schema_current
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
@@ -31,6 +34,7 @@ from star_itsm_api.schemas.auth import (
 )
 from star_itsm_api.services.login_throttle import (
     assert_login_allowed,
+    mark_login_throttle_schema_ready,
     on_login_failure,
     on_login_success,
 )
@@ -44,6 +48,18 @@ from star_itsm_api.services.user_roles import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+_login_throttle_schema_ensured = False
+
+
+async def _ensure_login_throttle_schema() -> None:
+    """Create login_throttle on first login when Vercel cold-start sync did not run."""
+    global _login_throttle_schema_ensured
+    if _login_throttle_schema_ensured or engine is None or not settings.database_url:
+        return
+    await ensure_login_throttle_schema_current(engine, settings.database_url)
+    mark_login_throttle_schema_ready()
+    _login_throttle_schema_ensured = True
 
 
 def _current_password_valid(user: User, current_password: str) -> bool:
@@ -81,6 +97,7 @@ async def login(
 ) -> TokenResponse:
     normalized_email = payload.email.lower().strip()
     client_ip = client_ip_from_request(request)
+    await _ensure_login_throttle_schema()
     await assert_login_allowed(db, normalized_email, client_ip)
 
     user = await get_user_by_email(db, payload.email)

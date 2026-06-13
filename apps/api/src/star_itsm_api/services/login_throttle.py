@@ -6,11 +6,10 @@ import logging
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import TypeVar
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
-from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.exc import DBAPIError, ProgrammingError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
@@ -33,10 +32,30 @@ _IP_RATE_LIMIT = (
 )
 
 _login_throttle_table_missing = False
-T = TypeVar("T")
 
 
-async def _with_login_throttle_table(
+def _is_login_throttle_schema_error(exc: BaseException) -> bool:
+    parts = [str(exc).lower()]
+    orig = getattr(exc, "orig", None)
+    if orig is not None:
+        parts.append(str(orig).lower())
+    message = " ".join(parts)
+    return "login_throttle" in message or ("does not exist" in message and "throttle" in message)
+
+
+def _as_utc_aware(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
+def mark_login_throttle_schema_ready() -> None:
+    """Re-enable throttling after schema sync created login_throttle."""
+    global _login_throttle_table_missing
+    _login_throttle_table_missing = False
+
+
+async def _with_login_throttle_table[T](
     db: AsyncSession,
     operation: Callable[[], Awaitable[T]],
     *,
@@ -48,11 +67,14 @@ async def _with_login_throttle_table(
         return fallback
     try:
         return await operation()
-    except ProgrammingError as exc:
-        if "login_throttle" not in str(exc).lower():
+    except (ProgrammingError, DBAPIError, SQLAlchemyError) as exc:
+        if not _is_login_throttle_schema_error(exc):
             raise
         _login_throttle_table_missing = True
-        await db.rollback()
+        try:
+            await db.rollback()
+        except SQLAlchemyError:
+            logger.exception("rollback after login_throttle schema error failed")
         logger.warning("login_throttle table missing — login throttling disabled until migrated")
         return fallback
 
@@ -115,7 +137,7 @@ async def assert_login_allowed(
     now = _now()
     ip_row = await _get_row(db, scope=SCOPE_IP, throttle_key=client_ip)
     if ip_row is not None:
-        window_end = ip_row.window_started_at + _ip_window()
+        window_end = _as_utc_aware(ip_row.window_started_at) + _ip_window()
         if now < window_end and ip_row.failed_attempts >= settings.login_ip_max_attempts:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -129,7 +151,7 @@ async def assert_login_allowed(
     account_row = await _get_row(db, scope=SCOPE_ACCOUNT, throttle_key=email)
     if account_row is None or account_row.locked_until is None:
         return
-    if account_row.locked_until > now:
+    if _as_utc_aware(account_row.locked_until) > now:
         remaining = max(1, int((account_row.locked_until - now).total_seconds() // 60) or 1)
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -156,7 +178,7 @@ async def _increment_ip_failures(db: AsyncSession, client_ip: str) -> None:
         )
         await _upsert_row(db, row)
         return
-    window_end = row.window_started_at + _ip_window()
+    window_end = _as_utc_aware(row.window_started_at) + _ip_window()
     if now >= window_end:
         row.failed_attempts = 1
         row.window_started_at = now
@@ -192,7 +214,7 @@ async def on_login_failure(
             window_started_at=now,
         )
     else:
-        if row.locked_until is not None and row.locked_until <= now:
+        if row.locked_until is not None and _as_utc_aware(row.locked_until) <= now:
             row.failed_attempts = 0
             row.locked_until = None
         row.failed_attempts += 1
