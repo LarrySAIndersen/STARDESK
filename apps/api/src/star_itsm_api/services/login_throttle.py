@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
+from typing import TypeVar
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
+from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
@@ -14,6 +18,8 @@ from star_itsm_api.core.demo import get_prototype_bootstrap_password
 from star_itsm_api.core.security import hash_password
 from star_itsm_api.models.login_throttle import SCOPE_ACCOUNT, SCOPE_IP, LoginThrottle
 from star_itsm_api.models.user import User
+
+logger = logging.getLogger(__name__)
 
 _GENERIC_LOCKOUT = (
     "For mange forkerte login-forsøg. Kontoen er midlertidigt låst — prøv igen senere."
@@ -25,6 +31,30 @@ _DEMO_LOCKOUT = (
 _IP_RATE_LIMIT = (
     "For mange login-forsøg fra denne forbindelse. Vent et øjeblik og prøv igen."
 )
+
+_login_throttle_table_missing = False
+T = TypeVar("T")
+
+
+async def _with_login_throttle_table(
+    db: AsyncSession,
+    operation: Callable[[], Awaitable[T]],
+    *,
+    fallback: T,
+) -> T:
+    """Run throttle DB work; skip when login_throttle table is not migrated yet."""
+    global _login_throttle_table_missing
+    if _login_throttle_table_missing:
+        return fallback
+    try:
+        return await operation()
+    except ProgrammingError as exc:
+        if "login_throttle" not in str(exc).lower():
+            raise
+        _login_throttle_table_missing = True
+        await db.rollback()
+        logger.warning("login_throttle table missing — login throttling disabled until migrated")
+        return fallback
 
 
 def _now() -> datetime:
@@ -55,19 +85,25 @@ async def _get_row(
     scope: str,
     throttle_key: str,
 ) -> LoginThrottle | None:
-    result = await db.execute(
-        select(LoginThrottle).where(
-            LoginThrottle.scope == scope,
-            LoginThrottle.throttle_key == throttle_key,
+    async def _load() -> LoginThrottle | None:
+        result = await db.execute(
+            select(LoginThrottle).where(
+                LoginThrottle.scope == scope,
+                LoginThrottle.throttle_key == throttle_key,
+            )
         )
-    )
-    return result.scalar_one_or_none()
+        return result.scalar_one_or_none()
+
+    return await _with_login_throttle_table(db, _load, fallback=None)
 
 
 async def _upsert_row(db: AsyncSession, row: LoginThrottle) -> None:
-    row.updated_at = _now()
-    db.add(row)
-    await db.commit()
+    async def _save() -> None:
+        row.updated_at = _now()
+        db.add(row)
+        await db.commit()
+
+    await _with_login_throttle_table(db, _save, fallback=None)
 
 
 async def assert_login_allowed(
@@ -170,10 +206,13 @@ async def on_login_failure(
 
 
 async def on_login_success(db: AsyncSession, email: str) -> None:
-    await db.execute(
-        delete(LoginThrottle).where(
-            LoginThrottle.scope == SCOPE_ACCOUNT,
-            LoginThrottle.throttle_key == email,
+    async def _clear() -> None:
+        await db.execute(
+            delete(LoginThrottle).where(
+                LoginThrottle.scope == SCOPE_ACCOUNT,
+                LoginThrottle.throttle_key == email,
+            )
         )
-    )
-    await db.commit()
+        await db.commit()
+
+    await _with_login_throttle_table(db, _clear, fallback=None)
