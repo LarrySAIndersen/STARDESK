@@ -1,6 +1,6 @@
--- Restore / upsert Larry Sanders admin (password: password)
+-- Restore / upsert Larry Sanders admin (password: Stardesk2026!)
 -- Run in Neon when larrysanders@example.dk cannot log in.
--- bcrypt for "password": $2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC
+-- bcrypt pepper hash (example-dk-v1): $2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC
 
 INSERT INTO users (id, email, display_name, role, is_active, password_hash) VALUES
     (
@@ -9,7 +9,7 @@ INSERT INTO users (id, email, display_name, role, is_active, password_hash) VALU
         'Larrysanders',
         'admin',
         TRUE,
-        '$2b$12$R4g4tKPsO73abz4FuHtEXuYIwua1Rr3zsfp/N4x3R5h07rV33EzXC'
+        '$2b$12$Ss7R94HhRfq3Vq22M9ivS.1/OlQMmAdxdh9x9XaTwh9F0FmR1vlZC'
     )
 ON CONFLICT (email) DO UPDATE SET
     display_name = EXCLUDED.display_name,
