@@ -5,6 +5,7 @@ import {
   NAV_LAYOUT_VERSION,
   buildDefaultNavLayout,
   sanitizeNavLayout,
+  type NavLayout,
 } from "@/lib/agent-nav-config";
 
 describe("sanitizeNavLayout", () => {
@@ -17,7 +18,7 @@ describe("sanitizeNavLayout", () => {
     const defaultLayout = buildDefaultNavLayout(items, { includeClassicUi: false });
     const availableIds = new Set(defaultLayout.entries.map((entry) => entry.id));
 
-    const savedWithoutSystemDocs = {
+    const savedWithoutSystemDocs: NavLayout = {
       version: NAV_LAYOUT_VERSION,
       entries: defaultLayout.entries.filter((entry) => entry.id !== "system-dokumentation"),
     };
