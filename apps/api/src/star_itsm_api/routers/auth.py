@@ -20,7 +20,7 @@ from star_itsm_api.core.security import (
     verify_password,
 )
 from star_itsm_api.db import engine
-from star_itsm_api.db_schema_sync import ensure_login_throttle_schema_current
+from star_itsm_api.db_schema_sync import ensure_auth_login_schema_current
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
@@ -49,17 +49,17 @@ from star_itsm_api.services.user_roles import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-_login_throttle_schema_ensured = False
+_login_auth_schema_ensured = False
 
 
-async def _ensure_login_throttle_schema() -> None:
-    """Create login_throttle on first login when Vercel cold-start sync did not run."""
-    global _login_throttle_schema_ensured
-    if _login_throttle_schema_ensured or engine is None or not settings.database_url:
+async def _ensure_auth_login_schema() -> None:
+    """Sync login_throttle + users ORM columns before auth DB queries (Vercel/Neon gap)."""
+    global _login_auth_schema_ensured
+    if _login_auth_schema_ensured or engine is None or not settings.database_url:
         return
-    await ensure_login_throttle_schema_current(engine, settings.database_url)
+    await ensure_auth_login_schema_current(engine, settings.database_url)
     mark_login_throttle_schema_ready()
-    _login_throttle_schema_ensured = True
+    _login_auth_schema_ensured = True
 
 
 def _current_password_valid(user: User, current_password: str) -> bool:
@@ -97,7 +97,7 @@ async def login(
 ) -> TokenResponse:
     normalized_email = payload.email.lower().strip()
     client_ip = client_ip_from_request(request)
-    await _ensure_login_throttle_schema()
+    await _ensure_auth_login_schema()
     await assert_login_allowed(db, normalized_email, client_ip)
 
     user = await get_user_by_email(db, payload.email)

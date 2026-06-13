@@ -134,6 +134,24 @@ async def assert_login_allowed(
     client_ip: str,
 ) -> None:
     """Raise 429 when IP or account is throttled."""
+    try:
+        await _assert_login_allowed_impl(db, email, client_ip)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("login throttle check failed — allowing login attempt")
+        try:
+            await db.rollback()
+        except SQLAlchemyError:
+            logger.exception("rollback after login throttle failure failed")
+
+
+async def _assert_login_allowed_impl(
+    db: AsyncSession,
+    email: str,
+    client_ip: str,
+) -> None:
+    """Raise 429 when IP or account is throttled."""
     now = _now()
     ip_row = await _get_row(db, scope=SCOPE_IP, throttle_key=client_ip)
     if ip_row is not None:
@@ -196,6 +214,22 @@ async def _reset_prototype_password(db: AsyncSession, user: User) -> None:
 
 
 async def on_login_failure(
+    db: AsyncSession,
+    email: str,
+    client_ip: str,
+    user: User | None,
+) -> None:
+    try:
+        await _on_login_failure_impl(db, email, client_ip, user)
+    except Exception:
+        logger.exception("login throttle failure recording skipped")
+        try:
+            await db.rollback()
+        except SQLAlchemyError:
+            logger.exception("rollback after login failure throttle error failed")
+
+
+async def _on_login_failure_impl(
     db: AsyncSession,
     email: str,
     client_ip: str,

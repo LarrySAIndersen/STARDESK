@@ -2,6 +2,15 @@
 -- Password for all @example.dk demo users: Stardesk2026!
 -- Pepper hash (example-dk-v1): see migration 36_larrysanders-prototype-account.sql
 
+-- 0) User columns required by SQLAlchemy User model (prod may lack these if Alembic never ran)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_policy_exempt BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id UUID;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_preset_id VARCHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ui_mode VARCHAR(16);
+
 -- 1) Login throttle table (prod 500 root cause when missing)
 CREATE TABLE IF NOT EXISTS login_throttle (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

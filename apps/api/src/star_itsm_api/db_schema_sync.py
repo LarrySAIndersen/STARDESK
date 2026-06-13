@@ -368,6 +368,17 @@ async def ensure_login_throttle_schema_current(
         logger.exception("login_throttle schema sync failed — login rate limit may not work")
 
 
+async def ensure_auth_login_schema_current(
+    engine: AsyncEngine | None,
+    database_url: str | None,
+) -> None:
+    """Ensure DB objects required for /auth/login exist (Neon prod often skips Alembic)."""
+    if engine is None or not database_url:
+        return
+    await ensure_login_throttle_schema_current(engine, database_url)
+    await ensure_ticket_schema_current(engine, database_url)
+
+
 async def ensure_team_chat_schema_current(
     engine: AsyncEngine | None,
     database_url: str | None,
