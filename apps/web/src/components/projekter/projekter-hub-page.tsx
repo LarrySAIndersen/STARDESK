@@ -7,7 +7,6 @@ import { ArrowUpRight, FolderKanban, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   filterProjekterHubItems,
-  PROJEKTER_HUB_ITEMS,
 } from "@/lib/projekter-hub";
 import { cn } from "@/lib/utils";
 

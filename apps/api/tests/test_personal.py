@@ -769,3 +769,62 @@ async def test_unwatch_ticket_endpoint(
 
     response = await api_client.delete(f"/api/v1/personal/tickets/{ticket_id}/watch")
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_mentions_overview_endpoint(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from star_itsm_api.routers import personal as personal_router
+    from star_itsm_api.schemas.ticket_internal_chat import PersonalMentionsOverviewRead
+
+    user = _user(role=ROLE_AGENT)
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    monkeypatch.setattr(
+        personal_router,
+        "list_personal_mentions_overview",
+        AsyncMock(return_value=PersonalMentionsOverviewRead(items=[])),
+    )
+
+    response = await api_client.get("/api/v1/personal/mentions-overview")
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+
+
+@pytest.mark.asyncio
+async def test_ticket_watch_summary_endpoint(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    user = _user(role=ROLE_AGENT)
+    ticket_id = uuid.uuid4()
+
+    def _as_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = _as_user
+    app.dependency_overrides[get_current_user_session] = _as_user
+
+    from star_itsm_api.schemas.personal import TicketWatchSummary
+
+    monkeypatch.setattr(
+        ticket_watch_service,
+        "summarize_watch_state",
+        AsyncMock(
+            return_value=[TicketWatchSummary(ticket_id=ticket_id, watching=True)],
+        ),
+    )
+
+    response = await api_client.get(
+        f"/api/v1/personal/ticket-watch/summary?ticket_ids={ticket_id}",
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["watching"] is True

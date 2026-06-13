@@ -73,11 +73,13 @@ export function TicketQuickInviteButton({
     >
       <SearchableSelect
         valueId={null}
-        query={query}
-        onQueryChange={setQuery}
+        displayValue=""
         options={options}
         placeholder="Vælg kollega…"
+        emptyLabel="Ingen kollega fundet"
+        allowClear={false}
         disabled={busy}
+        onQueryChange={setQuery}
         onSelect={(option) => fireAndForget(invite(option))}
       />
     </div>

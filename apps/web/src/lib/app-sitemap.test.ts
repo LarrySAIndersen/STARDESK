@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildAppSitemapSections,
   filterAppSitemapSections,
-  isExternalNavHref,
   navIconForItemId,
 } from "@/lib/app-sitemap";
 import type { User } from "@/types/user";

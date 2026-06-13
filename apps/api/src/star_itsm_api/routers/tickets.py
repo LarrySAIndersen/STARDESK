@@ -58,6 +58,11 @@ from star_itsm_api.schemas.ticket_intelligence import (
     TicketLlmContextRead,
     TicketLlmEvalPackRead,
 )
+from star_itsm_api.schemas.ticket_internal_chat import (
+    TicketInternalChatInviteRequest,
+    TicketInternalChatMessageCreate,
+    TicketInternalChatRead,
+)
 from star_itsm_api.services.attachments import (
     build_attachment_download_response,
     delete_ticket_attachment,
@@ -117,6 +122,11 @@ from star_itsm_api.services.ticket_intelligence import (
     build_ticket_llm_context,
     intelligence_from_ticket,
 )
+from star_itsm_api.services.ticket_internal_chat import (
+    get_ticket_internal_chat_read,
+    invite_user_to_ticket_internal_chat,
+    post_ticket_internal_chat_message,
+)
 from star_itsm_api.services.ticket_list_query import (
     apply_list_tickets_post_filters,
     build_list_tickets_stmt,
@@ -154,16 +164,6 @@ from star_itsm_api.services.ticket_stakeholders import (
     sync_ticket_stakeholders_on_create,
     upsert_stakeholder,
     validate_stakeholder_user_ids,
-)
-from star_itsm_api.schemas.ticket_internal_chat import (
-    TicketInternalChatInviteRequest,
-    TicketInternalChatMessageCreate,
-    TicketInternalChatRead,
-)
-from star_itsm_api.services.ticket_internal_chat import (
-    get_ticket_internal_chat_read,
-    invite_user_to_ticket_internal_chat,
-    post_ticket_internal_chat_message,
 )
 from star_itsm_api.services.ticket_timestamps import (
     apply_status_milestone_timestamps,

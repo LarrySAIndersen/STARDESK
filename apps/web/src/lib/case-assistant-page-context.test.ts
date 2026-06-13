@@ -59,6 +59,13 @@ describe("resolveCaseAssistantPageContext", () => {
     expect(resolveCaseAssistantPageContext("/knowledge").kind).toBe("knowledge");
     expect(resolveCaseAssistantPageContext("/tickets/new").kind).toBe("create-ticket");
   });
+
+  it("detects workspace hub pages", () => {
+    expect(resolveCaseAssistantPageContext("/projekter").pageLabel).toBe("Projekter");
+    expect(resolveCaseAssistantPageContext("/arbejdsrum").pageLabel).toBe("Arbejdsrum");
+    expect(resolveCaseAssistantPageContext("/teamwiki").pageLabel).toBe("Teamwiki");
+    expect(resolveCaseAssistantPageContext("/chat").pageLabel).toBe("Chat");
+  });
 });
 
 describe("buildCaseAssistantWelcome", () => {
