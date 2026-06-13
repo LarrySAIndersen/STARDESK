@@ -776,8 +776,8 @@ async def test_mentions_overview_endpoint(
     api_client: AsyncClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from star_itsm_api.schemas.ticket_internal_chat import PersonalMentionsOverviewRead
     from star_itsm_api.routers import personal as personal_router
+    from star_itsm_api.schemas.ticket_internal_chat import PersonalMentionsOverviewRead
 
     user = _user(role=ROLE_AGENT)
 
