@@ -30,9 +30,9 @@ Implementering: `apps/api/src/star_itsm_api/services/org_access.py`, `services/p
 
 | Brugergruppe | Adgangskode |
 |--------------|-------------|
-| Alle `@example.dk` i seed (undtagen nedenfor) | `Stardesk2026!` |
-| `larrysanders@example.dk` | `password` (ikke på login-listen) |
-| `larrysanders2@example.dk` | `password` — kun klassisk UI (`ui_mode=classic`), gruppe Landssupport |
+| Alle `@example.dk` i seed | `Stardesk2026!` |
+| `larrysanders@example.dk` | `Stardesk2026!` (ikke på login-listen) |
+| `larrysanders2@example.dk` | `Stardesk2026!` — kun klassisk UI (`ui_mode=classic`), gruppe Landssupport |
 
 ## Aktive testbrugere (login-UI)
 
