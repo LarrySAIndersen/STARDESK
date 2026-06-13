@@ -40,7 +40,7 @@ export type CaseAssistantQuickAction = {
 };
 
 const PAGE_LABELS: Record<string, string> = {
-  "/": "Dashboard",
+  "/": "Hjem",
   "/min-side": "Min side",
   "/service-desk": "Service Desk",
   "/kanban": "Kanban",
@@ -201,174 +201,179 @@ export function resolveCaseAssistantPageContext(pathname: string): CaseAssistant
   };
 }
 
+export type CaseAssistantWelcomeMessages = {
+  general: string;
+  pageSpecific: string;
+};
+
+function firstName(displayName?: string | null): string {
+  if (!displayName?.trim()) {
+    return "";
+  }
+  return ` ${displayName.trim().split(/\s+/)[0]}`;
+}
+
+export function buildCaseAssistantWelcomeMessages(options: {
+  staff: boolean;
+  displayName?: string | null;
+  pageContext: CaseAssistantPageContext;
+  ticket?: Pick<Ticket, "ticket_number" | "title"> | null;
+}): CaseAssistantWelcomeMessages {
+  const { staff, displayName, pageContext, ticket } = options;
+  const namePart = firstName(displayName);
+
+  const general = staff
+    ? `Hej${namePart}! Hvad kan jeg hjælpe med i dag?`
+    : `Hej${namePart}! Hvad har du brug for hjælp til?`;
+
+  const pageSpecific = buildCaseAssistantPageQuestion({
+    staff,
+    pageContext,
+    ticket,
+  });
+
+  return { general, pageSpecific };
+}
+
+function buildCaseAssistantPageQuestion(options: {
+  staff: boolean;
+  pageContext: CaseAssistantPageContext;
+  ticket?: Pick<Ticket, "ticket_number" | "title"> | null;
+}): string {
+  const { staff, pageContext, ticket } = options;
+  const { kind, pageLabel } = pageContext;
+
+  if (kind === "ticket-detail") {
+    const ticketLabel = ticket
+      ? `**${ticket.ticket_number}** — ${ticket.title}`
+      : "den sag, du kigger på";
+
+    return staff
+      ? `Du er på sagsdetaljer for ${ticketLabel}. Vil du have en opsummering, statusforklaring eller forslag til næste skridt?`
+      : `Du kigger på ${ticketLabel}. Vil du have en opsummering eller forklaring på status?`;
+  }
+
+  if (kind === "ticket-list") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du søge et sagsnummer, se mine sager eller få hjælp til filtre?`
+      : `Du er i **${pageLabel}**. Vil du se dine sager eller søge på et sagsnummer?`;
+  }
+
+  if (kind === "create-ticket") {
+    return `Du opretter en ny sag. Vil du have hjælp til kategori, titel eller beskrivelse?`;
+  }
+
+  if (kind === "service-desk") {
+    return staff
+      ? `Du er på **Service Desk**. Vil du hjælpe med sagsopslag, køen eller fordeling af nye sager?`
+      : `Du er på **Service Desk**. Vil du finde en sag eller få hjælp med en henvendelse?`;
+  }
+
+  if (kind === "knowledge") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du søge artikler, finde et emne eller få hjælp til vidensbasen?`
+      : `Du er i vidensbasen. Vil du søge vejledninger — fx VPN, MitID eller andre emner?`;
+  }
+
+  if (kind === "reports") {
+    return staff
+      ? `Du er på **${pageLabel}**. Vil du forstå KPI'erne, finde den rigtige rapport eller få hjælp til eksport?`
+      : `Du er på **${pageLabel}**. Vil du have hjælp til at læse tallene eller finde det du leder efter?`;
+  }
+
+  if (kind === "analytics") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du have hjælp til at læse grafer, trends eller filtre på siden?`
+      : `Du er i **${pageLabel}**. Vil du have hjælp til at forstå det du ser her?`;
+  }
+
+  if (kind === "kanban") {
+    return staff
+      ? `Du er på **Kanban**. Vil du have hjælp til boards, kolonner, WIP-grænser eller arbejdsflow?`
+      : `Du er på **Kanban**. Vil du have hjælp til at bruge boardet?`;
+  }
+
+  if (kind === "backlog") {
+    return staff
+      ? `Du er i **Backlog**. Vil du prioritere sager, planlægge sprint eller få overblik over køen?`
+      : `Du er i **Backlog**. Vil du have hjælp til at finde eller prioritere sager?`;
+  }
+
+  if (kind === "dashboard") {
+    return staff
+      ? `Du er på **${pageLabel}**. Vil du bruge sitemapet, åbne arbejdsrum eller få et hurtigt overblik over dagens drift?`
+      : `Du er på **${pageLabel}**. Vil du finde en side, se dine sager eller få IT-hjælp?`;
+  }
+
+  if (kind === "admin") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du have hjælp til indstillinger, konfiguration eller hvad denne side gør?`
+      : `Du er på **${pageLabel}**. Vil du have hjælp til at bruge siden?`;
+  }
+
+  if (kind === "users") {
+    return staff
+      ? `Du er i **Brugere**. Vil du have hjælp til roller, adgang eller brugeradministration?`
+      : `Du er i **Brugere**. Vil du have hjælp til at finde eller administrere brugere?`;
+  }
+
+  if (kind === "assets") {
+    return staff
+      ? `Du er i **Aktiver**. Vil du søge udstyr, CMDB eller tilknytte aktiver til sager?`
+      : `Du er i **Aktiver**. Vil du finde eller forstå et aktiv?`;
+  }
+
+  if (kind === "groups") {
+    return staff
+      ? `Du er i **Grupper**. Vil du have hjælp til team-tildeling, eskalering eller gruppeindstillinger?`
+      : `Du er i **Grupper**. Vil du have hjælp til at finde eller forstå en gruppe?`;
+  }
+
+  if (kind === "integrations") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du opsætte, synkronisere eller fejlfinde denne integration?`
+      : `Du er i **${pageLabel}**. Vil du have hjælp til integrationen?`;
+  }
+
+  if (kind === "portal") {
+    return staff
+      ? `Du kigger på **${pageLabel}** (slutbruger-visning). Vil du forstå portal-flows eller selvbetjening?`
+      : `Du er i selvbetjeningen. Vil du se dine sager, læse vejledninger eller oprette en ny sag?`;
+  }
+
+  if (kind === "profile") {
+    return staff
+      ? `Du er på **${pageLabel}**. Vil du have hjælp til profil, avatar eller adgangskode?`
+      : `Du er på **${pageLabel}**. Vil du opdatere profil eller skifte adgangskode?`;
+  }
+
+  if (kind === "forbedringer") {
+    return staff
+      ? `Du er i **${pageLabel}**. Vil du arbejde med review-sedler, layout-forslag eller forbedringer?`
+      : `Du er i **${pageLabel}**. Vil du have hjælp til siden?`;
+  }
+
+  if (kind === "classic") {
+    return staff
+      ? `Du er i **${pageLabel}** (Classic UI). Vil du hjælpe med sager, incidents eller ændringer?`
+      : `Du er i **${pageLabel}**. Vil du have hjælp til at bruge Classic UI?`;
+  }
+
+  if (staff) {
+    return `Du er på **${pageLabel}**. Vil du søge en sag, se mine sager eller oprette en ny henvendelse?`;
+  }
+
+  return `Du er på **${pageLabel}**. Vil du se mine sager, søge et sagsnummer eller oprette en sag?`;
+}
+
 export function buildCaseAssistantWelcome(options: {
   staff: boolean;
   displayName?: string | null;
   pageContext: CaseAssistantPageContext;
   ticket?: Pick<Ticket, "ticket_number" | "title"> | null;
 }): string {
-  const { staff, displayName, pageContext, ticket } = options;
-  const namePart = displayName ? ` ${displayName.split(" ")[0]}` : "";
-
-  if (pageContext.kind === "ticket-detail") {
-    const ticketLabel = ticket
-      ? `**${ticket.ticket_number}** — ${ticket.title}`
-      : "den sag, du kigger på";
-
-    if (staff) {
-      return [
-        `Hej${namePart}! Du er på sagsdetaljer for ${ticketLabel}.`,
-        "",
-        "Vil du have hjælp? Jeg kan fx:",
-        "• Opsummere sagen",
-        "• Forklare status og SLA",
-        "• Foreslå næste skridt",
-        "",
-        "Tryk på et forslag nedenfor, eller skriv frit.",
-      ].join("\n");
-    }
-
-    return [
-      `Hej${namePart}! Du kigger på ${ticketLabel}.`,
-      "",
-      "Skal jeg hjælpe? Jeg kan fx opsummere sagen eller forklare status.",
-      "Tryk på et forslag nedenfor, eller skriv dit spørgsmål.",
-    ].join("\n");
-  }
-
-  if (pageContext.kind === "ticket-list") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg fx om \`mine sager\`, et sagsnummer, eller brug mikrofonen.`
-      : `Hej${namePart}! Her kan du se sager. Skriv \`mine sager\` eller et sagsnummer for hjælp.`;
-  }
-
-  if (pageContext.kind === "create-ticket") {
-    return `Hej${namePart}! Du opretter en ny sag. Skriv fx \`opret Titel - Beskrivelse\`, eller spørg om kategorier.`;
-  }
-
-  if (pageContext.kind === "service-desk") {
-    return staff
-      ? `Hej${namePart}! Du er på **Service Desk**. Jeg kan hjælpe med sagsopslag, status og korte kommandoer.`
-      : `Hej${namePart}! Spørg om dine sager eller skriv et sagsnummer.`;
-  }
-
-  if (pageContext.kind === "knowledge") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om emner, artikler eller søgning i vidensbasen.`
-      : `Hej${namePart}! Du er i vidensbasen. Spørg fx om VPN, MitID eller andre emner.`;
-  }
-
-  if (pageContext.kind === "reports") {
-    return staff
-      ? [
-          `Hej${namePart}! Jeg kan se, du er på **${pageContext.pageLabel}**.`,
-          "",
-          "Her får du overblik over Service Desk KPI'er. Jeg kan fx:",
-          "• Forklare hvad tallene betyder",
-          "• Guide dig til den rigtige rapport",
-          "• Hjælpe med filtre og eksport",
-        ].join("\n")
-      : `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "analytics") {
-    return staff
-      ? [
-          `Hej${namePart}! Du er i **${pageContext.pageLabel}**.`,
-          "",
-          "Jeg kan hjælpe med:",
-          "• At læse grafer og trends",
-          "• Observability og sagspipeline",
-          "• Filtre og tidsperioder",
-        ].join("\n")
-      : `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "kanban") {
-    return staff
-      ? `Hej${namePart}! Du er på **Kanban**. Jeg kan hjælpe med boards, kolonner, WIP-grænser og arbejdsflow.`
-      : `Hej${namePart}! Du er på **Kanban**. Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "backlog") {
-    return staff
-      ? `Hej${namePart}! Du er i **Backlog**. Spørg om prioritering, sprint-planlægning eller sagsstatus.`
-      : `Hej${namePart}! Du er i **Backlog**. Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "dashboard") {
-    return staff
-      ? `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Her ser du drifts-KPI'er — spørg fx om SLA, køer eller dagens overblik.`
-      : `Hej${namePart}! Velkommen til **${pageContext.pageLabel}**. Spørg om dine sager eller IT-hjælp.`;
-  }
-
-  if (pageContext.kind === "admin") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om indstillinger, konfiguration eller hvad denne side gør.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "users") {
-    return staff
-      ? `Hej${namePart}! Du er i **Brugere**. Jeg kan hjælpe med roller, adgang og brugeradministration.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "assets") {
-    return staff
-      ? `Hej${namePart}! Du er i **Aktiver**. Spørg om CMDB, udstyr eller tilknytning til sager.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "groups") {
-    return staff
-      ? `Hej${namePart}! Du er i **Grupper**. Spørg om team-tildeling, eskalering eller gruppeindstillinger.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "integrations") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om opsætning, synkronisering eller fejlfinding.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "portal") {
-    return staff
-      ? `Hej${namePart}! Du kigger på **${pageContext.pageLabel}** (slutbruger-visning). Spørg om portal-flows og selvbetjening.`
-      : `Hej${namePart}! Velkommen i selvbetjeningen. Spørg om dine sager, vejledninger eller opret en ny sag.`;
-  }
-
-  if (pageContext.kind === "profile") {
-    return staff
-      ? `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Spørg hvis du har brug for hjælp til profil eller adgangskode.`
-      : `Hej${namePart}! Her kan du administrere din profil. Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "forbedringer") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}**. Spørg om review-sedler, layout-forslag eller forbedringsarbejde.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (pageContext.kind === "classic") {
-    return staff
-      ? `Hej${namePart}! Du er i **${pageContext.pageLabel}** (Classic UI). Jeg kan hjælpe med sager, incidents og ændringer.`
-      : `Hej${namePart}! Spørg hvis du har brug for hjælp.`;
-  }
-
-  if (staff) {
-    return [
-      `Hej${namePart}! Jeg er Help-a-bot. Du er på **${pageContext.pageLabel}**.`,
-      "",
-      "Korte kommandoer:",
-      "• `INC-2026-00118` — find sag",
-      "• `luk INC-…` — luk sag",
-      "• `mine sager` — dine sager",
-      "• `opret Titel - Beskrivelse` — ny sag",
-    ].join("\n");
-  }
-
-  return `Hej${namePart}! Du er på **${pageContext.pageLabel}**. Skriv \`mine sager\`, sagsnummer, eller \`opret Titel - Beskrivelse\`. Mikrofonen virker også.`;
+  const { general, pageSpecific } = buildCaseAssistantWelcomeMessages(options);
+  return `${general}\n\n${pageSpecific}`;
 }
 
 export function getCaseAssistantQuickActions(options: {
@@ -378,6 +383,18 @@ export function getCaseAssistantQuickActions(options: {
 }): CaseAssistantQuickAction[] {
   const { staff, pageContext, ticket } = options;
   const { kind } = pageContext;
+
+  const generalAction: CaseAssistantQuickAction = staff
+    ? {
+        label: "Generel hjælp",
+        message: "Hvad kan du hjælpe mig med generelt?",
+        autoSend: true,
+      }
+    : {
+        label: "Hvad kan du hjælpe med?",
+        message: "Hvad kan du hjælpe mig med?",
+        autoSend: true,
+      };
 
   if (kind === "ticket-detail") {
     const actions: CaseAssistantQuickAction[] = [
@@ -397,11 +414,12 @@ export function getCaseAssistantQuickActions(options: {
         });
       }
     }
-    return actions;
+    return [generalAction, ...actions];
   }
 
   if (kind === "reports") {
     return [
+      generalAction,
       { label: "Forklar KPI'er", message: "Forklar KPI'erne på rapportsiden", autoSend: true },
       { label: "Hvilken rapport?", message: "Hvilken rapport skal jeg bruge til mit formål?", autoSend: true },
       { label: "Gå til analyse", message: "Hvad kan jeg se under avanceret sagsanalyse?", autoSend: true },
@@ -410,6 +428,7 @@ export function getCaseAssistantQuickActions(options: {
 
   if (kind === "analytics") {
     return [
+      generalAction,
       { label: "Læs grafer", message: "Hvordan læser jeg graferne på denne side?", autoSend: true },
       { label: "Trends", message: "Forklar trends og observability her", autoSend: true },
     ];
@@ -417,6 +436,7 @@ export function getCaseAssistantQuickActions(options: {
 
   if (kind === "kanban") {
     return [
+      generalAction,
       { label: "Kanban-hjælp", message: "Hvordan bruger jeg Kanban-boardet?", autoSend: true },
       { label: "mine sager", message: "mine sager" },
     ];
@@ -424,6 +444,7 @@ export function getCaseAssistantQuickActions(options: {
 
   if (kind === "backlog") {
     return [
+      generalAction,
       { label: "Prioritering", message: "Hvordan prioriterer jeg backlog?", autoSend: true },
       { label: "mine sager", message: "mine sager" },
     ];
@@ -431,6 +452,7 @@ export function getCaseAssistantQuickActions(options: {
 
   if (kind === "dashboard") {
     return [
+      generalAction,
       { label: "Dagens overblik", message: "Giv mig et kort overblik over dagens drift", autoSend: true },
       { label: "mine sager", message: "mine sager" },
     ];
@@ -438,17 +460,22 @@ export function getCaseAssistantQuickActions(options: {
 
   if (kind === "knowledge") {
     return [
+      generalAction,
       { label: "Søg vidensbase", message: "Hvordan søger jeg i vidensbasen?", autoSend: true },
       { label: "VPN", message: "Hjælp med VPN", autoSend: true },
     ];
   }
 
   if (kind === "create-ticket") {
-    return [{ label: "Kategorier", message: "Hvilken kategori skal jeg vælge?", autoSend: true }];
+    return [
+      generalAction,
+      { label: "Kategorier", message: "Hvilken kategori skal jeg vælge?", autoSend: true },
+    ];
   }
 
   if (kind === "admin") {
     return [
+      generalAction,
       {
         label: "Hvad gør siden?",
         message: `Hvad kan jeg gøre på ${pageContext.pageLabel}?`,
@@ -458,17 +485,22 @@ export function getCaseAssistantQuickActions(options: {
   }
 
   if (kind === "users") {
-    return [{ label: "Roller", message: "Forklar brugerroller og adgang", autoSend: true }];
+    return [
+      generalAction,
+      { label: "Roller", message: "Forklar brugerroller og adgang", autoSend: true },
+    ];
   }
 
   if (kind === "integrations") {
     return [
+      generalAction,
       { label: "Opsætning", message: "Hvordan opsætter jeg denne integration?", autoSend: true },
     ];
   }
 
   if (kind === "portal") {
     return [
+      generalAction,
       { label: "Mine sager", message: "mine sager", autoSend: true },
       { label: "Opret sag", message: "Hvordan opretter jeg en ny sag?", autoSend: true },
     ];
@@ -476,12 +508,14 @@ export function getCaseAssistantQuickActions(options: {
 
   if (staff) {
     return [
+      generalAction,
       { label: "mine sager", message: "mine sager" },
       { label: "INC-2026-00118", message: "INC-2026-00118" },
     ];
   }
 
   return [
+    generalAction,
     { label: "Mine sager", message: "mine sager", autoSend: true },
     { label: "Hjælp", message: "Hjælp", autoSend: true },
   ];

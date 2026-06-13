@@ -34,7 +34,7 @@ export function ChatChannelList({
   channels: TeamChatChannel[];
   activeChannelId: string | null;
   staff: TeamChatStaff[];
-  layout?: "page" | "dock";
+  layout?: "page" | "dock" | "float";
   onSelect: (id: string) => void;
   onChannelCreated: (ch: TeamChatChannel) => void;
   onDmCreated: (ch: TeamChatChannel) => void;
@@ -117,7 +117,12 @@ export function ChatChannelList({
   };
 
   return (
-    <aside className={cn("team-chat-channel-list", layout === "dock" && "team-chat-channel-list--dock")}>
+    <aside
+      className={cn(
+        "team-chat-channel-list",
+        (layout === "dock" || layout === "float") && "team-chat-channel-list--dock",
+      )}
+    >
       <div className="team-chat-sidebar-brand">
         <MessagesSquare className="size-5 shrink-0 text-star-blue" aria-hidden />
         <div className="min-w-0">

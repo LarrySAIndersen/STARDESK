@@ -1,8 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BookOpen,
   Bot,
   Columns3,
+  FolderKanban,
   Headset,
   Inbox,
   Layers,
@@ -15,6 +17,7 @@ import {
   LayoutTemplate,
   Map,
   MessagesSquare,
+  ScrollText,
   StickyNote,
   Ticket,
   Shield,
@@ -26,6 +29,10 @@ import {
 } from "lucide-react";
 
 import { canManageNavVisibility } from "@/lib/top-admin";
+import {
+  EXTERNAL_NAV_VISIBILITY_IDS,
+  NAV_VISIBILITY_PATH_BY_ID,
+} from "@/lib/nav-visibility-registry";
 import { INTEGRATION_META } from "@/lib/integrations-config";
 import type { User } from "@/types/user";
 
@@ -61,10 +68,37 @@ export function buildAgentNavItems(options: {
       ? [{ id: "service-desk", href: "/service-desk", label: "Service Desk", icon: Headset }]
       : []),
     ...(staff
-      ? [{ id: "kanban", href: "/kanban", label: "Kanban", icon: Columns3 }]
+      ? [
+          {
+            id: "projekter",
+            href: "/projekter",
+            label: "Projektoversigt",
+            icon: FolderKanban,
+            section: "Projekt",
+          },
+        ]
       : []),
     ...(staff
-      ? [{ id: "backlog", href: "/backlog", label: "Backlog", icon: Inbox }]
+      ? [
+          {
+            id: "kanban",
+            href: "/kanban",
+            label: "Kanban",
+            icon: Columns3,
+            section: "Projekt",
+          },
+        ]
+      : []),
+    ...(staff
+      ? [
+          {
+            id: "backlog",
+            href: "/backlog",
+            label: "Backlog",
+            icon: Inbox,
+            section: "Projekt",
+          },
+        ]
       : []),
     ...(staff
       ? [{ id: "team-chat", href: "/chat", label: "Chat", icon: MessagesSquare }]
@@ -74,6 +108,19 @@ export function buildAgentNavItems(options: {
     ...(staff ? [{ id: "assets", href: "/aktiver", label: "Aktiver", icon: Layers }] : []),
     ...(staff
       ? [{ id: "knowledge", href: "/knowledge", label: "Vidensartikler", icon: Library }]
+      : []),
+    ...(staff
+      ? [{ id: "team-wiki", href: "/teamwiki", label: "Teamwiki", icon: BookOpen }]
+      : []),
+    ...(staff
+      ? [
+          {
+            id: "system-dokumentation",
+            href: "/system-dokumentation",
+            label: "Systemdokumentation",
+            icon: ScrollText,
+          },
+        ]
       : []),
     ...(staff ? [{ id: "groups", href: "/groups", label: "Grupper", icon: Users }] : []),
     ...(showForbedringer
@@ -212,19 +259,21 @@ export function isNavPathHidden(
   if (isTopAdmin || hiddenNavIds.length === 0) {
     return false;
   }
-  const items = buildAgentNavItems({ staff: true, showAdmin: true });
   const hidden = new Set(hiddenNavIds);
-  for (const item of items) {
-    if (!hidden.has(item.id)) {
+  for (const [navId, prefix] of Object.entries(NAV_VISIBILITY_PATH_BY_ID)) {
+    if (!hidden.has(navId)) {
       continue;
     }
-    if (item.href === "/") {
+    if (EXTERNAL_NAV_VISIBILITY_IDS.has(navId)) {
+      continue;
+    }
+    if (prefix === "/") {
       if (pathname === "/") {
         return true;
       }
       continue;
     }
-    if (pathname === item.href || pathname.startsWith(`${item.href}/`)) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
       return true;
     }
   }

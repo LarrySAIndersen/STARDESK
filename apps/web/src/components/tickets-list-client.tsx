@@ -13,7 +13,9 @@ import type { TicketPostItSummary } from "@/types/personal";
 import { ClearFiltersButton } from "@/components/clear-filters-button";
 import { WireframeTicketTable } from "@/components/wireframe/wireframe-ticket-table";
 import { TicketSearchInput } from "@/components/ticket-search-input";
+import { TicketWatchUpdatesBanner } from "@/components/tickets/ticket-watch-updates-banner";
 import { useListFilters } from "@/hooks/use-list-filters";
+import { useTicketWatch } from "@/hooks/use-ticket-watch";
 import { priorityLabel, statusLabel } from "@/lib/ticket-labels";
 import {
   DEFAULT_TICKET_SORT,
@@ -30,6 +32,7 @@ import {
 } from "@/lib/tickets-api-query";
 import { isOpenTicketStatus } from "@/lib/ticket-open-status";
 import type { Ticket } from "@/types/ticket";
+import type { Team } from "@/types/team";
 
 function pickParam(
   value: string | string[] | undefined,
@@ -64,6 +67,15 @@ export function TicketsListClient({
   initialParams?: Record<string, string | string[] | undefined>;
 }) {
   const [postItCounts, setPostItCounts] = useState<Record<string, number>>({});
+  const [teams, setTeams] = useState<Team[]>([]);
+
+  useEffect(() => {
+    fireAndForget(
+      apiGet<Team[]>("/api/v1/teams")
+        .then(setTeams)
+        .catch(() => setTeams([])),
+    );
+  }, []);
 
   const refreshPostItCounts = useCallback(async (ticketList: Ticket[]) => {
     if (ticketList.length === 0) {
@@ -175,6 +187,9 @@ export function TicketsListClient({
     });
   }, [tickets, status, priority, category, tagFilter, search, initialParams, assetIdFilter]);
 
+  const watchTicketIds = useMemo(() => filtered.map((ticket) => ticket.id), [filtered]);
+  const { watchingById, toggleWatch } = useTicketWatch(watchTicketIds);
+
   const activeTags = [tagFilter].filter(Boolean);
 
   const hasActiveFilters =
@@ -195,6 +210,7 @@ export function TicketsListClient({
   return (
     <PostItAttachProvider onAttached={() => fireAndForget(refreshPostItCounts(filtered))}>
     <div className="space-y-3">
+      <TicketWatchUpdatesBanner />
       {fromDashboard ? (
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/" className="wire-btn wire-btn-sm">
@@ -297,6 +313,11 @@ export function TicketsListClient({
         tickets={filtered}
         postItCounts={postItCounts}
         postItDropEnabled
+        showWatchColumn
+        showInviteColumn
+        inviteTeams={teams}
+        watchingById={watchingById}
+        onToggleWatch={(ticketId) => fireAndForget(toggleWatch(ticketId))}
       />
     </div>
     </PostItAttachProvider>

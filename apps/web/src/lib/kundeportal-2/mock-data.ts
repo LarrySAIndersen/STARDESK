@@ -95,12 +95,12 @@ export const KP2_SERVICE_MESSAGES: Kp2ServiceMessage[] = [
     id: "omfattende-serviceafbrydelse",
     bannerLabel: "Driftsmeddelelse",
     tone: "alert",
-    title: "Udfordringer med TOPdesk-adviseringer",
+    title: "Udfordringer med adviseringer",
     summary:
       "Vi oplever udfordringer med at adviseringer om sager ikke altid sendes korrekt. Svartider kan være længere end normalt.",
     status: "behandler",
     type: "Incident",
-    categorization: "Middleware - Topdesk",
+    categorization: "Middleware - Adviseringer",
     registeredAt: "2025-11-27T10:29:00",
     updates: [
       {

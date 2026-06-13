@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useChatWorkspaceOptional } from "@/components/team-chat/chat-workspace-provider";
 import { cn } from "@/lib/utils";
 
-/** Staff-only toggle — magnetically docks chat below the locked top bar. */
+/** Staff-only toggle — opens floating STARchat panel. */
 export function TeamChatTopBarButton() {
   const chat = useChatWorkspaceOptional();
   const pathname = usePathname();

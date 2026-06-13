@@ -8,6 +8,7 @@ import type {
 
 export type WorkspaceLandingView = "grid" | "sitemap" | "widget";
 
+export const WORKSPACE_BASE_PATH = "/arbejdsrum";
 export const WORKSPACE_SITEMAP_PATH = "/sitemap";
 
 export function parseWorkspaceSpace(value: string | null): WorkspaceSpace {
@@ -54,7 +55,7 @@ export function buildWorkspaceHref(options: {
   }
 
   const query = params.toString();
-  return query ? `/?${query}` : "/";
+  return query ? `${WORKSPACE_BASE_PATH}?${query}` : WORKSPACE_BASE_PATH;
 }
 
 export function resolveWorkspaceBackHref(
@@ -157,7 +158,7 @@ export function applySpaceWidgetUpdate(
 export function buildSpaceHref(space: WorkspaceSpace, searchParams: string): string {
   const params = new URLSearchParams(searchParams);
   params.set("space", space);
-  return `/?${params.toString()}`;
+  return `${WORKSPACE_BASE_PATH}?${params.toString()}`;
 }
 
 export function needsPostItProvider(widgets: WorkspaceWidgetInstance[]): boolean {

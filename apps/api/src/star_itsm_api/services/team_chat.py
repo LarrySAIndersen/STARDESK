@@ -16,6 +16,7 @@ from star_itsm_api.models.team_chat import (
     CHANNEL_DM,
     CHANNEL_PRIVATE,
     CHANNEL_PUBLIC,
+    CHANNEL_TICKET,
     TeamChatChannel,
     TeamChatChannelMember,
     TeamChatMessage,
@@ -108,6 +109,14 @@ async def _channel_visible_to_user(
             )
         )
         return member.scalar_one_or_none() is not None
+    if channel.channel_type == CHANNEL_TICKET:
+        member = await db.execute(
+            select(TeamChatChannelMember.user_id).where(
+                TeamChatChannelMember.channel_id == channel.id,
+                TeamChatChannelMember.user_id == user.id,
+            )
+        )
+        return member.scalar_one_or_none() is not None
     if channel.is_private or channel.channel_type == CHANNEL_PRIVATE:
         member = await db.execute(
             select(TeamChatChannelMember.user_id).where(
@@ -153,7 +162,7 @@ async def list_channels(db: AsyncSession, user: User) -> list[TeamChatChannelRea
             or_(
                 TeamChatChannel.channel_type.in_((CHANNEL_PUBLIC, CHANNEL_BOT)),
                 and_(
-                    TeamChatChannel.channel_type.in_((CHANNEL_PRIVATE, CHANNEL_DM)),
+                    TeamChatChannel.channel_type.in_((CHANNEL_PRIVATE, CHANNEL_DM, CHANNEL_TICKET)),
                     TeamChatChannel.id.in_(member_channel_ids),
                 ),
             ),

@@ -7,6 +7,10 @@ API_URL="${STARDESK_API_URL:-http://localhost:8000}"
 EMAIL="${TEST_USER_EMAIL:-sf01@example.dk}"
 REQUIRE_NON_PROD="${GATE_REQUIRE_NON_PROD:-1}"
 
+# shellcheck source=scripts/lib/gate-json.sh
+source "$ROOT/scripts/lib/gate-json.sh"
+GATE_PYTHON="$(stardesk_gate_python "$ROOT")"
+
 if [[ -z "${TEST_USER_PASSWORD:-}" ]]; then
   export TEST_USER_PASSWORD
   TEST_USER_PASSWORD="$(bash "$ROOT/scripts/lib/resolve-prototype-demo-password.sh")"
@@ -35,9 +39,9 @@ echo "==> Hello-world gate (API) — $API_URL"
 
 HEALTH="$(curl_gate "$API_URL/health" 2>/dev/null)" || fail "GET /health failed (is API running on $API_URL?)"
 
-STARDESK_ENV="$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stardesk_env',''))" 2>/dev/null || true)"
-APP_ENV="$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('app_env',''))" 2>/dev/null || true)"
-DEPLOYMENT="$(echo "$HEALTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('deployment',''))" 2>/dev/null || true)"
+STARDESK_ENV="$(stardesk_json_field "$GATE_PYTHON" stardesk_env "$HEALTH")"
+APP_ENV="$(stardesk_json_field "$GATE_PYTHON" app_env "$HEALTH")"
+DEPLOYMENT="$(stardesk_json_field "$GATE_PYTHON" deployment "$HEALTH")"
 
 echo "    health: stardesk_env=$STARDESK_ENV app_env=$APP_ENV deployment=$DEPLOYMENT"
 
@@ -49,7 +53,7 @@ LOGIN_JSON="$(curl_gate -X POST "$API_URL/api/v1/auth/login" \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")" || fail "POST /api/v1/auth/login failed for $EMAIL"
 
-TOKEN="$(echo "$LOGIN_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")"
+TOKEN="$(stardesk_json_field "$GATE_PYTHON" access_token "$LOGIN_JSON")"
 [[ -n "$TOKEN" ]] || fail "No access_token in login response"
 
 pass "Login as $EMAIL"
@@ -57,15 +61,7 @@ pass "Login as $EMAIL"
 TICKETS_JSON="$(curl_gate "$API_URL/api/v1/tickets?page=1&page_size=5" \
   -H "Authorization: Bearer $TOKEN")" || fail "GET /api/v1/tickets failed"
 
-COUNT="$(echo "$TICKETS_JSON" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-if isinstance(data, list):
-    print(len(data))
-else:
-    items = data.get('items') or data.get('data') or []
-    print(len(items) if isinstance(items, list) else 0)
-")"
+COUNT="$(stardesk_json_ticket_count "$GATE_PYTHON" "$TICKETS_JSON")"
 
 [[ "${COUNT:-0}" -ge 1 ]] || fail "Expected at least 1 ticket (got $COUNT). Run bootstrap-dev-database.sh?"
 

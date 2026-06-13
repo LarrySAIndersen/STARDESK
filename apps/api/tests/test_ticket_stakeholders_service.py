@@ -514,6 +514,10 @@ async def test_process_comment_mentions_upserts_each() -> None:
             svc, "resolve_mentioned_user_ids", new=AsyncMock(return_value=mentioned)
         ) as mock_resolve,
         patch.object(svc, "upsert_stakeholder", new=AsyncMock()) as mock_upsert,
+        patch(
+            "star_itsm_api.services.ticket_internal_chat.sync_mentions_to_internal_chat",
+            new=AsyncMock(),
+        ),
     ):
         result = await svc.process_comment_mentions(
             mock_db,
@@ -525,4 +529,4 @@ async def test_process_comment_mentions_upserts_each() -> None:
 
     assert result == mentioned
     mock_resolve.assert_awaited_once()
-    assert mock_upsert.await_count == 2
+    assert mock_upsert.await_count == 4

@@ -13,6 +13,7 @@ class TeamChatChannelRead(BaseModel):
     is_private: bool
     is_system: bool
     channel_type: str
+    ticket_id: uuid.UUID | None = None
     unread_count: int = 0
     last_message_at: datetime | None = None
     last_message_preview: str | None = None

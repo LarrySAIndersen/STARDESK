@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   buildCaseAssistantApiPageContext,
-  buildCaseAssistantWelcome,
+  buildCaseAssistantWelcomeMessages,
   getCaseAssistantQuickActions,
   resolveCaseAssistantPageContext,
   type CaseAssistantQuickAction,
@@ -41,12 +41,9 @@ import {
 import {
   buildChatApiPayload,
   buildChatArchiveUrl,
-  clampFabPosition,
   clampPanelSize,
   createChatMessage,
-  FAB_POS_STORAGE_KEY,
   getCaseAssistantBotLabels,
-  getDefaultFabPosition,
   getDefaultPanelPosition,
   MOCK_SPEECH_SAMPLE,
   PANEL_POS_STORAGE_KEY,
@@ -57,6 +54,12 @@ import {
   resolvePanelSizeForPreset,
   type PanelSizePreset,
 } from "@/lib/case-assistant-chat-panel";
+import {
+  CASE_ASSISTANT_OPEN_EVENT,
+  CASE_ASSISTANT_TOGGLE_EVENT,
+  dispatchCaseAssistantState,
+  type CaseAssistantOpenDetail,
+} from "@/lib/case-assistant-open";
 import type { User } from "@/types/user";
 import type { TicketDetail } from "@/types/ticket";
 
@@ -78,6 +81,38 @@ type ChatMessage = Readonly<{
   body: string;
 }>;
 
+function buildWelcomeChatMessages(options: {
+  staff: boolean;
+  displayName?: string | null;
+  pageContext: ReturnType<typeof resolveCaseAssistantPageContext>;
+  ticket?: Pick<TicketDetail, "ticket_number" | "title"> | null;
+}): ChatMessage[] {
+  const { general, pageSpecific } = buildCaseAssistantWelcomeMessages({
+    staff: options.staff,
+    displayName: options.displayName,
+    pageContext: options.pageContext,
+    ticket: options.ticket,
+  });
+  return [
+    { id: "welcome-general", role: "assistant", body: general },
+    { id: "welcome-page", role: "assistant", body: pageSpecific },
+  ];
+}
+
+function isOnlyWelcomeMessages(messages: ChatMessage[]): boolean {
+  return (
+    messages.length > 0 &&
+    messages.length <= 2 &&
+    messages.every(
+      (message) =>
+        message.role === "assistant" &&
+        (message.id === "welcome-general" ||
+          message.id === "welcome-page" ||
+          message.id === "welcome"),
+    )
+  );
+}
+
 export function CaseAssistantChat({
   user,
   pathname = "/",
@@ -90,6 +125,7 @@ export function CaseAssistantChat({
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const draftInputRef = useRef<HTMLTextAreaElement>(null);
 
   const staff = isStaff(user);
   const pageContext = resolveCaseAssistantPageContext(pathname);
@@ -127,7 +163,7 @@ export function CaseAssistantChat({
   const [panelPreset, setPanelPreset] = useState<PanelSizePreset>("normal");
   const [panelSize, setPanelSize] = useState(() => PANEL_SIZE_PRESETS.normal);
   const [panelPos, setPanelPos] = useState<{ x: number; y: number } | null>(null);
-  const [fabPos, setFabPos] = useState<{ x: number; y: number } | null>(null);
+  const [pendingAutoSend, setPendingAutoSend] = useState<string | null>(null);
   const [selectedAvatarId, setSelectedAvatarId] = useState<HelpABotAvatarId>("robot");
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [listening, setListening] = useState(false);
@@ -135,9 +171,6 @@ export function CaseAssistantChat({
   const fabRef = useRef<HTMLButtonElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const dragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
-  const fabDragStateRef = useRef<{ startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
-  const fabDragMovedRef = useRef(false);
-  const fabClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resizeStateRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   const fetchArchive = useCallback(async () => {
@@ -165,14 +198,10 @@ export function CaseAssistantChat({
     if (typeof window === "undefined") return;
     try {
       const storedPos = parseStoredPoint(localStorage.getItem(PANEL_POS_STORAGE_KEY));
-      const storedFabPos = parseStoredPoint(localStorage.getItem(FAB_POS_STORAGE_KEY));
       const storedAvatar = localStorage.getItem(HELP_A_BOT_AVATAR_STORAGE_KEY);
       const storedSize = parseStoredPanelSize(localStorage.getItem(PANEL_SIZE_STORAGE_KEY));
       if (storedPos) {
         setPanelPos(storedPos);
-      }
-      if (storedFabPos) {
-        setFabPos(storedFabPos);
       }
       if (storedAvatar && isValidHelpABotAvatarId(storedAvatar)) {
         setSelectedAvatarId(storedAvatar);
@@ -185,6 +214,39 @@ export function CaseAssistantChat({
       // ignore corrupt storage
     }
   }, []);
+
+  useEffect(() => {
+    function handleExternalOpen(event: Event) {
+      const detail = (event as CustomEvent<CaseAssistantOpenDetail>).detail ?? {};
+      setOpen(true);
+      setActiveTab("chat");
+      const trimmedDraft = detail.draft?.trim();
+      if (trimmedDraft) {
+        setDraft(trimmedDraft);
+      }
+      if (detail.autoSend && trimmedDraft) {
+        setPendingAutoSend(trimmedDraft);
+      } else if (detail.focusInput) {
+        window.setTimeout(() => draftInputRef.current?.focus(), 60);
+      }
+    }
+
+    window.addEventListener(CASE_ASSISTANT_OPEN_EVENT, handleExternalOpen);
+    return () => window.removeEventListener(CASE_ASSISTANT_OPEN_EVENT, handleExternalOpen);
+  }, []);
+
+  useEffect(() => {
+    function handleToggle() {
+      setOpen((prev) => !prev);
+    }
+
+    window.addEventListener(CASE_ASSISTANT_TOGGLE_EVENT, handleToggle);
+    return () => window.removeEventListener(CASE_ASSISTANT_TOGGLE_EVENT, handleToggle);
+  }, []);
+
+  useEffect(() => {
+    dispatchCaseAssistantState(open);
+  }, [open]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -200,11 +262,6 @@ export function CaseAssistantChat({
   }, [panelPos]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !fabPos) return;
-    localStorage.setItem(FAB_POS_STORAGE_KEY, JSON.stringify(fabPos));
-  }, [fabPos]);
-
-  useEffect(() => {
     if (typeof window === "undefined") return;
     localStorage.setItem(HELP_A_BOT_AVATAR_STORAGE_KEY, selectedAvatarId);
   }, [selectedAvatarId]);
@@ -217,84 +274,10 @@ export function CaseAssistantChat({
   const resolvedPanelPos =
     panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
 
-  const resolvedFabPos =
-    fabPos ??
-    getDefaultFabPosition(
-      fabRef.current?.offsetWidth ?? 180,
-      fabRef.current?.offsetHeight ?? 52,
-    );
-
   const handleAvatarDoubleClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (fabClickTimerRef.current) {
-      clearTimeout(fabClickTimerRef.current);
-      fabClickTimerRef.current = null;
-    }
     setAvatarPickerOpen(true);
-  }, []);
-
-  const handleFabDragStart = useCallback(
-    (e: React.MouseEvent<HTMLElement>) => {
-      if (e.button !== 0 || !staff) return;
-      e.preventDefault();
-      const origin =
-        fabPos ??
-        getDefaultFabPosition(
-          fabRef.current?.offsetWidth ?? 180,
-          fabRef.current?.offsetHeight ?? 52,
-        );
-      fabDragMovedRef.current = false;
-      fabDragStateRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        originX: origin.x,
-        originY: origin.y,
-        moved: false,
-      };
-
-      function onMove(ev: MouseEvent) {
-        const drag = fabDragStateRef.current;
-        if (!drag) return;
-        const dx = ev.clientX - drag.startX;
-        const dy = ev.clientY - drag.startY;
-        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-          drag.moved = true;
-          fabDragMovedRef.current = true;
-        }
-        if (!drag.moved) return;
-
-        const fabWidth = fabRef.current?.offsetWidth ?? 180;
-        const fabHeight = fabRef.current?.offsetHeight ?? 52;
-        setFabPos(
-          clampFabPosition(drag.originX + dx, drag.originY + dy, fabWidth, fabHeight),
-        );
-      }
-
-      function onUp() {
-        fabDragStateRef.current = null;
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-        window.setTimeout(() => {
-          fabDragMovedRef.current = false;
-        }, 0);
-      }
-
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    },
-    [fabPos, staff],
-  );
-
-  const handleFabClick = useCallback(() => {
-    if (fabDragMovedRef.current) return;
-    if (fabClickTimerRef.current) {
-      clearTimeout(fabClickTimerRef.current);
-    }
-    fabClickTimerRef.current = setTimeout(() => {
-      fabClickTimerRef.current = null;
-      setOpen((prev) => !prev);
-    }, 250);
   }, []);
 
   const handlePanelDragStart = useCallback(
@@ -422,9 +405,6 @@ export function CaseAssistantChat({
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
-      if (fabClickTimerRef.current) {
-        clearTimeout(fabClickTimerRef.current);
-      }
     };
   }, []);
 
@@ -514,18 +494,14 @@ export function CaseAssistantChat({
 
   useEffect(() => {
     if (open && messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          body: buildCaseAssistantWelcome({
-            staff,
-            displayName: useName ? user?.display_name : null,
-            pageContext,
-            ticket: pageTicket,
-          }),
-        },
-      ]);
+      setMessages(
+        buildWelcomeChatMessages({
+          staff,
+          displayName: useName ? user?.display_name : null,
+          pageContext,
+          ticket: pageTicket,
+        }),
+      );
     }
   }, [open, messages.length, staff, useName, user?.display_name, pageContext, pageTicket]);
 
@@ -534,23 +510,15 @@ export function CaseAssistantChat({
       return;
     }
     setMessages((prev) => {
-      const onlyWelcome =
-        prev.length === 1 && prev[0]?.id === "welcome" && prev[0]?.role === "assistant";
-      if (!onlyWelcome) {
+      if (!isOnlyWelcomeMessages(prev)) {
         return prev;
       }
-      return [
-        {
-          id: "welcome",
-          role: "assistant",
-          body: buildCaseAssistantWelcome({
-            staff,
-            displayName: useName ? user?.display_name : null,
-            pageContext,
-            ticket: pageTicket,
-          }),
-        },
-      ];
+      return buildWelcomeChatMessages({
+        staff,
+        displayName: useName ? user?.display_name : null,
+        pageContext,
+        ticket: pageTicket,
+      });
     });
   }, [open, pageTicket, pageContext, staff, useName, user?.display_name]);
 
@@ -624,6 +592,15 @@ export function CaseAssistantChat({
     }
   }, [draft, loading, messages, user, useName, activeModel, chatSessionId, apiPageContext]);
 
+  useEffect(() => {
+    if (!open || !pendingAutoSend || loading) {
+      return;
+    }
+    const message = pendingAutoSend;
+    setPendingAutoSend(null);
+    fireAndForget(handleSend(message));
+  }, [open, pendingAutoSend, loading, handleSend]);
+
   const handleQuickAction = useCallback(
     (action: CaseAssistantQuickAction) => {
       if (action.autoSend) {
@@ -637,40 +614,19 @@ export function CaseAssistantChat({
 
   return (
     <>
-      <button
-        ref={fabRef}
-        type="button"
-        className={cn(
-          staff
-            ? "fixed z-[399] flex cursor-grab items-center gap-2 rounded-full border border-slate-600 bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 shadow-lg transition-shadow hover:from-slate-600 hover:to-slate-700 active:cursor-grabbing"
-            : cn("case-assistant-fab", open && "case-assistant-fab--open"),
-        )}
-        style={
-          staff
-            ? { left: resolvedFabPos.x, top: resolvedFabPos.y, right: "auto", bottom: "auto" }
-            : undefined
-        }
-        onMouseDown={staff ? handleFabDragStart : undefined}
-        onClick={staff ? handleFabClick : () => setOpen(!open)}
-        aria-expanded={open}
-        aria-label={botName}
-        title={staff ? "Træk for at flytte · Dobbeltklik på botten for avatar" : undefined}
-      >
-        {staff ? (
-          <span
-            className="shrink-0 cursor-pointer"
-            onDoubleClick={handleAvatarDoubleClick}
-            title="Dobbeltklik for at vælge avatar"
-          >
-            <HelpABotAvatar avatarId={selectedAvatarId} className="size-12" />
-          </span>
-        ) : (
+      {!staff ? (
+        <button
+          ref={fabRef}
+          type="button"
+          className={cn("case-assistant-fab", open && "case-assistant-fab--open")}
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-label={botName}
+        >
           <Bot className="size-5 shrink-0" aria-hidden />
-        )}
-        <span className={cn(!staff && "case-assistant-fab-label", "font-semibold")}>
-          {fabLabel}
-        </span>
-      </button>
+          <span className={cn("case-assistant-fab-label", "font-semibold")}>{fabLabel}</span>
+        </button>
+      ) : null}
 
       {staff ? (
         <HelpABotAvatarPicker
@@ -876,6 +832,7 @@ export function CaseAssistantChat({
                 ) : null}
                 <div className="flex gap-2 items-end">
                   <Textarea
+                    ref={draftInputRef}
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder={listening ? "Lytter… tal nu" : "Fx mine sager · INC-2026-00118 · luk INC-… · opret Titel - Beskrivelse"}

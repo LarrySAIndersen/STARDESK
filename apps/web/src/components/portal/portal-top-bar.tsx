@@ -4,6 +4,7 @@ import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
+import { HistoryBackButton } from "@/components/navigation/history-back-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { getClientUser } from "@/lib/auth";
@@ -54,6 +55,7 @@ export function PortalTopBar({
   return (
     <header className="wire-topbar">
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <HistoryBackButton />
         {onOpenNav ? (
           <button
             type="button"

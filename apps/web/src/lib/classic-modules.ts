@@ -1,6 +1,6 @@
 import type { Ticket } from "@/types/ticket";
 
-/** Classic module ids — TOPdesk-style navigation (same DB, different presentation). */
+/** Classic module ids — classic ITSM-style navigation (same DB, different presentation). */
 export type ClassicModuleId =
   | "home"
   | "incidents"

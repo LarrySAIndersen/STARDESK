@@ -24,10 +24,10 @@ export default async function BacklogPage() {
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="wire-scroll-content min-h-0 flex-1 space-y-4">
         <Link
-          href="/tickets"
+          href="/projekter"
           className="text-[var(--gray-mid)] hover:text-star-navy inline-flex items-center gap-1 text-xs font-medium"
         >
-          ← Tilbage til sager
+          ← Tilbage til projektoversigt
         </Link>
 
         <header className="wire-card mb-0">

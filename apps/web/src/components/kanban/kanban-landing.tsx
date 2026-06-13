@@ -27,6 +27,12 @@ export function KanbanLanding({ boards: initialBoards }: { boards: KanbanBoardSu
 
   return (
     <div className="wire-scroll-content star-page flex min-h-0 flex-1 flex-col gap-6">
+      <Link
+        href="/projekter"
+        className="text-[var(--gray-mid)] hover:text-star-navy inline-flex items-center gap-1 text-xs font-medium"
+      >
+        ← Tilbage til projektoversigt
+      </Link>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="star-page-title">Kanban</h1>

@@ -9,7 +9,7 @@ class TicketImportRow(BaseModel):
     status: str | None = None
     external_number: str | None = Field(
         default=None,
-        description="TOPdesk sagsnummer eller eksternt id",
+        description="Eksternt sagsnummer eller id",
     )
     category: str | None = None
     team: str | None = None

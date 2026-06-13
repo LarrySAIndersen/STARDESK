@@ -13,7 +13,7 @@ function UserStatusBadge({ isActive }: { isActive: boolean }) {
   return <span className="wire-badge wire-badge--critical">Inaktiv</span>;
 }
 
-/** Person card aligned with ticket detail TOPdesk-style wire-card (Indmelder). */
+/** Person card aligned with ticket detail classic wire-card (Indmelder). */
 export function AdminUserCard({
   user,
   onEdit,

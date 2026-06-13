@@ -23,8 +23,9 @@ start_session() {
   "${TMUX[@]}" send-keys -t "$name:0.0" "$cmd" C-m
 }
 
+DOTENV_SH="$ROOT/scripts/lib/source-dotenv.sh"
 start_session "$SESSION_API" "$API_DIR" \
-  "export PATH=\"\$HOME/.local/bin:\$PATH\" && set -a && source .env && set +a && \"$API_UVICORN\" star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000"
+  "export PATH=\"\$HOME/.local/bin:\$PATH\" && set -a && source \"$DOTENV_SH\" && stardesk_source_dotenv .env && set +a && \"$API_UVICORN\" star_itsm_api.main:app --reload --host 0.0.0.0 --port 8000"
 
 start_session "$SESSION_WEB" "$ROOT/apps/web" \
   'npm run dev -- --hostname 0.0.0.0 --port 3000'

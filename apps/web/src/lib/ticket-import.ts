@@ -23,7 +23,6 @@ const HEADER_ALIASES: Record<keyof TicketImportRowInput, string[]> = {
     "number",
     "incident_number",
     "call_number",
-    "topdesk_number",
     "id",
   ],
   category: ["category", "kategori", "category_name", "service"],

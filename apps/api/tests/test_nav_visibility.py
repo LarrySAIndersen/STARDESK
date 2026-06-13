@@ -12,7 +12,11 @@ def test_path_for_nav_id_known_routes() -> None:
 def test_nav_id_for_path_longest_prefix_wins() -> None:
     assert nav_id_for_path("/") == "dashboard"
     assert nav_id_for_path("/tickets/new") == "tickets-new"
+    assert nav_id_for_path("/sitemap") == "sitemap"
+    assert nav_id_for_path("/chat") == "team-chat"
+    assert nav_id_for_path("/admin/chatbot") == "admin-chatbot"
     assert nav_id_for_path("/integrations/slack/callback") == "integration-slack"
+    assert nav_id_for_path("/system-dokumentation") == "system-dokumentation"
     assert nav_id_for_path("/nope") is None
 
 
@@ -28,8 +32,39 @@ def test_nav_id_for_path_shorter_prefix_ignored() -> None:
 
 
 def test_normalize_ids_filters_invalid() -> None:
-    raw = ["tickets", "bogus", "tickets", 42, "portal", "dependency-track", "kanban", "backlog", "min-side", "forbedringer", "saglayout-2"]
-    assert nav_visibility._normalize_ids(raw) == ["tickets", "portal", "dependency-track", "kanban", "backlog", "min-side", "forbedringer", "saglayout-2"]
+    raw = [
+        "tickets",
+        "bogus",
+        "tickets",
+        42,
+        "portal",
+        "sitemap",
+        "team-chat",
+        "admin-chatbot",
+        "kundeportal-2",
+        "arbejdsrum",
+        "dependency-track",
+        "kanban",
+        "backlog",
+        "min-side",
+        "forbedringer",
+        "saglayout-2",
+    ]
+    assert nav_visibility._normalize_ids(raw) == [
+        "tickets",
+        "portal",
+        "sitemap",
+        "team-chat",
+        "admin-chatbot",
+        "kundeportal-2",
+        "arbejdsrum",
+        "dependency-track",
+        "kanban",
+        "backlog",
+        "min-side",
+        "forbedringer",
+        "saglayout-2",
+    ]
     assert nav_visibility._normalize_ids("not-a-list") == []
 
 

@@ -23,6 +23,11 @@ export function CaseAssistantHost({ user }: { user: User | null }) {
     return null;
   }
 
+  // Inline STARbot card on home handles inline chat — floating panel still opens from chrome trigger.
+  if (pathname === "/" && !isStaff(user)) {
+    return null;
+  }
+
   // If user is staff, show on all pages. If not staff, only show on allowed paths.
   if (!isStaff(user) && !showCaseAssistantOnPath(pathname)) {
     return null;

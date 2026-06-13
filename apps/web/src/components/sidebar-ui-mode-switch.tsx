@@ -6,7 +6,7 @@ import { ClassicUiSwitcher } from "@/components/classic/classic-ui-switcher";
 import type { UiMode } from "@/lib/classic-ui-mode";
 import { cn } from "@/lib/utils";
 
-/** Sidebar nav-styled control to switch between modern and classic (TOPdesk) UI. */
+/** Sidebar nav-styled control to switch between modern and classic ITSM UI. */
 export function SidebarUiModeSwitch({
   targetMode,
   label,

@@ -15,7 +15,7 @@ import { canEditPageLayout } from "@/lib/page-layout/access";
 import { PageLayoutEditToolbar } from "@/components/page-layout/page-layout-edit-toolbar";
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
 import { ChatWorkspacePanel } from "@/components/team-chat/chat-workspace-panel";
-import { TeamChatDock } from "@/components/team-chat/team-chat-dock";
+import { TeamChatFloatPanel } from "@/components/team-chat/team-chat-float-panel";
 import {
   ChatWorkspaceProvider,
   useChatWorkspaceOptional,
@@ -42,7 +42,9 @@ function AgentShellInner({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const chat = useChatWorkspaceOptional();
   const staff = isStaff(user ?? null);
+  const chromeToolbar = staff;
   const isChatPage = pathname === "/chat";
+  const isHomeLanding = pathname === "/";
   const showChatDock = staff && (chat?.open ?? false) && !isChatPage;
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
@@ -60,7 +62,12 @@ function AgentShellInner({
   return (
     <>
       <PageLayoutEditToolbar />
-      <AgentBrandHeader />
+      <AgentBrandHeader
+        user={user}
+        embedToolbar={chromeToolbar}
+        showTeamChat={staff}
+        topBarActions={topBarActions}
+      />
       <div className="wire-shell-accent" aria-hidden="true" />
       <MobileNavDrawer open={mobileNavOpen} onClose={closeMobileNav} title="Navigation">
         <AgentSidebar
@@ -74,36 +81,49 @@ function AgentShellInner({
       <AgentShellColumns
         collapsed={collapsed}
         onToggle={toggle}
+        hideNavSeparator={chromeToolbar}
         sidebar={
           <AgentSidebar
             user={user}
             showUsersNav={showUsersNav}
             collapsed={collapsed}
             onToggle={toggle}
+            chromeCompactNav={chromeToolbar}
           />
         }
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-          <div className="team-chat-shell-header">
-            <AgentTopBar
-              title={topBarTitle}
-              actions={topBarActions}
-              user={user}
-              onOpenNav={openMobileNav}
-              showTeamChat={staff}
-            />
-            {staff ? (
-              <TeamChatDock open={showChatDock}>
-                <ChatWorkspacePanel layout="dock" />
-              </TeamChatDock>
-            ) : null}
-          </div>
+          {chromeToolbar && isHomeLanding ? null : (
+            <div
+              className={
+                chromeToolbar
+                  ? "team-chat-shell-header team-chat-shell-header--chrome-title"
+                  : "team-chat-shell-header"
+              }
+            >
+              <AgentTopBar
+                title={topBarTitle}
+                actions={topBarActions}
+                user={user}
+                onOpenNav={openMobileNav}
+                hideActions={chromeToolbar}
+                chromeTitle={chromeToolbar}
+                navCollapsed={collapsed}
+                onToggleNav={toggle}
+              />
+            </div>
+          )}
           <PageLayoutEditMainChrome>
             <AgentErrorBoundary>{children}</AgentErrorBoundary>
             <ReviewNotesOverlay user={user ?? null} />
           </PageLayoutEditMainChrome>
         </div>
       </AgentShellColumns>
+      {staff ? (
+        <TeamChatFloatPanel open={showChatDock}>
+          <ChatWorkspacePanel layout="float" />
+        </TeamChatFloatPanel>
+      ) : null}
     </>
   );
 }

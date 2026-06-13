@@ -27,7 +27,7 @@ export default async function ClassicMyWorkPage() {
         <header className="classic-page__header">
           <h2 className="classic-page__title">Mit arbejde</h2>
           <p className="classic-page__subtitle">
-            Åbne sager tildelt dig — tilsvarende &quot;Mine sager&quot; i TOPdesk.
+            Åbne sager tildelt dig — tilsvarende &quot;Mine sager&quot; i klassisk visning.
           </p>
           <p className="classic-page__meta">{mine.length} sager</p>
         </header>
