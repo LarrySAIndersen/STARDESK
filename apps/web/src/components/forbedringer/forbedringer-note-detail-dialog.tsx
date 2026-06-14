@@ -44,6 +44,10 @@ function statusBadgeClass(note: ReviewNote): string {
   return "rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700";
 }
 
+function reviewNumberLabel(note: ReviewNote): string {
+  return note.review_number || "REV-?????";
+}
+
 export function ForbedringerNoteDetailDialog({
   note,
   onClose,
@@ -71,7 +75,7 @@ export function ForbedringerNoteDetailDialog({
         <div className="flex items-start justify-between gap-3 border-b border-[var(--gray-border)] px-4 py-3">
           <div className="min-w-0">
             <p id={titleId} className="wire-card-title text-lg">
-              {note.review_number} · {note.page_title || note.page_path}
+              {reviewNumberLabel(note)} · {note.page_title || note.page_path}
             </p>
             <p className="text-muted-foreground mt-0.5 truncate text-xs">{note.page_path}</p>
           </div>
