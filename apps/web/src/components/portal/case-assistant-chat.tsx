@@ -26,7 +26,7 @@ import {
   resolveCaseAssistantPageContext,
   type CaseAssistantQuickAction,
 } from "@/lib/case-assistant-page-context";
-import { isStaff } from "@/lib/auth";
+import { hasAgentShellAccess } from "@/lib/auth";
 import { apiPost, apiGet, apiDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -127,7 +127,7 @@ export function CaseAssistantChat({
   const endRef = useRef<HTMLDivElement>(null);
   const draftInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const staff = isStaff(user);
+  const staff = hasAgentShellAccess(user);
   const pageContext = resolveCaseAssistantPageContext(pathname);
   const [pageTicket, setPageTicket] = useState<TicketDetail | null>(null);
   const contextualQuickActions = useMemo(
