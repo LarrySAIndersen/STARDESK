@@ -25,6 +25,16 @@ type DraftNote = Readonly<{
   comment: string;
 }>;
 
+const REVIEW_OVERLAY_INTERACTIVE_SELECTOR = [
+  ".review-notes-toolbar",
+  ".review-note-pin",
+  ".review-note-popover",
+  ".review-note-composer",
+  ".wire-topheader__helpabot",
+  ".case-assistant-fab",
+  ".case-assistant-panel",
+].join(",");
+
 function pageTitleFromPath(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   const segment = pathname.split("/").filter(Boolean)[0] ?? "Side";
@@ -244,10 +254,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!canPlaceNotes || !reviewMode || draft) return;
-    if ((event.target as HTMLElement).closest(".review-notes-toolbar")) return;
-    if ((event.target as HTMLElement).closest(".review-note-pin")) return;
-    if ((event.target as HTMLElement).closest(".review-note-popover")) return;
-    if ((event.target as HTMLElement).closest(".review-note-composer")) return;
+    if ((event.target as HTMLElement).closest(REVIEW_OVERLAY_INTERACTIVE_SELECTOR)) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     setDraft({
