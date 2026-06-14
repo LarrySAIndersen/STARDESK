@@ -14,7 +14,8 @@ Before writing code on **any** task:
 1. If scope, intent, quality bar, operability, or overlap with in-flight work (open PR, staging batch) is unclear: **stop and ask**
 2. Present: short understanding + numbered questions (typically 3–20 from catalog A–E in `STARDESK-agent-afklaring.md`) + proposed defaults + what is blocked until answered
 3. Do **not** guess whether ongoing work should be included — ask explicitly
-4. Proceed without asking only when the task is unambiguous, already approved (debate table), or the user explicitly says to implement without clarification — still respect hard guardrails (no schema without approval, PR-only to `staging`)
+4. **Opt-out:** If the user says `opt-out afklaring`, `bare gør det`, `ingen spørgsmål`, `skip afklaring`, or `vis mig en løsning først` — implement immediately with reasonable defaults; **do not** post a clarification block. Opt-out is per message/task, not stored in DB. Hard guardrails still apply (no schema without approval, PR-only to `staging`, no secrets).
+5. Proceed without asking only when the task is unambiguous, already approved (debate table), or user opted out — still respect hard guardrails
 
 **Principle:** Stop ved tvivl — fortsæt ikke for at være hjælpsom.
 

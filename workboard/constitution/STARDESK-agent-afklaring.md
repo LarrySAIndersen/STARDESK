@@ -20,10 +20,41 @@ Agenten **må ikke** fortsætte med antagelser når noget kan påvirke kvalitet,
 |--------|----------|
 | Opgaven er entydig og afgrænset | Implementér |
 | Én eller flere punkter nedenfor er uklare | **Stop og stil spørgsmål** |
-| Brugeren siger eksplicit "bare gør det" / "ingen spørgsmål" | Implementér inden for sikkerheds-guardrails |
-| Pågående arbejde (PR, batch, anden agent) kan overlappe | **Spørg om scope** før du inkluderer eller ændrer det |
+| Brugeren **opt-out** (se §1b) | Implementér med det samme — vis løsning, ingen afklaringsblok |
+| Pågående arbejde (PR, batch, anden agent) kan overlappe | **Spørg om scope** — medmindre brugeren har opt-out for denne opgave |
 
 ---
+
+## 1b. Opt-out (når du vil se en løsning nu)
+
+**Dette er ikke en database- eller UI-indstilling.** Du fravælger afklaring **i chatten** — pr. besked eller pr. opgave.
+
+Skriv én af disse (eller tilsvarende), så agenten **ikke** stopper med spørgsmål, men implementerer og viser en løsning:
+
+| Sætning | Effekt |
+|---------|--------|
+| `opt-out afklaring` | Ingen spørgsmålsblok — gå direkte til løsning |
+| `bare gør det` / `bare implementér` | Samme — vis kode/PR uden afklaring |
+| `ingen spørgsmål` / `skip afklaring` | Samme |
+| `vis mig en løsning først` | Prototype/demo-mentalitet — implementér med fornuftige defaults |
+
+**Gælder kun for den aktuelle opgave/tråd** — næste uklare opgave starter igen med afklaring, medmindre du opt-out igen.
+
+**Hårde grænser selv ved opt-out** (kan ikke fravælges i chat):
+
+- Ingen Alembic/schema uden eksplicit godkendelse
+- Ingen `git push` til `main` eller `staging`
+- Ingen secrets i kode
+- Destruktive DB-kommandoer kræver stadig OK
+
+**Hvor findes reglen?** (ikke i databasen)
+
+| Sted | Formål |
+|------|--------|
+| `workboard/constitution/STARDESK-agent-afklaring.md` | Fuld grundlov + spørgsmålskatalog |
+| `.cursor/rules/stardesk-constitution-paradigme.mdc` | Cursor agent — `alwaysApply: true` |
+| Denne chat | Opt-out — skriv det i din besked |
+
 
 ## 2. Hvornår SKAL agenten spørge
 
@@ -126,9 +157,9 @@ Brug som **tjekliste** — vælg kun dem der er relevante for opgaven. Nummerér
 - Opgaven er **entydig**, spec findes, og acceptkriterier er givet i samme tråd
 - **Ren udførelse** af allerede godkendt plan (tabel fra debate-first er accepteret)
 - **Triviel** rettelse (typo, kommentar) uden adfærdsændring
-- Brugeren har skrevet eksplicit **"ingen afklaring"** / **"bare implementér"** — stadig respekter hårde guardrails (ingen schema uden godkendelse, ingen push til main/staging)
+- Brugeren har **opt-out** (§1b): `opt-out afklaring`, `bare gør det`, `ingen spørgsmål`, `vis mig en løsning først` — implementér med fornuftige defaults; hårde guardrails gælder stadig
 
-Ved tvivl om *om* man skal spørge: **spørg**.
+Ved tvivl om *om* man skal spørge: **spørg** — medmindre brugeren allerede har opt-out i samme besked/tråd.
 
 ---
 
