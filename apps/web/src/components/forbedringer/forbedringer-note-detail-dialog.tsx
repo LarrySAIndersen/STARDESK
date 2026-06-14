@@ -28,6 +28,22 @@ function placementLabel(note: ReviewNote): string {
   return `x: ${Math.round(note.position_x)}, y: ${Math.round(note.position_y)}`;
 }
 
+function statusLabel(note: ReviewNote): string {
+  if (note.status === "open") return "Åben";
+  if (note.status === "resolved") return "Løst";
+  return "Slettet";
+}
+
+function statusBadgeClass(note: ReviewNote): string {
+  if (note.status === "open") {
+    return "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900";
+  }
+  if (note.status === "resolved") {
+    return "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold";
+  }
+  return "rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700";
+}
+
 export function ForbedringerNoteDetailDialog({
   note,
   onClose,
@@ -71,15 +87,7 @@ export function ForbedringerNoteDetailDialog({
 
         <div className="wire-scroll-content max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto px-4 py-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={
-                note.status === "open"
-                  ? "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900"
-                  : "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold"
-              }
-            >
-              {note.status === "open" ? "Åben" : "Løst"}
-            </span>
+            <span className={statusBadgeClass(note)}>{statusLabel(note)}</span>
             <Link
               href={note.page_path}
               className="text-star-blue inline-flex items-center gap-1 text-sm font-medium hover:underline"

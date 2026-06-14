@@ -101,7 +101,7 @@ function ReviewNotePin({
               variant="destructive"
               className="mt-2 w-full"
               onClick={async () => {
-                if (!window.confirm("Slet seddel permanent?")) return;
+                if (!window.confirm("Markér seddel som slettet og fjern den fra websiden?")) return;
                 await apiDelete(`/api/v1/review-notes/${note.id}`);
                 onDeleted();
                 setOpen(false);
@@ -191,7 +191,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
       const data = await apiGet<ReviewNote[]>(
         `/api/v1/review-notes?page_path=${encodeURIComponent(pathname)}`,
       );
-      setNotes(data);
+      setNotes(data.filter((note) => note.status !== "deleted"));
       setLoadError(null);
     } catch {
       setLoadError("Kunne ikke hente sedler på siden.");

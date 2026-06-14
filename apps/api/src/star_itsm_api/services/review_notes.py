@@ -208,7 +208,6 @@ async def delete_review_note(
     row = await db.get(PageReviewNote, note_id)
     if row is None:
         raise LookupError("Note not found")
-    if row.screenshot_storage_key and not file_storage.is_blob_storage_key(row.screenshot_storage_key):
-        Path(row.screenshot_storage_key).unlink(missing_ok=True)
-    await db.delete(row)
+    row.status = "deleted"
+    row.updated_at = _now()
     await db.commit()

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from star_itsm_api.models.base import Base
 
-NOTE_STATUSES = frozenset({"open", "resolved"})
+NOTE_STATUSES = frozenset({"open", "resolved", "deleted"})
 
 
 class PageReviewNote(Base):

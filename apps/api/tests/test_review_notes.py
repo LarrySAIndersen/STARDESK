@@ -236,6 +236,19 @@ async def test_delete_review_note_happy_path_for_admin(
 
 
 @pytest.mark.asyncio
+async def test_delete_review_note_marks_note_as_deleted(mock_db: AsyncMock) -> None:
+    note = SimpleNamespace(id=uuid.uuid4(), status="open", updated_at=None)
+    mock_db.get = AsyncMock(return_value=note)
+
+    await review_notes_service.delete_review_note(mock_db, note_id=note.id)
+
+    assert note.status == "deleted"
+    assert note.updated_at is not None
+    mock_db.delete.assert_not_called()
+    mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_delete_review_note_forbidden_for_agent(api_client: AsyncClient) -> None:
     agent = _agent_user()
 
