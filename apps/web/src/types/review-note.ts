@@ -2,6 +2,7 @@ export type ReviewNoteStatus = "open" | "resolved" | "deleted";
 
 export interface ReviewNote {
   id: string;
+  review_number: string;
   page_path: string;
   page_title: string;
   comment: string;

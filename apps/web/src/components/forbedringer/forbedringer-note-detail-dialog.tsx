@@ -71,7 +71,7 @@ export function ForbedringerNoteDetailDialog({
         <div className="flex items-start justify-between gap-3 border-b border-[var(--gray-border)] px-4 py-3">
           <div className="min-w-0">
             <p id={titleId} className="wire-card-title text-lg">
-              {note.page_title || note.page_path}
+              {note.review_number} · {note.page_title || note.page_path}
             </p>
             <p className="text-muted-foreground mt-0.5 truncate text-xs">{note.page_path}</p>
           </div>

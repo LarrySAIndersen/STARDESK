@@ -8,7 +8,7 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
-import { apiDelete, apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
 import { isAdmin } from "@/lib/auth";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
 import type { User } from "@/types/user";
@@ -65,8 +65,12 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   const loadNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiGet<ReviewNote[]>("/api/v1/review-notes");
-      setNotes(data);
+      const grouped = await Promise.all(
+        STATUS_COLUMNS.map((column) =>
+          apiGet<ReviewNote[]>(`/api/v1/review-notes?status=${column.status}`),
+        ),
+      );
+      setNotes(grouped.flat());
       setError(null);
     } catch {
       setError("Kunne ikke hente forbedringer.");
@@ -108,14 +112,14 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   );
 
   const deleteNote = async (noteId: string) => {
-    await apiDelete(`/api/v1/review-notes/${noteId}`);
+    const deleted = await apiPatch<ReviewNote>(`/api/v1/review-notes/${noteId}`, {
+      status: "deleted",
+    });
     setSelectedNote(null);
     setNotes((prev) =>
-      prev.map((note) =>
-        note.id === noteId
-          ? { ...note, status: "deleted", updated_at: new Date().toISOString() }
-          : note,
-      ),
+      prev.some((note) => note.id === deleted.id)
+        ? prev.map((note) => (note.id === deleted.id ? deleted : note))
+        : [deleted, ...prev],
     );
   };
 
@@ -189,6 +193,9 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
                           onClick={() => setSelectedNote(note)}
                         >
                           <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-star-blue">
+                              {note.review_number}
+                            </span>
                             <span className={statusBadgeClass(note.status)}>
                               {statusLabel(note.status)}
                             </span>
