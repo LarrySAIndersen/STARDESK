@@ -40,6 +40,15 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
+  it("ignores production NEXT_PUBLIC_API_URL on non-production STARDESK env", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "production";
+    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
+
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+  });
+
   it("uses production API for real production deployments", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "production";
