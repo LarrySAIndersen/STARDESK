@@ -45,6 +45,7 @@ function ReviewNotePin({
   onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <>
@@ -100,14 +101,15 @@ function ReviewNotePin({
               size="sm"
               variant="destructive"
               className="mt-2 w-full"
+              disabled={deleting}
               onClick={async () => {
-                if (!window.confirm("Markér seddel som slettet og fjern den fra websiden?")) return;
-                await apiDelete(`/api/v1/review-notes/${note.id}`);
-                onDeleted();
+                setDeleting(true);
                 setOpen(false);
+                onDeleted();
+                await apiDelete(`/api/v1/review-notes/${note.id}`);
               }}
             >
-              Slet seddel
+              {deleting ? "Sletter…" : "Slet seddel"}
             </Button>
           ) : null}
         </div>
