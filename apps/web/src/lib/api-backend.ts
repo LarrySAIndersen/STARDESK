@@ -44,82 +44,28 @@ function isVercelHosted(): boolean {
   );
 }
 
-function normalizeBase(url: string): string {
-  return url.replace(/\/$/, "");
-}
-
-function configuredPublicApiBase(): string | undefined {
-  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
-  return configured ? normalizeBase(configured) : undefined;
-}
-
-function pointsAtProductionApi(base: string | undefined): boolean {
-  if (!base) {
-    return true;
-  }
-  return base === VERCEL_PROTOTYPE_API_FALLBACK;
-}
-
-function stagingApiBase(): string {
-  return previewUsesProductionApi()
-    ? VERCEL_PROTOTYPE_API_FALLBACK
-    : VERCEL_STAGING_API_FALLBACK;
-}
-
-/** Server-side upstream API base URL (SSR, auth BFF, health checks). */
+/** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
   const configured = (process.env.STARDESK_API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
   if (configured) {
-    return normalizeBase(configured);
+    return configured.replace(/\/$/, "");
   }
 
   if (
     isVercelHosted() &&
     (isNonProductionStardeskEnvironment() || !isVercelProductionDeployment())
   ) {
-    return stagingApiBase();
+    return previewUsesProductionApi()
+      ? VERCEL_PROTOTYPE_API_FALLBACK
+      : VERCEL_STAGING_API_FALLBACK;
   }
 
   const base = isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000";
-  return normalizeBase(base);
-}
-
-/**
- * Browser BFF proxy upstream. Custom-domain staging (tstar-itsm.sbs) may keep
- * NEXT_PUBLIC_API_URL on production for SSR, but client mutations must reach
- * staging-only routes such as POST /review-notes/{id}/delete.
- */
-export function getProxyBackendBase(): string {
-  const serverConfigured = process.env.STARDESK_API_URL?.trim();
-  if (serverConfigured) {
-    return normalizeBase(serverConfigured);
-  }
-
-  const publicBase = configuredPublicApiBase();
-  if (
-    isVercelHosted() &&
-    isNonProductionStardeskEnvironment() &&
-    pointsAtProductionApi(publicBase) &&
-    !previewUsesProductionApi()
-  ) {
-    return VERCEL_STAGING_API_FALLBACK;
-  }
-
-  if (publicBase) {
-    return publicBase;
-  }
-
-  return getApiBackendBase();
+  return base.replace(/\/$/, "");
 }
 
 export function buildBackendUrl(path: string): string {
   const base = getApiBackendBase();
-  const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalized}`;
-}
-
-export function buildProxyBackendUrl(path: string): string {
-  const base = getProxyBackendBase();
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${base}${normalized}`;
 }
