@@ -40,6 +40,7 @@ def test_to_read_default_email() -> None:
     out = review_notes._to_read(row, author_name="Åse")  # type: ignore[arg-type]
     assert out.created_by_name == "Åse"
     assert out.created_by_email is None
+    assert out.review_number == ""
 
 
 def test_to_read_with_email() -> None:
@@ -80,9 +81,12 @@ async def test_list_review_notes_no_filters() -> None:
     profiles_res.all.return_value = [
         SimpleNamespace(id=uid, display_name="Rita", email="rita@example.dk")
     ]
-    db.execute = AsyncMock(side_effect=[rows_res, profiles_res])
+    numbers_res = MagicMock()
+    numbers_res.scalars.return_value.all.return_value = [row.id]
+    db.execute = AsyncMock(side_effect=[rows_res, profiles_res, numbers_res])
     out = await review_notes.list_review_notes(db)
     assert len(out) == 1
+    assert out[0].review_number == "REV-00001"
     assert out[0].created_by_name == "Rita"
     assert out[0].created_by_email == "rita@example.dk"
 
@@ -95,9 +99,12 @@ async def test_list_review_notes_with_filters_and_unknown_author() -> None:
     rows_res.scalars.return_value.all.return_value = [row]
     profiles_res = MagicMock()
     profiles_res.all.return_value = []
-    db.execute = AsyncMock(side_effect=[rows_res, profiles_res])
+    numbers_res = MagicMock()
+    numbers_res.scalars.return_value.all.return_value = [row.id]
+    db.execute = AsyncMock(side_effect=[rows_res, profiles_res, numbers_res])
     out = await review_notes.list_review_notes(db, page_path="/tickets", status="open")
     assert len(out) == 1
+    assert out[0].review_number == "REV-00001"
     assert out[0].created_by_name == "Ukendt"
     assert out[0].created_by_email is None
 
@@ -116,6 +123,9 @@ async def test_create_review_note() -> None:
         position_x=10,
         position_y=20,
     )
+    numbers_res = MagicMock()
+    numbers_res.scalars.return_value.all.return_value = []
+    db.execute = AsyncMock(return_value=numbers_res)
     out = await review_notes.create_review_note(db, payload=payload, author=author)
     assert out.page_path == "/tickets"
     assert out.page_title == "Alle sager"
@@ -154,11 +164,14 @@ async def test_update_review_note_success() -> None:
     profiles_res.all.return_value = [
         SimpleNamespace(id=uid, display_name="Bo", email="bo@example.dk")
     ]
-    db.execute = AsyncMock(return_value=profiles_res)
+    numbers_res = MagicMock()
+    numbers_res.scalars.return_value.all.return_value = [row.id]
+    db.execute = AsyncMock(side_effect=[profiles_res, numbers_res])
     payload = SimpleNamespace(status="resolved")
     out = await review_notes.update_review_note(db, note_id=row.id, payload=payload)  # type: ignore[arg-type]
     assert row.status == "resolved"
     assert out.status == "resolved"
+    assert out.review_number == "REV-00001"
     assert out.created_by_name == "Bo"
     db.commit.assert_awaited_once()
     db.refresh.assert_awaited_once()
@@ -171,8 +184,11 @@ async def test_update_review_note_success_unknown_author() -> None:
     db.get = AsyncMock(return_value=row)
     profiles_res = MagicMock()
     profiles_res.all.return_value = []
-    db.execute = AsyncMock(return_value=profiles_res)
+    numbers_res = MagicMock()
+    numbers_res.scalars.return_value.all.return_value = [row.id]
+    db.execute = AsyncMock(side_effect=[profiles_res, numbers_res])
     payload = SimpleNamespace(status="resolved")
     out = await review_notes.update_review_note(db, note_id=row.id, payload=payload)  # type: ignore[arg-type]
+    assert out.review_number == "REV-00001"
     assert out.created_by_name == "Ukendt"
     assert out.created_by_email is None

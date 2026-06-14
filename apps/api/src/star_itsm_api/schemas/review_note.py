@@ -58,6 +58,7 @@ class ReviewNoteRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    review_number: str = ""
     page_path: str
     page_title: str
     comment: str

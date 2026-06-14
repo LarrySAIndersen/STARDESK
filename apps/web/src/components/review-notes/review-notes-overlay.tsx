@@ -8,7 +8,7 @@ import { StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiGet, apiPatch, apiPost } from "@/lib/api";
 import {
   blobToBase64,
   scheduleReviewScreenshotCapture,
@@ -63,7 +63,7 @@ function ReviewNotePin({
         type="button"
         className="review-note-pin"
         style={{ left: note.position_x, top: note.position_y }}
-        aria-label={`Forbedring: ${note.comment.slice(0, 40)}`}
+        aria-label={`${note.review_number || "Forbedring"}: ${note.comment.slice(0, 40)}`}
         onClick={() => setOpen(true)}
       >
         <StickyNote className="size-4" aria-hidden />
@@ -76,7 +76,7 @@ function ReviewNotePin({
           aria-label="Forbedring"
         >
           <div className="review-note-popover__header">
-            <strong className="text-sm">Forbedring</strong>
+            <strong className="text-sm">Forbedring {note.review_number}</strong>
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground rounded p-0.5"
@@ -114,9 +114,15 @@ function ReviewNotePin({
               disabled={deleting}
               onClick={async () => {
                 setDeleting(true);
-                setOpen(false);
-                onDeleted();
-                await apiDelete(`/api/v1/review-notes/${note.id}`);
+                try {
+                  await apiPatch<ReviewNote>(`/api/v1/review-notes/${note.id}`, {
+                    status: "deleted",
+                  });
+                  setOpen(false);
+                  onDeleted();
+                } finally {
+                  setDeleting(false);
+                }
               }}
             >
               {deleting ? "Sletter…" : "Slet seddel"}
