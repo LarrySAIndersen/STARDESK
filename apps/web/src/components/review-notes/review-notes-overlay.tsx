@@ -13,7 +13,7 @@ import {
   blobToBase64,
   scheduleReviewScreenshotCapture,
 } from "@/lib/capture-review-screenshot";
-import { isAdmin, isStaff, isStardeskReviewer } from "@/lib/auth";
+import { isStaff, isStardeskReviewer } from "@/lib/auth";
 import { isForbedringerAdminPath } from "@/lib/review-notes-paths";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
@@ -193,7 +193,6 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   const pathname = usePathname();
   const reviewer = isStardeskReviewer(user);
   const staff = isStaff(user);
-  const admin = isAdmin(user);
   const canPlaceNotes = reviewer;
   const canViewNotes = reviewer || staff;
   const overlayActive = canViewNotes && !isForbedringerAdminPath(pathname);
@@ -356,7 +355,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             key={note.id}
             note={note}
             canEdit={staff || (reviewer && note.created_by_user_id === user?.id)}
-            canDelete={admin}
+            canDelete={canViewNotes}
             onResolved={() => fireAndForget(loadNotes())}
             onDeleted={() => setNotes((prev) => prev.filter((item) => item.id !== note.id))}
           />
