@@ -125,7 +125,7 @@ async def integration_create_ticket(
         payload.external_ref.system = client.system
     return await create_integration_ticket(
         db,
-        client=client,
+        _client=client,
         organization_id=organization_id,
         payload=payload,
     )

@@ -13,7 +13,6 @@ import {
 import { visualForKind } from "@/lib/workspace-landing/sitemap-visuals";
 import type { WorkspaceLandingConfig, WorkspaceSpace, WorkspaceWidgetInstance } from "@/lib/workspace-landing/types";
 import type { WorkspaceLandingRecord } from "@/lib/workspace-landing/api";
-import { cn } from "@/lib/utils";
 
 type WorkspaceSitemapDatamodelProps = Readonly<{
   userId: string;
