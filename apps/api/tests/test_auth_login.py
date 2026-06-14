@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 
 import pytest
@@ -102,3 +103,89 @@ async def test_login_larry_wrong_password(login_client: AsyncClient) -> None:
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Forkert e-mail eller adgangskode"
+
+
+@pytest.fixture
+async def deleted_larry_login_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> AsyncIterator[AsyncClient]:
+    deleted_user = User(
+        id=LARRY_ID,
+        email=LARRY_EMAIL,
+        display_name="Larrysanders",
+        role="admin",
+        is_active=False,
+        password_hash=LARRY_HASH,
+        organization_id=None,
+        deleted_at=datetime.now(UTC),
+        must_change_password=False,
+    )
+
+    monkeypatch.setattr(
+        settings,
+        "jwt_secret",
+        "test-jwt-secret-for-login-tests-only-32",
+    )
+
+    async def _fake_get_user_by_email(_db: object, _email: str) -> User | None:
+        return None
+
+    async def _fake_get_user_any_state(_db: object, email: str) -> User | None:
+        if email == LARRY_EMAIL:
+            return deleted_user
+        return None
+
+    async def _fake_ensure_prototype_staff_account(_db: object, user: User) -> bool:
+        user.is_active = True
+        user.deleted_at = None
+        return True
+
+    def _fake_db() -> AsyncMock:
+        return AsyncMock()
+
+    monkeypatch.setattr(
+        auth_router,
+        "get_user_by_email",
+        AsyncMock(side_effect=_fake_get_user_by_email),
+    )
+    monkeypatch.setattr(
+        auth_router,
+        "get_user_by_email_any_state",
+        AsyncMock(side_effect=_fake_get_user_any_state),
+    )
+    monkeypatch.setattr(
+        auth_router,
+        "ensure_prototype_staff_accounts_current",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        auth_router,
+        "ensure_prototype_staff_account",
+        AsyncMock(side_effect=_fake_ensure_prototype_staff_account),
+    )
+    monkeypatch.setattr(
+        auth_router,
+        "enforce_sole_top_admin_on_login",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(auth_router, "assert_login_allowed", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_failure", AsyncMock(return_value=None))
+    monkeypatch.setattr(auth_router, "on_login_success", AsyncMock(return_value=None))
+    app.dependency_overrides[require_db] = _fake_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+    app.dependency_overrides.pop(require_db, None)
+
+
+@pytest.mark.asyncio
+async def test_login_recovers_soft_deleted_prototype_user(
+    deleted_larry_login_client: AsyncClient,
+) -> None:
+    response = await deleted_larry_login_client.post(
+        "/api/v1/auth/login",
+        json={"email": LARRY_EMAIL, "password": LARRY_PASSWORD},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["email"] == LARRY_EMAIL

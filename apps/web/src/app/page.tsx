@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/login-form";
 import { HomeLandingPage } from "@/components/home-landing/home-landing-page";
 import { TicketListShell } from "@/components/ticket-list-shell";
 import { getServerUser } from "@/lib/auth-server";
-import { isStaff, TOKEN_COOKIE } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 import {
   classicHomePath,
   parseUiMode,
@@ -16,18 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(TOKEN_COOKIE)?.value;
-
-  if (!token) {
-    return (
-      <div className="star-page px-6 py-10">
-        <LoginForm />
-      </div>
-    );
-  }
-
   const currentUser = await getServerUser();
-  const staff = isStaff(currentUser);
 
   if (!currentUser) {
     return (
@@ -36,6 +25,8 @@ export default async function HomePage() {
       </div>
     );
   }
+
+  const staff = isStaff(currentUser);
 
   if (staff && parseUiMode(cookieStore.get(UI_MODE_COOKIE)?.value) === "classic") {
     redirect(classicHomePath());

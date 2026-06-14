@@ -9,11 +9,11 @@ on:
     branches: [staging]
   check_suite:
     types: [completed]
-  workflow_run:
-    workflows:
-      - Security
-      - Deliverable gate
-    types: [completed]
+  workflow_dispatch:
+
+
+
+
 
 permissions:
   contents: write

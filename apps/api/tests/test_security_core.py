@@ -201,6 +201,21 @@ async def test_get_user_by_email_normalizes_and_filters() -> None:
     mock_db.execute.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_get_user_by_email_any_state_includes_inactive() -> None:
+    from star_itsm_api.core.security import get_user_by_email_any_state
+
+    mock_db = AsyncMock()
+    user = SimpleNamespace(email="agent@example.dk", deleted_at="2026-01-01")
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = user
+    mock_db.execute = AsyncMock(return_value=result)
+
+    found = await get_user_by_email_any_state(mock_db, "agent@example.dk")
+    assert found is user
+    mock_db.execute.assert_awaited_once()
+
+
 def test_require_roles_allows_matching_user() -> None:
     checker = require_roles(ROLE_ADMIN)
     user = SimpleNamespace()

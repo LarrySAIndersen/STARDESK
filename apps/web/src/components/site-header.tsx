@@ -24,8 +24,13 @@ export async function SiteHeader({
   user: userProp,
 }: SiteHeaderProps) {
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
-  const isAuthenticated = Boolean(token);
-  const user = userProp ?? (isAuthenticated ? await getServerUser() : null);
+  const user =
+    userProp !== undefined
+      ? userProp
+      : token
+        ? await getServerUser()
+        : null;
+  const isAuthenticated = user !== null;
   const industrial = shellVariant === "firstLoginIndustrial";
 
   return (
