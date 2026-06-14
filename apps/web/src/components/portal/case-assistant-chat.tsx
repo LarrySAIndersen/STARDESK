@@ -3,6 +3,7 @@
 import { fireAndForget } from "@/lib/fire-and-forget";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { 
   X, 
   Bot, 
@@ -41,6 +42,8 @@ import {
 import {
   buildChatApiPayload,
   buildChatArchiveUrl,
+  CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS,
+  CASE_ASSISTANT_PANEL_SHELL_CLASS,
   clampPanelPosition,
   clampPanelSize,
   createChatMessage,
@@ -168,6 +171,7 @@ export function CaseAssistantChat({
   const [selectedAvatarId, setSelectedAvatarId] = useState<HelpABotAvatarId>("robot");
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
   const [listening, setListening] = useState(false);
+  const [panelPortalReady, setPanelPortalReady] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const fabRef = useRef<HTMLButtonElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -194,6 +198,10 @@ export function CaseAssistantChat({
       setLoadingArchive(false);
     }
   }, [user?.email, searchQuery, filterCategory, onlyBookmarked]);
+
+  useEffect(() => {
+    setPanelPortalReady(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -664,23 +672,25 @@ export function CaseAssistantChat({
         />
       ) : null}
 
-      {open ? (
-        <div
-          ref={panelRef}
-          className="case-assistant-panel case-assistant-panel--floating flex flex-col overflow-hidden"
-          style={{
-            left: resolvedPanelPos.x,
-            top: resolvedPanelPos.y,
-            width: panelSize.width,
-            height: panelSize.height,
-          }}
-          role="dialog"
-          aria-modal={false}
-          aria-label={botName}
-        >
+      {open && panelPortalReady
+        ? createPortal(
+            <div
+              ref={panelRef}
+              className={CASE_ASSISTANT_PANEL_SHELL_CLASS}
+              style={{
+                left: resolvedPanelPos.x,
+                top: resolvedPanelPos.y,
+                width: panelSize.width,
+                height: panelSize.height,
+                pointerEvents: "none",
+              }}
+              role="dialog"
+              aria-modal={false}
+              aria-label={botName}
+            >
           <header
             className={cn(
-              "case-assistant-panel--interactive",
+              CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS,
               staff
                 ? "bg-gradient-to-r from-slate-800 to-slate-900 relative px-3 py-2.5 pr-24 text-slate-100 border-b border-slate-700 case-assistant-panel-drag-handle shrink-0"
                 : "case-assistant-panel-header case-assistant-panel-drag-handle shrink-0",
@@ -739,7 +749,7 @@ export function CaseAssistantChat({
           </header>
 
           {/* Tabs Selector */}
-          <div className="case-assistant-panel--interactive flex shrink-0 border-b border-border bg-slate-50 dark:bg-slate-900">
+          <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "flex shrink-0 border-b border-border bg-slate-50 dark:bg-slate-900")}>
             <button
               type="button"
               onClick={() => setActiveTab("chat")}
@@ -778,7 +788,8 @@ export function CaseAssistantChat({
                     <div
                       key={m.id}
                       className={cn(
-                        "case-assistant-panel--interactive flex items-start gap-2.5",
+                        CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS,
+                        "flex items-start gap-2.5",
                         isUser ? "justify-end" : "justify-start"
                       )}
                     >
@@ -818,7 +829,7 @@ export function CaseAssistantChat({
                 })}
                 
                 {loading && (
-                  <div className="case-assistant-panel--interactive flex items-start gap-2.5 justify-start">
+                  <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "flex items-start gap-2.5 justify-start")}>
                     {useIcon && (
                       <div className="size-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
                         {staff ? (
@@ -841,7 +852,7 @@ export function CaseAssistantChat({
               </div>
 
               {/* Input footer */}
-              <footer className="case-assistant-panel--interactive shrink-0 border-t border-border bg-white p-3 dark:bg-slate-900">
+              <footer className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "shrink-0 border-t border-border bg-white p-3 dark:bg-slate-900")}>
                 {activeTab === "chat" && contextualQuickActions.length > 0 ? (
                   <div className="mb-2 flex flex-wrap gap-1.5">
                     {contextualQuickActions.map((action) => (
@@ -908,7 +919,7 @@ export function CaseAssistantChat({
             /* Archive & Search View */
             <div className="pointer-events-none flex min-h-0 flex-1 flex-col bg-slate-50 dark:bg-slate-950">
               {/* Search and Filters */}
-              <div className="case-assistant-panel--interactive shrink-0 space-y-2 border-b border-border bg-white p-3 dark:bg-slate-900">
+              <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "shrink-0 space-y-2 border-b border-border bg-white p-3 dark:bg-slate-900")}>
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
                   <input
@@ -968,14 +979,14 @@ export function CaseAssistantChat({
               {/* Archived messages list */}
               <div className="pointer-events-none flex-1 overflow-y-auto p-3 space-y-3">
                 {loadingArchive ? (
-                  <div className="case-assistant-panel--interactive flex flex-col items-center justify-center gap-2 py-12 text-xs text-muted-foreground">
+                  <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "flex flex-col items-center justify-center gap-2 py-12 text-xs text-muted-foreground")}>
                     <RefreshCw className="size-5 animate-spin text-star-blue" />
                     <span>Henter arkiv...</span>
                   </div>
                 ) : archiveError ? (
-                  <div className="case-assistant-panel--interactive py-12 text-center text-xs text-red-500">{archiveError}</div>
+                  <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "py-12 text-center text-xs text-red-500")}>{archiveError}</div>
                 ) : archivedMessages.length === 0 ? (
-                  <div className="case-assistant-panel--interactive flex flex-col items-center justify-center px-4 py-12 text-center text-xs text-muted-foreground">
+                  <div className={cn(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS, "flex flex-col items-center justify-center px-4 py-12 text-center text-xs text-muted-foreground")}>
                     <Clock className="size-8 text-slate-300 dark:text-slate-700 mb-2" />
                     <p className="font-semibold text-slate-600 dark:text-slate-400">Ingen beskeder fundet</p>
                     <p className="text-[10px] mt-1">Stil spørgsmål til chatbotten for automatisk at opbygge historikken.</p>
@@ -988,7 +999,10 @@ export function CaseAssistantChat({
                     return (
                       <div 
                         key={msg.id} 
-                        className="case-assistant-panel--interactive relative space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all group hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
+                        className={cn(
+                          CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS,
+                          "relative space-y-2 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all group hover:shadow-md dark:border-slate-800 dark:bg-slate-900",
+                        )}
                       >
                         <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-1.5 text-[10px]">
                           <div className="flex items-center gap-1.5 font-bold">
@@ -1058,13 +1072,15 @@ export function CaseAssistantChat({
             </div>
           )}
           <div
-            className="case-assistant-panel-resize-handle case-assistant-panel--interactive"
+            className={cn("case-assistant-panel-resize-handle", CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS)}
             role="separator"
             aria-label="Træk for at ændre størrelse"
             onMouseDown={handlePanelResizeStart}
           />
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
