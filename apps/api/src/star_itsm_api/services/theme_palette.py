@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from star_itsm_api.schemas.theme_palette import (
+    VALID_PRESET_IDS,
     ThemePalettePreference,
     ThemePaletteSlotOverrides,
     ThemePaletteUpdateRequest,
-    VALID_PRESET_IDS,
 )
 
 SLOT_LABELS = {

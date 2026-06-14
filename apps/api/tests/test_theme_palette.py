@@ -9,13 +9,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.security import get_current_user_session
-from star_itsm_api.deps import require_db
 from star_itsm_api.main import app
 from star_itsm_api.schemas.theme_palette import (
+    VALID_PRESET_IDS,
     ThemePalettePreference,
     ThemePaletteSlotOverrides,
     ThemePaletteUpdateRequest,
-    VALID_PRESET_IDS,
 )
 from star_itsm_api.services import org_access
 from star_itsm_api.services.theme_palette import merge_theme_palette_update, validate_theme_palette

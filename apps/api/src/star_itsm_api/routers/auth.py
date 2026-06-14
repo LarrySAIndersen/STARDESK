@@ -34,12 +34,6 @@ from star_itsm_api.schemas.auth import (
     user_to_read,
 )
 from star_itsm_api.schemas.theme_palette import ThemePaletteUpdateRequest
-from star_itsm_api.services.theme_palette import (
-    merge_theme_palette_update,
-    normalize_theme_palette_preference,
-    theme_palette_to_storage,
-    validate_theme_palette,
-)
 from star_itsm_api.services.login_throttle import (
     assert_login_allowed,
     mark_login_throttle_schema_ready,
@@ -49,6 +43,12 @@ from star_itsm_api.services.login_throttle import (
 from star_itsm_api.services.org_access import get_user_organization_id
 from star_itsm_api.services.prototype_staff_bootstrap import ensure_prototype_staff_account
 from star_itsm_api.services.sole_top_admin import enforce_sole_top_admin_on_login
+from star_itsm_api.services.theme_palette import (
+    merge_theme_palette_update,
+    normalize_theme_palette_preference,
+    theme_palette_to_storage,
+    validate_theme_palette,
+)
 from star_itsm_api.services.user_roles import (
     attach_roles_to_user,
     ensure_user_roles_loaded,
