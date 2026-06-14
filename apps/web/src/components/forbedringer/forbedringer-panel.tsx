@@ -8,7 +8,7 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
-import { apiDelete, apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { apiGet, apiPatch, apiPostNoContent, reviewNoteScreenshotUrl } from "@/lib/api";
 import { isAdmin } from "@/lib/auth";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
 import type { User } from "@/types/user";
@@ -124,22 +124,14 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   );
 
   const deleteNote = async (noteId: string) => {
-    let deleted: ReviewNote | null = null;
-    try {
-      deleted = await apiPatch<ReviewNote>(`/api/v1/review-notes/${noteId}`, {
-        status: "deleted",
-      });
-    } catch {
-      await apiDelete(`/api/v1/review-notes/${noteId}`);
-    }
+    await apiPostNoContent(`/api/v1/review-notes/${noteId}/delete`, {});
     setSelectedNote(null);
     setNotes((prev) => {
       const existing = prev.find((note) => note.id === noteId);
       const nextDeleted =
-        deleted ??
-        (existing
+        existing
           ? { ...existing, status: "deleted" as const, updated_at: new Date().toISOString() }
-          : null);
+          : null;
       if (!nextDeleted) return prev;
       const next = prev.some((note) => note.id === nextDeleted.id)
         ? prev.map((note) => (note.id === nextDeleted.id ? nextDeleted : note))

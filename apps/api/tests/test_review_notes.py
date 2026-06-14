@@ -259,6 +259,30 @@ async def test_delete_review_note_allowed_for_reviewer(
 
 
 @pytest.mark.asyncio
+async def test_post_delete_review_note_allowed_for_reviewer(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reviewer = _reviewer_user()
+    note_id = uuid.uuid4()
+
+    def _as_reviewer():
+        return reviewer
+
+    app.dependency_overrides[get_current_user] = _as_reviewer
+    app.dependency_overrides[get_current_user_session] = _as_reviewer
+
+    delete_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(review_notes_service, "delete_review_note", delete_mock)
+
+    response = await api_client.post(f"/api/v1/review-notes/{note_id}/delete")
+
+    assert response.status_code == 204
+    delete_mock.assert_awaited_once()
+    assert delete_mock.await_args.kwargs["note_id"] == note_id
+
+
+@pytest.mark.asyncio
 async def test_delete_review_note_marks_note_as_deleted(mock_db: AsyncMock) -> None:
     note = SimpleNamespace(id=uuid.uuid4(), status="open", updated_at=None)
     mock_db.get = AsyncMock(return_value=note)
