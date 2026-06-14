@@ -32,10 +32,12 @@ export function ForbedringerNoteDetailDialog({
   note,
   onClose,
   onResolve,
+  onDelete,
 }: Readonly<{
   note: ReviewNote;
   onClose: () => void;
   onResolve?: () => void;
+  onDelete?: () => void;
 }>) {
   const titleId = useId();
   const [photoExpanded, setPhotoExpanded] = useState(false);
@@ -141,6 +143,11 @@ export function ForbedringerNoteDetailDialog({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--gray-border)] px-4 py-3">
+          {onDelete ? (
+            <Button type="button" size="sm" variant="destructive" onClick={onDelete}>
+              Slet seddel
+            </Button>
+          ) : null}
           {note.status === "open" && onResolve ? (
             <Button type="button" size="sm" variant="outline" onClick={onResolve}>
               Markér som løst

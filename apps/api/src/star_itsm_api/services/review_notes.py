@@ -198,3 +198,17 @@ async def update_review_note(
     profiles = await _author_profiles(db, {row.created_by_user_id})
     name, email = profiles.get(row.created_by_user_id, ("Ukendt", None))
     return _to_read(row, author_name=name, author_email=email)
+
+
+async def delete_review_note(
+    db: AsyncSession,
+    *,
+    note_id: uuid.UUID,
+) -> None:
+    row = await db.get(PageReviewNote, note_id)
+    if row is None:
+        raise LookupError("Note not found")
+    if row.screenshot_storage_key and not file_storage.is_blob_storage_key(row.screenshot_storage_key):
+        Path(row.screenshot_storage_key).unlink(missing_ok=True)
+    await db.delete(row)
+    await db.commit()

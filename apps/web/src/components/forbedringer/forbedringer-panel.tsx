@@ -8,8 +8,10 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
-import { apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { isAdmin } from "@/lib/auth";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
+import type { User } from "@/types/user";
 
 function formatTimestamp(value: string): string {
   try {
@@ -26,13 +28,14 @@ function placementLabel(note: ReviewNote): string {
   return `x: ${Math.round(note.position_x)}, y: ${Math.round(note.position_y)}`;
 }
 
-export function ForbedringerPanel() {
+export function ForbedringerPanel({ user }: { user: User | null }) {
   const [notes, setNotes] = useState<ReviewNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ReviewNoteStatus | "all">("open");
   const [pageFilter, setPageFilter] = useState("");
   const [selectedNote, setSelectedNote] = useState<ReviewNote | null>(null);
+  const canDeleteNotes = isAdmin(user);
 
   const loadNotes = useCallback(async () => {
     setLoading(true);
@@ -72,6 +75,13 @@ export function ForbedringerPanel() {
     await apiPatch(`/api/v1/review-notes/${noteId}`, { status: "resolved" });
     setSelectedNote(null);
     await loadNotes();
+  };
+
+  const deleteNote = async (noteId: string) => {
+    if (!window.confirm("Slet seddel permanent?")) return;
+    await apiDelete(`/api/v1/review-notes/${noteId}`);
+    setSelectedNote(null);
+    setNotes((prev) => prev.filter((note) => note.id !== noteId));
   };
 
   return (
@@ -201,6 +211,16 @@ export function ForbedringerPanel() {
                   >
                     Åbn side
                   </Link>
+                  {canDeleteNotes ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => fireAndForget(deleteNote(note.id))}
+                    >
+                      Slet seddel
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
@@ -232,6 +252,11 @@ export function ForbedringerPanel() {
           onResolve={
             selectedNote.status === "open"
               ? () => fireAndForget(resolveNote(selectedNote.id))
+              : undefined
+          }
+          onDelete={
+            canDeleteNotes
+              ? () => fireAndForget(deleteNote(selectedNote.id))
               : undefined
           }
         />

@@ -19,7 +19,7 @@ describe("shouldIgnoreCaptureElement", () => {
 
     const overlay = new MockHTMLElement();
     overlay.classList = {
-      contains: (name: string) => name === "review-notes-layer",
+      contains: (...names: string[]) => names.includes("review-notes-layer"),
     };
     expect(shouldIgnoreCaptureElement(overlay as unknown as Element)).toBe(true);
 
