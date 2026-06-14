@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "checkSuiteVersion": 1,
+  "patterns": [
+    {
+      "id": "vercel-protection-401",
+      "match": ["401", "authentication required", "deployment protection"],
+      "category": "infra",
+      "diagnosis": "Vercel Deployment Protection blocks unauthenticated Preview access.",
+      "suggestedFix": "Set VERCEL_PROTECTION_BYPASS secret in GitHub/VM, or use Vercel Share link. See docs/staging-vercel-preview-env.md.",
+      "checks": ["api_health", "api_login"]
+    },
+    {
+      "id": "database-not-configured",
+      "match": ["database is not configured", "database_url", "no database"],
+      "category": "env",
+      "diagnosis": "API Preview deployment is missing DATABASE_URL (Neon test branch).",
+      "suggestedFix": "Add DATABASE_URL to Vercel api project Preview env (postgresql+asyncpg://…). Redeploy staging. See docs/staging-vercel-preview-env.md.",
+      "checks": ["api_login", "api_tickets"]
+    },
+    {
+      "id": "login-failed",
+      "match": ["login failed", "/auth/login", "401", "403", "invalid credentials"],
+      "category": "auth",
+      "diagnosis": "Login endpoint failed — often env (JWT_SECRET, PROTOTYPE_BOOTSTRAP_PASSWORD) or missing seed data.",
+      "suggestedFix": "Verify Preview env vars on api project; run bootstrap on Neon test branch.",
+      "checks": ["api_login"]
+    },
+    {
+      "id": "no-tickets",
+      "match": ["no ticket", "expected at least 1 ticket", "got 0"],
+      "category": "data",
+      "diagnosis": "API reachable but Neon test branch lacks seed/demo tickets.",
+      "suggestedFix": "Run bash scripts/bootstrap-dev-database.sh against Neon test (never main).",
+      "checks": ["api_tickets"]
+    },
+    {
+      "id": "health-timeout",
+      "match": ["health failed", "econnrefused", "timed out", "fetch failed"],
+      "category": "deploy",
+      "diagnosis": "Deployment not ready or build still propagating.",
+      "suggestedFix": "Wait for Vercel deployment READY; check Vercel build logs for failed build.",
+      "checks": ["vercel_status", "api_health"]
+    },
+    {
+      "id": "vercel-build-error",
+      "match": ["build failed", "error command", "npm run build", "module not found"],
+      "category": "build",
+      "diagnosis": "Vercel build failed — CI may be green while deploy breaks.",
+      "suggestedFix": "Inspect Vercel deployment logs; reproduce with cd apps/web && npm run build or apps/api deploy.",
+      "checks": ["vercel_status"]
+    },
+    {
+      "id": "wrong-environment",
+      "match": ["stardesk_env=production", "expected stardesk_env", "non-prod"],
+      "category": "env",
+      "diagnosis": "Staging Preview reports production identity — wrong STARDESK_ENV on Preview.",
+      "suggestedFix": "Set STARDESK_ENV=test on api Preview; NEXT_PUBLIC_STARDESK_ENV=test on web Preview.",
+      "checks": ["api_health"]
+    },
+    {
+      "id": "cors-frontend",
+      "match": ["cors", "blocked by cors", "access-control"],
+      "category": "env",
+      "diagnosis": "FRONTEND_URL on API does not match staging web URL.",
+      "suggestedFix": "Set FRONTEND_URL to staging web Preview URL on api Preview env.",
+      "checks": ["api_login", "ui_gate"]
+    }
+  ],
+  "checkDefinitions": [
+    { "id": "vercel_status", "description": "Poll Vercel until api+web deployments are READY", "required": false },
+    { "id": "api_health", "description": "GET /health with expected stardesk_env", "required": true },
+    { "id": "api_login", "description": "POST /auth/login with demo user", "required": true },
+    { "id": "api_tickets", "description": "GET /tickets with bearer token", "required": true },
+    { "id": "ui_gate", "description": "Playwright login → Alle sager (staging --full only)", "required": false }
+  ]
+}
