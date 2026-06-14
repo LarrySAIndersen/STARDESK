@@ -44,20 +44,32 @@ function isVercelHosted(): boolean {
   );
 }
 
+function stagingApiBase(): string {
+  return previewUsesProductionApi()
+    ? VERCEL_PROTOTYPE_API_FALLBACK
+    : VERCEL_STAGING_API_FALLBACK;
+}
+
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
-  const configured = (process.env.STARDESK_API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
-  if (configured) {
-    return configured.replace(/\/$/, "");
+  const serverConfigured = process.env.STARDESK_API_URL?.trim();
+  if (serverConfigured) {
+    return serverConfigured.replace(/\/$/, "");
   }
 
-  if (
-    isVercelHosted() &&
-    (isNonProductionStardeskEnvironment() || !isVercelProductionDeployment())
-  ) {
-    return previewUsesProductionApi()
-      ? VERCEL_PROTOTYPE_API_FALLBACK
-      : VERCEL_STAGING_API_FALLBACK;
+  // Custom-domain staging (e.g. tstar-itsm.sbs) often has NEXT_PUBLIC_API_URL set to prod.
+  // Non-production STARDESK env must win so review-notes and other staging-only API routes work.
+  if (isVercelHosted() && isNonProductionStardeskEnvironment()) {
+    return stagingApiBase();
+  }
+
+  const publicConfigured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (publicConfigured) {
+    return publicConfigured.replace(/\/$/, "");
+  }
+
+  if (isVercelHosted() && !isVercelProductionDeployment()) {
+    return stagingApiBase();
   }
 
   const base = isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000";
