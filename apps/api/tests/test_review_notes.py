@@ -236,6 +236,29 @@ async def test_delete_review_note_happy_path_for_admin(
 
 
 @pytest.mark.asyncio
+async def test_delete_review_note_allowed_for_reviewer(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reviewer = _reviewer_user()
+    note_id = uuid.uuid4()
+
+    def _as_reviewer():
+        return reviewer
+
+    app.dependency_overrides[get_current_user] = _as_reviewer
+    app.dependency_overrides[get_current_user_session] = _as_reviewer
+
+    delete_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(review_notes_service, "delete_review_note", delete_mock)
+
+    response = await api_client.delete(f"/api/v1/review-notes/{note_id}")
+
+    assert response.status_code == 204
+    delete_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_delete_review_note_marks_note_as_deleted(mock_db: AsyncMock) -> None:
     note = SimpleNamespace(id=uuid.uuid4(), status="open", updated_at=None)
     mock_db.get = AsyncMock(return_value=note)
@@ -249,14 +272,24 @@ async def test_delete_review_note_marks_note_as_deleted(mock_db: AsyncMock) -> N
 
 
 @pytest.mark.asyncio
-async def test_delete_review_note_forbidden_for_agent(api_client: AsyncClient) -> None:
-    agent = _agent_user()
+async def test_delete_review_note_forbidden_for_end_user(api_client: AsyncClient) -> None:
+    end_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="submitter@example.dk",
+        display_name="Slutbruger",
+        role="end_user",
+        is_active=True,
+        password_hash=None,
+        deleted_at=None,
+        must_change_password=False,
+        password_policy_exempt=False,
+    )
 
-    def _as_agent():
-        return agent
+    def _as_end_user():
+        return end_user
 
-    app.dependency_overrides[get_current_user] = _as_agent
-    app.dependency_overrides[get_current_user_session] = _as_agent
+    app.dependency_overrides[get_current_user] = _as_end_user
+    app.dependency_overrides[get_current_user_session] = _as_end_user
 
     response = await api_client.delete(f"/api/v1/review-notes/{uuid.uuid4()}")
     assert response.status_code == 403
