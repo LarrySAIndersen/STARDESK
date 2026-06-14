@@ -75,10 +75,12 @@ export function ThemePalettePicker({
   user,
   variant = "default",
   onUserUpdated,
+  defaultOpen = false,
 }: Readonly<{
   user: User;
   variant?: "default" | "chrome";
   onUserUpdated?: (user: User) => void;
+  defaultOpen?: boolean;
 }>) {
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -90,7 +92,7 @@ export function ThemePalettePicker({
     [user.theme_palette],
   );
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [presetId, setPresetId] = useState<ThemePalettePresetId>(initial.preset_id);
   const [overrides, setOverrides] = useState<ThemePalettePreference["overrides"]>(
     initial.overrides ?? {},
