@@ -1,9 +1,9 @@
-from datetime import UTC, datetime
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import AsyncMock
 
 from star_itsm_api.core.security import get_current_user, get_current_user_session
 from star_itsm_api.main import app
