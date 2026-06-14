@@ -51,7 +51,7 @@ async def test_list_sla_policies() -> None:
 
 def test_list_standard_sla_rules() -> None:
     res = list_standard_sla_rules()
-    assert len(res) == 12
+    assert len(res) == 16
     assert any(r.priority == "critical" and r.ticket_type == "incident" for r in res)
     sr_medium = next(
         r for r in res if r.ticket_type == "service_request" and r.priority == "medium"
