@@ -8,6 +8,7 @@ import { AgentErrorBoundary } from "@/components/agent/agent-error-boundary";
 import { AgentShellColumns } from "@/components/agent/agent-shell-columns";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
 import { AgentTopBar } from "@/components/agent/agent-top-bar";
+import { StaffNotificationToast } from "@/components/notifications/staff-notification-toast";
 import { ReviewNotesOverlay } from "@/components/review-notes/review-notes-overlay";
 import { PageLayoutEditProvider } from "@/components/page-layout/page-layout-edit-provider";
 import { PageLayoutEditMainChrome } from "@/components/page-layout/page-layout-edit-main-chrome";
@@ -124,6 +125,7 @@ function AgentShellInner({
           <ChatWorkspacePanel layout="float" />
         </TeamChatFloatPanel>
       ) : null}
+      {staff ? <StaffNotificationToast user={user} /> : null}
     </>
   );
 }
