@@ -2,6 +2,7 @@ import asyncio
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.config import settings
@@ -31,6 +32,13 @@ from star_itsm_api.schemas.auth import (
     TokenResponse,
     UserRead,
     user_to_read,
+)
+from star_itsm_api.schemas.theme_palette import ThemePaletteUpdateRequest
+from star_itsm_api.services.theme_palette import (
+    merge_theme_palette_update,
+    normalize_theme_palette_preference,
+    theme_palette_to_storage,
+    validate_theme_palette,
 )
 from star_itsm_api.services.login_throttle import (
     assert_login_allowed,
@@ -213,3 +221,32 @@ async def update_avatar(
     await db.refresh(current_user)
     org_name = await _organization_name(db, current_user)
     return user_to_read(current_user, organization_name=org_name)
+
+
+@router.patch("/me/theme-palette")
+async def update_theme_palette(
+    payload: ThemePaletteUpdateRequest,
+    current_user: User = Depends(get_current_user_session),
+    db: AsyncSession = Depends(require_db),
+) -> UserRead:
+    current = normalize_theme_palette_preference(getattr(current_user, "theme_palette", None))
+    try:
+        merged = merge_theme_palette_update(current, payload)
+        validate_theme_palette(merged)
+    except ValidationError as exc:
+        detail = exc.errors()[0]["msg"] if exc.errors() else "Ugyldigt farvetema"
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=detail.removeprefix("Value error, "),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    current_user.theme_palette = theme_palette_to_storage(merged)
+    await db.commit()
+    await db.refresh(current_user)
+    org_name = await _organization_name(db, current_user)
+    roles = await ensure_user_roles_loaded(db, current_user)
+    return user_to_read(current_user, organization_name=org_name, roles=roles)

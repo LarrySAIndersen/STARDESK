@@ -448,7 +448,7 @@
   }
 
   .wire-topheader__helpabot {
-    @apply flex shrink-0 items-center gap-2 self-center rounded-lg border border-white/20 bg-gradient-to-r from-slate-700 to-slate-800 px-3 py-2 text-sm font-semibold text-white transition-colors hover:from-slate-600 hover:to-slate-700;
+    @apply flex shrink-0 items-center gap-2 self-center rounded-full border border-white/20 bg-gradient-to-r from-slate-700 to-slate-800 px-3 py-2 text-sm font-semibold text-white transition-colors hover:from-slate-600 hover:to-slate-700;
   }
 
   .wire-topheader__helpabot--open {

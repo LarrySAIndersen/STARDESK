@@ -1,3 +1,5 @@
+import type { ThemePalettePreference } from "@/lib/theme-palettes";
+
 export type UserRole = "end_user" | "agent" | "admin" | "top_admin" | "supporter" | "stardesk_reviewer" | "kundeportal_2";
 
 export interface User {
@@ -16,6 +18,7 @@ export interface User {
   avatar_preset_id?: string | null;
   /** When set, locks UI to classic or modern (overrides login cookie). */
   ui_mode?: "modern" | "classic" | null;
+  theme_palette?: ThemePalettePreference | null;
 }
 
 export type AvatarSelection =
