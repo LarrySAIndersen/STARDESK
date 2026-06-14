@@ -13,7 +13,7 @@ describe("shouldIgnoreCaptureElement", () => {
 
   it("ignores review overlay nodes", () => {
     class MockHTMLElement {
-      classList = { contains: (_name: string) => false };
+      classList = { contains: () => false };
     }
     vi.stubGlobal("HTMLElement", MockHTMLElement);
 
