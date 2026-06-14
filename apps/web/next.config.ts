@@ -1,9 +1,18 @@
 import type { NextConfig } from "next";
 
+import { buildContentSecurityPolicy } from "./src/lib/content-security-policy";
+
 const isProductionDeploy =
   process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+const isDevServer = process.env.NODE_ENV === "development";
+
+const contentSecurityPolicy = buildContentSecurityPolicy({
+  isProductionDeploy,
+  isDevServer,
+});
 
 const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
