@@ -7,6 +7,8 @@ import {
   clampPanelPosition,
   clampPanelSize,
   createChatMessage,
+  CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS,
+  CASE_ASSISTANT_PANEL_SHELL_CLASS,
   getCaseAssistantBotLabels,
   getDefaultFabPosition,
   getDefaultPanelPosition,
@@ -25,6 +27,12 @@ describe("case-assistant-chat-panel", () => {
   it("labels staff vs portal bots", () => {
     expect(getCaseAssistantBotLabels(true).botName).toBe("Help-a-bot");
     expect(getCaseAssistantBotLabels(false).fabLabel).toBe("Spørg om sager");
+  });
+
+  it("uses click-through shell classes on the floating panel", () => {
+    expect(CASE_ASSISTANT_PANEL_SHELL_CLASS).toContain("pointer-events-none");
+    expect(CASE_ASSISTANT_PANEL_SHELL_CLASS).toContain("case-assistant-panel--floating");
+    expect(CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS).toContain("pointer-events-auto");
   });
 
   it("builds archive URL with filters", () => {

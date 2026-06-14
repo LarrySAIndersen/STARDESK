@@ -18,6 +18,13 @@ export const PANEL_SIZE_PRESETS: Record<PanelSizePreset, { width: number; height
 export const PANEL_POS_STORAGE_KEY = "stardesk-helpabot-pos";
 export const PANEL_SIZE_STORAGE_KEY = "stardesk-helpabot-size";
 export const FAB_POS_STORAGE_KEY = "stardesk-helpabot-fab-pos";
+
+/** Shell lets clicks pass through to sidebar/main; only interactive children capture events. */
+export const CASE_ASSISTANT_PANEL_SHELL_CLASS =
+  "case-assistant-panel case-assistant-panel--floating pointer-events-none flex flex-col overflow-hidden";
+
+export const CASE_ASSISTANT_PANEL_INTERACTIVE_CLASS =
+  "case-assistant-panel--interactive pointer-events-auto";
 export const MOCK_SPEECH_SAMPLE = "Jeg har brug for hjælp til at opdatere en sag";
 
 export function clampPanelSize(width: number, height: number) {
