@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, hasAgentShellAccess, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
+import { clearStaleSessionCookies } from "@/lib/clear-stale-session";
 import {
   firstAllowedStaffPathForUser,
   isStaffPathBlockedForUser,
@@ -24,11 +25,17 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
   const pathname = (await headers()).get("x-pathname") ?? "";
 
-  if (!token && isStandaloneLoginPath(pathname)) {
+  let currentUser = token ? await getServerUser() : null;
+  if (token && !currentUser) {
+    await clearStaleSessionCookies();
+    currentUser = null;
+  }
+
+  if (!currentUser && isStandaloneLoginPath(pathname)) {
     return <>{children}</>;
   }
 
-  if (!token) {
+  if (!currentUser) {
     return (
       <>
         <SiteHeader user={null} />
@@ -39,8 +46,6 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
       </>
     );
   }
-
-  const currentUser = await getServerUser();
 
   const showUsersNav = canManageUsers(currentUser);
 

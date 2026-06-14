@@ -210,3 +210,11 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
         )
     )
     return result.scalar_one_or_none()
+
+
+async def get_user_by_email_any_state(db: AsyncSession, email: str) -> User | None:
+    """Lookup by email including soft-deleted or inactive rows (prototype recovery)."""
+    result = await db.execute(
+        select(User).where(User.email == email.lower().strip())
+    )
+    return result.scalar_one_or_none()

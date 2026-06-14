@@ -17,11 +17,15 @@ from star_itsm_api.core.security import (
     create_access_token,
     get_current_user_session,
     get_user_by_email,
+    get_user_by_email_any_state,
     hash_password,
     verify_password,
 )
 from star_itsm_api.db import engine
-from star_itsm_api.db_schema_sync import ensure_login_throttle_schema_current
+from star_itsm_api.db_schema_sync import (
+    ensure_login_throttle_schema_current,
+    ensure_prototype_staff_accounts_current,
+)
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.user import User
@@ -97,6 +101,20 @@ async def _organization_name(db: AsyncSession, user: User) -> str | None:
     return org.name if org else None
 
 
+async def _resolve_login_user(db: AsyncSession, email: str) -> User | None:
+    """Active user lookup; prototype @example.dk may recover soft-deleted rows."""
+    user = await get_user_by_email(db, email)
+    if user is not None:
+        return user
+    if documented_prototype_password(email) is None:
+        return None
+    await ensure_prototype_staff_accounts_current(engine, settings.database_url)
+    user = await get_user_by_email(db, email)
+    if user is not None:
+        return user
+    return await get_user_by_email_any_state(db, email)
+
+
 @router.post("/login")
 async def login(
     payload: LoginRequest,
@@ -108,7 +126,7 @@ async def login(
     await _ensure_login_throttle_schema()
     await assert_login_allowed(db, normalized_email, client_ip)
 
-    user = await get_user_by_email(db, payload.email)
+    user = await _resolve_login_user(db, payload.email)
     password_hash_before = user.password_hash if user is not None else None
     if user is None or not _login_password_valid(user, payload.password):
         await on_login_failure(db, normalized_email, client_ip, user)

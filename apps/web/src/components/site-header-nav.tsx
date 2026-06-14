@@ -28,6 +28,13 @@ export function SiteHeaderNav({
   industrialChrome?: boolean;
 }) {
   const user = serverUser ?? getClientUser();
+  if (!user) {
+    return (
+      <nav className="flex flex-wrap items-center gap-1" aria-label="Hovednavigation">
+        <ThemeToggle />
+      </nav>
+    );
+  }
   const staff = isStaff(user);
   const admin = canManageUsers(user);
 
