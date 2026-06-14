@@ -27,9 +27,11 @@ def _to_read(
     *,
     author_name: str,
     author_email: str | None = None,
+    review_number: str = "",
 ) -> ReviewNoteRead:
     return ReviewNoteRead(
         id=row.id,
+        review_number=review_number,
         page_path=row.page_path,
         page_title=row.page_title,
         comment=row.comment,
@@ -44,6 +46,26 @@ def _to_read(
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _format_review_number(index: int) -> str:
+    return f"REV-{index:05d}"
+
+
+async def _review_numbers(
+    db: AsyncSession,
+    note_ids: set[uuid.UUID],
+) -> dict[uuid.UUID, str]:
+    if not note_ids:
+        return {}
+    result = await db.execute(
+        select(PageReviewNote.id).order_by(PageReviewNote.created_at.asc(), PageReviewNote.id.asc())
+    )
+    return {
+        note_id: _format_review_number(index)
+        for index, note_id in enumerate(result.scalars().all(), start=1)
+        if note_id in note_ids
+    }
 
 
 async def _author_profiles(
@@ -123,11 +145,13 @@ async def list_review_notes(
     result = await db.execute(query)
     rows = list(result.scalars().all())
     profiles = await _author_profiles(db, {row.created_by_user_id for row in rows})
+    numbers = await _review_numbers(db, {row.id for row in rows})
     return [
         _to_read(
             row,
             author_name=profiles.get(row.created_by_user_id, ("Ukendt", ""))[0],
             author_email=profiles.get(row.created_by_user_id, ("", None))[1],
+            review_number=numbers.get(row.id, ""),
         )
         for row in rows
     ]
@@ -166,7 +190,13 @@ async def create_review_note(
     db.add(row)
     await db.commit()
     await db.refresh(row)
-    return _to_read(row, author_name=author.display_name, author_email=author.email)
+    numbers = await _review_numbers(db, {row.id})
+    return _to_read(
+        row,
+        author_name=author.display_name,
+        author_email=author.email,
+        review_number=numbers.get(row.id, ""),
+    )
 
 
 async def get_review_note_screenshot(
@@ -196,5 +226,19 @@ async def update_review_note(
     await db.commit()
     await db.refresh(row)
     profiles = await _author_profiles(db, {row.created_by_user_id})
+    numbers = await _review_numbers(db, {row.id})
     name, email = profiles.get(row.created_by_user_id, ("Ukendt", None))
-    return _to_read(row, author_name=name, author_email=email)
+    return _to_read(row, author_name=name, author_email=email, review_number=numbers.get(row.id, ""))
+
+
+async def delete_review_note(
+    db: AsyncSession,
+    *,
+    note_id: uuid.UUID,
+) -> None:
+    row = await db.get(PageReviewNote, note_id)
+    if row is None:
+        raise LookupError("Note not found")
+    row.status = "deleted"
+    row.updated_at = _now()
+    await db.commit()

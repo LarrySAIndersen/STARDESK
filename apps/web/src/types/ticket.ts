@@ -159,7 +159,7 @@ export interface TicketDetail extends Ticket {
 }
 
 export interface TicketCreateInput {
-  ticket_type: "service_request" | "incident" | "problem";
+  ticket_type: "service_request" | "incident" | "problem" | "wreck_ind";
   title: string;
   description: string;
   priority: "critical" | "high" | "medium" | "low";

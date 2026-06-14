@@ -3,6 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from star_itsm_api.core.password_policy import effective_must_change_password
+from star_itsm_api.schemas.theme_palette import ThemePalettePreference
 
 
 class LoginRequest(BaseModel):
@@ -38,6 +39,7 @@ class UserRead(BaseModel):
     avatar_url: str | None = None
     avatar_preset_id: str | None = None
     ui_mode: str | None = None
+    theme_palette: ThemePalettePreference | None = None
 
 
 class TokenResponse(BaseModel):
@@ -82,4 +84,14 @@ def user_to_read(
         avatar_url=getattr(user, "avatar_url", None),
         avatar_preset_id=getattr(user, "avatar_preset_id", None),
         ui_mode=getattr(user, "ui_mode", None),
+        theme_palette=normalize_theme_palette_read(getattr(user, "theme_palette", None)),
     )
+
+
+def normalize_theme_palette_read(raw) -> ThemePalettePreference | None:  # noqa: ANN001
+    if raw is None:
+        return None
+    try:
+        return ThemePalettePreference.model_validate(raw)
+    except Exception:
+        return None

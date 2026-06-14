@@ -13,13 +13,13 @@ describe("shouldIgnoreCaptureElement", () => {
 
   it("ignores review overlay nodes", () => {
     class MockHTMLElement {
-      classList = { contains: (_name: string) => false };
+      classList = { contains: () => false };
     }
     vi.stubGlobal("HTMLElement", MockHTMLElement);
 
     const overlay = new MockHTMLElement();
     overlay.classList = {
-      contains: (name: string) => name === "review-notes-layer",
+      contains: (...names: string[]) => names.includes("review-notes-layer"),
     };
     expect(shouldIgnoreCaptureElement(overlay as unknown as Element)).toBe(true);
 

@@ -28,14 +28,36 @@ function placementLabel(note: ReviewNote): string {
   return `x: ${Math.round(note.position_x)}, y: ${Math.round(note.position_y)}`;
 }
 
+function statusLabel(note: ReviewNote): string {
+  if (note.status === "open") return "Åben";
+  if (note.status === "resolved") return "Løst";
+  return "Slettet";
+}
+
+function statusBadgeClass(note: ReviewNote): string {
+  if (note.status === "open") {
+    return "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900";
+  }
+  if (note.status === "resolved") {
+    return "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold";
+  }
+  return "rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700";
+}
+
+function reviewNumberLabel(note: ReviewNote): string {
+  return note.review_number || "REV-?????";
+}
+
 export function ForbedringerNoteDetailDialog({
   note,
   onClose,
   onResolve,
+  onDelete,
 }: Readonly<{
   note: ReviewNote;
   onClose: () => void;
   onResolve?: () => void;
+  onDelete?: () => void;
 }>) {
   const titleId = useId();
   const [photoExpanded, setPhotoExpanded] = useState(false);
@@ -53,7 +75,7 @@ export function ForbedringerNoteDetailDialog({
         <div className="flex items-start justify-between gap-3 border-b border-[var(--gray-border)] px-4 py-3">
           <div className="min-w-0">
             <p id={titleId} className="wire-card-title text-lg">
-              {note.page_title || note.page_path}
+              {reviewNumberLabel(note)} · {note.page_title || note.page_path}
             </p>
             <p className="text-muted-foreground mt-0.5 truncate text-xs">{note.page_path}</p>
           </div>
@@ -69,15 +91,7 @@ export function ForbedringerNoteDetailDialog({
 
         <div className="wire-scroll-content max-h-[calc(90vh-8rem)] space-y-4 overflow-y-auto px-4 py-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={
-                note.status === "open"
-                  ? "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900"
-                  : "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold"
-              }
-            >
-              {note.status === "open" ? "Åben" : "Løst"}
-            </span>
+            <span className={statusBadgeClass(note)}>{statusLabel(note)}</span>
             <Link
               href={note.page_path}
               className="text-star-blue inline-flex items-center gap-1 text-sm font-medium hover:underline"
@@ -141,6 +155,11 @@ export function ForbedringerNoteDetailDialog({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--gray-border)] px-4 py-3">
+          {onDelete ? (
+            <Button type="button" size="sm" variant="destructive" onClick={onDelete}>
+              Slet seddel
+            </Button>
+          ) : null}
           {note.status === "open" && onResolve ? (
             <Button type="button" size="sm" variant="outline" onClick={onResolve}>
               Markér som løst

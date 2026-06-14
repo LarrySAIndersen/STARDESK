@@ -42,7 +42,7 @@ def require_reviewer(user: User = Depends(get_current_user)) -> User:
 @router.get("")
 async def list_review_notes(
     page_path: str | None = Query(default=None),
-    status: str | None = Query(default=None, pattern=r"^(open|resolved)$"),
+    status: str | None = Query(default=None, pattern=r"^(open|resolved|deleted)$"),
     db: AsyncSession = Depends(require_db),
     _current_user: User = Depends(require_note_viewer),
 ) -> list[ReviewNoteRead]:
@@ -86,3 +86,15 @@ async def update_review_note(
         raise HTTPException(status_code=404, detail="Seddel ikke fundet") from None
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_review_note(
+    note_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(require_note_viewer),
+) -> None:
+    try:
+        await review_notes.delete_review_note(db, note_id=note_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Seddel ikke fundet") from None

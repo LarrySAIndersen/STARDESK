@@ -11,5 +11,5 @@ export default async function ForbedringerPage() {
     redirect("/");
   }
 
-  return <ForbedringerPanel />;
+  return <ForbedringerPanel user={currentUser} />;
 }

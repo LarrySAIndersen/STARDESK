@@ -8,7 +8,7 @@ import { StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import {
   blobToBase64,
   scheduleReviewScreenshotCapture,
@@ -25,6 +25,16 @@ type DraftNote = Readonly<{
   comment: string;
 }>;
 
+const REVIEW_OVERLAY_INTERACTIVE_SELECTOR = [
+  ".review-notes-toolbar",
+  ".review-note-pin",
+  ".review-note-popover",
+  ".review-note-composer",
+  ".wire-topheader__helpabot",
+  ".case-assistant-fab",
+  ".case-assistant-panel",
+].join(",");
+
 function pageTitleFromPath(pathname: string): string {
   if (pathname === "/") return "Dashboard";
   const segment = pathname.split("/").filter(Boolean)[0] ?? "Side";
@@ -34,13 +44,18 @@ function pageTitleFromPath(pathname: string): string {
 function ReviewNotePin({
   note,
   canEdit,
+  canDelete,
   onResolved,
+  onDeleted,
 }: {
   note: ReviewNote;
   canEdit: boolean;
+  canDelete: boolean;
   onResolved: () => void;
+  onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <>
@@ -48,7 +63,7 @@ function ReviewNotePin({
         type="button"
         className="review-note-pin"
         style={{ left: note.position_x, top: note.position_y }}
-        aria-label={`Forbedring: ${note.comment.slice(0, 40)}`}
+        aria-label={`${note.review_number || "Forbedring"}: ${note.comment.slice(0, 40)}`}
         onClick={() => setOpen(true)}
       >
         <StickyNote className="size-4" aria-hidden />
@@ -61,7 +76,7 @@ function ReviewNotePin({
           aria-label="Forbedring"
         >
           <div className="review-note-popover__header">
-            <strong className="text-sm">Forbedring</strong>
+            <strong className="text-sm">Forbedring {note.review_number}</strong>
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground rounded p-0.5"
@@ -88,6 +103,33 @@ function ReviewNotePin({
               }}
             >
               Markér som løst
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="mt-2 w-full"
+              disabled={deleting}
+              onClick={async () => {
+                setDeleting(true);
+                try {
+                  try {
+                    await apiPatch<ReviewNote>(`/api/v1/review-notes/${note.id}`, {
+                      status: "deleted",
+                    });
+                  } catch {
+                    await apiDelete(`/api/v1/review-notes/${note.id}`);
+                  }
+                  setOpen(false);
+                  onDeleted();
+                } finally {
+                  setDeleting(false);
+                }
+              }}
+            >
+              {deleting ? "Sletter…" : "Slet seddel"}
             </Button>
           ) : null}
         </div>
@@ -170,7 +212,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
       const data = await apiGet<ReviewNote[]>(
         `/api/v1/review-notes?page_path=${encodeURIComponent(pathname)}`,
       );
-      setNotes(data);
+      setNotes(data.filter((note) => note.status !== "deleted"));
       setLoadError(null);
     } catch {
       setLoadError("Kunne ikke hente sedler på siden.");
@@ -221,10 +263,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!canPlaceNotes || !reviewMode || draft) return;
-    if ((event.target as HTMLElement).closest(".review-notes-toolbar")) return;
-    if ((event.target as HTMLElement).closest(".review-note-pin")) return;
-    if ((event.target as HTMLElement).closest(".review-note-popover")) return;
-    if ((event.target as HTMLElement).closest(".review-note-composer")) return;
+    if ((event.target as HTMLElement).closest(REVIEW_OVERLAY_INTERACTIVE_SELECTOR)) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     setDraft({
@@ -316,7 +355,9 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             key={note.id}
             note={note}
             canEdit={staff || (reviewer && note.created_by_user_id === user?.id)}
+            canDelete={canViewNotes}
             onResolved={() => fireAndForget(loadNotes())}
+            onDeleted={() => setNotes((prev) => prev.filter((item) => item.id !== note.id))}
           />
         ))}
         {draft ? (

@@ -5,9 +5,14 @@ from typing import Literal
 
 Priority = Literal["critical", "high", "medium", "low"]
 SlaTimeKind = Literal["calendar_hours", "business_days"]
-TicketType = Literal["incident", "service_request", "problem"]
+TicketType = Literal["incident", "service_request", "problem", "wreck_ind"]
 
-TICKET_TYPES_FOR_SLA: tuple[TicketType, ...] = ("incident", "service_request", "problem")
+TICKET_TYPES_FOR_SLA: tuple[TicketType, ...] = (
+    "incident",
+    "service_request",
+    "problem",
+    "wreck_ind",
+)
 
 
 @dataclass(frozen=True)

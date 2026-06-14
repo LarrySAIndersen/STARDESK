@@ -21,8 +21,10 @@ from star_itsm_api.schemas.personal import (
     TicketWatchSummary,
     WatchedTicketsRead,
 )
+from star_itsm_api.schemas.staff_notification import StaffNotificationRead
 from star_itsm_api.schemas.ticket_internal_chat import PersonalMentionsOverviewRead
 from star_itsm_api.services import personal_service, ticket_watch_service
+from star_itsm_api.services.staff_notification_service import list_staff_notifications
 from star_itsm_api.services.ticket_internal_chat import list_personal_mentions_overview
 
 router = APIRouter(prefix="/personal", tags=["personal"])
@@ -138,6 +140,15 @@ async def list_ticket_watch_updates(
     current_user: User = Depends(get_current_user),
 ) -> list[TicketWatchActivityRead]:
     return await ticket_watch_service.list_watch_updates(db, current_user, since=since)
+
+
+@router.get("/staff-notifications")
+async def list_staff_notification_feed(
+    since: datetime = Query(..., description="ISO 8601 timestamp — notifications after this time"),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[StaffNotificationRead]:
+    return await list_staff_notifications(db, current_user, since=since)
 
 
 @router.put("/tickets/{ticket_id}/watch", status_code=status.HTTP_204_NO_CONTENT)

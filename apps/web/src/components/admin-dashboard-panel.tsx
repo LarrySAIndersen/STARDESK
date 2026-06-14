@@ -3,7 +3,7 @@
 import { fireAndForget } from "@/lib/fire-and-forget";
 
 import Link from "next/link";
-import { Bot, FileUp, LayoutDashboard, Shield, Ticket, UserCog } from "lucide-react";
+import { Bot, FileUp, LayoutDashboard, Repeat, Shield, Ticket, UserCog } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AdminTicketImportDialog } from "@/components/admin-ticket-import-dialog";
@@ -21,6 +21,12 @@ const ADMIN_LINKS = [
     label: "Kategorier",
     icon: Shield,
     description: "Kategori- og underkategorier",
+  },
+  {
+    href: "/tasks",
+    label: "Gentagne opgaver",
+    icon: Repeat,
+    description: "Wreck ind — planlagte sager",
   },
   {
     href: "/admin/dependencies",

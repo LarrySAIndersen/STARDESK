@@ -65,7 +65,11 @@
     "kodepraksis:tick": "node ./kodepraksis-agent/run-tick.mjs",
     "kodepraksis:status": "node ./kodepraksis-agent/run-tick.mjs --status",
     "kodepraksis:result": "node ./kodepraksis-agent/apply-result.mjs",
-    "kodepraksis:export-plan": "node ./kodepraksis-agent/export-plan-table.mjs"
+    "kodepraksis:export-plan": "node ./kodepraksis-agent/export-plan-table.mjs",
+    "deploy-check:pipeline": "node ./deploy-check/run-deploy-check.mjs",
+    "deploy-check:poll": "node ./deploy-check/poll-vercel-deployment.mjs",
+    "deploy-check:result": "node ./deploy-check/apply-result.mjs",
+    "deploy-check:prompt": "node ./deploy-check/emit-agent-prompt.mjs"
   },
   "devDependencies": {
     "playwright": "^1.60.0"

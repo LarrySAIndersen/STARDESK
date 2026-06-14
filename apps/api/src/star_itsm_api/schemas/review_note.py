@@ -51,13 +51,14 @@ class ReviewNoteCreate(BaseModel):
 
 
 class ReviewNoteUpdate(BaseModel):
-    status: str = Field(pattern=r"^(open|resolved)$")
+    status: str = Field(pattern=r"^(open|resolved|deleted)$")
 
 
 class ReviewNoteRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    review_number: str = ""
     page_path: str
     page_title: str
     comment: str

@@ -3,13 +3,14 @@
 Prioriterede 50-punkts planer for **sikkerhed**, **performance** og **kodepraksis**.
 Bruges som fælles reference for debate-first forbedringsarbejde — ikke som Work Board kanban.
 
-**Start her:** [STARDESK-udviklingsparadigme.md](./STARDESK-udviklingsparadigme.md)
+**Start her:** [STARDESK-udviklingsparadigme.md](./STARDESK-udviklingsparadigme.md) · **Grundlov:** [STARDESK-agent-afklaring.md](./STARDESK-agent-afklaring.md)
 
 ## Filer
 
 | Fil | Fokus | Prioritet |
 |-----|-------|-----------|
-| [STARDESK-udviklingsparadigme.md](./STARDESK-udviklingsparadigme.md) | Metode, agent-loops, PR-flow, gate | Læs først |
+| [STARDESK-agent-afklaring.md](./STARDESK-agent-afklaring.md) | Spørg ved tvivl — scope, kvalitet, drift (agent-grundlov) | **Altid først** ved uklar opgave |
+| [STARDESK-udviklingsparadigme.md](./STARDESK-udviklingsparadigme.md) | Metode, agent-loops, PR-flow, gate | Læs derefter |
 | [STARDESK-sikkerhed-50.md](./STARDESK-sikkerhed-50.md) | Trusselsbillede, auth, uploads, CORS, SQL | KRITISK 1-10 først |
 | [STARDESK-performance-50.md](./STARDESK-performance-50.md) | N+1, caching, pool, frontend load | KRITISK 1-10 først |
 | [STARDESK-kodepraksis-50.md](./STARDESK-kodepraksis-50.md) | Typing, DRY, SRP, test, lint | Scorecard 7/10 |

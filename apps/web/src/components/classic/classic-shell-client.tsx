@@ -4,6 +4,7 @@ import { ClassicTopBar } from "@/components/classic/classic-top-bar";
 import { ClassicSidebar } from "@/components/classic/classic-sidebar";
 import { ClassicWorkTabs } from "@/components/classic/classic-work-tabs";
 import { ClassicWorkTabsProvider } from "@/components/classic/classic-work-tabs-context";
+import { StaffNotificationToast } from "@/components/notifications/staff-notification-toast";
 import type { User } from "@/types/user";
 
 export function ClassicShellClient({
@@ -26,6 +27,7 @@ export function ClassicShellClient({
             {children}
           </main>
         </div>
+        <StaffNotificationToast user={user} />
       </div>
     </ClassicWorkTabsProvider>
   );

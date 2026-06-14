@@ -4,6 +4,7 @@ import {
   buildChatApiPayload,
   buildChatArchiveUrl,
   clampFabPosition,
+  clampPanelPosition,
   clampPanelSize,
   createChatMessage,
   getCaseAssistantBotLabels,
@@ -72,6 +73,9 @@ describe("case-assistant-chat-panel", () => {
     const panel = clampPanelSize(2000, 2000);
     expect(panel.width).toBeLessThanOrEqual(Math.floor(800 * 0.92));
     expect(panel.height).toBeLessThanOrEqual(Math.floor(600 * 0.88));
+
+    const panelPos = clampPanelPosition(1200, -50, 400, 550);
+    expect(panelPos).toEqual({ x: 400, y: 0 });
 
     const fab = clampFabPosition(900, 900, 180, 52);
     expect(fab.x).toBeLessThanOrEqual(620);

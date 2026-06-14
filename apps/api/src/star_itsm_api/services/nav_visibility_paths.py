@@ -17,6 +17,7 @@ NAV_PATH_BY_ID: dict[str, str] = {
     "knowledge": "/knowledge",
     "team-wiki": "/teamwiki",
     "groups": "/groups",
+    "tasks": "/tasks",
     "forbedringer": "/forbedringer",
     "saglayout-2": "/forbedringer/saglayout-2",
     "users": "/users",

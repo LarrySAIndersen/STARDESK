@@ -26,7 +26,7 @@ import {
   resolveCaseAssistantPageContext,
   type CaseAssistantQuickAction,
 } from "@/lib/case-assistant-page-context";
-import { isStaff } from "@/lib/auth";
+import { hasAgentShellAccess } from "@/lib/auth";
 import { apiPost, apiGet, apiDelete } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,7 @@ import {
 import {
   buildChatApiPayload,
   buildChatArchiveUrl,
+  clampPanelPosition,
   clampPanelSize,
   createChatMessage,
   getCaseAssistantBotLabels,
@@ -127,7 +128,7 @@ export function CaseAssistantChat({
   const endRef = useRef<HTMLDivElement>(null);
   const draftInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const staff = isStaff(user);
+  const staff = hasAgentShellAccess(user);
   const pageContext = resolveCaseAssistantPageContext(pathname);
   const [pageTicket, setPageTicket] = useState<TicketDetail | null>(null);
   const contextualQuickActions = useMemo(
@@ -200,8 +201,11 @@ export function CaseAssistantChat({
       const storedPos = parseStoredPoint(localStorage.getItem(PANEL_POS_STORAGE_KEY));
       const storedAvatar = localStorage.getItem(HELP_A_BOT_AVATAR_STORAGE_KEY);
       const storedSize = parseStoredPanelSize(localStorage.getItem(PANEL_SIZE_STORAGE_KEY));
+      const restoredSize = storedSize
+        ? { width: storedSize.width, height: storedSize.height }
+        : PANEL_SIZE_PRESETS.normal;
       if (storedPos) {
-        setPanelPos(storedPos);
+        setPanelPos(clampPanelPosition(storedPos.x, storedPos.y, restoredSize.width, restoredSize.height));
       }
       if (storedAvatar && isValidHelpABotAvatarId(storedAvatar)) {
         setSelectedAvatarId(storedAvatar);
@@ -215,9 +219,17 @@ export function CaseAssistantChat({
     }
   }, []);
 
+  const ensurePanelVisible = useCallback(() => {
+    setPanelPos((prev) => {
+      const origin = prev ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
+      return clampPanelPosition(origin.x, origin.y, panelSize.width, panelSize.height);
+    });
+  }, [panelSize.height, panelSize.width]);
+
   useEffect(() => {
     function handleExternalOpen(event: Event) {
       const detail = (event as CustomEvent<CaseAssistantOpenDetail>).detail ?? {};
+      ensurePanelVisible();
       setOpen(true);
       setActiveTab("chat");
       const trimmedDraft = detail.draft?.trim();
@@ -233,16 +245,22 @@ export function CaseAssistantChat({
 
     window.addEventListener(CASE_ASSISTANT_OPEN_EVENT, handleExternalOpen);
     return () => window.removeEventListener(CASE_ASSISTANT_OPEN_EVENT, handleExternalOpen);
-  }, []);
+  }, [ensurePanelVisible]);
 
   useEffect(() => {
     function handleToggle() {
-      setOpen((prev) => !prev);
+      setOpen((prev) => {
+        const next = !prev;
+        if (next) {
+          ensurePanelVisible();
+        }
+        return next;
+      });
     }
 
     window.addEventListener(CASE_ASSISTANT_TOGGLE_EVENT, handleToggle);
     return () => window.removeEventListener(CASE_ASSISTANT_TOGGLE_EVENT, handleToggle);
-  }, []);
+  }, [ensurePanelVisible]);
 
   useEffect(() => {
     dispatchCaseAssistantState(open);
@@ -263,6 +281,17 @@ export function CaseAssistantChat({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    function handleResize() {
+      setPanelPos((prev) =>
+        prev ? clampPanelPosition(prev.x, prev.y, panelSize.width, panelSize.height) : prev,
+      );
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [panelSize.height, panelSize.width]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     localStorage.setItem(HELP_A_BOT_AVATAR_STORAGE_KEY, selectedAvatarId);
   }, [selectedAvatarId]);
 
@@ -271,8 +300,13 @@ export function CaseAssistantChat({
     setPanelSize(resolvePanelSizeForPreset(preset));
   }, []);
 
-  const resolvedPanelPos =
-    panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
+  const panelOrigin = panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
+  const resolvedPanelPos = clampPanelPosition(
+    panelOrigin.x,
+    panelOrigin.y,
+    panelSize.width,
+    panelSize.height,
+  );
 
   const handleAvatarDoubleClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -284,13 +318,11 @@ export function CaseAssistantChat({
     (e: React.MouseEvent<HTMLElement>) => {
       if (e.button !== 0) return;
       e.preventDefault();
-      const origin =
-        panelPos ?? getDefaultPanelPosition(panelSize.width, panelSize.height);
       dragStateRef.current = {
         startX: e.clientX,
         startY: e.clientY,
-        originX: origin.x,
-        originY: origin.y,
+        originX: resolvedPanelPos.x,
+        originY: resolvedPanelPos.y,
       };
 
       function onMove(ev: MouseEvent) {
@@ -298,12 +330,7 @@ export function CaseAssistantChat({
         if (!drag) return;
         const nextX = drag.originX + (ev.clientX - drag.startX);
         const nextY = drag.originY + (ev.clientY - drag.startY);
-        const maxX = Math.max(0, window.innerWidth - panelSize.width);
-        const maxY = Math.max(0, window.innerHeight - panelSize.height);
-        setPanelPos({
-          x: Math.min(Math.max(0, nextX), maxX),
-          y: Math.min(Math.max(0, nextY), maxY),
-        });
+        setPanelPos(clampPanelPosition(nextX, nextY, panelSize.width, panelSize.height));
       }
 
       function onUp() {
@@ -315,7 +342,7 @@ export function CaseAssistantChat({
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [panelPos, panelSize.height, panelSize.width],
+    [panelSize.height, panelSize.width, resolvedPanelPos.x, resolvedPanelPos.y],
   );
 
   const handlePanelResizeStart = useCallback(

@@ -7,6 +7,7 @@ export type ClassicModuleId =
   | "changes"
   | "problems"
   | "service-requests"
+  | "wreck-ind"
   | "my-work";
 
 export type ClassicModuleDef = {
@@ -47,6 +48,13 @@ export const CLASSIC_MODULES: ClassicModuleDef[] = [
     label: "Service requests",
     subtitle: "Anmodninger og bestillinger",
     match: (t) => t.ticket_type === "service_request",
+  },
+  {
+    id: "wreck-ind",
+    href: "/classic/wreck-ind",
+    label: "Wreck ind",
+    subtitle: "Gentagne opgaver og planlagte sager",
+    match: (t) => t.ticket_type === "wreck_ind",
   },
 ];
 

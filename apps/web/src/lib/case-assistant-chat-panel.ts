@@ -30,6 +30,23 @@ export function clampPanelSize(width: number, height: number) {
   };
 }
 
+export function clampPanelPosition(
+  x: number,
+  y: number,
+  panelWidth: number,
+  panelHeight: number,
+): { x: number; y: number } {
+  if (typeof window === "undefined") {
+    return { x, y };
+  }
+  const maxX = Math.max(0, window.innerWidth - panelWidth);
+  const maxY = Math.max(0, window.innerHeight - panelHeight);
+  return {
+    x: Math.min(maxX, Math.max(0, x)),
+    y: Math.min(maxY, Math.max(0, y)),
+  };
+}
+
 export function getExpandedHeight() {
   if (typeof window === "undefined") {
     return PANEL_SIZE_PRESETS.expanded.height;

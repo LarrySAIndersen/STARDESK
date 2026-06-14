@@ -10,6 +10,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from star_itsm_api.core.security import (
+    ROLE_ADMIN,
     ROLE_AGENT,
     ROLE_STARDESK_REVIEWER,
     get_current_user,
@@ -47,6 +48,20 @@ def _agent_user() -> SimpleNamespace:
         email="agent@example.dk",
         display_name="Agent",
         role=ROLE_AGENT,
+        is_active=True,
+        password_hash=None,
+        deleted_at=None,
+        must_change_password=False,
+        password_policy_exempt=False,
+    )
+
+
+def _admin_user() -> SimpleNamespace:
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        email="admin@example.dk",
+        display_name="Admin",
+        role=ROLE_ADMIN,
         is_active=True,
         password_hash=None,
         deleted_at=None,
@@ -193,4 +208,96 @@ async def test_download_review_note_screenshot_requires_auth(
     response = await unauthenticated_client.get(
         f"/api/v1/review-notes/{uuid.uuid4()}/screenshot",
     )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_delete_review_note_happy_path_for_admin(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admin = _admin_user()
+    note_id = uuid.uuid4()
+
+    def _as_admin():
+        return admin
+
+    app.dependency_overrides[get_current_user] = _as_admin
+    app.dependency_overrides[get_current_user_session] = _as_admin
+
+    delete_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(review_notes_service, "delete_review_note", delete_mock)
+
+    response = await api_client.delete(f"/api/v1/review-notes/{note_id}")
+
+    assert response.status_code == 204
+    delete_mock.assert_awaited_once()
+    assert delete_mock.await_args.kwargs["note_id"] == note_id
+
+
+@pytest.mark.asyncio
+async def test_delete_review_note_allowed_for_reviewer(
+    api_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reviewer = _reviewer_user()
+    note_id = uuid.uuid4()
+
+    def _as_reviewer():
+        return reviewer
+
+    app.dependency_overrides[get_current_user] = _as_reviewer
+    app.dependency_overrides[get_current_user_session] = _as_reviewer
+
+    delete_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(review_notes_service, "delete_review_note", delete_mock)
+
+    response = await api_client.delete(f"/api/v1/review-notes/{note_id}")
+
+    assert response.status_code == 204
+    delete_mock.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_review_note_marks_note_as_deleted(mock_db: AsyncMock) -> None:
+    note = SimpleNamespace(id=uuid.uuid4(), status="open", updated_at=None)
+    mock_db.get = AsyncMock(return_value=note)
+
+    await review_notes_service.delete_review_note(mock_db, note_id=note.id)
+
+    assert note.status == "deleted"
+    assert note.updated_at is not None
+    mock_db.delete.assert_not_called()
+    mock_db.commit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_delete_review_note_forbidden_for_end_user(api_client: AsyncClient) -> None:
+    end_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="submitter@example.dk",
+        display_name="Slutbruger",
+        role="end_user",
+        is_active=True,
+        password_hash=None,
+        deleted_at=None,
+        must_change_password=False,
+        password_policy_exempt=False,
+    )
+
+    def _as_end_user():
+        return end_user
+
+    app.dependency_overrides[get_current_user] = _as_end_user
+    app.dependency_overrides[get_current_user_session] = _as_end_user
+
+    response = await api_client.delete(f"/api/v1/review-notes/{uuid.uuid4()}")
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_delete_review_note_requires_auth(
+    unauthenticated_client: AsyncClient,
+) -> None:
+    response = await unauthenticated_client.delete(f"/api/v1/review-notes/{uuid.uuid4()}")
     assert response.status_code == 401

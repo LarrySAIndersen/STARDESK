@@ -17,6 +17,7 @@ import {
   LayoutTemplate,
   Map,
   MessagesSquare,
+  Repeat,
   ScrollText,
   StickyNote,
   Ticket,
@@ -123,6 +124,9 @@ export function buildAgentNavItems(options: {
         ]
       : []),
     ...(staff ? [{ id: "groups", href: "/groups", label: "Grupper", icon: Users }] : []),
+    ...(staff
+      ? [{ id: "tasks", href: "/tasks", label: "Opgaver", icon: Repeat }]
+      : []),
     ...(showForbedringer
       ? [
           {

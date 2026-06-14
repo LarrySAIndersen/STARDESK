@@ -9,6 +9,7 @@ function isPublicAppPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/portal") return true;
   if (pathname === "/login" || pathname.startsWith("/login/")) return true;
+  if (process.env.NODE_ENV === "development" && pathname.startsWith("/dev/")) return true;
   if (isPasswordChangeExemptPath(pathname)) return true;
   return false;
 }

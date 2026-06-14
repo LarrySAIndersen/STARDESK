@@ -41,6 +41,15 @@ class Settings(BaseSettings):
     mail_from: str | None = Field(default=None, validation_alias="MAIL_FROM")
     cron_secret: str | None = Field(default=None, validation_alias="CRON_SECRET")
     webhook_secret: str | None = Field(default=None, validation_alias="WEBHOOK_SECRET")
+    integration_api_key: str | None = Field(
+        default=None,
+        validation_alias="INTEGRATION_API_KEY",
+    )
+    integration_org_id: str | None = Field(
+        default=None,
+        validation_alias="INTEGRATION_ORG_ID",
+        description="Optional org UUID scope for machine integration API.",
+    )
     jwt_secret: str | None = Field(default=None, validation_alias="JWT_SECRET")
     prototype_staff_password_hash: str | None = Field(
         default=None,
@@ -105,6 +114,8 @@ class Settings(BaseSettings):
         "mail_from",
         "cron_secret",
         "webhook_secret",
+        "integration_api_key",
+        "integration_org_id",
         "jwt_secret",
         "slack_client_id",
         "slack_client_secret",

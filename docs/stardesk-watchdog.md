@@ -11,6 +11,7 @@ Minimal VM watchdog that keeps the Sonar remediation loop and release path healt
 | Staging sync | `origin/staging` behind `origin/main` | Log + escalate (no direct push) |
 | Flow-2 prod PR | Open PR `staging`→`main`, CI green | Log only — **Jan merges prod** |
 | Sonar scan age | Last scan > 2 h, `.env` present | `npm run sonar:pipeline` in `scripts/` |
+| Staging deploy check | Missing, last failed, or > 2 h old | `npm run deploy-check:pipeline -- staging` |
 
 Repairs are idempotent. No force-push. Secrets are never written to logs.
 
@@ -74,7 +75,7 @@ pwsh scripts/sonar-agent/run-sonar-loop-scheduler.ps1 -Stop
 - **Vercel production env** or prod deploy → Jan
 - CI red on open PRs
 - Missing `gh` auth or Sonar `.env`
-- Deliverable gate / app failures (not in watchdog scope)
+- Deliverable gate / app failures (deploy-check re-runs staging scan; prod deploy → Jan)
 
 ## Related
 
