@@ -94,6 +94,19 @@ async def delete_review_note(
     db: AsyncSession = Depends(require_db),
     _current_user: User = Depends(require_note_viewer),
 ) -> None:
+    await _delete_review_note(db, note_id)
+
+
+@router.post("/{note_id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def post_delete_review_note(
+    note_id: uuid.UUID,
+    db: AsyncSession = Depends(require_db),
+    _current_user: User = Depends(require_note_viewer),
+) -> None:
+    await _delete_review_note(db, note_id)
+
+
+async def _delete_review_note(db: AsyncSession, note_id: uuid.UUID) -> None:
     try:
         await review_notes.delete_review_note(db, note_id=note_id)
     except LookupError:
