@@ -91,6 +91,9 @@ reports/coverage-agent-latest.md
 reports/quality-loop-latest.json
 reports/quality-loop-latest.md
 reports/quality-loop-agent-prompt.md
+reports/deploy-check-latest.json
+reports/deploy-check-latest.md
+reports/deploy-check-agent-prompt.md
 reports/review-reject-attachments/
 
 # Destructive/load test local artifacts

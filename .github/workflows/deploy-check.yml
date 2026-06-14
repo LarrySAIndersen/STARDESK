@@ -1,0 +1,125 @@
+# Post-deploy smoke: poll Vercel until READY, run hello-world gates, classify failures.
+# Feeds deploy-check knowledge base for improving scans on each merge.
+name: Deploy check
+
+on:
+  push:
+    branches: [staging, main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: staging or production
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+      full:
+        description: Include UI Playwright gate
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: deploy-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            scripts/package-lock.json
+            apps/web/package-lock.json
+
+      - name: Install script dependencies
+        working-directory: scripts
+        run: npm ci
+
+      - name: Install Playwright (UI gate)
+        if: github.ref == 'refs/heads/staging' || inputs.full == true
+        working-directory: scripts
+        run: npx playwright install chromium --with-deps
+
+      - name: Resolve deploy target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.target }}" >> "$GITHUB_OUTPUT"
+            echo "full=${{ inputs.full }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "name=production" >> "$GITHUB_OUTPUT"
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=staging" >> "$GITHUB_OUTPUT"
+            echo "full=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run deploy check pipeline
+        id: check
+        working-directory: scripts
+        run: |
+          ARGS="${{ steps.target.outputs.name }}"
+          if [ "${{ steps.target.outputs.full }}" = "true" ]; then
+            ARGS="$ARGS --full"
+          fi
+          set +e
+          node ./deploy-check/run-deploy-check.mjs $ARGS
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload deploy-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-check-${{ steps.target.outputs.name }}-${{ github.sha }}
+          path: |
+            reports/deploy-check-latest.json
+            reports/deploy-check-latest.md
+            reports/deploy-check-agent-prompt.md
+            reports/deploy-check-knowledge.json
+          if-no-files-found: warn
+
+      - name: Comment on PR (staging failure)
+        if: steps.target.outputs.name == 'staging' && steps.check.outputs.exit_code != '0' && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body=$(cat reports/deploy-check-latest.md)
+          pr=$(gh pr list --head "${{ github.ref_name }}" --base staging --state open --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            pr=$(gh pr list --base staging --state merged --limit 1 --json number -q '.[0].number' 2>/dev/null || true)
+          fi
+          if [ -n "$pr" ] && [ "$pr" != "null" ]; then
+            gh pr comment "$pr" --body "## Deploy check failed after merge to staging
+
+          $body
+
+          Agent prompt: \`reports/deploy-check-agent-prompt.md\` — see \`docs/deploy-check-agent.md\`."
+          fi
+
+      - name: Fail job on deploy check error
+        if: steps.check.outputs.exit_code != '0'
+        run: |
+          echo "::error::Deploy check failed — see artifact deploy-check-${{ steps.target.outputs.name }}-${{ github.sha }}"
+          cat reports/deploy-check-latest.md || true
+          exit 1
+
+      - name: Production escalation notice
+        if: steps.target.outputs.name == 'production' && steps.check.outputs.exit_code != '0'
+        run: |
+          echo "::warning::Production deploy check failed — Jan must investigate before next release."
+          echo "See artifact and docs/deploy-check-agent.md"

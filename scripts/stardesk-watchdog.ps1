@@ -28,6 +28,8 @@ $SchedulerScript = Join-Path $RepoRoot "scripts/sonar-agent/run-sonar-loop-sched
 $TickScript = Join-Path $RepoRoot "scripts/sonar-agent/run-sonar-loop-tick.ps1"
 $LastTickFile = Join-Path $ReportsDir "sonar-loop-last-tick.json"
 $SonarReportFile = Join-Path $ReportsDir "sonar-agent-latest.json"
+$DeployCheckFile = Join-Path $ReportsDir "deploy-check-latest.json"
+$DeployCheckMaxAgeHours = 2
 $SonarEnvFile = Join-Path $RepoRoot "scripts/sonar-agent/.env"
 $SonarLoopBranch = "cursor/sonar-remediation-loop"
 $StagingBatchMinCommits = 10
@@ -152,6 +154,26 @@ function Get-LastTickAgeMinutes {
         $tick = Get-Content $LastTickFile -Raw | ConvertFrom-Json
         $at = [datetime]::Parse($tick.at)
         return ((Get-Date).ToUniversalTime() - $at.ToUniversalTime()).TotalMinutes
+    } catch { return $null }
+}
+
+function Get-DeployCheckAgeHours {
+    if (-not (Test-Path $DeployCheckFile)) { return $null }
+    try {
+        $report = Get-Content $DeployCheckFile -Raw | ConvertFrom-Json
+        $at = [datetime]::Parse($report.at)
+        return ((Get-Date).ToUniversalTime() - $at.ToUniversalTime()).TotalHours
+    } catch {
+        $mtime = (Get-Item $DeployCheckFile).LastWriteTime
+        return ((Get-Date) - $mtime).TotalHours
+    }
+}
+
+function Get-DeployCheckLastPassed {
+    if (-not (Test-Path $DeployCheckFile)) { return $null }
+    try {
+        $report = Get-Content $DeployCheckFile -Raw | ConvertFrom-Json
+        return [bool]$report.passed
     } catch { return $null }
 }
 
@@ -337,6 +359,33 @@ function Invoke-WatchdogTick {
                     throw $safe.Trim()
                 }
                 return "sonar:pipeline completed"
+            } finally { Pop-Location }
+        }
+    }
+
+    # (f) Staging deploy check — re-run when stale or last scan failed
+    $deployAge = Get-DeployCheckAgeHours
+    $deployPassed = Get-DeployCheckLastPassed
+    $results["deploy_check_staging"] = @{
+        status        = if ($null -eq $deployAge) { "missing_report" }
+                        elseif ($deployPassed -eq $false) { "last_failed" }
+                        elseif ($deployAge -gt $DeployCheckMaxAgeHours) { "stale" }
+                        else { "ok" }
+        age_hours     = $deployAge
+        max_age_hours = $DeployCheckMaxAgeHours
+        last_passed   = $deployPassed
+    }
+    if ($null -eq $deployAge -or $deployPassed -eq $false -or $deployAge -gt $DeployCheckMaxAgeHours) {
+        $results["deploy_check_staging"].repair = Invoke-RepairAction -Name "run_deploy_check_staging" -Action {
+            Push-Location (Join-Path $RepoRoot "scripts")
+            try {
+                $out = & npm run deploy-check:pipeline -- staging 2>&1 | Out-String
+                if ($LASTEXITCODE -ne 0) {
+                    $safe = $out -replace '(?m)(VERCEL_TOKEN|VERCEL_PROTECTION_BYPASS|password|secret)[=:]\s*\S+', '$1=[REDACTED]'
+                    Write-WatchdogLog "deploy-check staging failed — see reports/deploy-check-agent-prompt.md" "WARN"
+                    throw $safe.Trim()
+                }
+                return "deploy-check:pipeline staging passed"
             } finally { Pop-Location }
         }
     }
