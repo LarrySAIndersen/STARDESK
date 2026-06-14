@@ -114,7 +114,7 @@ class TicketDetailRead(TicketRead):
 
 
 class TicketCreate(BaseModel):
-    ticket_type: Literal["service_request", "incident", "problem"] = "incident"
+    ticket_type: Literal["service_request", "incident", "problem", "wreck_ind"] = "incident"
     title: str = Field(min_length=3, max_length=256)
     description: str = Field(min_length=10)
     priority: Literal["critical", "high", "medium", "low"] = "medium"
@@ -183,7 +183,7 @@ class TicketPriorityUpdate(BaseModel):
 
 
 class TicketTypeUpdate(BaseModel):
-    ticket_type: Literal["service_request", "incident", "problem"]
+    ticket_type: Literal["service_request", "incident", "problem", "wreck_ind"]
     reason: str = Field(min_length=10, max_length=2000)
 
 

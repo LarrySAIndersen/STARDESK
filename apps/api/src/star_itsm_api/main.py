@@ -35,6 +35,7 @@ from star_itsm_api.routers import (
     personal,
     platform,
     reports,
+    recurring_tasks,
     review_notes,
     sf_chat,
     slack,
@@ -115,6 +116,7 @@ app.include_router(sub_causes.router, prefix=API_V1_PREFIX)
 app.include_router(webhooks.router, prefix=API_V1_PREFIX)
 app.include_router(cron.router, prefix=API_V1_PREFIX)
 app.include_router(reports.router, prefix=API_V1_PREFIX)
+app.include_router(recurring_tasks.router, prefix=API_V1_PREFIX)
 app.include_router(users.router, prefix=API_V1_PREFIX)
 app.include_router(platform.router, prefix=API_V1_PREFIX)
 app.include_router(admin.router, prefix=API_V1_PREFIX)

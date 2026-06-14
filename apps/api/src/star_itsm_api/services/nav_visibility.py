@@ -25,6 +25,7 @@ VALID_NAV_IDS = frozenset(
         "knowledge",
         "team-wiki",
         "groups",
+        "tasks",
         "forbedringer",
         "saglayout-2",
         "users",

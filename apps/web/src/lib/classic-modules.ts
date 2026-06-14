@@ -48,6 +48,13 @@ export const CLASSIC_MODULES: ClassicModuleDef[] = [
     subtitle: "Anmodninger og bestillinger",
     match: (t) => t.ticket_type === "service_request",
   },
+  {
+    id: "wreck-ind",
+    href: "/classic/wreck-ind",
+    label: "Wreck ind",
+    subtitle: "Gentagne opgaver og planlagte sager",
+    match: (t) => t.ticket_type === "wreck_ind",
+  },
 ];
 
 export function classicModuleBySegment(segment: string): ClassicModuleDef | undefined {

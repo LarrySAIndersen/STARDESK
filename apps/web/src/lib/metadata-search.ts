@@ -45,7 +45,12 @@ export const TICKET_STATUS_VALUES = [
 ] as const;
 
 export const TICKET_PRIORITY_VALUES = ["critical", "high", "medium", "low"] as const;
-export const TICKET_TYPE_VALUES = ["incident", "service_request", "problem"] as const;
+export const TICKET_TYPE_VALUES = [
+  "incident",
+  "service_request",
+  "problem",
+  "wreck_ind",
+] as const;
 export const TICKET_SOURCE_VALUES = [
   "portal",
   "email",
