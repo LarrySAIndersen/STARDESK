@@ -8,12 +8,12 @@ import { StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
 import {
   blobToBase64,
   scheduleReviewScreenshotCapture,
 } from "@/lib/capture-review-screenshot";
-import { isStaff, isStardeskReviewer } from "@/lib/auth";
+import { isAdmin, isStaff, isStardeskReviewer } from "@/lib/auth";
 import { isForbedringerAdminPath } from "@/lib/review-notes-paths";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
@@ -34,11 +34,15 @@ function pageTitleFromPath(pathname: string): string {
 function ReviewNotePin({
   note,
   canEdit,
+  canDelete,
   onResolved,
+  onDeleted,
 }: {
   note: ReviewNote;
   canEdit: boolean;
+  canDelete: boolean;
   onResolved: () => void;
+  onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -88,6 +92,22 @@ function ReviewNotePin({
               }}
             >
               Markér som løst
+            </Button>
+          ) : null}
+          {canDelete ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="mt-2 w-full"
+              onClick={async () => {
+                if (!window.confirm("Markér seddel som slettet og fjern den fra websiden?")) return;
+                await apiDelete(`/api/v1/review-notes/${note.id}`);
+                onDeleted();
+                setOpen(false);
+              }}
+            >
+              Slet seddel
             </Button>
           ) : null}
         </div>
@@ -151,6 +171,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
   const pathname = usePathname();
   const reviewer = isStardeskReviewer(user);
   const staff = isStaff(user);
+  const admin = isAdmin(user);
   const canPlaceNotes = reviewer;
   const canViewNotes = reviewer || staff;
   const overlayActive = canViewNotes && !isForbedringerAdminPath(pathname);
@@ -170,7 +191,7 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
       const data = await apiGet<ReviewNote[]>(
         `/api/v1/review-notes?page_path=${encodeURIComponent(pathname)}`,
       );
-      setNotes(data);
+      setNotes(data.filter((note) => note.status !== "deleted"));
       setLoadError(null);
     } catch {
       setLoadError("Kunne ikke hente sedler på siden.");
@@ -316,7 +337,9 @@ export function ReviewNotesOverlay({ user }: { user: User | null }) {
             key={note.id}
             note={note}
             canEdit={staff || (reviewer && note.created_by_user_id === user?.id)}
+            canDelete={admin}
             onResolved={() => fireAndForget(loadNotes())}
+            onDeleted={() => setNotes((prev) => prev.filter((item) => item.id !== note.id))}
           />
         ))}
         {draft ? (

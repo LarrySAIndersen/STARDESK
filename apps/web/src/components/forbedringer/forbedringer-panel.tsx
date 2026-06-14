@@ -8,8 +8,10 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
-import { apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { isAdmin } from "@/lib/auth";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
+import type { User } from "@/types/user";
 
 function formatTimestamp(value: string): string {
   try {
@@ -26,25 +28,44 @@ function placementLabel(note: ReviewNote): string {
   return `x: ${Math.round(note.position_x)}, y: ${Math.round(note.position_y)}`;
 }
 
-export function ForbedringerPanel() {
+const STATUS_COLUMNS: ReadonlyArray<{
+  status: ReviewNoteStatus;
+  title: string;
+  empty: string;
+}> = [
+  { status: "open", title: "Åben", empty: "Ingen åbne sedler." },
+  { status: "resolved", title: "Løst", empty: "Ingen løste sedler." },
+  { status: "deleted", title: "Slettet", empty: "Ingen slettede sedler." },
+];
+
+function statusLabel(status: ReviewNoteStatus): string {
+  if (status === "open") return "Åben";
+  if (status === "resolved") return "Løst";
+  return "Slettet";
+}
+
+function statusBadgeClass(status: ReviewNoteStatus): string {
+  if (status === "open") {
+    return "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900";
+  }
+  if (status === "resolved") {
+    return "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold";
+  }
+  return "rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700";
+}
+
+export function ForbedringerPanel({ user }: { user: User | null }) {
   const [notes, setNotes] = useState<ReviewNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<ReviewNoteStatus | "all">("open");
   const [pageFilter, setPageFilter] = useState("");
   const [selectedNote, setSelectedNote] = useState<ReviewNote | null>(null);
+  const canDeleteNotes = isAdmin(user);
 
   const loadNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") {
-        params.set("status", statusFilter);
-      }
-      const qs = params.toString();
-      const data = await apiGet<ReviewNote[]>(
-        `/api/v1/review-notes${qs ? `?${qs}` : ""}`,
-      );
+      const data = await apiGet<ReviewNote[]>("/api/v1/review-notes");
       setNotes(data);
       setError(null);
     } catch {
@@ -52,7 +73,7 @@ export function ForbedringerPanel() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     fireAndForget(loadNotes());
@@ -72,6 +93,31 @@ export function ForbedringerPanel() {
     await apiPatch(`/api/v1/review-notes/${noteId}`, { status: "resolved" });
     setSelectedNote(null);
     await loadNotes();
+  };
+
+  const notesByStatus = useMemo(
+    () =>
+      STATUS_COLUMNS.reduce(
+        (acc, column) => {
+          acc[column.status] = filteredNotes.filter((note) => note.status === column.status);
+          return acc;
+        },
+        {} as Record<ReviewNoteStatus, ReviewNote[]>,
+      ),
+    [filteredNotes],
+  );
+
+  const deleteNote = async (noteId: string) => {
+    if (!window.confirm("Markér seddel som slettet og fjern den fra websiden?")) return;
+    await apiDelete(`/api/v1/review-notes/${noteId}`);
+    setSelectedNote(null);
+    setNotes((prev) =>
+      prev.map((note) =>
+        note.id === noteId
+          ? { ...note, status: "deleted", updated_at: new Date().toISOString() }
+          : note,
+      ),
+    );
   };
 
   return (
@@ -100,20 +146,6 @@ export function ForbedringerPanel() {
               className="border-input bg-background rounded-md border px-3 py-2 text-sm"
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm sm:w-48">
-            <span className="font-medium">Status</span>
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as ReviewNoteStatus | "all")
-              }
-              className="border-input bg-background rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="all">Alle</option>
-              <option value="open">Åbne</option>
-              <option value="resolved">Løste</option>
-            </select>
-          </label>
         </div>
 
         {loading ? (
@@ -131,98 +163,125 @@ export function ForbedringerPanel() {
           <p className="text-muted-foreground text-sm">Ingen forbedringer matcher filteret.</p>
         ) : null}
 
-        <ul className="divide-y divide-[var(--gray-border)]">
-          {filteredNotes.map((note) => (
-            <li key={note.id} className="py-4 first:pt-0">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <button
-                  type="button"
-                  className="hover:bg-muted/40 -mx-2 min-w-0 flex-1 rounded-md px-2 py-1 text-left transition-colors"
-                  onClick={() => setSelectedNote(note)}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={
-                        note.status === "open"
-                          ? "rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900"
-                          : "bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold"
-                      }
-                    >
-                      {note.status === "open" ? "Åben" : "Løst"}
-                    </span>
-                    <span className="text-sm font-medium">{note.page_title || note.page_path}</span>
-                    <span className="text-muted-foreground text-xs">{note.page_path}</span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed">{note.comment}</p>
-                  <dl className="text-muted-foreground mt-2 grid gap-1 text-xs sm:grid-cols-3">
-                    <div>
-                      <dt className="sr-only">Person</dt>
-                      <dd>
-                        {note.created_by_name}
-                        {note.created_by_email ? ` (${note.created_by_email})` : ""}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="sr-only">Placering</dt>
-                      <dd>{placementLabel(note)}</dd>
-                    </div>
-                    <div>
-                      <dt className="sr-only">Oprettet</dt>
-                      <dd>{formatTimestamp(note.created_at)}</dd>
-                    </div>
-                  </dl>
-                </button>
-
-                <div className="flex shrink-0 flex-wrap items-center gap-2 sm:flex-col sm:items-stretch">
-                  {note.has_screenshot ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedNote(note)}
-                    >
-                      <ImageIcon className="size-3.5" aria-hidden />
-                      Vis skærmbillede
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="justify-between gap-2"
-                    onClick={() => setSelectedNote(note)}
-                  >
-                    Vis detaljer
-                    <ChevronRight className="size-4" aria-hidden />
-                  </Button>
-                  <Link
-                    href={note.page_path}
-                    className="text-star-blue px-2 text-center text-xs font-medium hover:underline sm:px-0"
-                  >
-                    Åbn side
-                  </Link>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {STATUS_COLUMNS.map((column) => {
+            const columnNotes = notesByStatus[column.status];
+            return (
+              <section
+                key={column.status}
+                className="rounded-lg border border-[var(--gray-border)] bg-background/60"
+                aria-labelledby={`review-notes-${column.status}`}
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--gray-border)] px-3 py-2">
+                  <h2 id={`review-notes-${column.status}`} className="text-sm font-semibold">
+                    {column.title}
+                  </h2>
+                  <span className="text-muted-foreground text-xs">{columnNotes.length}</span>
                 </div>
-              </div>
+                {columnNotes.length === 0 ? (
+                  <p className="text-muted-foreground px-3 py-4 text-sm">{column.empty}</p>
+                ) : (
+                  <ul className="divide-y divide-[var(--gray-border)]">
+                    {columnNotes.map((note) => (
+                      <li key={note.id} className="p-3">
+                        <button
+                          type="button"
+                          className="hover:bg-muted/40 -mx-2 w-[calc(100%+1rem)] rounded-md px-2 py-1 text-left transition-colors"
+                          onClick={() => setSelectedNote(note)}
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={statusBadgeClass(note.status)}>
+                              {statusLabel(note.status)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                              {note.page_title || note.page_path}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-1 truncate text-xs">{note.page_path}</p>
+                          <p className="mt-2 line-clamp-3 text-sm leading-relaxed">{note.comment}</p>
+                          <dl className="text-muted-foreground mt-2 grid gap-1 text-xs">
+                            <div>
+                              <dt className="sr-only">Person</dt>
+                              <dd>
+                                {note.created_by_name}
+                                {note.created_by_email ? ` (${note.created_by_email})` : ""}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="sr-only">Placering</dt>
+                              <dd>{placementLabel(note)}</dd>
+                            </div>
+                            <div>
+                              <dt className="sr-only">Oprettet</dt>
+                              <dd>{formatTimestamp(note.created_at)}</dd>
+                            </div>
+                          </dl>
+                        </button>
 
-              {note.has_screenshot ? (
-                <button
-                  type="button"
-                  className="border-input mt-3 block max-w-xs rounded-md border bg-muted/20 p-1"
-                  onClick={() => setSelectedNote(note)}
-                  aria-label={`Vis skærmbillede for ${note.page_title || note.page_path}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={reviewNoteScreenshotUrl(note.id)}
-                    alt=""
-                    className="max-h-24 w-full object-contain object-left"
-                    loading="lazy"
-                  />
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+                        {note.has_screenshot ? (
+                          <button
+                            type="button"
+                            className="border-input mt-3 block w-full rounded-md border bg-muted/20 p-1"
+                            onClick={() => setSelectedNote(note)}
+                            aria-label={`Vis skærmbillede for ${note.page_title || note.page_path}`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={reviewNoteScreenshotUrl(note.id)}
+                              alt=""
+                              className="max-h-24 w-full object-contain object-left"
+                              loading="lazy"
+                            />
+                          </button>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {note.has_screenshot ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedNote(note)}
+                            >
+                              <ImageIcon className="size-3.5" aria-hidden />
+                              Skærmbillede
+                            </Button>
+                          ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="gap-2"
+                            onClick={() => setSelectedNote(note)}
+                          >
+                            Detaljer
+                            <ChevronRight className="size-4" aria-hidden />
+                          </Button>
+                          <Link
+                            href={note.page_path}
+                            className="text-star-blue px-1 text-xs font-medium hover:underline"
+                          >
+                            Åbn side
+                          </Link>
+                          {canDeleteNotes && note.status !== "deleted" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => fireAndForget(deleteNote(note.id))}
+                            >
+                              Slet
+                            </Button>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </div>
       </div>
 
       {selectedNote ? (
@@ -232,6 +291,11 @@ export function ForbedringerPanel() {
           onResolve={
             selectedNote.status === "open"
               ? () => fireAndForget(resolveNote(selectedNote.id))
+              : undefined
+          }
+          onDelete={
+            canDeleteNotes && selectedNote.status !== "deleted"
+              ? () => fireAndForget(deleteNote(selectedNote.id))
               : undefined
           }
         />

@@ -51,7 +51,7 @@ class ReviewNoteCreate(BaseModel):
 
 
 class ReviewNoteUpdate(BaseModel):
-    status: str = Field(pattern=r"^(open|resolved)$")
+    status: str = Field(pattern=r"^(open|resolved|deleted)$")
 
 
 class ReviewNoteRead(BaseModel):

@@ -1,4 +1,4 @@
-export type ReviewNoteStatus = "open" | "resolved";
+export type ReviewNoteStatus = "open" | "resolved" | "deleted";
 
 export interface ReviewNote {
   id: string;
