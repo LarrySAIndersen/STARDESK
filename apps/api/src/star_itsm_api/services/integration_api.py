@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from star_itsm_api.core.constants import SYSTEM_USER_ID, TICKET_TYPE_PREFIX
+from star_itsm_api.core.constants import SYSTEM_USER_ID
 from star_itsm_api.core.integration_api_auth import IntegrationClient
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.ticket import Ticket
@@ -22,62 +22,16 @@ from star_itsm_api.schemas.integration_api import (
     IntegrationTicketPatch,
     IntegrationTicketRead,
     IntegrationTicketStatus,
-    IntegrationTicketType,
+)
+from star_itsm_api.schemas.case_types import CaseTypeEntry
+from star_itsm_api.services.case_types import (
+    get_enabled_case_types,
+    get_case_type_catalog,
+    validate_ticket_type_id,
 )
 from star_itsm_api.services.routing import apply_routing
 from star_itsm_api.services.sla import apply_sla_to_ticket
 from star_itsm_api.services.ticket_numbers import generate_ticket_number
-
-CASE_TYPE_CATALOG: tuple[IntegrationCaseTypeRead, ...] = (
-    IntegrationCaseTypeRead(
-        id="incident",
-        label_da="Hændelse",
-        prefix=TICKET_TYPE_PREFIX["incident"],
-        description_da="Uventet afbrydelse eller fejl der skal løses hurtigt.",
-        allowed_priorities=["critical", "high", "medium", "low"],
-        allowed_statuses=[
-            "new",
-            "assigned",
-            "in_progress",
-            "on_hold",
-            "resolved",
-            "closed",
-            "cancelled",
-        ],
-    ),
-    IntegrationCaseTypeRead(
-        id="service_request",
-        label_da="Serviceanmodning",
-        prefix=TICKET_TYPE_PREFIX["service_request"],
-        description_da="Planlagt ændring eller anmodning om service.",
-        allowed_priorities=["high", "medium", "low"],
-        allowed_statuses=[
-            "new",
-            "assigned",
-            "in_progress",
-            "on_hold",
-            "resolved",
-            "closed",
-            "cancelled",
-        ],
-    ),
-    IntegrationCaseTypeRead(
-        id="problem",
-        label_da="Problem",
-        prefix=TICKET_TYPE_PREFIX["problem"],
-        description_da="Underliggende årsag til gentagne hændelser.",
-        allowed_priorities=["high", "medium", "low"],
-        allowed_statuses=[
-            "new",
-            "assigned",
-            "in_progress",
-            "on_hold",
-            "resolved",
-            "closed",
-            "cancelled",
-        ],
-    ),
-)
 
 INTEGRATION_PROFILE_CAPABILITIES: tuple[str, ...] = (
     "case-types",
@@ -86,7 +40,24 @@ INTEGRATION_PROFILE_CAPABILITIES: tuple[str, ...] = (
     "tickets.patch",
     "external-ref",
     "delta-sync",
+    "case-types.configurable",
 )
+
+
+def _to_integration_case_type(entry: CaseTypeEntry) -> IntegrationCaseTypeRead:
+    return IntegrationCaseTypeRead(
+        id=entry.id,
+        label_da=entry.label_da,
+        prefix=entry.prefix,
+        description_da=entry.description_da,
+        allowed_priorities=entry.allowed_priorities,
+        allowed_statuses=entry.allowed_statuses,
+    )
+
+
+async def list_integration_case_types(db: AsyncSession) -> list[IntegrationCaseTypeRead]:
+    catalog = await get_case_type_catalog(db)
+    return [_to_integration_case_type(entry) for entry in get_enabled_case_types(catalog)]
 
 
 def integration_metadata_key() -> str:
@@ -285,7 +256,7 @@ async def list_integration_tickets(
     organization_id: uuid.UUID,
     page: int,
     page_size: int,
-    ticket_type: IntegrationTicketType | None,
+    ticket_type: str | None,
     status_filter: IntegrationTicketStatus | None,
     updated_since: datetime | None,
     external_system: str | None,
@@ -336,6 +307,7 @@ async def create_integration_ticket(
     organization_id: uuid.UUID,
     payload: IntegrationTicketCreate,
 ) -> IntegrationTicketRead:
+    await validate_ticket_type_id(db, payload.ticket_type)
     external_ref = payload.external_ref.model_copy(
         update={"system": payload.external_ref.system.strip().lower()}
     )
@@ -413,6 +385,7 @@ async def patch_integration_ticket(
     if payload.priority is not None:
         ticket.priority = payload.priority
     if payload.ticket_type is not None:
+        await validate_ticket_type_id(db, payload.ticket_type)
         ticket.ticket_type = payload.ticket_type
     if payload.external_ref is not None:
         meta = dict(ticket.routing_metadata or {})

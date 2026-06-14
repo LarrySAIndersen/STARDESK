@@ -77,6 +77,7 @@ def test_read_external_ref_legacy_external_number() -> None:
 @pytest.mark.asyncio
 async def test_integration_profile_requires_key(
     monkeypatch: pytest.MonkeyPatch,
+    override_db: AsyncMock,
 ) -> None:
     monkeypatch.setattr(settings, "app_env", "production")
     monkeypatch.setattr(settings, "integration_api_key", "expected-key")

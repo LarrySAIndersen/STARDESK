@@ -15,13 +15,13 @@ from star_itsm_api.schemas.integration_api import (
     IntegrationTicketPatch,
     IntegrationTicketRead,
     IntegrationTicketStatus,
-    IntegrationTicketType,
 )
+from star_itsm_api.services.case_types import get_case_type_catalog, get_enabled_case_types
 from star_itsm_api.services.integration_api import (
-    CASE_TYPE_CATALOG,
     INTEGRATION_PROFILE_CAPABILITIES,
     create_integration_ticket,
     get_ticket_for_integration,
+    list_integration_case_types,
     list_integration_tickets,
     patch_integration_ticket,
     resolve_integration_organization_id,
@@ -44,13 +44,15 @@ router = APIRouter(
     ),
 )
 async def integration_profile(
+    db: AsyncSession = Depends(require_db),
     _client: IntegrationClient = Depends(get_integration_client),
 ) -> IntegrationProfileRead:
+    catalog = await get_case_type_catalog(db)
     return IntegrationProfileRead(
         openapi_url="/openapi.json",
         auth=["X-Integration-Key", "X-Integration-System (optional)"],
         capabilities=list(INTEGRATION_PROFILE_CAPABILITIES),
-        case_types=[item.id for item in CASE_TYPE_CATALOG],
+        case_types=[item.id for item in get_enabled_case_types(catalog)],
         pagination={"default_page_size": 50, "max_page_size": 100, "style": "page"},
     )
 
@@ -59,12 +61,13 @@ async def integration_profile(
     "/case-types",
     response_model=list[IntegrationCaseTypeRead],
     summary="List sagstyper / case types",
-    description="Stable catalog of supported ticket types for routing and SLA.",
+    description="Configurable catalog of supported ticket types for routing and SLA.",
 )
 async def integration_case_types(
+    db: AsyncSession = Depends(require_db),
     _client: IntegrationClient = Depends(get_integration_client),
 ) -> list[IntegrationCaseTypeRead]:
-    return list(CASE_TYPE_CATALOG)
+    return await list_integration_case_types(db)
 
 
 @router.get(
@@ -76,7 +79,7 @@ async def integration_case_types(
 async def integration_list_tickets(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=100),
-    ticket_type: IntegrationTicketType | None = Query(default=None),
+    ticket_type: str | None = Query(default=None),
     status: IntegrationTicketStatus | None = Query(default=None, alias="status"),
     updated_since: datetime | None = Query(
         default=None,

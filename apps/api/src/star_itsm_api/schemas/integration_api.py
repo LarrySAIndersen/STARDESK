@@ -42,7 +42,7 @@ class IntegrationExternalRef(BaseModel):
 class IntegrationCaseTypeRead(BaseModel):
     """Catalog entry for sagstype / case type."""
 
-    id: IntegrationTicketType
+    id: str
     label_da: str
     prefix: str
     description_da: str
@@ -70,7 +70,7 @@ class IntegrationTicketRead(BaseModel):
 
     id: UUID
     ticket_number: str
-    ticket_type: IntegrationTicketType
+    ticket_type: str
     title: str
     description: str
     status: IntegrationTicketStatus
@@ -86,7 +86,7 @@ class IntegrationTicketRead(BaseModel):
 class IntegrationTicketCreate(BaseModel):
     """Create ticket from an external system."""
 
-    ticket_type: IntegrationTicketType = "incident"
+    ticket_type: str = "incident"
     title: str = Field(min_length=3, max_length=256)
     description: str = Field(min_length=10)
     priority: IntegrationTicketPriority = "medium"
@@ -105,7 +105,7 @@ class IntegrationTicketPatch(BaseModel):
     description: str | None = Field(default=None, min_length=10)
     status: IntegrationTicketStatus | None = None
     priority: IntegrationTicketPriority | None = None
-    ticket_type: IntegrationTicketType | None = None
+    ticket_type: str | None = None
     external_ref: IntegrationExternalRef | None = None
 
 

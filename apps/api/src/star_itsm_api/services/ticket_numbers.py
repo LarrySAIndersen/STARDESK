@@ -5,10 +5,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.constants import TICKET_TYPE_PREFIX
 from star_itsm_api.models.ticket import Ticket
+from star_itsm_api.services.case_types import get_case_type_catalog, resolve_ticket_type_prefix
 
 
 async def generate_ticket_number(db: AsyncSession, ticket_type: str) -> str:
-    prefix = TICKET_TYPE_PREFIX[ticket_type]
+    catalog = await get_case_type_catalog(db)
+    try:
+        prefix = resolve_ticket_type_prefix(catalog, ticket_type)
+    except Exception:
+        prefix = TICKET_TYPE_PREFIX.get(ticket_type)
+        if prefix is None:
+            raise
     year = datetime.now(UTC).year
     pattern = f"{prefix}-{year}-%"
     

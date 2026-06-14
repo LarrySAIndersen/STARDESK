@@ -27,15 +27,11 @@ In development without a configured key, endpoints are open (same pattern as cro
 
 ## Case types (sagstyper)
 
-Fixed catalog (not admin-configurable in v1):
+Defaults: `incident`, `service_request`, `problem`. Admins can extend or relabel via
+`PUT /api/v1/platform/case-types` (stored in `platform_settings.case_type_catalog`).
+Integration and ticket numbering read the live catalog.
 
-| `id` | Danish label | Prefix |
-|------|--------------|--------|
-| `incident` | Hændelse | INC |
-| `service_request` | Serviceanmodning | SR |
-| `problem` | Problem | PRB |
-
-`GET /api/v1/integration/case-types` returns labels, allowed priorities/statuses.
+`GET /api/v1/integration/case-types` returns enabled types with labels and prefixes.
 
 ## Endpoints
 
@@ -89,8 +85,16 @@ Legacy imports using `routing_metadata.external_number` remain readable.
 
 - Per-tenant API keys in database
 - Outbound webhooks / event subscriptions
-- Configurable case-type catalog (admin CRUD)
 - Full RFC 7807 problem details
+
+## Admin: sagstyper
+
+| Metode | Sti | Rolle |
+|--------|-----|-------|
+| GET | `/platform/case-types` | staff |
+| PUT | `/platform/case-types` | admin |
+
+Adding a type updates DB `CHECK` constraints automatically.
 
 ## Related docs
 

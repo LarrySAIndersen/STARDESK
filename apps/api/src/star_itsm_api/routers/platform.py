@@ -7,11 +7,13 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.core.http_details import INSUFFICIENT_PERMISSIONS
-from star_itsm_api.core.security import get_current_user
+from star_itsm_api.core.security import get_current_user, require_admin
 from star_itsm_api.core.top_admin_policy import can_manage_sidebar_nav_visibility
 from star_itsm_api.deps import require_db
 from star_itsm_api.models.user import User
+from star_itsm_api.schemas.case_types import CaseTypeCatalogRead, CaseTypeCatalogUpdate
 from star_itsm_api.schemas.platform import SidebarNavVisibilityRead, SidebarNavVisibilityUpdate
+from star_itsm_api.services.case_types import get_case_type_catalog, set_case_type_catalog
 from star_itsm_api.services.nav_visibility import get_hidden_nav_ids, set_hidden_nav_ids
 from star_itsm_api.services.permissions import is_staff_role
 
@@ -65,3 +67,22 @@ async def update_sidebar_nav_visibility(
         )
     hidden = await set_hidden_nav_ids(db, payload.hidden_nav_ids)
     return SidebarNavVisibilityRead(hidden_nav_ids=hidden)
+
+
+@router.get("/case-types")
+async def read_case_type_catalog(
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> CaseTypeCatalogRead:
+    if not is_staff_role(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=INSUFFICIENT_PERMISSIONS)
+    return await get_case_type_catalog(db)
+
+
+@router.put("/case-types")
+async def update_case_type_catalog(
+    payload: CaseTypeCatalogUpdate,
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(require_admin()),
+) -> CaseTypeCatalogRead:
+    return await set_case_type_catalog(db, payload)
