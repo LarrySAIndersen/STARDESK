@@ -14,6 +14,7 @@ from star_itsm_api.core.integration_api_auth import IntegrationClient
 from star_itsm_api.models.organization import Organization
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
+from star_itsm_api.schemas.case_types import CaseTypeEntry
 from star_itsm_api.schemas.integration_api import (
     IntegrationCaseTypeRead,
     IntegrationExternalRef,
@@ -23,10 +24,9 @@ from star_itsm_api.schemas.integration_api import (
     IntegrationTicketRead,
     IntegrationTicketStatus,
 )
-from star_itsm_api.schemas.case_types import CaseTypeEntry
 from star_itsm_api.services.case_types import (
-    get_enabled_case_types,
     get_case_type_catalog,
+    get_enabled_case_types,
     validate_ticket_type_id,
 )
 from star_itsm_api.services.routing import apply_routing
@@ -303,7 +303,7 @@ async def list_integration_tickets(
 async def create_integration_ticket(
     db: AsyncSession,
     *,
-    client: IntegrationClient,
+    _client: IntegrationClient,
     organization_id: uuid.UUID,
     payload: IntegrationTicketCreate,
 ) -> IntegrationTicketRead:
