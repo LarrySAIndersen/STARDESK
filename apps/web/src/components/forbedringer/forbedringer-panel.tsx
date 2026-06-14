@@ -8,7 +8,7 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
-import { apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, reviewNoteScreenshotUrl } from "@/lib/api";
 import { isAdmin } from "@/lib/auth";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
 import type { User } from "@/types/user";
@@ -54,6 +54,22 @@ function statusBadgeClass(status: ReviewNoteStatus): string {
   return "rounded bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700";
 }
 
+function withReviewNumbers(notes: ReviewNote[]): ReviewNote[] {
+  const byId = new Map(
+    [...notes]
+      .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id))
+      .map((note, index) => [note.id, `REV-${String(index + 1).padStart(5, "0")}`]),
+  );
+  return notes.map((note) => ({
+    ...note,
+    review_number: note.review_number || byId.get(note.id) || "",
+  }));
+}
+
+function reviewNumberLabel(note: ReviewNote): string {
+  return note.review_number || "REV-?????";
+}
+
 export function ForbedringerPanel({ user }: { user: User | null }) {
   const [notes, setNotes] = useState<ReviewNote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,12 +81,8 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   const loadNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const grouped = await Promise.all(
-        STATUS_COLUMNS.map((column) =>
-          apiGet<ReviewNote[]>(`/api/v1/review-notes?status=${column.status}`),
-        ),
-      );
-      setNotes(grouped.flat());
+      const data = await apiGet<ReviewNote[]>("/api/v1/review-notes");
+      setNotes(withReviewNumbers(data));
       setError(null);
     } catch {
       setError("Kunne ikke hente forbedringer.");
@@ -112,15 +124,28 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   );
 
   const deleteNote = async (noteId: string) => {
-    const deleted = await apiPatch<ReviewNote>(`/api/v1/review-notes/${noteId}`, {
-      status: "deleted",
-    });
+    let deleted: ReviewNote | null = null;
+    try {
+      deleted = await apiPatch<ReviewNote>(`/api/v1/review-notes/${noteId}`, {
+        status: "deleted",
+      });
+    } catch {
+      await apiDelete(`/api/v1/review-notes/${noteId}`);
+    }
     setSelectedNote(null);
-    setNotes((prev) =>
-      prev.some((note) => note.id === deleted.id)
-        ? prev.map((note) => (note.id === deleted.id ? deleted : note))
-        : [deleted, ...prev],
-    );
+    setNotes((prev) => {
+      const existing = prev.find((note) => note.id === noteId);
+      const nextDeleted =
+        deleted ??
+        (existing
+          ? { ...existing, status: "deleted" as const, updated_at: new Date().toISOString() }
+          : null);
+      if (!nextDeleted) return prev;
+      const next = prev.some((note) => note.id === nextDeleted.id)
+        ? prev.map((note) => (note.id === nextDeleted.id ? nextDeleted : note))
+        : [nextDeleted, ...prev];
+      return withReviewNumbers(next);
+    });
   };
 
   return (
@@ -194,7 +219,7 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
                         >
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-semibold text-star-blue">
-                              {note.review_number}
+                              {reviewNumberLabel(note)}
                             </span>
                             <span className={statusBadgeClass(note.status)}>
                               {statusLabel(note.status)}
