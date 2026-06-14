@@ -2558,6 +2558,10 @@
   position: absolute;
   bottom: -2px;
   right: -2px;
+  color: #fff;
+  background: var(--classic-header);
+  border-radius: 50%;
+  padding: 1px;
 }
 
 .staff-notification-toast {
@@ -2640,14 +2644,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  color: #fff;
-  background: var(--classic-header);
-  border-radius: 50%;
-  padding: 1px;
 }
 
 .classic-modal-backdrop {
