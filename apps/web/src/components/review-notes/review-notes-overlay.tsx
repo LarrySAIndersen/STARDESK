@@ -8,7 +8,7 @@ import { StickyNote, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { apiGet, apiPatch, apiPost, apiPostNoContent } from "@/lib/api";
+import { apiGet, apiPatch, apiPost, deleteReviewNote } from "@/lib/api";
 import {
   blobToBase64,
   scheduleReviewScreenshotCapture,
@@ -115,7 +115,7 @@ function ReviewNotePin({
               onClick={async () => {
                 setDeleting(true);
                 try {
-                  await apiPostNoContent(`/api/v1/review-notes/${note.id}/delete`, {});
+                  await deleteReviewNote(note.id);
                   setOpen(false);
                   onDeleted();
                 } finally {

@@ -1,4 +1,5 @@
 import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
+import type { ReviewNote } from "@/types/review-note";
 
 export class ApiError extends Error {
   constructor(
@@ -205,4 +206,33 @@ export async function apiDelete(path: string, init?: RequestInit): Promise<void>
   if (!response.ok) {
     await throwApiError(response);
   }
+}
+
+function isReviewNoteDeleteFallbackError(error: unknown): boolean {
+  return error instanceof ApiError && (error.status === 404 || error.status === 405);
+}
+
+/** Try staging POST /delete, then PATCH soft-delete, then hard DELETE. */
+export async function deleteReviewNote(noteId: string): Promise<ReviewNote | null> {
+  try {
+    await apiPostNoContent(`/api/v1/review-notes/${noteId}/delete`, {});
+    return null;
+  } catch (error) {
+    if (!isReviewNoteDeleteFallbackError(error)) {
+      throw error;
+    }
+  }
+
+  try {
+    return await apiPatch<ReviewNote>(`/api/v1/review-notes/${noteId}`, {
+      status: "deleted",
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) {
+      throw error;
+    }
+  }
+
+  await apiDelete(`/api/v1/review-notes/${noteId}`);
+  return null;
 }

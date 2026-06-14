@@ -1,14 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { buildProxyBackendUrl } from "@/lib/api-backend";
+import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE } from "@/lib/auth";
 import { vercelProtectionBypassHeaders } from "@/lib/vercel-protection-bypass";
 
 async function proxyRequest(request: Request, pathSegments: string[]) {
   const path = `/api/${pathSegments.join("/")}`;
   const incoming = new URL(request.url);
-  const target = new URL(buildProxyBackendUrl(path));
+  const target = new URL(buildBackendUrl(path));
   target.search = incoming.search;
 
   const token = (await cookies()).get(TOKEN_COOKIE)?.value;
