@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from star_itsm_api.core.config import settings
+from star_itsm_api.core.openapi import configure_openapi
 from star_itsm_api.core.startup_checks import validate_production_settings
 from star_itsm_api.db import engine
 from star_itsm_api.db_schema_sync import (
@@ -28,6 +29,7 @@ from star_itsm_api.routers import (
     cron,
     gmail,
     health,
+    integration_api,
     integrations,
     kanban,
     knowledge_articles,
@@ -76,7 +78,11 @@ app = FastAPI(
     title="STARdesk API",
     version="0.2.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
+configure_openapi(app)
 app.add_middleware(SecurityHeadersMiddleware)
 # Cursor / VS Code canvases: Origin null, vscode-webview://, vscode-file://, https://*.cursor.com
 _canvas_cors_origins = ["null"]
@@ -104,6 +110,7 @@ app.include_router(tickets.router, prefix=API_V1_PREFIX)
 app.include_router(slack.router, prefix=API_V1_PREFIX)
 app.include_router(gmail.router, prefix=API_V1_PREFIX)
 app.include_router(integrations.router, prefix=API_V1_PREFIX)
+app.include_router(integration_api.router, prefix=API_V1_PREFIX)
 app.include_router(knowledge_articles.router, prefix=API_V1_PREFIX)
 app.include_router(teams.router, prefix=API_V1_PREFIX)
 app.include_router(kanban.router, prefix=API_V1_PREFIX)

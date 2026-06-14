@@ -82,6 +82,21 @@ Query: `dry_run=true` (tæl kun), `anchor=created_at` (standard, som prioritets�
 | POST | `/cron/virus-scan` | samme |
 | POST | `/webhooks/email-inbound` | `X-Webhook-Secret: <WEBHOOK_SECRET>` |
 
+## Integration API (maskin-kontrakt)
+
+Stabil kontrakt for TOPdesk, Jira m.fl. — se `docs/specs/integration-api.md` og Swagger på `/developers/api`.
+
+| Metode | Sti | Header |
+|--------|-----|--------|
+| GET | `/integration/profile` | `X-Integration-Key` |
+| GET | `/integration/case-types` | samme |
+| GET | `/integration/tickets` | samme (+ pagination) |
+| POST | `/integration/tickets` | samme |
+| GET | `/integration/tickets/{uuid\|ext:system:id}` | samme |
+| PATCH | `/integration/tickets/{uuid\|ext:system:id}` | samme |
+
+Valgfrit: `X-Integration-System` (fx `topdesk`). OpenAPI: `GET /openapi.json`.
+
 ## Health
 
 `GET /health` — ingen auth
