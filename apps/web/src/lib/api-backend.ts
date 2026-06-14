@@ -17,6 +17,21 @@ function vercelDeploymentTier(): string | undefined {
   return process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV;
 }
 
+function stardeskEnvironmentTier(): string | undefined {
+  return (
+    process.env.STARDESK_ENV ??
+    process.env.NEXT_PUBLIC_STARDESK_ENV ??
+    process.env.APP_ENV
+  )
+    ?.trim()
+    .toLowerCase();
+}
+
+function isNonProductionStardeskEnvironment(): boolean {
+  const tier = stardeskEnvironmentTier();
+  return tier === "test" || tier === "development" || tier === "staging" || tier === "prod-clone";
+}
+
 function isVercelProductionDeployment(): boolean {
   return vercelDeploymentTier() === "production";
 }
@@ -36,7 +51,10 @@ export function getApiBackendBase(): string {
     return configured.replace(/\/$/, "");
   }
 
-  if (isVercelHosted() && !isVercelProductionDeployment()) {
+  if (
+    isVercelHosted() &&
+    (isNonProductionStardeskEnvironment() || !isVercelProductionDeployment())
+  ) {
     return previewUsesProductionApi()
       ? VERCEL_PROTOTYPE_API_FALLBACK
       : VERCEL_STAGING_API_FALLBACK;
