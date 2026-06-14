@@ -40,7 +40,7 @@ import type { Ticket, TicketCreateInput } from "@/types/ticket";
 
 const schema = z
   .object({
-    ticket_type: z.enum(["service_request", "incident", "problem"]),
+    ticket_type: z.enum(["service_request", "incident", "problem", "wreck_ind"]),
     title: z.string().min(3, "Titel skal være mindst 3 tegn"),
     description: z.string().min(10, "Beskrivelse skal være mindst 10 tegn"),
     priority: z.enum(["critical", "high", "medium", "low"]),
@@ -379,6 +379,7 @@ export function CreateTicketForm({
                   <option value="incident">Hændelse</option>
                   <option value="service_request">Serviceanmodning</option>
                   <option value="problem">Problem</option>
+                  <option value="wreck_ind">Wreck ind</option>
                 </select>
               </PageLayoutFormField>
               <PageLayoutFormField

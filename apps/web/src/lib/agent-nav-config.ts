@@ -2,7 +2,7 @@ import type { AgentNavItem } from "@/lib/agent-nav";
 
 export const NAV_LAYOUT_STORAGE_KEY = "stardesk-nav-layout";
 /** Bump when default nav order/sections change so saved layouts pick up new items. */
-export const NAV_LAYOUT_VERSION = 2;
+export const NAV_LAYOUT_VERSION = 3;
 
 export type NavSectionId =
   | "main"

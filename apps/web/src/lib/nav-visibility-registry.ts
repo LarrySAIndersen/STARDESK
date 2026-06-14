@@ -21,6 +21,7 @@ export const NAV_VISIBILITY_PATH_BY_ID: Record<string, string> = {
   knowledge: "/knowledge",
   "team-wiki": "/teamwiki",
   groups: "/groups",
+  tasks: "/tasks",
   forbedringer: "/forbedringer",
   "saglayout-2": "/forbedringer/saglayout-2",
   users: "/users",

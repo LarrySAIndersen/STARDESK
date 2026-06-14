@@ -13,6 +13,7 @@ from star_itsm_api.deps import require_db
 from star_itsm_api.models.team import Team
 from star_itsm_api.models.ticket import Ticket
 from star_itsm_api.models.ticket_event import TicketEvent
+from star_itsm_api.services.recurring_tasks import run_due_recurring_tasks
 from star_itsm_api.services.mail import send_escalation_email
 from star_itsm_api.services.ticket_timestamps import touch_ticket_updated
 from star_itsm_api.services.virus_scan import scan_pending_attachments
@@ -87,6 +88,22 @@ async def sla_check(
 
     await db.commit()
     return {"escalated": escalated, "checked_at": now.isoformat()}
+
+
+@router.post("/recurring-tasks")
+async def recurring_tasks_run(
+    db: AsyncSession = Depends(require_db),
+    authorization: str | None = Header(default=None),
+) -> dict[str, int | str]:
+    token = authorization.removeprefix("Bearer ").strip() if authorization else None
+    _verify_cron_secret(token)
+
+    now = datetime.now(UTC)
+    created = await run_due_recurring_tasks(db, now=now)
+    return {
+        "created": created,
+        "checked_at": now.isoformat(),
+    }
 
 
 @router.post("/virus-scan")
