@@ -5,6 +5,21 @@
 
 ---
 
+## 0. Grundlov: Spørg ved tvivl (agent-afklaring)
+
+**Før alt andet** gælder [STARDESK-agent-afklaring.md](./STARDESK-agent-afklaring.md):
+
+- Agenten **stopper og spørger** når intent, scope, kvalitet eller drift er uklart
+- Pågående arbejde (åben PR, batch) afklares eksplicit — agenten gætter ikke om det skal med
+- Op til **20 nummererede spørgsmål** fra katalog A–E (scope, kvalitet, drift, sikkerhed, performance)
+- **Ingen kode** før afklaring — medmindre opgaven er entydig eller brugeren siger "bare gør det"
+
+```text
+Afklar tvivl → Forstå → Debattér → Godkend → Implementér → Mål → Lever (PR + gate)
+```
+
+---
+
 ## 1. Kerneidé: Debate-first, mål-først, lever-i-små-PR'er
 
 STARDESK forbedres ikke ved at "fixe alt på listen". Hvert punkt går gennem:
@@ -12,6 +27,8 @@ STARDESK forbedres ikke ved at "fixe alt på listen". Hvert punkt går gennem:
 ```text
 Forstå → Debattér → Godkend → Implementér → Mål → Lever (PR + gate)
 ```
+
+(For constitution-punkter kommer **afklaring** før "Forstå" — se §0.)
 
 | Fase | Spørgsmål | Output |
 |------|-----------|--------|
