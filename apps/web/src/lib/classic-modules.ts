@@ -7,6 +7,7 @@ export type ClassicModuleId =
   | "changes"
   | "problems"
   | "service-requests"
+  | "wreck-ind"
   | "my-work";
 
 export type ClassicModuleDef = {
