@@ -83,6 +83,6 @@ async def read_case_type_catalog(
 async def update_case_type_catalog(
     payload: CaseTypeCatalogUpdate,
     db: AsyncSession = Depends(require_db),
-    current_user: User = Depends(require_admin()),
+    _current_user: User = Depends(require_admin()),
 ) -> CaseTypeCatalogRead:
     return await set_case_type_catalog(db, payload)

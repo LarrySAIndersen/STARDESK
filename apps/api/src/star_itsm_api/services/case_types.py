@@ -15,7 +15,6 @@ from star_itsm_api.schemas.case_types import (
     CaseTypeCatalogRead,
     CaseTypeCatalogUpdate,
     CaseTypeEntry,
-    IntegrationTicketPriority,
     IntegrationTicketStatus,
 )
 

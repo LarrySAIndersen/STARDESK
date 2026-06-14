@@ -108,7 +108,6 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
   );
 
   const deleteNote = async (noteId: string) => {
-    if (!window.confirm("Markér seddel som slettet og fjern den fra websiden?")) return;
     await apiDelete(`/api/v1/review-notes/${noteId}`);
     setSelectedNote(null);
     setNotes((prev) =>
