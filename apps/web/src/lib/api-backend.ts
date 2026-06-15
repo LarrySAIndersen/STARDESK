@@ -44,9 +44,28 @@ function isVercelHosted(): boolean {
   );
 }
 
+function isVercelPreviewDeployment(): boolean {
+  return vercelDeploymentTier() === "preview";
+}
+
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
-  const configured = (process.env.STARDESK_API_URL ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
+  const stagingOverride = process.env.STARDESK_API_URL?.trim();
+
+  // Vercel Preview must talk to the staging API (Neon test). Legacy Preview env often
+  // still sets NEXT_PUBLIC_API_URL to production — new routes (e.g. impersonate) 404 there.
+  if (
+    isVercelHosted() &&
+    isVercelPreviewDeployment() &&
+    !previewUsesProductionApi()
+  ) {
+    if (stagingOverride) {
+      return stagingOverride.replace(/\/$/, "");
+    }
+    return VERCEL_STAGING_API_FALLBACK;
+  }
+
+  const configured = (stagingOverride ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
   if (configured) {
     return configured.replace(/\/$/, "");
   }

@@ -32,6 +32,23 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe("https://api.example.test");
   });
 
+  it("uses staging API on Vercel preview even when NEXT_PUBLIC_API_URL is production", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "preview";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
+
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+  });
+
+  it("honours STARDESK_API_URL on Vercel preview", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "preview";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
+    process.env.STARDESK_API_URL = "https://api-custom-staging.example.test/";
+
+    expect(getApiBackendBase()).toBe("https://api-custom-staging.example.test");
+  });
+
   it("keeps custom-domain staging on configured NEXT_PUBLIC_API_URL", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "production";
