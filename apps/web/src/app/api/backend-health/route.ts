@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { buildBackendUrl, getApiBackendBase } from "@/lib/api-backend";
-import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
+import {
+  backendUpstreamHeaders,
+  isVercelDeploymentProtectionResponse,
+  UPSTREAM_PROTECTION_BLOCKED_DETAIL,
+} from "@/lib/vercel-protection-bypass";
 
 /** Proxies Vercel API `/health` for client-side API status checks (no JWT required). */
 export async function GET() {
@@ -14,6 +18,16 @@ export async function GET() {
     });
 
     if (!response.ok) {
+      if (isVercelDeploymentProtectionResponse(response)) {
+        return NextResponse.json(
+          {
+            status: "error",
+            detail: UPSTREAM_PROTECTION_BLOCKED_DETAIL,
+            upstream: upstreamBase,
+          },
+          { status: 503 },
+        );
+      }
       return NextResponse.json(
         { status: "error", detail: `Backend HTTP ${response.status}`, upstream: upstreamBase },
         { status: 503 },

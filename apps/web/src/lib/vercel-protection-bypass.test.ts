@@ -1,49 +1,69 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  apiUpstreamProtectionBypassHeaders,
   backendUpstreamHeaders,
   vercelProtectionBypassHeaders,
 } from "./vercel-protection-bypass";
 
-describe("vercelProtectionBypassHeaders", () => {
-  const originalAutomation = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+describe("apiUpstreamProtectionBypassHeaders", () => {
+  const originalApiBypass = process.env.STARDESK_API_PROTECTION_BYPASS;
   const originalBypass = process.env.VERCEL_PROTECTION_BYPASS;
+  const originalAutomation = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 
   beforeEach(() => {
-    delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    delete process.env.STARDESK_API_PROTECTION_BYPASS;
     delete process.env.VERCEL_PROTECTION_BYPASS;
+    delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
   });
 
   afterEach(() => {
-    if (originalAutomation === undefined) {
-      delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    if (originalApiBypass === undefined) {
+      delete process.env.STARDESK_API_PROTECTION_BYPASS;
     } else {
-      process.env.VERCEL_AUTOMATION_BYPASS_SECRET = originalAutomation;
+      process.env.STARDESK_API_PROTECTION_BYPASS = originalApiBypass;
     }
     if (originalBypass === undefined) {
       delete process.env.VERCEL_PROTECTION_BYPASS;
     } else {
       process.env.VERCEL_PROTECTION_BYPASS = originalBypass;
     }
+    if (originalAutomation === undefined) {
+      delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    } else {
+      process.env.VERCEL_AUTOMATION_BYPASS_SECRET = originalAutomation;
+    }
   });
 
-  it("returns empty object when no secret is configured", () => {
-    expect(vercelProtectionBypassHeaders()).toEqual({});
+  it("returns empty object when no API bypass secret is configured", () => {
+    expect(apiUpstreamProtectionBypassHeaders()).toEqual({});
   });
 
-  it("prefers VERCEL_AUTOMATION_BYPASS_SECRET", () => {
-    process.env.VERCEL_AUTOMATION_BYPASS_SECRET = "auto-secret";
+  it("prefers STARDESK_API_PROTECTION_BYPASS", () => {
+    process.env.STARDESK_API_PROTECTION_BYPASS = "api-secret";
     process.env.VERCEL_PROTECTION_BYPASS = "legacy";
-    expect(vercelProtectionBypassHeaders()).toEqual({
-      "x-vercel-protection-bypass": "auto-secret",
+    expect(apiUpstreamProtectionBypassHeaders()).toEqual({
+      "x-vercel-protection-bypass": "api-secret",
     });
   });
 
-  it("falls back to VERCEL_PROTECTION_BYPASS", () => {
+  it("uses VERCEL_PROTECTION_BYPASS for upstream API calls", () => {
     process.env.VERCEL_PROTECTION_BYPASS = "legacy-secret";
-    expect(vercelProtectionBypassHeaders()).toEqual({
+    expect(apiUpstreamProtectionBypassHeaders()).toEqual({
       "x-vercel-protection-bypass": "legacy-secret",
     });
+  });
+
+  it("does not use VERCEL_AUTOMATION_BYPASS_SECRET (web-only token)", () => {
+    process.env.VERCEL_AUTOMATION_BYPASS_SECRET = "web-auto-secret";
+    expect(apiUpstreamProtectionBypassHeaders()).toEqual({});
+  });
+
+  it("vercelProtectionBypassHeaders aliases api upstream headers", () => {
+    process.env.VERCEL_PROTECTION_BYPASS = "legacy-secret";
+    expect(vercelProtectionBypassHeaders()).toEqual(
+      apiUpstreamProtectionBypassHeaders(),
+    );
   });
 });
 

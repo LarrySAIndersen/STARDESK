@@ -71,6 +71,8 @@
     "identity": ["NEXT_PUBLIC_STARDESK_ENV"],
     "optional": [
       "NEXT_PUBLIC_ENABLE_DEMO_LOGIN",
+      "VERCEL_PROTECTION_BYPASS",
+      "STARDESK_API_PROTECTION_BYPASS",
       "BASIC_AUTH_USER",
       "BASIC_AUTH_PASSWORD"
     ],

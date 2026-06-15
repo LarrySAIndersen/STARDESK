@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
-import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
+import {
+  backendUpstreamHeaders,
+  isVercelDeploymentProtectionResponse,
+  UPSTREAM_PROTECTION_BLOCKED_DETAIL,
+} from "@/lib/vercel-protection-bypass";
 import type { LoginResponse } from "@/types/user";
 
 export async function POST(request: Request) {
@@ -28,6 +32,9 @@ export async function POST(request: Request) {
   });
 
   if (!upstream.ok) {
+    if (isVercelDeploymentProtectionResponse(upstream)) {
+      return NextResponse.json({ detail: UPSTREAM_PROTECTION_BLOCKED_DETAIL }, { status: 503 });
+    }
     let detail = "Forkert e-mail eller adgangskode";
     try {
       const err = (await upstream.json()) as { detail?: string };
