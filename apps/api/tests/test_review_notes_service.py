@@ -40,15 +40,22 @@ def test_to_read_default_email() -> None:
     out = review_notes._to_read(row, author_name="Åse")  # type: ignore[arg-type]
     assert out.created_by_name == "Åse"
     assert out.created_by_email is None
+    assert out.created_by_role == "agent"
+    assert out.created_by_role_label == "Agent"
     assert out.review_number == ""
 
 
 def test_to_read_with_email() -> None:
     row = _note_row()
     out = review_notes._to_read(
-        row, author_name="Bo", author_email="bo@example.dk"  # type: ignore[arg-type]
-    )
+        row,
+        author_name="Bo",
+        author_email="bo@example.dk",
+        author_role="stardesk_reviewer",
+    )  # type: ignore[arg-type]
     assert out.created_by_email == "bo@example.dk"
+    assert out.created_by_role == "stardesk_reviewer"
+    assert out.created_by_role_label == "Stardesk Reviewer"
 
 
 @pytest.mark.asyncio
@@ -64,10 +71,12 @@ async def test_author_profiles_returns_map() -> None:
     db = AsyncMock()
     uid = uuid.uuid4()
     res = MagicMock()
-    res.all.return_value = [SimpleNamespace(id=uid, display_name="Bo", email="bo@example.dk")]
+    res.all.return_value = [
+        SimpleNamespace(id=uid, display_name="Bo", email="bo@example.dk", role="agent")
+    ]
     db.execute = AsyncMock(return_value=res)
     out = await review_notes._author_profiles(db, {uid})
-    assert out == {uid: ("Bo", "bo@example.dk")}
+    assert out == {uid: ("Bo", "bo@example.dk", "agent")}
 
 
 @pytest.mark.asyncio
@@ -79,7 +88,7 @@ async def test_list_review_notes_no_filters() -> None:
     rows_res.scalars.return_value.all.return_value = [row]
     profiles_res = MagicMock()
     profiles_res.all.return_value = [
-        SimpleNamespace(id=uid, display_name="Rita", email="rita@example.dk")
+        SimpleNamespace(id=uid, display_name="Rita", email="rita@example.dk", role="stardesk_reviewer")
     ]
     numbers_res = MagicMock()
     numbers_res.scalars.return_value.all.return_value = [row.id]
@@ -89,6 +98,7 @@ async def test_list_review_notes_no_filters() -> None:
     assert out[0].review_number == "REV-00001"
     assert out[0].created_by_name == "Rita"
     assert out[0].created_by_email == "rita@example.dk"
+    assert out[0].created_by_role == "stardesk_reviewer"
 
 
 @pytest.mark.asyncio
@@ -114,7 +124,10 @@ async def test_create_review_note() -> None:
     db = AsyncMock()
     db.add = MagicMock()
     author = SimpleNamespace(
-        id=uuid.uuid4(), display_name="Rita Reviewer", email="rita@example.dk"
+        id=uuid.uuid4(),
+        display_name="Rita Reviewer",
+        email="rita@example.dk",
+        role="stardesk_reviewer",
     )
     payload = ReviewNoteCreate(
         page_path="  /tickets  ",
@@ -132,6 +145,7 @@ async def test_create_review_note() -> None:
     assert out.comment == "Knappen er for lille"
     assert out.status == "open"
     assert out.created_by_name == "Rita Reviewer"
+    assert out.created_by_role == "stardesk_reviewer"
     db.add.assert_called_once()
     db.commit.assert_awaited_once()
     db.refresh.assert_awaited_once()
@@ -162,7 +176,7 @@ async def test_update_review_note_success() -> None:
     db.get = AsyncMock(return_value=row)
     profiles_res = MagicMock()
     profiles_res.all.return_value = [
-        SimpleNamespace(id=uid, display_name="Bo", email="bo@example.dk")
+        SimpleNamespace(id=uid, display_name="Bo", email="bo@example.dk", role="admin")
     ]
     numbers_res = MagicMock()
     numbers_res.scalars.return_value.all.return_value = [row.id]
@@ -173,6 +187,7 @@ async def test_update_review_note_success() -> None:
     assert out.status == "resolved"
     assert out.review_number == "REV-00001"
     assert out.created_by_name == "Bo"
+    assert out.created_by_role == "admin"
     db.commit.assert_awaited_once()
     db.refresh.assert_awaited_once()
 

@@ -14,7 +14,9 @@ import {
   scheduleReviewScreenshotCapture,
 } from "@/lib/capture-review-screenshot";
 import { isStaff, isStardeskReviewer } from "@/lib/auth";
+import { firstName } from "@/lib/display-name";
 import { isForbedringerAdminPath } from "@/lib/review-notes-paths";
+import { reviewNoteRoleColor } from "@/lib/review-note-role-colors";
 import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteCreatePayload } from "@/types/review-note";
 import type { User } from "@/types/user";
@@ -41,6 +43,10 @@ function pageTitleFromPath(pathname: string): string {
   return segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
 }
 
+function reviewNoteHeading(note: ReviewNote): string {
+  return note.review_number?.trim() || "Seddel";
+}
+
 function ReviewNotePin({
   note,
   canEdit,
@@ -56,27 +62,34 @@ function ReviewNotePin({
 }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const roleColor = reviewNoteRoleColor(note.created_by_role);
+  const authorFirst = firstName(note.created_by_name);
+  const heading = reviewNoteHeading(note);
 
   return (
     <>
       <button
         type="button"
-        className="review-note-pin"
+        className={cn("review-note-pin", roleColor.pinClassName)}
         style={{ left: note.position_x, top: note.position_y }}
-        aria-label={`${note.review_number || "Forbedring"}: ${note.comment.slice(0, 40)}`}
+        aria-label={`${heading}: ${note.comment.slice(0, 40)} — ${authorFirst}`}
         onClick={() => setOpen(true)}
       >
-        <StickyNote className="size-4" aria-hidden />
+        <span className="review-note-pin__heading">{heading}</span>
+        <span className="review-note-pin__author">{authorFirst}</span>
       </button>
       {open ? (
         <div
-          className="review-note-popover"
-          style={{ left: note.position_x + 8, top: note.position_y + 28 }}
+          className={cn("review-note-popover", roleColor.pinClassName)}
+          style={{ left: note.position_x + 8, top: note.position_y + 36 }}
           role="dialog"
           aria-label="Forbedring"
         >
           <div className="review-note-popover__header">
-            <strong className="text-sm">Forbedring {note.review_number}</strong>
+            <div className="min-w-0">
+              <strong className="text-sm">{heading}</strong>
+              <p className="review-note-popover__role">{note.created_by_role_label ?? roleColor.label}</p>
+            </div>
             <button
               type="button"
               className="text-muted-foreground hover:text-foreground rounded p-0.5"
@@ -87,7 +100,7 @@ function ReviewNotePin({
             </button>
           </div>
           <p className="review-note-popover__meta">
-            {note.created_by_name} · {note.status === "open" ? "Åben" : "Løst"}
+            {authorFirst} · {note.status === "open" ? "Åben" : "Løst"}
           </p>
           <p className="review-note-popover__comment">{note.comment}</p>
           {canEdit && note.status === "open" ? (

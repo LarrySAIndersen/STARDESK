@@ -4601,12 +4601,24 @@ body.page-layout-edit-active .page-layout-field--editing {
 }
 
 .review-note-pin {
-  @apply absolute z-[46] flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-star-red/40 bg-star-red-light text-star-navy shadow-md transition-transform hover:scale-105;
+  @apply absolute z-[46] flex min-h-[3.25rem] min-w-[4.75rem] max-w-[6.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-start justify-center gap-0.5 rounded-sm border px-2 py-1.5 text-left shadow-md transition-transform hover:scale-[1.03];
+}
+
+.review-note-pin__heading {
+  @apply w-full truncate text-[10px] leading-tight font-bold tracking-tight uppercase;
+}
+
+.review-note-pin__author {
+  @apply w-full truncate text-[11px] leading-tight font-semibold;
 }
 
 .review-note-popover,
 .review-note-composer {
-  @apply absolute z-[47] w-72 max-w-[calc(100vw-2rem)] rounded-sm border border-star-navy/30 bg-star-blue-light p-3 text-star-navy shadow-lg;
+  @apply absolute z-[47] w-72 max-w-[calc(100vw-2rem)] rounded-sm border p-3 text-star-navy shadow-lg;
+}
+
+.review-note-popover__role {
+  @apply text-star-text-muted text-[10px] font-medium uppercase tracking-wide;
 }
 
 .review-note-popover__header,

@@ -12,6 +12,8 @@ export interface ReviewNote {
   created_by_user_id: string;
   created_by_name: string;
   created_by_email?: string | null;
+  created_by_role?: string;
+  created_by_role_label?: string;
   status: ReviewNoteStatus;
   has_screenshot: boolean;
   created_at: string;
