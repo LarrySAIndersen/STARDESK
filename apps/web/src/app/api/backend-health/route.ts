@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { buildBackendUrl, getApiBackendBase } from "@/lib/api-backend";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 
 /** Proxies Vercel API `/health` for client-side API status checks (no JWT required). */
 export async function GET() {
   const upstreamBase = getApiBackendBase();
   try {
     const response = await fetch(buildBackendUrl("/health"), {
+      headers: backendUpstreamHeaders({ Accept: "application/json" }),
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });

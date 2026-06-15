@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { buildBackendUrl } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 
 export async function POST() {
   const cookieStore = await cookies();
@@ -14,10 +15,10 @@ export async function POST() {
 
   const upstream = await fetch(buildBackendUrl("/api/v1/auth/stop-impersonate"), {
     method: "POST",
-    headers: {
+    headers: backendUpstreamHeaders({
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
-    },
+    }),
     cache: "no-store",
   });
 

@@ -49,13 +49,13 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe("https://api-custom-staging.example.test");
   });
 
-  it("keeps custom-domain staging on configured NEXT_PUBLIC_API_URL", () => {
+  it("uses staging API for custom-domain test env even when NEXT_PUBLIC_API_URL is production", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "production";
     process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
 
-    expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
   it("uses staging API for preview deployments without NEXT_PUBLIC_API_URL", () => {

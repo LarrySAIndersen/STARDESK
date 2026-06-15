@@ -48,17 +48,22 @@ function isVercelPreviewDeployment(): boolean {
   return vercelDeploymentTier() === "preview";
 }
 
+function shouldPreferStagingApiBackend(): boolean {
+  return (
+    isVercelHosted() &&
+    !previewUsesProductionApi() &&
+    (isVercelPreviewDeployment() || isNonProductionStardeskEnvironment())
+  );
+}
+
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
 
-  // Vercel Preview must talk to the staging API (Neon test). Legacy Preview env often
-  // still sets NEXT_PUBLIC_API_URL to production — new routes (e.g. impersonate) 404 there.
-  if (
-    isVercelHosted() &&
-    isVercelPreviewDeployment() &&
-    !previewUsesProductionApi()
-  ) {
+  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) must
+  // talk to the staging API (Neon test). Legacy env often still sets NEXT_PUBLIC_API_URL
+  // to production — login and new routes would hit the wrong database there.
+  if (shouldPreferStagingApiBackend()) {
     if (stagingOverride) {
       return stagingOverride.replace(/\/$/, "");
     }

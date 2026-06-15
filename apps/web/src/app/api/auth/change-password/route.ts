@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/api-backend";
 import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
 import { userForSessionCookie } from "@/lib/must-change-password";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 import type { LoginResponse, User } from "@/types/user";
 
 const SESSION_MAX_AGE = 60 * 60 * 2;
@@ -24,7 +25,10 @@ export async function POST(request: Request) {
 
   const upstream = await fetch(buildBackendUrl("/api/v1/auth/change-password"), {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: backendUpstreamHeaders({
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
@@ -51,7 +55,10 @@ export async function POST(request: Request) {
   if (email && newPassword) {
     const loginResponse = await fetch(buildBackendUrl("/api/v1/auth/login"), {
       method: "POST",
-      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      headers: backendUpstreamHeaders({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      }),
       body: JSON.stringify({ email, password: newPassword }),
       cache: "no-store",
     });
@@ -79,7 +86,10 @@ export async function POST(request: Request) {
   const token = cookieStore.get(TOKEN_COOKIE)?.value;
   if (token) {
     const meResponse = await fetch(buildBackendUrl("/api/v1/auth/me"), {
-      headers: { Accept: "application/json", Authorization: `Bearer ${token}` },
+      headers: backendUpstreamHeaders({
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      }),
       cache: "no-store",
     });
     if (meResponse.ok) {
