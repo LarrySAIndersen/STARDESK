@@ -8,7 +8,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, hasAgentShellAccess, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
-import { clearStaleSessionCookies } from "@/lib/clear-stale-session";
 import { isMinSidePath } from "@/lib/min-side-redirect";
 import {
   firstAllowedStaffPathForUser,
@@ -28,7 +27,8 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
 
   let currentUser = token ? await getServerUser() : null;
   if (token && !currentUser) {
-    await clearStaleSessionCookies();
+    // Stale HttpOnly cookies are cleared client-side via /api/auth/logout in
+    // hydrateClientSession — do not mutate cookies during RSC (Next.js 15).
     currentUser = null;
   }
 

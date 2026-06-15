@@ -187,13 +187,20 @@ describe("client session cache", () => {
     expect(getClientUser()?.email).toBe("hydrated@example.dk");
   });
 
-  it("hydrateClientSession clears cache on non-OK response", async () => {
+  it("hydrateClientSession clears cache and logs out on 401", async () => {
     vi.stubGlobal("window", {} as Window);
     setClientSessionCache(makeUser());
-    fetchMock.mockResolvedValue(new Response(null, { status: 401 }));
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
 
     await expect(hydrateClientSession()).resolves.toBeNull();
     expect(getClientUser()).toBeNull();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/auth/logout",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
   });
 
   it("clearSession posts logout and clears cache", async () => {

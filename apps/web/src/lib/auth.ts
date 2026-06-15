@@ -153,6 +153,13 @@ export async function hydrateClientSession(): Promise<User | null> {
     });
     if (!response.ok) {
       clientSessionCache = null;
+      if (response.status === 401) {
+        try {
+          await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+        } catch {
+          // ignore — render already treats user as logged out
+        }
+      }
       return null;
     }
     const body = (await response.json()) as { user?: User };
