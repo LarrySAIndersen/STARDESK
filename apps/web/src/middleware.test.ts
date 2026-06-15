@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 
-import { TOKEN_COOKIE } from "@/lib/auth";
+import { TOKEN_COOKIE, USER_COOKIE } from "@/lib/auth";
 import { middleware } from "@/middleware";
 
 function makeRequest(
   pathname: string,
-  options?: { token?: string; basicAuth?: string },
+  options?: { token?: string; userCookie?: string; basicAuth?: string },
 ): NextRequest {
   const url = `http://localhost:3000${pathname}`;
   const headers = new Headers();
@@ -16,6 +16,9 @@ function makeRequest(
   const request = new NextRequest(url, { headers });
   if (options?.token) {
     request.cookies.set(TOKEN_COOKIE, options.token);
+  }
+  if (options?.userCookie) {
+    request.cookies.set(USER_COOKIE, options.userCookie);
   }
   return request;
 }
@@ -92,6 +95,29 @@ describe("middleware JWT session", () => {
     const response = middleware(makeRequest("/tickets", { token: "jwt-token" }));
     expect(response.status).toBe(200);
     expect(response.headers.get("x-middleware-request-x-pathname")).toBe("/tickets");
+  });
+
+  it("redirects legacy /min-side for staff to personal workspace", () => {
+    const userCookie = JSON.stringify({
+      id: "user-1",
+      role: "agent",
+      roles: ["agent"],
+      display_name: "Anna",
+      email: "sf01@example.dk",
+    });
+    const response = middleware(
+      makeRequest("/min-side", { token: "jwt-token", userCookie }),
+    );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/arbejdsrum?space=personal",
+    );
+  });
+
+  it("passes /min-side through when user cookie is missing", () => {
+    const response = middleware(makeRequest("/min-side", { token: "jwt-token" }));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
   });
 });
 

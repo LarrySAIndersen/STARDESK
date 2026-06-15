@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 import { TOKEN_COOKIE } from "@/lib/auth";
+import {
+  readMinSideRedirectCookies,
+  resolveMinSideRedirectTarget,
+} from "@/lib/min-side-redirect";
 import { isPasswordChangeExemptPath } from "@/lib/must-change-password";
 
 /** Routes that work without a session (login UI lives on `/` and `/portal`). */
@@ -120,9 +124,24 @@ function nextWithPathname(request: NextRequest): NextResponse {
   });
 }
 
+function handleLegacyMinSideRedirect(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  const { token, userCookieRaw } = readMinSideRedirectCookies(request);
+  const target = resolveMinSideRedirectTarget(pathname, token, userCookieRaw);
+  if (!target) {
+    return null;
+  }
+  return NextResponse.redirect(new URL(target, request.url));
+}
+
 function handleJwtSession(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
+
+  const minSideRedirect = handleLegacyMinSideRedirect(request);
+  if (minSideRedirect) {
+    return minSideRedirect;
+  }
 
   if (isAuthApiPath(pathname) || isProxyApiPath(pathname) || isHealthApiPath(pathname)) {
     return nextWithPathname(request);
