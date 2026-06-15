@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { vercelProtectionBypassHeaders } from "./vercel-protection-bypass";
+import {
+  backendUpstreamHeaders,
+  vercelProtectionBypassHeaders,
+} from "./vercel-protection-bypass";
 
 describe("vercelProtectionBypassHeaders", () => {
   const originalAutomation = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
@@ -40,6 +43,26 @@ describe("vercelProtectionBypassHeaders", () => {
     process.env.VERCEL_PROTECTION_BYPASS = "legacy-secret";
     expect(vercelProtectionBypassHeaders()).toEqual({
       "x-vercel-protection-bypass": "legacy-secret",
+    });
+  });
+});
+
+describe("backendUpstreamHeaders", () => {
+  afterEach(() => {
+    delete process.env.VERCEL_PROTECTION_BYPASS;
+  });
+
+  it("merges bypass secret with extra headers", () => {
+    process.env.VERCEL_PROTECTION_BYPASS = "bypass-token";
+    expect(
+      backendUpstreamHeaders({
+        Accept: "application/json",
+        Authorization: "Bearer jwt",
+      }),
+    ).toEqual({
+      "x-vercel-protection-bypass": "bypass-token",
+      Accept: "application/json",
+      Authorization: "Bearer jwt",
     });
   });
 });

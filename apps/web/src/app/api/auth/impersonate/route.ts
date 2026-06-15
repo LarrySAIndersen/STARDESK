@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { buildBackendUrl } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import { TOKEN_COOKIE } from "@/lib/auth";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
@@ -21,11 +22,11 @@ export async function POST(request: Request) {
 
   const upstream = await fetch(buildBackendUrl("/api/v1/auth/impersonate"), {
     method: "POST",
-    headers: {
+    headers: backendUpstreamHeaders({
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(body),
     cache: "no-store",
   });

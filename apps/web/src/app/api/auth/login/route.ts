@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 import type { LoginResponse } from "@/types/user";
 
 export async function POST(request: Request) {
@@ -14,14 +15,14 @@ export async function POST(request: Request) {
 
   const upstream = await fetch(buildBackendUrl("/api/v1/auth/login"), {
     method: "POST",
-    headers: {
+    headers: backendUpstreamHeaders({
       Accept: "application/json",
       "Content-Type": "application/json",
       "X-Forwarded-For":
         request.headers.get("x-forwarded-for") ??
         request.headers.get("x-real-ip") ??
         "",
-    },
+    }),
     body: JSON.stringify(body),
     cache: "no-store",
   });
