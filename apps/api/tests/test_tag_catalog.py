@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import select
 
 from star_itsm_api.models.ticket import Ticket
-from star_itsm_api.schemas.tag_catalog import TagSuggestionRead
+from star_itsm_api.schemas.tag_catalog import SimilarTicketRead, TagSuggestionRead
 from star_itsm_api.services.tag_catalog import (
     get_catalog_entry,
     list_catalog_entries,
@@ -47,6 +47,22 @@ def test_suggest_tags_from_vpn_text() -> None:
     slugs = [item.slug for item in suggestions]
     assert "vpn" in slugs
     assert suggestions[0].source == "catalog_keyword"
+
+
+def test_suggest_tags_returns_empty_for_blank_text() -> None:
+    assert suggest_tags_from_text("   ") == []
+
+
+def test_resolve_to_catalog_slug_handles_blank() -> None:
+    assert resolve_to_catalog_slug("  ") is None
+
+
+def test_get_catalog_entry_returns_none_for_unknown() -> None:
+    assert get_catalog_entry("not-a-real-tag") is None
+
+
+def test_normalize_tags_to_catalog_deduplicates() -> None:
+    assert normalize_tags_to_catalog(["vpn", "VPN", "vpn"]) == ["vpn"]
 
 
 def test_normalize_tags_to_catalog_maps_synonyms() -> None:
@@ -218,6 +234,64 @@ async def test_find_similar_tickets_without_search_terms() -> None:
     user = SimpleNamespace(id=uuid.uuid4(), role="admin")
     similar = await find_similar_tickets(mock_db, source, user, limit=3)
     assert similar == []
+
+
+@pytest.mark.asyncio
+async def test_validate_tags_endpoint(api_client) -> None:
+    response = await api_client.get("/api/v1/tags/validate?tags=vpn,not-in-catalog")
+    assert response.status_code == 200
+    body = response.json()
+    assert "vpn" in body["known"]
+    assert "not-in-catalog" in body["unknown"]
+
+
+@pytest.mark.asyncio
+async def test_validate_tags_rejects_invalid_input(api_client) -> None:
+    response = await api_client.get("/api/v1/tags/validate?tags=!!!")
+    assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_list_tags_with_usage_counts(api_client, override_db: AsyncMock) -> None:
+    mock_result = MagicMock()
+    mock_result.all.return_value = [(["vpn", "printer"],), (["vpn"],)]
+    override_db.execute = AsyncMock(return_value=mock_result)
+
+    response = await api_client.get("/api/v1/tags?include_usage=true")
+    assert response.status_code == 200
+    body = response.json()
+    vpn = next(item for item in body if item["slug"] == "vpn")
+    assert vpn["usage_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_similar_tickets_happy_path(api_client, override_db: AsyncMock, monkeypatch) -> None:
+    ticket_id = uuid.uuid4()
+    ticket = SimpleNamespace(id=ticket_id, deleted_at=None)
+    override_db.get = AsyncMock(return_value=ticket)
+
+    async def fake_find_similar(_db, _source, _user, **kwargs):
+        return [
+            SimilarTicketRead(
+                id=str(uuid.uuid4()),
+                ticket_number="INC-42",
+                title="VPN fejl",
+                status="resolved",
+                score=0.42,
+                match_reasons=["Fælles tags: vpn"],
+                tags=["vpn"],
+            )
+        ]
+
+    monkeypatch.setattr(
+        "star_itsm_api.routers.tickets.find_similar_tickets",
+        fake_find_similar,
+    )
+
+    response = await api_client.get(f"/api/v1/tickets/{ticket_id}/similar?closed_only=true")
+    assert response.status_code == 200
+    body = response.json()
+    assert body[0]["ticket_number"] == "INC-42"
 
 
 @pytest.mark.asyncio
