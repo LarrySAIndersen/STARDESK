@@ -159,18 +159,7 @@ export function AgentShell({
       canEditFromServer={showPageLayoutEdit ?? canEditPageLayout(user ?? null)}
     >
       <div className="agent-shell wire-app flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-        {staff ? (
-          <ChatWorkspaceProvider enabled={staff}>
-            <AgentShellInner
-              topBarTitle={topBarTitle}
-              topBarActions={topBarActions}
-              user={user}
-              showUsersNav={showUsersNav}
-            >
-              {children}
-            </AgentShellInner>
-          </ChatWorkspaceProvider>
-        ) : (
+        <ChatWorkspaceProvider enabled={staff}>
           <AgentShellInner
             topBarTitle={topBarTitle}
             topBarActions={topBarActions}
@@ -179,7 +168,7 @@ export function AgentShell({
           >
             {children}
           </AgentShellInner>
-        )}
+        </ChatWorkspaceProvider>
       </div>
     </PageLayoutEditProvider>
   );
