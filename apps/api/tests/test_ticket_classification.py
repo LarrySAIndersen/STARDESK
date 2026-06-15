@@ -11,7 +11,10 @@ from star_itsm_api.services.ticket_classification import (
     validate_ticket_classification,
     validate_ticket_source_value,
 )
-from star_itsm_api.services.ticket_search import apply_ticket_search_filter, apply_ticket_tags_filter
+from star_itsm_api.services.ticket_search import (
+    apply_ticket_search_filter,
+    apply_ticket_tags_filter,
+)
 
 
 def test_apply_ticket_search_filter_skips_blank_query() -> None:

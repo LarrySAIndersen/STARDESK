@@ -37,6 +37,7 @@ from star_itsm_api.schemas.stakeholder import (
     TicketStakeholdersGroupedRead,
     TicketStakeholderUpdate,
 )
+from star_itsm_api.schemas.tag_catalog import SimilarTicketRead
 from star_itsm_api.schemas.ticket import (
     CLOSED_STATUSES,
     TicketAssignmentUpdate,
@@ -51,7 +52,6 @@ from star_itsm_api.schemas.ticket import (
     TicketStatusUpdate,
     TicketTypeUpdate,
 )
-from star_itsm_api.schemas.tag_catalog import SimilarTicketRead
 from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
 from star_itsm_api.schemas.ticket_intelligence import (
     TicketIntelligenceRead,
@@ -150,11 +150,11 @@ from star_itsm_api.services.ticket_read import (
     tickets_to_read_list,
 )
 from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
-from star_itsm_api.services.ticket_similarity import find_similar_tickets
 from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
     resolve_create_security_flag,
 )
+from star_itsm_api.services.ticket_similarity import find_similar_tickets
 from star_itsm_api.services.ticket_sort import DEFAULT_TICKET_SORT
 from star_itsm_api.services.ticket_source import resolve_ticket_source_on_create
 from star_itsm_api.services.ticket_stakeholders import (

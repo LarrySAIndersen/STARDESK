@@ -28,10 +28,13 @@ from star_itsm_api.services.ticket_dashboard_filters import (
     filter_tickets_created_on,
     filter_tickets_opened_since,
 )
-from star_itsm_api.services.ticket_search import apply_ticket_search_filter, apply_ticket_tags_filter
-from star_itsm_api.services.ticket_tags import normalize_tags
+from star_itsm_api.services.ticket_search import (
+    apply_ticket_search_filter,
+    apply_ticket_tags_filter,
+)
 from star_itsm_api.services.ticket_sort import apply_ticket_sort, parse_ticket_sort
 from star_itsm_api.services.ticket_stakeholders import apply_stakeholder_ticket_filter
+from star_itsm_api.services.ticket_tags import normalize_tags
 
 DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
 DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})

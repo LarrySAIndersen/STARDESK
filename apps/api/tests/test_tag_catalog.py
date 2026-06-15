@@ -2,20 +2,33 @@
 
 import uuid
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
-from star_itsm_api.services.tag_catalog import (
-    list_catalog_entries,
-    normalize_tags_to_catalog,
-    resolve_to_catalog_slug,
-    suggest_tags_from_text,
-)
-from star_itsm_api.services.ticket_search import apply_ticket_tags_filter
-from star_itsm_api.services.ticket_similarity import score_ticket_similarity
 from sqlalchemy import select
 
 from star_itsm_api.models.ticket import Ticket
+from star_itsm_api.schemas.tag_catalog import TagSuggestionRead
+from star_itsm_api.services.tag_catalog import (
+    get_catalog_entry,
+    list_catalog_entries,
+    merge_tag_suggestions,
+    normalize_tags_to_catalog,
+    resolve_to_catalog_slug,
+    slugs_from_suggestions,
+    suggest_tags_from_text,
+)
+from star_itsm_api.services.ticket_search import (
+    apply_ticket_search_filter,
+    apply_ticket_tags_filter,
+)
+from star_itsm_api.services.ticket_similarity import (
+    _candidate_search_terms,
+    _jaccard,
+    _overlap_labels,
+    find_similar_tickets,
+    score_ticket_similarity,
+)
 
 
 def test_list_catalog_entries_not_empty() -> None:
@@ -58,7 +71,7 @@ def test_score_ticket_similarity_tag_overlap() -> None:
         description="Kan ikke logge på vpn",
         tags=["vpn", "netværk"],
         semantic_topics=["vpn"],
-        llm_summary=None,
+        llm_summary="VPN fejl løst ved genstart",
     )
     candidate = SimpleNamespace(
         title="VPN virker ikke",
@@ -70,6 +83,141 @@ def test_score_ticket_similarity_tag_overlap() -> None:
     score, reasons = score_ticket_similarity(source, candidate)
     assert score > 0.2
     assert any("Fælles tags" in reason for reason in reasons)
+    assert any("emner" in reason for reason in reasons)
+    assert any("opsummering" in reason for reason in reasons)
+
+
+def test_jaccard_empty_sets_returns_zero() -> None:
+    assert _jaccard(set(), {"vpn"}) == 0.0
+    assert _jaccard({"vpn"}, set()) == 0.0
+
+
+def test_overlap_labels_truncates_long_lists() -> None:
+    label = _overlap_labels({"a", "b", "c", "d", "e", "f"}, prefix_da="Fælles tags")
+    assert label is not None
+    assert "+2" in label
+
+
+def test_candidate_search_terms_deduplicates_topics() -> None:
+    ticket = SimpleNamespace(
+        title="VPN forbindelse fejler hjemmefra",
+        tags=["vpn"],
+        semantic_topics=["vpn", "fjernarbejde"],
+    )
+    terms = _candidate_search_terms(ticket)
+    assert terms.count("vpn") == 1
+    assert "fjernarbejde" in terms
+
+
+def test_get_catalog_entry_and_merge_suggestions() -> None:
+    entry = get_catalog_entry("vpn")
+    assert entry is not None
+    assert entry.slug == "vpn"
+    assert get_catalog_entry("unknown-slug-xyz") is None
+
+    low = TagSuggestionRead(
+        slug="vpn",
+        label_da="VPN",
+        confidence=0.5,
+        source="catalog_keyword",
+        reason_da="test",
+    )
+    high = TagSuggestionRead(
+        slug="vpn",
+        label_da="VPN",
+        confidence=0.9,
+        source="catalog_keyword",
+        reason_da="better",
+    )
+    merged = merge_tag_suggestions([low], [high])
+    assert merged[0].confidence == 0.9
+    assert slugs_from_suggestions(merged) == ["vpn"]
+
+
+def test_normalize_tags_to_catalog_handles_invalid_values() -> None:
+    assert normalize_tags_to_catalog(None) == []
+    assert normalize_tags_to_catalog(["", "   "]) == []
+
+
+def test_apply_ticket_search_and_tags_filters() -> None:
+    base = select(Ticket)
+    assert apply_ticket_search_filter(base, None) is base
+    assert apply_ticket_search_filter(base, "  ") is base
+    assert apply_ticket_search_filter(base, "printer") is not base
+
+    tagged = apply_ticket_tags_filter(base, ["vpn", "printer"], match_all=True)
+    assert tagged is not base
+    assert apply_ticket_tags_filter(base, ["  "]) is base
+
+
+@pytest.mark.asyncio
+async def test_find_similar_tickets_returns_scored_candidates() -> None:
+    source_id = uuid.uuid4()
+    candidate_id = uuid.uuid4()
+    source = SimpleNamespace(
+        id=source_id,
+        title="VPN fejl",
+        description="Kan ikke logge på vpn",
+        tags=["vpn"],
+        semantic_topics=["vpn"],
+        llm_summary=None,
+    )
+    candidate = SimpleNamespace(
+        id=candidate_id,
+        ticket_number="INC-9001",
+        title="VPN virker ikke",
+        description="vpn problem hjemmefra",
+        status="resolved",
+        tags=["vpn"],
+        semantic_topics=["vpn"],
+        llm_summary=None,
+        updated_at=None,
+        created_at=None,
+    )
+    weak = SimpleNamespace(
+        id=uuid.uuid4(),
+        ticket_number="INC-9002",
+        title="Printer",
+        description="papir",
+        status="open",
+        tags=["printer"],
+        semantic_topics=[],
+        llm_summary=None,
+        updated_at=None,
+        created_at=None,
+    )
+
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [candidate, weak]
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    similar = await find_similar_tickets(mock_db, source, user, limit=5, closed_only=True)
+    assert len(similar) == 1
+    assert similar[0].ticket_number == "INC-9001"
+    assert similar[0].score > 0.05
+    assert similar[0].match_reasons
+
+
+@pytest.mark.asyncio
+async def test_find_similar_tickets_without_search_terms() -> None:
+    source = SimpleNamespace(
+        id=uuid.uuid4(),
+        title="ab",
+        description="cd",
+        tags=[],
+        semantic_topics=[],
+        llm_summary=None,
+    )
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_db = AsyncMock()
+    mock_db.execute = AsyncMock(return_value=mock_result)
+
+    user = SimpleNamespace(id=uuid.uuid4(), role="admin")
+    similar = await find_similar_tickets(mock_db, source, user, limit=3)
+    assert similar == []
 
 
 @pytest.mark.asyncio

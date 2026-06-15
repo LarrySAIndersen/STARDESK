@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistMessage, IntakeAssistResponse
 from star_itsm_api.schemas.tag_catalog import TagSuggestionRead
+from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistMessage, IntakeAssistResponse
 from star_itsm_api.services.tag_catalog import (
     merge_tag_suggestions,
     normalize_tags_to_catalog,
