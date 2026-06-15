@@ -1,6 +1,5 @@
 import uuid
 from collections.abc import AsyncIterator
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest

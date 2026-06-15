@@ -40,6 +40,10 @@ export async function POST(request: Request) {
     } catch {
       // ignore
     }
+    if (upstream.status === 404) {
+      detail =
+        "Impersonering er ikke tilgængelig på den valgte API-backend. Kontakt administrator eller prøv igen efter staging-deploy.";
+    }
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 
