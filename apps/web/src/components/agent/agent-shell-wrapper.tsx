@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/site-header";
 import { canManageUsers, hasAgentShellAccess, isStaff, TOKEN_COOKIE } from "@/lib/auth";
 import { getServerUser } from "@/lib/auth-server";
 import { clearStaleSessionCookies } from "@/lib/clear-stale-session";
+import { isMinSidePath } from "@/lib/min-side-redirect";
 import {
   firstAllowedStaffPathForUser,
   isStaffPathBlockedForUser,
@@ -48,6 +49,15 @@ export async function AgentShellWrapper({ children }: { children: React.ReactNod
   }
 
   const showUsersNav = canManageUsers(currentUser);
+
+  if (isMinSidePath(pathname)) {
+    return (
+      <>
+        <ClientSessionHydrator />
+        {children}
+      </>
+    );
+  }
 
   if (pathname.startsWith("/classic")) {
     return (
