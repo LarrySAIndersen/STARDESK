@@ -71,6 +71,7 @@ def create_access_token(
     role: str,
     email: str,
     must_change_password: bool = False,
+    impersonator_id: UUID | None = None,
 ) -> str:
     if not settings.jwt_secret:
         raise HTTPException(
@@ -85,7 +86,19 @@ def create_access_token(
         "must_change_password": must_change_password,
         "exp": expire,
     }
+    if impersonator_id is not None:
+        payload["impersonator_id"] = str(impersonator_id)
     return jwt.encode(payload, settings.jwt_secret, algorithm=ALGORITHM)
+
+
+def impersonator_id_from_token_payload(payload: dict[str, Any]) -> UUID | None:
+    raw = payload.get("impersonator_id")
+    if not raw:
+        return None
+    try:
+        return UUID(str(raw))
+    except ValueError:
+        return None
 
 
 def decode_access_token(token: str) -> dict[str, Any]:

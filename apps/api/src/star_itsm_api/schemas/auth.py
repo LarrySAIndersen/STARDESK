@@ -22,6 +22,12 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class ImpersonatorRead(BaseModel):
+    id: UUID
+    email: str
+    display_name: str
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,6 +46,7 @@ class UserRead(BaseModel):
     avatar_preset_id: str | None = None
     ui_mode: str | None = None
     theme_palette: ThemePalettePreference | None = None
+    impersonator: ImpersonatorRead | None = None
 
 
 class TokenResponse(BaseModel):
@@ -59,11 +66,16 @@ ROLE_LABELS: dict[str, str] = {
 }
 
 
+class ImpersonateRequest(BaseModel):
+    user_id: UUID
+
+
 def user_to_read(
     user,  # noqa: ANN001
     *,
     organization_name: str | None = None,
     roles: list[str] | None = None,
+    impersonator: ImpersonatorRead | None = None,
 ) -> UserRead:
     org_id = getattr(user, "organization_id", None)
     role_values = roles if roles is not None else [user.role]
@@ -85,6 +97,7 @@ def user_to_read(
         avatar_preset_id=getattr(user, "avatar_preset_id", None),
         ui_mode=getattr(user, "ui_mode", None),
         theme_palette=normalize_theme_palette_read(getattr(user, "theme_palette", None)),
+        impersonator=impersonator,
     )
 
 

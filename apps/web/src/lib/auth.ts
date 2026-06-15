@@ -253,3 +253,11 @@ export function hasAgentShellAccess(user: User | null): boolean {
 export function canViewImprovements(user: User | null): boolean {
   return isStaff(user);
 }
+
+export function isImpersonating(user: User | null): boolean {
+  return Boolean(user?.impersonator?.id);
+}
+
+export function canImpersonateUsers(user: User | null): boolean {
+  return isAdmin(user) && !isImpersonating(user);
+}

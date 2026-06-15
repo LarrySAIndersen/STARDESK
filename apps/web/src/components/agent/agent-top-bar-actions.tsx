@@ -2,6 +2,7 @@
 
 import { AgentClock } from "@/components/agent/agent-clock";
 import { ApiHealthIndicator } from "@/components/agent/api-health-indicator";
+import { ImpersonateUserButton } from "@/components/agent/impersonate-user-button";
 import { TopBarUserMenu } from "@/components/agent/top-bar-user-menu";
 import { TeamChatTopBarButton } from "@/components/team-chat/team-chat-top-bar-button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -37,6 +38,9 @@ export function AgentTopBarActions({
       )}
     >
       {showTeamChat ? <TeamChatTopBarButton /> : null}
+      {resolvedUser ? (
+        <ImpersonateUserButton user={resolvedUser} variant={chrome ? "chrome" : "default"} />
+      ) : null}
       <ApiHealthIndicator />
       <AgentClock variant={chrome ? "chrome" : "default"} />
       {staff && resolvedUser ? (

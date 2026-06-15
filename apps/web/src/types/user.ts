@@ -2,6 +2,12 @@ import type { ThemePalettePreference } from "@/lib/theme-palettes";
 
 export type UserRole = "end_user" | "agent" | "admin" | "top_admin" | "supporter" | "stardesk_reviewer" | "kundeportal_2";
 
+export interface ImpersonatorInfo {
+  id: string;
+  email: string;
+  display_name: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -19,6 +25,8 @@ export interface User {
   /** When set, locks UI to classic or modern (overrides login cookie). */
   ui_mode?: "modern" | "classic" | null;
   theme_palette?: ThemePalettePreference | null;
+  /** Set when an admin is viewing the app as another user. */
+  impersonator?: ImpersonatorInfo | null;
 }
 
 export type AvatarSelection =

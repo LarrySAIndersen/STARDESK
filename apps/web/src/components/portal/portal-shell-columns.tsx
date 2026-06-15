@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Group, Panel, useDefaultLayout, usePanelRef } from "react-resizable-panels";
 
 import { MobileNavDrawer } from "@/components/mobile-nav-drawer";
+import { ImpersonationBanner } from "@/components/agent/impersonation-banner";
 import { PortalSidebar } from "@/components/portal/portal-sidebar";
 import { SidebarNavEdgeToggle } from "@/components/sidebar-nav-edge-toggle";
 import { ShellNavPanelProvider } from "@/components/shell-nav-panel-context";
@@ -80,6 +81,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
   if (!isLgUp) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+        <ImpersonationBanner user={sessionUser} />
         {mobileDrawer}
         {mainContent}
       </div>
@@ -87,7 +89,9 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
   }
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <ImpersonationBanner user={sessionUser} />
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
       {mobileDrawer}
       <ShellNavPanelProvider toggleNav={toggleNav}>
         <div className="relative min-h-0 min-w-0 flex-1">
@@ -122,6 +126,7 @@ export function PortalShellColumns({ children, user: serverUser }: PortalShellCo
           {collapsed ? <SidebarNavEdgeToggle onToggle={toggleNav} /> : null}
         </div>
       </ShellNavPanelProvider>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,9 @@
 import asyncio
 import secrets
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,11 +16,16 @@ from star_itsm_api.core.password_policy import (
 from star_itsm_api.core.prototype_credentials import documented_prototype_password
 from star_itsm_api.core.request_client import client_ip_from_request
 from star_itsm_api.core.security import (
+    ROLE_ADMIN,
+    ROLE_TOP_ADMIN,
     create_access_token,
+    decode_access_token,
     get_current_user_session,
     get_user_by_email,
     get_user_by_email_any_state,
     hash_password,
+    impersonator_id_from_token_payload,
+    security_scheme,
     verify_password,
 )
 from star_itsm_api.db import engine
@@ -32,6 +39,8 @@ from star_itsm_api.models.user import User
 from star_itsm_api.schemas.auth import (
     AvatarUpdateRequest,
     ChangePasswordRequest,
+    ImpersonateRequest,
+    ImpersonatorRead,
     LoginRequest,
     TokenResponse,
     UserRead,
@@ -57,6 +66,7 @@ from star_itsm_api.services.user_roles import (
     attach_roles_to_user,
     ensure_user_roles_loaded,
     fetch_user_roles,
+    user_has_any_role,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -99,6 +109,95 @@ async def _organization_name(db: AsyncSession, user: User) -> str | None:
         return None
     org = await db.get(Organization, org_id)
     return org.name if org else None
+
+
+async def _impersonator_from_token(
+    credentials: HTTPAuthorizationCredentials | None,
+    db: AsyncSession,
+) -> ImpersonatorRead | None:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+    payload = decode_access_token(credentials.credentials)
+    impersonator_id = impersonator_id_from_token_payload(payload)
+    if impersonator_id is None:
+        return None
+    admin = await db.get(User, impersonator_id)
+    if admin is None or not admin.is_active or admin.deleted_at is not None:
+        return None
+    return ImpersonatorRead(
+        id=admin.id,
+        email=admin.email,
+        display_name=admin.display_name,
+    )
+
+
+async def _resolve_impersonate_admin(
+    credentials: HTTPAuthorizationCredentials | None,
+    db: AsyncSession,
+    session_user: User,
+) -> User:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    payload = decode_access_token(credentials.credentials)
+    impersonator_id = impersonator_id_from_token_payload(payload)
+    if impersonator_id is not None:
+        admin = await db.get(User, impersonator_id)
+        if admin is None or not admin.is_active or admin.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Impersonation session invalid",
+            )
+        await ensure_user_roles_loaded(db, admin)
+        if not user_has_any_role(admin, ROLE_ADMIN, ROLE_TOP_ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return admin
+    if not user_has_any_role(session_user, ROLE_ADMIN, ROLE_TOP_ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    return session_user
+
+
+async def _token_response_for_user(
+    db: AsyncSession,
+    user: User,
+    *,
+    impersonator_id: UUID | None = None,
+) -> TokenResponse:
+    roles = await ensure_user_roles_loaded(db, user)
+    token = create_access_token(
+        user_id=user.id,
+        role=user.role,
+        email=user.email,
+        must_change_password=False if impersonator_id else effective_must_change_password(user),
+        impersonator_id=impersonator_id,
+    )
+    org_name = await _organization_name(db, user)
+    impersonator = None
+    if impersonator_id is not None:
+        admin = await db.get(User, impersonator_id)
+        if admin is not None:
+            impersonator = ImpersonatorRead(
+                id=admin.id,
+                email=admin.email,
+                display_name=admin.display_name,
+            )
+    return TokenResponse(
+        access_token=token,
+        user=user_to_read(
+            user,
+            organization_name=org_name,
+            roles=roles,
+            impersonator=impersonator,
+        ),
+    )
 
 
 async def _resolve_login_user(db: AsyncSession, email: str) -> User | None:
@@ -202,12 +301,70 @@ async def change_password(
 @router.get("/me")
 async def me(
     current_user: User = Depends(get_current_user_session),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
     db: AsyncSession = Depends(require_db),
 ) -> UserRead:
     await enforce_sole_top_admin_on_login(db, current_user)
     org_name = await _organization_name(db, current_user)
     roles = await ensure_user_roles_loaded(db, current_user)
-    return user_to_read(current_user, organization_name=org_name, roles=roles)
+    impersonator = await _impersonator_from_token(credentials, db)
+    return user_to_read(
+        current_user,
+        organization_name=org_name,
+        roles=roles,
+        impersonator=impersonator,
+    )
+
+
+@router.post("/impersonate")
+async def impersonate(
+    payload: ImpersonateRequest,
+    current_user: User = Depends(get_current_user_session),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: AsyncSession = Depends(require_db),
+) -> TokenResponse:
+    admin = await _resolve_impersonate_admin(credentials, db, current_user)
+    target = await db.get(User, payload.user_id)
+    if target is None or not target.is_active or target.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if target.id == admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Du kan ikke impersonere dig selv",
+        )
+    return await _token_response_for_user(db, target, impersonator_id=admin.id)
+
+
+@router.post("/stop-impersonate")
+async def stop_impersonate(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: AsyncSession = Depends(require_db),
+) -> TokenResponse:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    token_payload = decode_access_token(credentials.credentials)
+    impersonator_id = impersonator_id_from_token_payload(token_payload)
+    if impersonator_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Du impersonerer ikke en bruger",
+        )
+    admin = await db.get(User, impersonator_id)
+    if admin is None or not admin.is_active or admin.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Impersonation session invalid",
+        )
+    await ensure_user_roles_loaded(db, admin)
+    if not user_has_any_role(admin, ROLE_ADMIN, ROLE_TOP_ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions",
+        )
+    return await _token_response_for_user(db, admin)
 
 
 @router.patch("/me/avatar")
