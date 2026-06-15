@@ -1,6 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { TICKET_EMOJI_OPTIONS } from "@/lib/ticket-emojis";
+import { fetchTagCatalog, formatCatalogOption, type TagCatalogEntry } from "@/lib/tag-catalog";
 import { cn } from "@/lib/utils";
 
 export function TicketTagsEmojiFields({
@@ -18,6 +21,15 @@ export function TicketTagsEmojiFields({
   tagsInputId?: string;
   disabled?: boolean;
 }) {
+  const [catalog, setCatalog] = useState<TagCatalogEntry[]>([]);
+  const datalistId = `${tagsInputId}-catalog`;
+
+  useEffect(() => {
+    fetchTagCatalog({ includeUsage: true })
+      .then(setCatalog)
+      .catch(() => setCatalog([]));
+  }, []);
+
   return (
     <div className="space-y-4 rounded-[2px] border border-[var(--gray-border)] bg-white p-4">
       <div className="space-y-2">
@@ -32,9 +44,19 @@ export function TicketTagsEmojiFields({
           onChange={(event) => onTagsChange(event.target.value)}
           placeholder="fx adgang, printer, vpn — adskil med komma"
           className="wire-form-input h-9"
+          list={catalog.length > 0 ? datalistId : undefined}
         />
+        {catalog.length > 0 ? (
+          <datalist id={datalistId}>
+            {catalog.map((entry) => (
+              <option key={entry.slug} value={entry.slug}>
+                {formatCatalogOption(entry)}
+              </option>
+            ))}
+          </datalist>
+        ) : null}
         <p className="text-muted-foreground text-xs">
-          Op til 10 tags. Bruges til søgning i sagsoversigten.
+          Op til 10 tags fra kataloget. Bruges til søgning og lignende sager.
         </p>
       </div>
 

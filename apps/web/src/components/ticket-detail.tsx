@@ -14,7 +14,7 @@ import { TicketHierarchySection } from "@/components/ticket-hierarchy-section";
 import { TicketIntelligencePanel } from "@/components/ticket-intelligence-panel";
 import { TicketMetadataForm } from "@/components/ticket-metadata-form";
 import { TicketPriorityForm } from "@/components/ticket-priority-form";
-import { TicketSlackPush } from "@/components/ticket-slack-push";
+import { TicketSimilarPanel } from "@/components/ticket-similar-panel";
 import { TicketTagBadges } from "@/components/ticket-tag-badges";
 import { TicketPostItsPanel } from "@/components/personal/ticket-post-its-panel";
 import { TicketCaseLayout } from "@/components/ticket/ticket-case-layout";
@@ -257,11 +257,14 @@ function StaffTicketDetailBelow({
       <TicketHierarchySection ticket={activeTicket} staffView={staff} />
 
       {showLlmRail ? (
-        <TicketIntelligencePanel
-          ticketId={activeTicket.id}
-          intelligence={activeTicket.intelligence!}
-          routing={activeTicket.routing}
-        />
+        <>
+          <TicketIntelligencePanel
+            ticketId={activeTicket.id}
+            intelligence={activeTicket.intelligence!}
+            routing={activeTicket.routing}
+          />
+          <TicketSimilarPanel ticketId={activeTicket.id} />
+        </>
       ) : null}
 
       <TicketMetadataCard ticket={activeTicket} />

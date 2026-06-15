@@ -17,6 +17,7 @@ def test_build_draft_printer() -> None:
     assert "printer" in draft.title.lower() or "Printer" in draft.title
     assert "printer" in draft.tags
     assert draft.intake_answers.get("device_type") == "printer"
+    assert any(s.slug == "printer" for s in draft.tag_suggestions)
 
 
 def test_build_draft_urgency() -> None:
@@ -37,7 +38,7 @@ def test_build_draft_fallback() -> None:
     )
     assert draft.title == "noget med ost"
     assert draft.suggested_priority == "medium"
-    assert "generel" in draft.tags
+    assert "it-support" in draft.tags
 
 
 def test_fallback_title_variations() -> None:

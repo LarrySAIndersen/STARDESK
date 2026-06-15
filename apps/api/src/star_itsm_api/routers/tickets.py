@@ -51,6 +51,7 @@ from star_itsm_api.schemas.ticket import (
     TicketStatusUpdate,
     TicketTypeUpdate,
 )
+from star_itsm_api.schemas.tag_catalog import SimilarTicketRead
 from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistRequest, IntakeAssistResponse
 from star_itsm_api.schemas.ticket_intelligence import (
     TicketIntelligenceRead,
@@ -149,6 +150,7 @@ from star_itsm_api.services.ticket_read import (
     tickets_to_read_list,
 )
 from star_itsm_api.services.ticket_routing import intake_metadata_from_answers
+from star_itsm_api.services.ticket_similarity import find_similar_tickets
 from star_itsm_api.services.ticket_security import (
     require_staff_for_security_metadata_update,
     resolve_create_security_flag,
@@ -483,10 +485,24 @@ async def list_tickets(
         default=None,
         description="Filter tickets involving this user (reporter or stakeholder)",
     ),
+    tags: str | None = Query(
+        default=None,
+        max_length=256,
+        description="Comma-separated tags — exact match (any by default)",
+    ),
+    tags_match: str = Query(
+        default="any",
+        description="Tag filter mode: any (overlap) or all (contains every tag)",
+    ),
     db: AsyncSession = Depends(require_db),
     current_user: User = Depends(get_current_user),
 ) -> list[TicketRead]:
     try:
+        parsed_tags = (
+            [part.strip() for part in tags.split(",") if part.strip()] if tags else None
+        )
+        if tags_match not in ("any", "all"):
+            raise HTTPException(status_code=400, detail="Invalid tags_match filter")
         parsed = validate_list_tickets_query(
             current_user=current_user,
             assignee_id=assignee_id,
@@ -523,6 +539,8 @@ async def list_tickets(
             priority=priority,
             ticket_type=ticket_type,
             q=q,
+            tags=parsed_tags,
+            tags_match=tags_match,
             stakeholder=stakeholder,
             involving_user_id=involving_user_id,
         )
@@ -716,6 +734,30 @@ async def _create_ticket_impl(
     await db.commit()
     await db.refresh(ticket)
     return await ticket_to_read(db, ticket)
+
+
+@router.get("/{ticket_id}/similar")
+async def get_similar_tickets(
+    ticket_id: uuid.UUID,
+    limit: int = Query(default=5, ge=1, le=20),
+    closed_only: bool = Query(
+        default=False,
+        description="Only suggest resolved/closed tickets as historical matches",
+    ),
+    db: AsyncSession = Depends(require_db),
+    current_user: User = Depends(get_current_user),
+) -> list[SimilarTicketRead]:
+    ticket = await db.get(Ticket, ticket_id)
+    if ticket is None or ticket.deleted_at is not None:
+        raise HTTPException(status_code=404, detail=TICKET_NOT_FOUND)
+    await _ensure_ticket_access(db, ticket, current_user)
+    return await find_similar_tickets(
+        db,
+        ticket,
+        current_user,
+        limit=limit,
+        closed_only=closed_only,
+    )
 
 
 @router.get("/{ticket_id}")

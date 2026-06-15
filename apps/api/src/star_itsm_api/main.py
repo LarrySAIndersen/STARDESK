@@ -42,6 +42,7 @@ from star_itsm_api.routers import (
     sf_chat,
     slack,
     sub_causes,
+    tags,
     team_chat,
     teams,
     tickets,
@@ -118,6 +119,7 @@ app.include_router(personal.router, prefix=API_V1_PREFIX)
 app.include_router(workboard.router, prefix=API_V1_PREFIX)
 app.include_router(review_notes.router, prefix=API_V1_PREFIX)
 app.include_router(categories.router, prefix=API_V1_PREFIX)
+app.include_router(tags.router, prefix=API_V1_PREFIX)
 app.include_router(assets.router, prefix=API_V1_PREFIX)
 app.include_router(sub_causes.router, prefix=API_V1_PREFIX)
 app.include_router(webhooks.router, prefix=API_V1_PREFIX)

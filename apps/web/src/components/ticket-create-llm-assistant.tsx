@@ -10,6 +10,8 @@ import type { IntakeAnswers } from "@/components/ticket-intake-questions";
 import { apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+import type { TagSuggestion } from "@/lib/tag-catalog";
+
 export type IntakeAssistDraft = {
   title: string;
   description: string;
@@ -17,6 +19,7 @@ export type IntakeAssistDraft = {
   suggested_priority: "critical" | "high" | "medium" | "low";
   suggested_ticket_type: "service_request" | "incident" | "problem";
   tags: string[];
+  tag_suggestions?: TagSuggestion[];
   emoji: string | null;
 };
 
@@ -372,12 +375,27 @@ export function TicketCreateLlmAssistant({
               <div>
                 <dt className="font-semibold text-[var(--gray-mid)]">Foreslåede tags</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
-                  {draft.tags.map((tag) => (
+                  {(draft.tag_suggestions?.length
+                    ? draft.tag_suggestions
+                    : draft.tags.map((tag) => ({
+                        slug: tag,
+                        label_da: tag,
+                        confidence: 1,
+                        source: "catalog_rule",
+                        reason_da: null,
+                      }))
+                  ).map((item) => (
                     <span
-                      key={tag}
+                      key={item.slug}
+                      title={
+                        item.reason_da
+                          ? `${item.reason_da} (${item.source})`
+                          : item.source
+                      }
                       className="rounded-[2px] border border-[var(--gray-border)] bg-[var(--gray-bg)] px-1.5 py-0.5 text-[10px]"
                     >
-                      {tag}
+                      {item.label_da}
+                      {item.confidence < 1 ? ` ${Math.round(item.confidence * 100)}%` : ""}
                     </span>
                   ))}
                 </dd>
