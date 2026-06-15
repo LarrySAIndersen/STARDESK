@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 
 import { buildBackendUrl } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
-import type { LoginResponse } from "@/types/user";
+import { TOKEN_COOKIE } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(TOKEN_COOKIE)?.value;
+  if (!token) {
+    return NextResponse.json({ detail: "Ikke logget ind" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -12,22 +19,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Ugyldig forespørgsel" }, { status: 400 });
   }
 
-  const upstream = await fetch(buildBackendUrl("/api/v1/auth/login"), {
+  const upstream = await fetch(buildBackendUrl("/api/v1/auth/impersonate"), {
     method: "POST",
     headers: {
       Accept: "application/json",
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
-      "X-Forwarded-For":
-        request.headers.get("x-forwarded-for") ??
-        request.headers.get("x-real-ip") ??
-        "",
     },
     body: JSON.stringify(body),
     cache: "no-store",
   });
 
   if (!upstream.ok) {
-    let detail = "Forkert e-mail eller adgangskode";
+    let detail = "Kunne ikke impersonere bruger";
     try {
       const err = (await upstream.json()) as { detail?: string };
       if (typeof err.detail === "string") {
@@ -39,6 +43,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 
-  const data = (await upstream.json()) as LoginResponse;
+  const data = await upstream.json();
   return jsonWithSessionCookies(data);
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { AgentBrandHeader } from "@/components/agent/agent-brand-header";
 import { AgentErrorBoundary } from "@/components/agent/agent-error-boundary";
+import { ImpersonationBanner } from "@/components/agent/impersonation-banner";
 import { ThemePaletteProvider } from "@/components/providers/theme-palette-provider";
 import { AgentShellColumns } from "@/components/agent/agent-shell-columns";
 import { AgentSidebar } from "@/components/agent/agent-sidebar";
@@ -63,6 +64,7 @@ function AgentShellInner({
 
   return (
     <>
+      <ImpersonationBanner user={user ?? null} />
       {staff ? <ThemePaletteProvider preference={user?.theme_palette} enabled /> : null}
       <PageLayoutEditToolbar />
       <AgentBrandHeader
