@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/accessible-modal-shell";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { reviewNoteScreenshotUrl } from "@/lib/api";
+import { firstName } from "@/lib/display-name";
+import { reviewNoteRoleColor } from "@/lib/review-note-role-colors";
+import { cn } from "@/lib/utils";
 import type { ReviewNote } from "@/types/review-note";
 
 function formatTimestamp(value: string): string {
@@ -63,6 +66,7 @@ export function ForbedringerNoteDetailDialog({
   const [photoExpanded, setPhotoExpanded] = useState(false);
   const panelRef = useFocusTrap(true, onClose);
   const screenshotUrl = reviewNoteScreenshotUrl(note.id);
+  const roleColor = reviewNoteRoleColor(note.created_by_role);
 
   return (
     <AccessibleModalBackdrop onClose={onClose}>
@@ -70,7 +74,7 @@ export function ForbedringerNoteDetailDialog({
         trapRef={panelRef}
         titleId={titleId}
         onClose={onClose}
-        className="wire-confirm-modal max-h-[90vh] w-full max-w-3xl overflow-hidden"
+        className={cn("wire-confirm-modal max-h-[90vh] w-full max-w-3xl overflow-hidden border-l-4", roleColor.surfaceClassName)}
       >
         <div className="flex items-start justify-between gap-3 border-b border-[var(--gray-border)] px-4 py-3">
           <div className="min-w-0">
@@ -107,7 +111,11 @@ export function ForbedringerNoteDetailDialog({
             <div>
               <dt className="font-medium text-foreground">Person</dt>
               <dd>
-                {note.created_by_name}
+                {firstName(note.created_by_name)}
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {note.created_by_role_label ?? roleColor.label}
+                </span>
                 {note.created_by_email ? ` (${note.created_by_email})` : ""}
               </dd>
             </div>

@@ -9,7 +9,10 @@ import { ChevronRight, ImageIcon } from "lucide-react";
 import { ForbedringerNoteDetailDialog } from "@/components/forbedringer/forbedringer-note-detail-dialog";
 import { Button } from "@/components/ui/button";
 import { apiGet, apiPatch, deleteReviewNote, reviewNoteScreenshotUrl } from "@/lib/api";
+import { firstName } from "@/lib/display-name";
 import { isAdmin } from "@/lib/auth";
+import { reviewNoteRoleColor } from "@/lib/review-note-role-colors";
+import { cn } from "@/lib/utils";
 import type { ReviewNote, ReviewNoteStatus } from "@/types/review-note";
 import type { User } from "@/types/user";
 
@@ -148,7 +151,7 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
           <div>
             <h1 className="wire-card-title text-xl">Forbedringer</h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              Gule sedler fra Stardesk Reviewer med side, person, kommentar, placering og skærmbillede.
+              Sedler fra review med farve efter rolle, forfatter (fornavn) og sideplacering.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => fireAndForget(loadNotes())}>
@@ -203,19 +206,25 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
                   <p className="text-muted-foreground px-3 py-4 text-sm">{column.empty}</p>
                 ) : (
                   <ul className="divide-y divide-[var(--gray-border)]">
-                    {columnNotes.map((note) => (
+                    {columnNotes.map((note) => {
+                      const roleColor = reviewNoteRoleColor(note.created_by_role);
+                      return (
                       <li key={note.id} className="p-3">
                         <button
                           type="button"
-                          className="hover:bg-muted/40 -mx-2 w-[calc(100%+1rem)] rounded-md px-2 py-1 text-left transition-colors"
+                          className={cn(
+                            "hover:bg-muted/40 -mx-2 w-[calc(100%+1rem)] rounded-md border-l-4 px-2 py-2 text-left transition-colors",
+                            roleColor.surfaceClassName,
+                          )}
                           onClick={() => setSelectedNote(note)}
                         >
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-xs font-semibold text-star-blue">
-                              {reviewNumberLabel(note)}
-                            </span>
+                            <span className="text-xs font-semibold">{reviewNumberLabel(note)}</span>
                             <span className={statusBadgeClass(note.status)}>
                               {statusLabel(note.status)}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {note.created_by_role_label ?? roleColor.label}
                             </span>
                             <span className="min-w-0 flex-1 truncate text-sm font-medium">
                               {note.page_title || note.page_path}
@@ -227,8 +236,8 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
                             <div>
                               <dt className="sr-only">Person</dt>
                               <dd>
-                                {note.created_by_name}
-                                {note.created_by_email ? ` (${note.created_by_email})` : ""}
+                                {firstName(note.created_by_name)}
+                                {note.created_by_email ? ` · ${note.created_by_email}` : ""}
                               </dd>
                             </div>
                             <div>
@@ -299,7 +308,8 @@ export function ForbedringerPanel({ user }: { user: User | null }) {
                           ) : null}
                         </div>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 )}
               </section>

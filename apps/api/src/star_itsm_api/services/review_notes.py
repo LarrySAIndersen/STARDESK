@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from star_itsm_api.models.page_review_note import NOTE_STATUSES, PageReviewNote
 from star_itsm_api.models.user import User
+from star_itsm_api.schemas.auth import ROLE_LABELS
 from star_itsm_api.schemas.review_note import (
     ReviewNoteCreate,
     ReviewNoteRead,
@@ -27,8 +28,10 @@ def _to_read(
     *,
     author_name: str,
     author_email: str | None = None,
+    author_role: str = "agent",
     review_number: str = "",
 ) -> ReviewNoteRead:
+    role = author_role or "agent"
     return ReviewNoteRead(
         id=row.id,
         review_number=review_number,
@@ -41,6 +44,8 @@ def _to_read(
         created_by_user_id=row.created_by_user_id,
         created_by_name=author_name,
         created_by_email=author_email,
+        created_by_role=role,
+        created_by_role_label=ROLE_LABELS.get(role, role),
         status=row.status,
         has_screenshot=bool(row.screenshot_storage_key),
         created_at=row.created_at,
@@ -71,13 +76,13 @@ async def _review_numbers(
 async def _author_profiles(
     db: AsyncSession,
     user_ids: set[uuid.UUID],
-) -> dict[uuid.UUID, tuple[str, str]]:
+) -> dict[uuid.UUID, tuple[str, str | None, str]]:
     if not user_ids:
         return {}
     result = await db.execute(
-        select(User.id, User.display_name, User.email).where(User.id.in_(user_ids))
+        select(User.id, User.display_name, User.email, User.role).where(User.id.in_(user_ids))
     )
-    return {row.id: (row.display_name, row.email) for row in result.all()}
+    return {row.id: (row.display_name, row.email, row.role) for row in result.all()}
 
 
 async def _persist_screenshot(*, note_id: uuid.UUID, content: bytes) -> str:
@@ -149,8 +154,9 @@ async def list_review_notes(
     return [
         _to_read(
             row,
-            author_name=profiles.get(row.created_by_user_id, ("Ukendt", ""))[0],
-            author_email=profiles.get(row.created_by_user_id, ("", None))[1],
+            author_name=profiles.get(row.created_by_user_id, ("Ukendt", "", "agent"))[0],
+            author_email=profiles.get(row.created_by_user_id, ("", None, "agent"))[1],
+            author_role=profiles.get(row.created_by_user_id, ("", None, "agent"))[2],
             review_number=numbers.get(row.id, ""),
         )
         for row in rows
@@ -195,6 +201,7 @@ async def create_review_note(
         row,
         author_name=author.display_name,
         author_email=author.email,
+        author_role=author.role,
         review_number=numbers.get(row.id, ""),
     )
 
@@ -227,8 +234,15 @@ async def update_review_note(
     await db.refresh(row)
     profiles = await _author_profiles(db, {row.created_by_user_id})
     numbers = await _review_numbers(db, {row.id})
-    name, email = profiles.get(row.created_by_user_id, ("Ukendt", None))
-    return _to_read(row, author_name=name, author_email=email, review_number=numbers.get(row.id, ""))
+    profile = profiles.get(row.created_by_user_id, ("Ukendt", None, "agent"))
+    name, email, role = profile[0], profile[1], profile[2]
+    return _to_read(
+        row,
+        author_name=name,
+        author_email=email,
+        author_role=role,
+        review_number=numbers.get(row.id, ""),
+    )
 
 
 async def delete_review_note(

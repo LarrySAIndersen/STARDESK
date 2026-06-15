@@ -68,6 +68,8 @@ class ReviewNoteRead(BaseModel):
     created_by_user_id: UUID
     created_by_name: str
     created_by_email: str | None = None
+    created_by_role: str = "agent"
+    created_by_role_label: str = "Agent"
     status: str
     has_screenshot: bool = False
     created_at: datetime
