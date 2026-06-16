@@ -67,6 +67,14 @@ Skabelon: [`apps/api/.env.test.example`](../apps/api/.env.test.example)
 | `NEXT_PUBLIC_STARDESK_ENV` | `test` |
 | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | `true` |
 | `NEXT_PUBLIC_PROTOTYPE_BOOTSTRAP_PASSWORD` | `Stardesk2026!` |
+| `VERCEL_PROTECTION_BYPASS` | **API-projektets** bypass-token (ikke web-token) |
+
+**Vigtigt — login fejler uden API bypass på web:**  
+`VERCEL_AUTOMATION_BYPASS_SECRET` på web bypasser kun **web**-deployment. Server-side BFF (`/api/auth/login` → staging API) kræver **API**-projektets token i `VERCEL_PROTECTION_BYPASS`:
+
+1. Vercel → **api** → Settings → Deployment Protection → *Protection Bypass for Automation* → kopiér secret  
+2. Vercel → **web** → Environment Variables → Preview → `VERCEL_PROTECTION_BYPASS` = samme secret  
+3. Redeploy **web** (API redeploy er ikke nødvendig for denne variabel)
 
 Skabelon: [`apps/web/.env.test.example`](../apps/web/.env.test.example)
 
