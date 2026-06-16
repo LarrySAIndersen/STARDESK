@@ -1,4 +1,4 @@
-import { hasApiProtectionBypass } from "@/lib/vercel-protection-bypass";
+import { hasApiProtectionBypass, isVercelDeploymentProtectionResponse } from "@/lib/vercel-protection-bypass";
 
 /** Production API — fallback when NEXT_PUBLIC_API_URL is missing on Vercel builds. */
 export const VERCEL_PROTOTYPE_API_FALLBACK = "https://api-gamma-amber.vercel.app";
@@ -137,4 +137,19 @@ export function buildBackendUrl(path: string, base?: string): string {
   const resolvedBase = (base ?? getApiBackendBase()).replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
   return `${resolvedBase}${normalized}`;
+}
+
+/** Retry login against fallback API when protected staging upstream fails for any reason. */
+export function shouldFallbackAuthUpstream(
+  upstream: Response,
+  primaryBase: string,
+  fallbackBase: string,
+): boolean {
+  if (upstream.ok || fallbackBase === primaryBase) {
+    return false;
+  }
+  if (isVercelDeploymentProtectionResponse(upstream)) {
+    return true;
+  }
+  return isProtectedStagingApiHost(primaryBase);
 }

@@ -4,6 +4,7 @@ import {
   buildBackendUrl,
   getApiBackendBase,
   getApiBackendFallbackBase,
+  shouldFallbackAuthUpstream,
 } from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import {
@@ -42,15 +43,26 @@ export async function POST(request: Request) {
   }
 
   const primaryBase = getApiBackendBase();
-  let upstream = await postLoginUpstream(primaryBase, request, body);
+  const fallbackBase = getApiBackendFallbackBase();
+  let upstream: Response;
 
-  if (
-    !upstream.ok &&
-    isVercelDeploymentProtectionResponse(upstream)
-  ) {
-    const fallbackBase = getApiBackendFallbackBase();
-    if (fallbackBase !== primaryBase) {
+  try {
+    upstream = await postLoginUpstream(primaryBase, request, body);
+  } catch {
+    return NextResponse.json(
+      { detail: "Login mislykkedes — API er ikke tilgængelig" },
+      { status: 503 },
+    );
+  }
+
+  if (shouldFallbackAuthUpstream(upstream, primaryBase, fallbackBase)) {
+    try {
       upstream = await postLoginUpstream(fallbackBase, request, body);
+    } catch {
+      return NextResponse.json(
+        { detail: "Login mislykkedes — API er ikke tilgængelig" },
+        { status: 503 },
+      );
     }
   }
 
@@ -70,6 +82,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 
-  const data = (await upstream.json()) as LoginResponse;
+  let data: LoginResponse;
+  try {
+    data = (await upstream.json()) as LoginResponse;
+  } catch {
+    return NextResponse.json(
+      { detail: "Login mislykkedes — ugyldigt svar fra API" },
+      { status: 502 },
+    );
+  }
+
+  if (!data.access_token) {
+    return NextResponse.json(
+      { detail: "Login mislykkedes — mangler adgangstoken" },
+      { status: 502 },
+    );
+  }
+
   return jsonWithSessionCookies(data);
 }
