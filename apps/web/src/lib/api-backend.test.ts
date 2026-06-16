@@ -4,6 +4,7 @@ import {
   getApiBackendBase,
   getApiBackendFallbackBase,
   isProtectedStagingApiHost,
+  shouldFallbackAuthUpstream,
   VERCEL_PROTOTYPE_API_FALLBACK,
   VERCEL_STAGING_API_FALLBACK,
 } from "@/lib/api-backend";
@@ -109,5 +110,32 @@ describe("api-backend", () => {
     process.env.NEXT_PUBLIC_STARDESK_ENV = "production";
 
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
+  });
+});
+
+describe("shouldFallbackAuthUpstream", () => {
+  it("retries when protected staging API returns server error", () => {
+    const upstream = new Response("error", {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+    expect(
+      shouldFallbackAuthUpstream(
+        upstream,
+        VERCEL_STAGING_API_FALLBACK,
+        VERCEL_PROTOTYPE_API_FALLBACK,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not retry when primary is already production API", () => {
+    const upstream = new Response("error", { status: 500 });
+    expect(
+      shouldFallbackAuthUpstream(
+        upstream,
+        VERCEL_PROTOTYPE_API_FALLBACK,
+        VERCEL_PROTOTYPE_API_FALLBACK,
+      ),
+    ).toBe(false);
   });
 });
