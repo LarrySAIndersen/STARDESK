@@ -1,3 +1,5 @@
+import { hasApiProtectionBypass } from "@/lib/vercel-protection-bypass";
+
 /** Production API — fallback when NEXT_PUBLIC_API_URL is missing on Vercel builds. */
 export const VERCEL_PROTOTYPE_API_FALLBACK = "https://api-gamma-amber.vercel.app";
 
@@ -48,21 +50,62 @@ function isVercelPreviewDeployment(): boolean {
   return vercelDeploymentTier() === "preview";
 }
 
+function canReachStagingApiBackend(): boolean {
+  return hasApiProtectionBypass();
+}
+
+/** Hostnames that require x-vercel-protection-bypass from the API Vercel project. */
+export function isProtectedStagingApiHost(base: string): boolean {
+  const normalized = base.replace(/\/$/, "").toLowerCase();
+  if (normalized === VERCEL_STAGING_API_FALLBACK) {
+    return true;
+  }
+  return normalized.includes("api-git-staging") || normalized.includes("-git-staging-");
+}
+
 function shouldPreferStagingApiBackend(): boolean {
   return (
     isVercelHosted() &&
     !previewUsesProductionApi() &&
+    canReachStagingApiBackend() &&
     (isVercelPreviewDeployment() || isNonProductionStardeskEnvironment())
   );
+}
+
+function stagingApiFallback(): string {
+  return canReachStagingApiBackend()
+    ? VERCEL_STAGING_API_FALLBACK
+    : VERCEL_PROTOTYPE_API_FALLBACK;
+}
+
+/** Production or explicitly configured non-staging API — used when staging API is blocked. */
+export function getApiBackendFallbackBase(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configured) {
+    const base = configured.replace(/\/$/, "");
+    if (!isProtectedStagingApiHost(base)) {
+      return base;
+    }
+  }
+  return VERCEL_PROTOTYPE_API_FALLBACK;
+}
+
+function resolveConfiguredApiBase(stagingOverride?: string): string | undefined {
+  const configured = (stagingOverride ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
+  if (!configured) {
+    return undefined;
+  }
+  const base = configured.replace(/\/$/, "");
+  if (!canReachStagingApiBackend() && isProtectedStagingApiHost(base)) {
+    return getApiBackendFallbackBase();
+  }
+  return base;
 }
 
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
 
-  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) must
-  // talk to the staging API (Neon test). Legacy env often still sets NEXT_PUBLIC_API_URL
-  // to production — login and new routes would hit the wrong database there.
   if (shouldPreferStagingApiBackend()) {
     if (stagingOverride) {
       return stagingOverride.replace(/\/$/, "");
@@ -70,9 +113,9 @@ export function getApiBackendBase(): string {
     return VERCEL_STAGING_API_FALLBACK;
   }
 
-  const configured = (stagingOverride ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
+  const configured = resolveConfiguredApiBase(stagingOverride);
   if (configured) {
-    return configured.replace(/\/$/, "");
+    return configured;
   }
 
   if (
@@ -81,15 +124,15 @@ export function getApiBackendBase(): string {
   ) {
     return previewUsesProductionApi()
       ? VERCEL_PROTOTYPE_API_FALLBACK
-      : VERCEL_STAGING_API_FALLBACK;
+      : stagingApiFallback();
   }
 
   const base = isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000";
   return base.replace(/\/$/, "");
 }
 
-export function buildBackendUrl(path: string): string {
-  const base = getApiBackendBase();
+export function buildBackendUrl(path: string, base?: string): string {
+  const resolvedBase = (base ?? getApiBackendBase()).replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalized}`;
+  return `${resolvedBase}${normalized}`;
 }
