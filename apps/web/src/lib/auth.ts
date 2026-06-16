@@ -265,6 +265,15 @@ export function isImpersonating(user: User | null): boolean {
   return Boolean(user?.impersonator?.id);
 }
 
+/** Administrator rettighedsgruppe (`admin` / `top_admin`) — see docs/demo-users-and-access.md */
+export function isAdministratorRightsGroupMember(user: User | null): boolean {
+  if (!user) {
+    return false;
+  }
+  const roles = resolveUserRoles(user);
+  return roles.includes("admin") || roles.includes("top_admin");
+}
+
 export function canImpersonateUsers(user: User | null): boolean {
-  return isAdmin(user) && !isImpersonating(user);
+  return isAdministratorRightsGroupMember(user) && !isImpersonating(user);
 }
