@@ -106,6 +106,8 @@ function resolveConfiguredApiBase(stagingOverride?: string): string | undefined 
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
 
+  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) use
+  // the staging API (Neon test) when the web BFF can bypass API deployment protection.
   if (shouldPreferStagingApiBackend()) {
     if (stagingOverride) {
       return stagingOverride.replace(/\/$/, "");

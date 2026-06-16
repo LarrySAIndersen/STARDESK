@@ -41,9 +41,29 @@ describe("api-backend", () => {
     expect(isProtectedStagingApiHost(VERCEL_PROTOTYPE_API_FALLBACK)).toBe(false);
   });
 
-  it("uses staging API on Vercel preview when API bypass token is set", () => {
+  it("uses staging API on Vercel preview even when NEXT_PUBLIC_API_URL is production", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "preview";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
+    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
+
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+  });
+
+  it("honours STARDESK_API_URL on Vercel preview", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "preview";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
+    process.env.STARDESK_API_URL = "https://api-custom-staging.example.test/";
+    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
+
+    expect(getApiBackendBase()).toBe("https://api-custom-staging.example.test");
+  });
+
+  it("uses staging API for custom-domain test env even when NEXT_PUBLIC_API_URL is production", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "production";
+    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
 
@@ -59,7 +79,7 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
   });
 
-  it("falls back to production on test env when API bypass token is missing", () => {
+  it("falls back to production API on test env when API bypass token is missing", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "production";
     process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
@@ -67,6 +87,15 @@ describe("api-backend", () => {
     process.env.VERCEL_AUTOMATION_BYPASS_SECRET = "web-only-token";
 
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
+  });
+
+  it("uses staging API for preview deployments without NEXT_PUBLIC_API_URL", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "production";
+    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
+    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
+
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
   it("getApiBackendFallbackBase prefers non-staging NEXT_PUBLIC_API_URL", () => {
