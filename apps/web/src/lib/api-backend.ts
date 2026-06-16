@@ -1,3 +1,5 @@
+import { hasApiProtectionBypass } from "@/lib/vercel-protection-bypass";
+
 /** Production API — fallback when NEXT_PUBLIC_API_URL is missing on Vercel builds. */
 export const VERCEL_PROTOTYPE_API_FALLBACK = "https://api-gamma-amber.vercel.app";
 
@@ -48,21 +50,31 @@ function isVercelPreviewDeployment(): boolean {
   return vercelDeploymentTier() === "preview";
 }
 
+function canReachStagingApiBackend(): boolean {
+  return hasApiProtectionBypass();
+}
+
 function shouldPreferStagingApiBackend(): boolean {
   return (
     isVercelHosted() &&
     !previewUsesProductionApi() &&
+    canReachStagingApiBackend() &&
     (isVercelPreviewDeployment() || isNonProductionStardeskEnvironment())
   );
+}
+
+function stagingApiFallback(): string {
+  return canReachStagingApiBackend()
+    ? VERCEL_STAGING_API_FALLBACK
+    : VERCEL_PROTOTYPE_API_FALLBACK;
 }
 
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
 
-  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) must
-  // talk to the staging API (Neon test). Legacy env often still sets NEXT_PUBLIC_API_URL
-  // to production — login and new routes would hit the wrong database there.
+  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) use
+  // the staging API (Neon test) when the web BFF can bypass API deployment protection.
   if (shouldPreferStagingApiBackend()) {
     if (stagingOverride) {
       return stagingOverride.replace(/\/$/, "");
@@ -81,7 +93,7 @@ export function getApiBackendBase(): string {
   ) {
     return previewUsesProductionApi()
       ? VERCEL_PROTOTYPE_API_FALLBACK
-      : VERCEL_STAGING_API_FALLBACK;
+      : stagingApiFallback();
   }
 
   const base = isVercelHosted() ? VERCEL_PROTOTYPE_API_FALLBACK : "http://localhost:8000";

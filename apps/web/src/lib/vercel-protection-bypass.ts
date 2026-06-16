@@ -6,6 +6,13 @@
  * deployment protection — it does not unlock the separate *api* Vercel project.
  * Copy the API project's bypass token into VERCEL_PROTECTION_BYPASS (web Preview).
  */
+export function hasApiProtectionBypass(): boolean {
+  return Boolean(
+    process.env.STARDESK_API_PROTECTION_BYPASS?.trim() ||
+      process.env.VERCEL_PROTECTION_BYPASS?.trim(),
+  );
+}
+
 export function apiUpstreamProtectionBypassHeaders(): Record<string, string> {
   const secret =
     process.env.STARDESK_API_PROTECTION_BYPASS?.trim() ||
