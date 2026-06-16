@@ -68,18 +68,18 @@ Skabelon: [`apps/api/.env.test.example`](../apps/api/.env.test.example)
 | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | `true` |
 | `NEXT_PUBLIC_PROTOTYPE_BOOTSTRAP_PASSWORD` | `Stardesk2026!` |
 | `VERCEL_PROTECTION_BYPASS` | **API-projektets** bypass-token (ikke web-token) |
-| `STARDESK_USE_STAGING_API` | `true` — **kun** når api Preview har Neon **test** `DATABASE_URL` og seed |
+| `STARDESK_USE_STAGING_API` | `false` — **kun** hvis BFF skal tvinges til production API trods bypass |
 
-**Vigtigt — bypass alene aktiverer ikke staging API:**  
-`VERCEL_PROTECTION_BYPASS` lader web kalde det beskyttede api Preview — men BFF bruger **production API** som standard, så login og session matcher. Sæt `STARDESK_USE_STAGING_API=true` først når api Preview er klar (Neon test + seed).
+**Vigtigt — bypass aktiverer staging API som standard:**  
+`VERCEL_PROTECTION_BYPASS` lader web kalde det beskyttede api Preview. BFF bruger **staging API** på Preview/test når bypass er sat — login falder tilbage til production hvis staging DB mangler. Sæt `STARDESK_USE_STAGING_API=false` kun hvis du bevidst vil tvinge production API (impersonering virker ikke uden staging API).
 
-**Bypass-token (når du bruger staging API):**
+**Bypass-token:**
 
 1. Vercel → **api** → Settings → Deployment Protection → *Protection Bypass for Automation* → kopiér secret  
 2. Vercel → **web** → Environment Variables → Preview → `VERCEL_PROTECTION_BYPASS` = samme secret  
 3. Redeploy **web**
 
-**Uden `STARDESK_USE_STAGING_API`:** BFF bruger production API — login virker med prod-data (Neon **main**).
+**Uden bypass:** BFF bruger production API — login virker med prod-data (Neon **main**), men impersonering kræver staging API.
 
 Skabelon: [`apps/web/.env.test.example`](../apps/web/.env.test.example)
 

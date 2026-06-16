@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import {
+  postAuthUpstreamWithStagingFallback,
+  resolveAuthUpstreamErrorDetail,
+} from "@/lib/auth-upstream-bff";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import { TOKEN_COOKIE } from "@/lib/auth";
-import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
-import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
@@ -20,31 +22,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Ugyldig forespørgsel" }, { status: 400 });
   }
 
-  const upstream = await fetch(buildBackendUrl("/api/v1/auth/impersonate"), {
-    method: "POST",
-    headers: backendUpstreamHeaders({
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify(body),
-    cache: "no-store",
+  const { upstream, detail: overrideDetail } = await postAuthUpstreamWithStagingFallback({
+    path: "/api/v1/auth/impersonate",
+    token,
+    body,
+    request,
   });
 
   if (!upstream.ok) {
-    let detail = "Kunne ikke impersonere bruger";
-    try {
-      const err = (await upstream.json()) as { detail?: string };
-      if (typeof err.detail === "string") {
-        detail = err.detail;
-      }
-    } catch {
-      // ignore
-    }
-    if (upstream.status === 404) {
-      detail =
-        "Impersonering er ikke tilgængelig på den valgte API-backend. Kontakt administrator eller prøv igen efter staging-deploy.";
-    }
+    const detail = await resolveAuthUpstreamErrorDetail(
+      upstream,
+      "Kunne ikke impersonere bruger",
+      overrideDetail,
+    );
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 

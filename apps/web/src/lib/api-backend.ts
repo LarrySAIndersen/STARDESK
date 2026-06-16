@@ -54,6 +54,11 @@ function canReachStagingApiBackend(): boolean {
   return hasApiProtectionBypass();
 }
 
+/** Opt-in override: force BFF to production API even when staging is reachable. */
+export function stagingApiExplicitlyDisabled(): boolean {
+  return process.env.STARDESK_USE_STAGING_API === "false";
+}
+
 /** Opt-in: route BFF to Neon test staging API (requires working api Preview + DATABASE_URL). */
 export function stagingApiExplicitlyEnabled(): boolean {
   return process.env.STARDESK_USE_STAGING_API === "true";
@@ -69,8 +74,10 @@ export function isProtectedStagingApiHost(base: string): boolean {
 }
 
 function shouldPreferStagingApiBackend(): boolean {
+  if (stagingApiExplicitlyDisabled()) {
+    return false;
+  }
   return (
-    stagingApiExplicitlyEnabled() &&
     isVercelHosted() &&
     !previewUsesProductionApi() &&
     canReachStagingApiBackend() &&
@@ -79,9 +86,26 @@ function shouldPreferStagingApiBackend(): boolean {
 }
 
 function stagingApiFallback(): string {
-  return stagingApiExplicitlyEnabled() && canReachStagingApiBackend()
+  return canReachStagingApiBackend()
     ? VERCEL_STAGING_API_FALLBACK
     : VERCEL_PROTOTYPE_API_FALLBACK;
+}
+
+/** Staging API base when preview/test can bypass deployment protection (impersonate lives here). */
+export function getStagingApiBackendBase(): string | undefined {
+  if (previewUsesProductionApi() || !canReachStagingApiBackend()) {
+    return undefined;
+  }
+  const stagingOverride = process.env.STARDESK_API_URL?.trim();
+  if (stagingOverride) {
+    return stagingOverride.replace(/\/$/, "");
+  }
+  return VERCEL_STAGING_API_FALLBACK;
+}
+
+/** Prefer staging for auth routes that only exist on the staging API branch (impersonate). */
+export function getStagingCapableAuthBackendBase(): string {
+  return getStagingApiBackendBase() ?? getApiBackendBase();
 }
 
 /** Production or explicitly configured non-staging API — used when staging API is blocked. */
@@ -102,7 +126,7 @@ function resolveConfiguredApiBase(stagingOverride?: string): string | undefined 
     return undefined;
   }
   const base = configured.replace(/\/$/, "");
-  if (isProtectedStagingApiHost(base) && !stagingApiExplicitlyEnabled()) {
+  if (isProtectedStagingApiHost(base) && stagingApiExplicitlyDisabled()) {
     return getApiBackendFallbackBase();
   }
   if (!canReachStagingApiBackend() && isProtectedStagingApiHost(base)) {
@@ -175,3 +199,18 @@ export function shouldFallbackServerUpstream(
   }
   return upstream.status === 401 || upstream.status === 403 || upstream.status >= 500;
 }
+
+/** Retry staging-only auth routes when production API has not deployed them yet (404). */
+export function shouldRetryAuthOnStagingForMissingRoute(
+  upstream: Response,
+  primaryBase: string,
+  stagingBase: string | undefined,
+): boolean {
+  if (upstream.ok || !stagingBase || stagingBase === primaryBase) {
+    return false;
+  }
+  return upstream.status === 404 && !isProtectedStagingApiHost(primaryBase);
+}
+
+export const IMPERSONATION_SESSION_MISMATCH_DETAIL =
+  "Impersonering kræver login mod test-API. Log ud, log ind igen, og prøv derefter — eller bed administrator om at aktivere STARDESK_USE_STAGING_API på web Preview.";

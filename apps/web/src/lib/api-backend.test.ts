@@ -3,9 +3,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   getApiBackendBase,
   getApiBackendFallbackBase,
+  getStagingApiBackendBase,
+  getStagingCapableAuthBackendBase,
   isProtectedStagingApiHost,
   shouldFallbackAuthUpstream,
   shouldFallbackServerUpstream,
+  shouldRetryAuthOnStagingForMissingRoute,
   VERCEL_PROTOTYPE_API_FALLBACK,
   VERCEL_STAGING_API_FALLBACK,
 } from "@/lib/api-backend";
@@ -44,35 +47,45 @@ describe("api-backend", () => {
     expect(isProtectedStagingApiHost(VERCEL_PROTOTYPE_API_FALLBACK)).toBe(false);
   });
 
-  it("uses staging API on Vercel preview when explicitly enabled", () => {
+  it("uses staging API on Vercel preview when bypass is available", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "preview";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
-    process.env.STARDESK_USE_STAGING_API = "true";
 
     expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+    expect(getStagingCapableAuthBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
-  it("uses production API when bypass is set but STARDESK_USE_STAGING_API is not", () => {
+  it("uses production API on preview when STARDESK_USE_STAGING_API=false", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "preview";
     process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_STAGING_API_FALLBACK;
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
+    process.env.STARDESK_USE_STAGING_API = "false";
 
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
+    expect(getStagingApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
-  it("honours STARDESK_API_URL on Vercel preview when staging is enabled", () => {
+  it("honours STARDESK_API_URL on Vercel preview when staging is reachable", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "preview";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
     process.env.STARDESK_API_URL = "https://api-custom-staging.example.test/";
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
-    process.env.STARDESK_USE_STAGING_API = "true";
 
     expect(getApiBackendBase()).toBe("https://api-custom-staging.example.test");
+  });
+
+  it("uses staging API on test custom domain when bypass is available", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "production";
+    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
+    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
+
+    expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
   });
 
   it("falls back to production when NEXT_PUBLIC_API_URL is staging but bypass is missing", () => {
@@ -94,15 +107,6 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
   });
 
-  it("uses production API by default on test preview without STARDESK_USE_STAGING_API", () => {
-    process.env.VERCEL = "1";
-    process.env.VERCEL_ENV = "production";
-    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
-    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
-
-    expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
-  });
-
   it("getApiBackendFallbackBase prefers non-staging NEXT_PUBLIC_API_URL", () => {
     process.env.NEXT_PUBLIC_API_URL = "https://api-custom.example.test/";
     expect(getApiBackendFallbackBase()).toBe("https://api-custom.example.test");
@@ -114,6 +118,30 @@ describe("api-backend", () => {
     process.env.NEXT_PUBLIC_STARDESK_ENV = "production";
 
     expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
+  });
+});
+
+describe("shouldRetryAuthOnStagingForMissingRoute", () => {
+  it("retries staging when production returns 404 for missing auth route", () => {
+    const upstream = new Response(null, { status: 404 });
+    expect(
+      shouldRetryAuthOnStagingForMissingRoute(
+        upstream,
+        VERCEL_PROTOTYPE_API_FALLBACK,
+        VERCEL_STAGING_API_FALLBACK,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not retry when primary is already staging", () => {
+    const upstream = new Response(null, { status: 404 });
+    expect(
+      shouldRetryAuthOnStagingForMissingRoute(
+        upstream,
+        VERCEL_STAGING_API_FALLBACK,
+        VERCEL_STAGING_API_FALLBACK,
+      ),
+    ).toBe(false);
   });
 });
 
