@@ -54,6 +54,11 @@ function canReachStagingApiBackend(): boolean {
   return hasApiProtectionBypass();
 }
 
+/** Opt-in: route BFF to Neon test staging API (requires working api Preview + DATABASE_URL). */
+export function stagingApiExplicitlyEnabled(): boolean {
+  return process.env.STARDESK_USE_STAGING_API === "true";
+}
+
 /** Hostnames that require x-vercel-protection-bypass from the API Vercel project. */
 export function isProtectedStagingApiHost(base: string): boolean {
   const normalized = base.replace(/\/$/, "").toLowerCase();
@@ -65,6 +70,7 @@ export function isProtectedStagingApiHost(base: string): boolean {
 
 function shouldPreferStagingApiBackend(): boolean {
   return (
+    stagingApiExplicitlyEnabled() &&
     isVercelHosted() &&
     !previewUsesProductionApi() &&
     canReachStagingApiBackend() &&
@@ -73,7 +79,7 @@ function shouldPreferStagingApiBackend(): boolean {
 }
 
 function stagingApiFallback(): string {
-  return canReachStagingApiBackend()
+  return stagingApiExplicitlyEnabled() && canReachStagingApiBackend()
     ? VERCEL_STAGING_API_FALLBACK
     : VERCEL_PROTOTYPE_API_FALLBACK;
 }
@@ -96,6 +102,9 @@ function resolveConfiguredApiBase(stagingOverride?: string): string | undefined 
     return undefined;
   }
   const base = configured.replace(/\/$/, "");
+  if (isProtectedStagingApiHost(base) && !stagingApiExplicitlyEnabled()) {
+    return getApiBackendFallbackBase();
+  }
   if (!canReachStagingApiBackend() && isProtectedStagingApiHost(base)) {
     return getApiBackendFallbackBase();
   }
@@ -106,8 +115,6 @@ function resolveConfiguredApiBase(stagingOverride?: string): string | undefined 
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
 
-  // Preview and custom-domain staging (VERCEL_ENV=production, STARDESK_ENV=test) use
-  // the staging API (Neon test) when the web BFF can bypass API deployment protection.
   if (shouldPreferStagingApiBackend()) {
     if (stagingOverride) {
       return stagingOverride.replace(/\/$/, "");
@@ -139,7 +146,7 @@ export function buildBackendUrl(path: string, base?: string): string {
   return `${resolvedBase}${normalized}`;
 }
 
-/** Retry login against fallback API when protected staging upstream fails for any reason. */
+/** Retry auth upstream against fallback API when protected staging upstream fails. */
 export function shouldFallbackAuthUpstream(
   upstream: Response,
   primaryBase: string,
@@ -152,4 +159,19 @@ export function shouldFallbackAuthUpstream(
     return true;
   }
   return isProtectedStagingApiHost(primaryBase);
+}
+
+/** Retry authenticated server fetches when JWT from prod API is rejected by staging host. */
+export function shouldFallbackServerUpstream(
+  upstream: Response,
+  primaryBase: string,
+  fallbackBase: string,
+): boolean {
+  if (upstream.ok || fallbackBase === primaryBase) {
+    return false;
+  }
+  if (!isProtectedStagingApiHost(primaryBase)) {
+    return false;
+  }
+  return upstream.status === 401 || upstream.status === 403 || upstream.status >= 500;
 }

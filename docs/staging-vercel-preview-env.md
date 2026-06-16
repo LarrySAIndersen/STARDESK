@@ -68,15 +68,18 @@ Skabelon: [`apps/api/.env.test.example`](../apps/api/.env.test.example)
 | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | `true` |
 | `NEXT_PUBLIC_PROTOTYPE_BOOTSTRAP_PASSWORD` | `Stardesk2026!` |
 | `VERCEL_PROTECTION_BYPASS` | **API-projektets** bypass-token (ikke web-token) |
+| `STARDESK_USE_STAGING_API` | `true` — **kun** når api Preview har Neon **test** `DATABASE_URL` og seed |
 
-**Vigtigt — login fejler uden API bypass på web:**  
-`VERCEL_AUTOMATION_BYPASS_SECRET` på web bypasser kun **web**-deployment. Server-side BFF (`/api/auth/login` → staging API) kræver **API**-projektets token i `VERCEL_PROTECTION_BYPASS`:
+**Vigtigt — bypass alene aktiverer ikke staging API:**  
+`VERCEL_PROTECTION_BYPASS` lader web kalde det beskyttede api Preview — men BFF bruger **production API** som standard, så login og session matcher. Sæt `STARDESK_USE_STAGING_API=true` først når api Preview er klar (Neon test + seed).
+
+**Bypass-token (når du bruger staging API):**
 
 1. Vercel → **api** → Settings → Deployment Protection → *Protection Bypass for Automation* → kopiér secret  
 2. Vercel → **web** → Environment Variables → Preview → `VERCEL_PROTECTION_BYPASS` = samme secret  
-3. Redeploy **web** (API redeploy er ikke nødvendig for denne variabel)
+3. Redeploy **web**
 
-**Midlertidig fallback (uden bypass):** Hvis `VERCEL_PROTECTION_BYPASS` mangler på web, bruger BFF automatisk production API (`NEXT_PUBLIC_API_URL` / `api-gamma-amber.vercel.app`) så login virker — data kommer fra Neon **main**, ikke **test**. Sæt bypass for fuld staging/test-paritet.
+**Uden `STARDESK_USE_STAGING_API`:** BFF bruger production API — login virker med prod-data (Neon **main**).
 
 Skabelon: [`apps/web/.env.test.example`](../apps/web/.env.test.example)
 

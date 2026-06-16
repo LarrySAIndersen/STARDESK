@@ -1,12 +1,17 @@
 import { cookies } from "next/headers";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import {
+  buildBackendUrl,
+  getApiBackendBase,
+  getApiBackendFallbackBase,
+  shouldFallbackServerUpstream,
+} from "@/lib/api-backend";
 import { ApiError } from "@/lib/api";
 import { apiErrorMessage, parseApiErrorDetail } from "@/lib/api-errors";
 import { TOKEN_COOKIE } from "@/lib/auth";
-import { vercelProtectionBypassHeaders } from "@/lib/vercel-protection-bypass";
+import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 
-/** AfireAndForget(infinite) SSR Suspense when upstream is unreachable. */
+/** Avoid infinite SSR Suspense when upstream is unreachable. */
 const SERVER_FETCH_TIMEOUT_MS = 25_000;
 
 async function authHeaders(): Promise<HeadersInit> {
@@ -14,12 +19,12 @@ async function authHeaders(): Promise<HeadersInit> {
   return {
     Accept: "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...vercelProtectionBypassHeaders(),
+    ...backendUpstreamHeaders(),
   };
 }
 
 type ApiGetServerOptions = {
-  /** Seconds to cache read-only reference data (e.g. categories). AfireAndForget(for) live counts. */
+  /** Seconds to cache read-only reference data (e.g. categories). Avoid for live counts. */
   revalidate?: number;
 };
 
@@ -33,13 +38,23 @@ export async function apiGetServer<T>(
   options?: ApiGetServerOptions,
 ): Promise<T> {
   const revalidate = options?.revalidate;
-  const response = await fetch(buildBackendUrl(path), {
-    headers: await authHeaders(),
+  const primaryBase = getApiBackendBase();
+  const fallbackBase = getApiBackendFallbackBase();
+  const headers = await authHeaders();
+  const fetchInit = {
+    headers,
     signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     ...(revalidate !== undefined
       ? { next: { revalidate } }
       : { cache: "no-store" as const }),
-  });
+  };
+
+  let response = await fetch(buildBackendUrl(path, primaryBase), fetchInit);
+
+  if (shouldFallbackServerUpstream(response, primaryBase, fallbackBase)) {
+    response = await fetch(buildBackendUrl(path, fallbackBase), fetchInit);
+  }
+
   if (!response.ok) {
     await throwServerApiError(response);
   }
