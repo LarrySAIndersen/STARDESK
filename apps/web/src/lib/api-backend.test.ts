@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   getApiBackendBase,
+  getApiBackendFallbackBase,
+  isProtectedStagingApiHost,
   VERCEL_PROTOTYPE_API_FALLBACK,
   VERCEL_STAGING_API_FALLBACK,
 } from "@/lib/api-backend";
@@ -34,6 +36,11 @@ describe("api-backend", () => {
     expect(getApiBackendBase()).toBe("https://api.example.test");
   });
 
+  it("detects protected staging API hosts", () => {
+    expect(isProtectedStagingApiHost(VERCEL_STAGING_API_FALLBACK)).toBe(true);
+    expect(isProtectedStagingApiHost(VERCEL_PROTOTYPE_API_FALLBACK)).toBe(false);
+  });
+
   it("uses staging API on Vercel preview even when NEXT_PUBLIC_API_URL is production", () => {
     process.env.VERCEL = "1";
     process.env.VERCEL_ENV = "preview";
@@ -48,6 +55,7 @@ describe("api-backend", () => {
     process.env.VERCEL_ENV = "preview";
     process.env.NEXT_PUBLIC_API_URL = VERCEL_PROTOTYPE_API_FALLBACK;
     process.env.STARDESK_API_URL = "https://api-custom-staging.example.test/";
+    process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
 
     expect(getApiBackendBase()).toBe("https://api-custom-staging.example.test");
   });
@@ -60,6 +68,15 @@ describe("api-backend", () => {
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
 
     expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+  });
+
+  it("falls back to production when NEXT_PUBLIC_API_URL is staging but bypass is missing", () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_ENV = "preview";
+    process.env.NEXT_PUBLIC_STARDESK_ENV = "test";
+    process.env.NEXT_PUBLIC_API_URL = VERCEL_STAGING_API_FALLBACK;
+
+    expect(getApiBackendBase()).toBe(VERCEL_PROTOTYPE_API_FALLBACK);
   });
 
   it("falls back to production API on test env when API bypass token is missing", () => {
@@ -79,6 +96,11 @@ describe("api-backend", () => {
     process.env.VERCEL_PROTECTION_BYPASS = "api-bypass-token";
 
     expect(getApiBackendBase()).toBe(VERCEL_STAGING_API_FALLBACK);
+  });
+
+  it("getApiBackendFallbackBase prefers non-staging NEXT_PUBLIC_API_URL", () => {
+    process.env.NEXT_PUBLIC_API_URL = "https://api-custom.example.test/";
+    expect(getApiBackendFallbackBase()).toBe("https://api-custom.example.test");
   });
 
   it("uses production API for real production deployments", () => {

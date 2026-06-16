@@ -54,6 +54,15 @@ function canReachStagingApiBackend(): boolean {
   return hasApiProtectionBypass();
 }
 
+/** Hostnames that require x-vercel-protection-bypass from the API Vercel project. */
+export function isProtectedStagingApiHost(base: string): boolean {
+  const normalized = base.replace(/\/$/, "").toLowerCase();
+  if (normalized === VERCEL_STAGING_API_FALLBACK) {
+    return true;
+  }
+  return normalized.includes("api-git-staging") || normalized.includes("-git-staging-");
+}
+
 function shouldPreferStagingApiBackend(): boolean {
   return (
     isVercelHosted() &&
@@ -69,6 +78,30 @@ function stagingApiFallback(): string {
     : VERCEL_PROTOTYPE_API_FALLBACK;
 }
 
+/** Production or explicitly configured non-staging API — used when staging API is blocked. */
+export function getApiBackendFallbackBase(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configured) {
+    const base = configured.replace(/\/$/, "");
+    if (!isProtectedStagingApiHost(base)) {
+      return base;
+    }
+  }
+  return VERCEL_PROTOTYPE_API_FALLBACK;
+}
+
+function resolveConfiguredApiBase(stagingOverride?: string): string | undefined {
+  const configured = (stagingOverride ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
+  if (!configured) {
+    return undefined;
+  }
+  const base = configured.replace(/\/$/, "");
+  if (!canReachStagingApiBackend() && isProtectedStagingApiHost(base)) {
+    return getApiBackendFallbackBase();
+  }
+  return base;
+}
+
 /** Server-side upstream API base URL (never exposed to browser fetch for auth). */
 export function getApiBackendBase(): string {
   const stagingOverride = process.env.STARDESK_API_URL?.trim();
@@ -82,9 +115,9 @@ export function getApiBackendBase(): string {
     return VERCEL_STAGING_API_FALLBACK;
   }
 
-  const configured = (stagingOverride ?? process.env.NEXT_PUBLIC_API_URL)?.trim();
+  const configured = resolveConfiguredApiBase(stagingOverride);
   if (configured) {
-    return configured.replace(/\/$/, "");
+    return configured;
   }
 
   if (
@@ -100,8 +133,8 @@ export function getApiBackendBase(): string {
   return base.replace(/\/$/, "");
 }
 
-export function buildBackendUrl(path: string): string {
-  const base = getApiBackendBase();
+export function buildBackendUrl(path: string, base?: string): string {
+  const resolvedBase = (base ?? getApiBackendBase()).replace(/\/$/, "");
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${normalized}`;
+  return `${resolvedBase}${normalized}`;
 }

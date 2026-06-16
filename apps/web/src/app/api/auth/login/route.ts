@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import {
+  buildBackendUrl,
+  getApiBackendBase,
+  getApiBackendFallbackBase,
+} from "@/lib/api-backend";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import {
   backendUpstreamHeaders,
@@ -9,15 +13,12 @@ import {
 } from "@/lib/vercel-protection-bypass";
 import type { LoginResponse } from "@/types/user";
 
-export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ detail: "Ugyldig forespørgsel" }, { status: 400 });
-  }
-
-  const upstream = await fetch(buildBackendUrl("/api/v1/auth/login"), {
+async function postLoginUpstream(
+  apiBase: string,
+  request: Request,
+  body: unknown,
+): Promise<Response> {
+  return fetch(buildBackendUrl("/api/v1/auth/login", apiBase), {
     method: "POST",
     headers: backendUpstreamHeaders({
       Accept: "application/json",
@@ -30,6 +31,28 @@ export async function POST(request: Request) {
     body: JSON.stringify(body),
     cache: "no-store",
   });
+}
+
+export async function POST(request: Request) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ detail: "Ugyldig forespørgsel" }, { status: 400 });
+  }
+
+  const primaryBase = getApiBackendBase();
+  let upstream = await postLoginUpstream(primaryBase, request, body);
+
+  if (
+    !upstream.ok &&
+    isVercelDeploymentProtectionResponse(upstream)
+  ) {
+    const fallbackBase = getApiBackendFallbackBase();
+    if (fallbackBase !== primaryBase) {
+      upstream = await postLoginUpstream(fallbackBase, request, body);
+    }
+  }
 
   if (!upstream.ok) {
     if (isVercelDeploymentProtectionResponse(upstream)) {
