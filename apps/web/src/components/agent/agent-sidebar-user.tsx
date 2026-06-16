@@ -33,17 +33,13 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 type ProfileTab = "heroes" | "upload";
 
-export function ProfileModal({
+export function AvatarEditor({
   user,
-  onClose,
   onUserChange,
 }: {
   user: User;
-  onClose: () => void;
   onUserChange: (user: User) => void;
 }) {
-  const titleId = useId();
-  const panelRef = useFocusTrap(true, onClose);
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<ProfileTab>("heroes");
   const [saving, setSaving] = useState(false);
@@ -100,63 +96,82 @@ export function ProfileModal({
   };
 
   return (
+    <div>
+      <p className="text-muted-foreground text-sm">
+        Vælg en superhelt eller upload dit eget billede. Upload har forrang indtil du vælger en
+        superhelt igen.
+      </p>
+
+      <ProfileTabs tab={tab} onTabChange={setTab} />
+
+      {tab === "heroes" ? (
+        <section className="mt-4">
+          <h3 className="text-star-navy mb-2 text-xs font-bold">Superhelte</h3>
+          <PresetGrid
+            selectedPreset={selectedPreset}
+            activeUpload={Boolean(user.avatar_url)}
+            saving={saving}
+            onSelect={(id) => fireAndForget(savePreset(id))}
+          />
+        </section>
+      ) : (
+        <section className="mt-4 space-y-3">
+          <h3 className="text-star-navy text-xs font-bold">Upload eget billede</h3>
+          <div className="flex items-center gap-3">
+            {previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- blob preview before upload
+              <img
+                src={previewUrl}
+                alt="Forhåndsvisning"
+                className="size-16 rounded-full border border-[var(--gray-border)] object-cover"
+              />
+            ) : (
+              <UserAvatar user={user} size="lg" />
+            )}
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={ACCEPTED_TYPES.join(",")}
+                className="sr-only"
+                onChange={(e) => fireAndForget(onFileChange(e))}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                onClick={() => fileRef.current?.click()}
+              >
+                {saving ? "Uploader…" : "Upload eget billede"}
+              </Button>
+              <p className="text-muted-foreground mt-1 text-xs">Max 400 KB</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {error ? <p className="text-destructive mt-3 text-xs">{error}</p> : null}
+    </div>
+  );
+}
+
+export function ProfileModal({
+  user,
+  onClose,
+  onUserChange,
+}: {
+  user: User;
+  onClose: () => void;
+  onUserChange: (user: User) => void;
+}) {
+  const titleId = useId();
+  const panelRef = useFocusTrap(true, onClose);
+
+  return (
     <ProfileOverlay onClose={onClose}>
       <ProfileDialogPanel panelRef={panelRef} titleId={titleId} title="Vælg avatar" onClose={onClose}>
-        <p className="text-[11px] text-[var(--gray-mid)]">
-          Vælg en superhelt eller upload dit eget billede. Upload har forrang indtil du vælger en
-          superhelt igen.
-        </p>
-
-        <ProfileTabs tab={tab} onTabChange={setTab} />
-
-        {tab === "heroes" ? (
-          <section className="mt-4">
-            <h3 className="text-star-navy mb-2 text-xs font-bold">Superhelte</h3>
-            <PresetGrid
-              selectedPreset={selectedPreset}
-              activeUpload={Boolean(user.avatar_url)}
-              saving={saving}
-              onSelect={(id) => fireAndForget(savePreset(id))}
-            />
-          </section>
-        ) : (
-          <section className="mt-4 space-y-3">
-            <h3 className="text-star-navy text-xs font-bold">Upload eget billede</h3>
-            <div className="flex items-center gap-3">
-              {previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- blob preview before upload
-                <img
-                  src={previewUrl}
-                  alt="Forhåndsvisning"
-                  className="size-16 rounded-full border border-[var(--gray-border)] object-cover"
-                />
-              ) : (
-                <UserAvatar user={user} size="lg" />
-              )}
-              <div>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept={ACCEPTED_TYPES.join(",")}
-                  className="sr-only"
-                  onChange={(e) => fireAndForget(onFileChange(e))}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={saving}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  {saving ? "Uploader…" : "Upload eget billede"}
-                </Button>
-                <p className="mt-1 text-[10px] text-[var(--gray-mid)]">Max 500 KB</p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {error ? <p className="text-destructive mt-3 text-xs">{error}</p> : null}
+        <AvatarEditor user={user} onUserChange={onUserChange} />
 
         <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--gray-border)] pt-4">
           <Link

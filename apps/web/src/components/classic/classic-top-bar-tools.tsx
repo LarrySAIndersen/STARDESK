@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, LayoutGrid, Settings, User } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import { ClassicNotificationModal } from "@/components/classic/classic-notification-modal";
@@ -50,16 +51,15 @@ export function ClassicTopBarTools({ user }: { user: AppUser | null }) {
         >
           <Bell className="size-[18px]" aria-hidden />
         </button>
-        <button
-          type="button"
+        <Link
+          href="/indstillinger"
           className="classic-topbar__icon-btn classic-topbar__icon-btn--profile"
           aria-label="Mine indstillinger"
           title="Mine indstillinger"
-          disabled
         >
           <User className="size-[18px]" aria-hidden />
           <Settings className="classic-topbar__profile-gear size-3" aria-hidden />
-        </button>
+        </Link>
       </div>
 
       {notifOpen && user?.id && notifPrefs ? (

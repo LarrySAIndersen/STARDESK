@@ -57,6 +57,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/users": "Brugere",
   "/portal": "Selvbetjeningsportal",
   "/profile": "Profil",
+  "/indstillinger": "Personlige indstillinger",
   "/skift-adgangskode": "Skift adgangskode",
   "/forbedringer": "Review-sedler",
   "/forbedringer/saglayout-2": "Saglayout #2",

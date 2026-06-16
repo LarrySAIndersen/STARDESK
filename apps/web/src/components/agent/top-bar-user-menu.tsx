@@ -5,12 +5,11 @@ import { fireAndForget } from "@/lib/fire-and-forget";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
-import { ProfileModal } from "@/components/agent/agent-sidebar-user";
 import { UserAvatar } from "@/components/agent/user-avatar";
 import { PortalLoggedInAs } from "@/components/portal/portal-logged-in-as";
-import { clearSession, writeUserCookie } from "@/lib/auth";
+import { clearSession } from "@/lib/auth";
 import { confirmSfChatLogout } from "@/lib/sf-chat-logout";
 import { resolveUserAvatar, userProfileHref } from "@/lib/user-avatar";
 import { cn } from "@/lib/utils";
@@ -18,12 +17,10 @@ import type { User } from "@/types/user";
 
 function UserActionLinks({
   profileHref,
-  onChangeAvatar,
   onLogout,
   className,
 }: {
   profileHref: string;
-  onChangeAvatar: () => void;
   onLogout: () => void;
   className?: string;
 }) {
@@ -32,17 +29,12 @@ function UserActionLinks({
       <Link href="/min-side" className={cn("wire-topbar-user-action", className)}>
         Min side
       </Link>
+      <Link href="/indstillinger" className={cn("wire-topbar-user-action", className)}>
+        Personlige indstillinger
+      </Link>
       <Link href={profileHref} className={cn("wire-topbar-user-action", className)}>
         Se mere
       </Link>
-      <button
-        type="button"
-        className={cn("wire-topbar-user-action", className)}
-        onClick={onChangeAvatar}
-        aria-haspopup="dialog"
-      >
-        Skift billede
-      </button>
       <button
         type="button"
         className={cn("wire-topbar-user-action", className)}
@@ -64,7 +56,6 @@ export function TopBarUserMenu({
   const router = useRouter();
   const menuId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
-  const [avatarOpen, setAvatarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState(() => resolveUserAvatar(userFromServer) ?? userFromServer);
 
@@ -83,11 +74,6 @@ export function TopBarUserMenu({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [menuOpen]);
 
-  const onUserChange = useCallback((next: User) => {
-    writeUserCookie(next);
-    setUser(next);
-  }, []);
-
   async function logout() {
     const ok = await confirmSfChatLogout();
     if (!ok) return;
@@ -102,80 +88,68 @@ export function TopBarUserMenu({
   const chrome = variant === "chrome";
 
   return (
-    <>
-      <div
-        className={cn("wire-topbar-user", chrome && "wire-topbar-user--chrome")}
-        aria-label="Brugerkonto"
-      >
-        <div className="wire-topbar-user-identity">
-          <UserAvatar user={user} size="md" />
-          <PortalLoggedInAs
-            user={user}
-            variant="topbar"
-            showAvatar={false}
-            industrialChrome={chrome}
-          />
-        </div>
-
-        <nav
-          className={cn(
-            "wire-topbar-user-actions hidden lg:flex",
-            chrome && "wire-topbar-user-actions--chrome",
-          )}
-          aria-label="Brugerkonto"
-        >
-          <UserActionLinks
-            profileHref={profileHref}
-            onChangeAvatar={() => setAvatarOpen(true)}
-            onLogout={() => fireAndForget(logout())}
-            className={chrome ? "wire-topbar-user-action--chrome" : undefined}
-          />
-        </nav>
-
-        <div className="relative lg:hidden" ref={menuRef}>
-          <button
-            type="button"
-            className={cn(
-              "wire-topbar-user-menu-trigger",
-              chrome && "wire-topbar-user-menu-trigger--chrome",
-            )}
-            aria-expanded={menuOpen}
-            aria-controls={menuId}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span className="sr-only">Brugermenu</span>
-            <ChevronDown
-              className={cn(
-                "size-4 transition-transform",
-                chrome ? "text-white/85" : "text-[var(--gray-mid)]",
-                menuOpen && "rotate-180",
-              )}
-              aria-hidden
-            />
-          </button>
-          {menuOpen ? (
-            <div id={menuId} className="wire-topbar-user-dropdown" role="menu">
-              <UserActionLinks
-                profileHref={profileHref}
-                onChangeAvatar={() => {
-                  setMenuOpen(false);
-                  setAvatarOpen(true);
-                }}
-                onLogout={() => fireAndForget(logout())}
-                className="wire-topbar-user-dropdown-action"
-              />
-            </div>
-          ) : null}
-        </div>
+    <div
+      className={cn("wire-topbar-user", chrome && "wire-topbar-user--chrome")}
+      aria-label="Brugerkonto"
+    >
+      <div className="wire-topbar-user-identity">
+        <UserAvatar user={user} size="md" />
+        <PortalLoggedInAs
+          user={user}
+          variant="topbar"
+          showAvatar={false}
+          industrialChrome={chrome}
+        />
       </div>
 
-      {avatarOpen ? (
-        <ProfileModal
-          user={user}
-          onClose={() => setAvatarOpen(false)}
-          onUserChange={onUserChange}
+      <nav
+        className={cn(
+          "wire-topbar-user-actions hidden lg:flex",
+          chrome && "wire-topbar-user-actions--chrome",
+        )}
+        aria-label="Brugerkonto"
+      >
+        <UserActionLinks
+          profileHref={profileHref}
+          onLogout={() => fireAndForget(logout())}
+          className={chrome ? "wire-topbar-user-action--chrome" : undefined}
         />
-      ) : null}
-    </>
+      </nav>
+
+      <div className="relative lg:hidden" ref={menuRef}>
+        <button
+          type="button"
+          className={cn(
+            "wire-topbar-user-menu-trigger",
+            chrome && "wire-topbar-user-menu-trigger--chrome",
+          )}
+          aria-expanded={menuOpen}
+          aria-controls={menuId}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span className="sr-only">Brugermenu</span>
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              chrome ? "text-white/85" : "text-[var(--gray-mid)]",
+              menuOpen && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </button>
+        {menuOpen ? (
+          <div id={menuId} className="wire-topbar-user-dropdown" role="menu">
+            <UserActionLinks
+              profileHref={profileHref}
+              onLogout={() => {
+                setMenuOpen(false);
+                fireAndForget(logout());
+              }}
+              className="wire-topbar-user-dropdown-action"
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }

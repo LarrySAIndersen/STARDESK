@@ -51,6 +51,10 @@ export function Kp2UserMenu({ user }: { user: AppUser }) {
       {open ? (
         <div className="kp2-user-menu" role="menu">
           <p className="kp2-user-menu-name">{user.display_name ?? user.email}</p>
+          <Link href="/indstillinger" className="kp2-user-menu-item" role="menuitem" onClick={() => setOpen(false)}>
+            <User className="size-4" aria-hidden />
+            Personlige indstillinger
+          </Link>
           <Link href="/profile" className="kp2-user-menu-item" role="menuitem" onClick={() => setOpen(false)}>
             <User className="size-4" aria-hidden />
             Tilret profil
