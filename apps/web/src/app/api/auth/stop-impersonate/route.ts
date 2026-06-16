@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import {
+  postAuthUpstreamWithStagingFallback,
+  resolveAuthUpstreamErrorDetail,
+} from "@/lib/auth-upstream-bff";
 import { jsonWithSessionCookies } from "@/lib/auth-session-bff";
 import { TOKEN_COOKIE } from "@/lib/auth";
-import { backendUpstreamHeaders } from "@/lib/vercel-protection-bypass";
 
 export async function POST() {
   const cookieStore = await cookies();
@@ -13,25 +15,17 @@ export async function POST() {
     return NextResponse.json({ detail: "Ikke logget ind" }, { status: 401 });
   }
 
-  const upstream = await fetch(buildBackendUrl("/api/v1/auth/stop-impersonate"), {
-    method: "POST",
-    headers: backendUpstreamHeaders({
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    cache: "no-store",
+  const { upstream, detail: overrideDetail } = await postAuthUpstreamWithStagingFallback({
+    path: "/api/v1/auth/stop-impersonate",
+    token,
   });
 
   if (!upstream.ok) {
-    let detail = "Kunne ikke afslutte impersonering";
-    try {
-      const err = (await upstream.json()) as { detail?: string };
-      if (typeof err.detail === "string") {
-        detail = err.detail;
-      }
-    } catch {
-      // ignore
-    }
+    const detail = await resolveAuthUpstreamErrorDetail(
+      upstream,
+      "Kunne ikke afslutte impersonering",
+      overrideDetail,
+    );
     return NextResponse.json({ detail }, { status: upstream.status });
   }
 
