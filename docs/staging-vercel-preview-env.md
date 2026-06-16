@@ -76,6 +76,8 @@ Skabelon: [`apps/api/.env.test.example`](../apps/api/.env.test.example)
 2. Vercel → **web** → Environment Variables → Preview → `VERCEL_PROTECTION_BYPASS` = samme secret  
 3. Redeploy **web** (API redeploy er ikke nødvendig for denne variabel)
 
+**Midlertidig fallback (uden bypass):** Hvis `VERCEL_PROTECTION_BYPASS` mangler på web, bruger BFF automatisk production API (`NEXT_PUBLIC_API_URL` / `api-gamma-amber.vercel.app`) så login virker — data kommer fra Neon **main**, ikke **test**. Sæt bypass for fuld staging/test-paritet.
+
 Skabelon: [`apps/web/.env.test.example`](../apps/web/.env.test.example)
 
 ### 4. Redeploy
