@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from star_itsm_api.schemas.tag_catalog import TagSuggestionRead
+
 
 class IntakeAssistMessage(BaseModel):
     role: Literal["user", "assistant"]
@@ -19,4 +21,8 @@ class IntakeAssistResponse(BaseModel):
     suggested_priority: Literal["critical", "high", "medium", "low"]
     suggested_ticket_type: Literal["service_request", "incident", "problem"]
     tags: list[str] = Field(default_factory=list)
+    tag_suggestions: list[TagSuggestionRead] = Field(
+        default_factory=list,
+        description="AI-ready suggestions with confidence and source",
+    )
     emoji: str | None = None

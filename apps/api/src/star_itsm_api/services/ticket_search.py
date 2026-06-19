@@ -19,3 +19,20 @@ def apply_ticket_search_filter(
             tag_blob.like(term),
         )
     )
+
+
+def apply_ticket_tags_filter(
+    stmt: Select[tuple[Ticket]],
+    tags: list[str] | None,
+    *,
+    match_all: bool = False,
+) -> Select[tuple[Ticket]]:
+    """Exact tag match via Postgres array operators."""
+    if not tags:
+        return stmt
+    normalized = [t.strip().lower() for t in tags if t.strip()]
+    if not normalized:
+        return stmt
+    if match_all:
+        return stmt.where(Ticket.tags.contains(normalized))
+    return stmt.where(Ticket.tags.overlap(normalized))

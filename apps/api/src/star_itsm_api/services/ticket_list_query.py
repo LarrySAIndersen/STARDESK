@@ -28,9 +28,13 @@ from star_itsm_api.services.ticket_dashboard_filters import (
     filter_tickets_created_on,
     filter_tickets_opened_since,
 )
-from star_itsm_api.services.ticket_search import apply_ticket_search_filter
+from star_itsm_api.services.ticket_search import (
+    apply_ticket_search_filter,
+    apply_ticket_tags_filter,
+)
 from star_itsm_api.services.ticket_sort import apply_ticket_sort, parse_ticket_sort
 from star_itsm_api.services.ticket_stakeholders import apply_stakeholder_ticket_filter
+from star_itsm_api.services.ticket_tags import normalize_tags
 
 DASHBOARD_PRIORITY_VALUES = frozenset({"critical", "high", "medium", "low"})
 DASHBOARD_TICKET_TYPES = frozenset({"incident", "problem", "service_request", "change"})
@@ -163,6 +167,8 @@ async def build_list_tickets_stmt(
     priority: str | None,
     ticket_type: str | None,
     q: str | None,
+    tags: list[str] | None,
+    tags_match: str,
     stakeholder: str | None,
     involving_user_id: uuid.UUID | None,
 ) -> Select[tuple[Ticket]]:
@@ -234,6 +240,16 @@ async def build_list_tickets_stmt(
         stmt = stmt.where(Ticket.ticket_type == ticket_type)
 
     stmt = apply_ticket_search_filter(stmt, q)
+    if tags:
+        try:
+            normalized_tags = normalize_tags(tags)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        stmt = apply_ticket_tags_filter(
+            stmt,
+            normalized_tags,
+            match_all=tags_match == "all",
+        )
     if stakeholder == "me":
         stmt = apply_stakeholder_ticket_filter(stmt, user_id=current_user.id)
     elif involving_user_id is not None:

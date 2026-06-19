@@ -5,7 +5,13 @@ from __future__ import annotations
 import re
 from typing import Literal
 
+from star_itsm_api.schemas.tag_catalog import TagSuggestionRead
 from star_itsm_api.schemas.ticket_intake_assist import IntakeAssistMessage, IntakeAssistResponse
+from star_itsm_api.services.tag_catalog import (
+    merge_tag_suggestions,
+    normalize_tags_to_catalog,
+    suggest_tags_from_text,
+)
 
 Priority = Literal["critical", "high", "medium", "low"]
 TicketType = Literal["service_request", "incident", "problem"]
@@ -139,6 +145,16 @@ def build_intake_assist_draft(messages: list[IntakeAssistMessage]) -> IntakeAssi
         priority: Priority = matched.get("priority", "medium")  # type: ignore[assignment]
         ticket_type: TicketType = matched.get("ticket_type", "incident")  # type: ignore[assignment]
         intake = dict(matched.get("intake") or {})
+        rule_suggestions = [
+            TagSuggestionRead(
+                slug=tag,
+                label_da=tag,
+                confidence=0.85,
+                source="catalog_rule",
+                reason_da=f"Regel matcher {topic}",
+            )
+            for tag in tags
+        ]
         description = (
             f"**{topic}** (AI-assistent mock)\n\n"
             f"Brugerens beskrivelse:\n{summary}\n\n"
@@ -151,11 +167,18 @@ def build_intake_assist_draft(messages: list[IntakeAssistMessage]) -> IntakeAssi
         priority = "medium"
         ticket_type = "incident"
         intake = {"device_type": "andet"}
+        rule_suggestions = []
         description = (
             "**Generel IT-support** (AI-assistent mock)\n\n"
             f"{summary}\n\n"
             f"Yderligere detaljer fra dialog:\n{blob[:2000]}"
         )
+
+    catalog_suggestions = suggest_tags_from_text(blob, source="catalog_keyword")
+    tag_suggestions = merge_tag_suggestions(rule_suggestions, catalog_suggestions)
+    merged_tags = normalize_tags_to_catalog(
+        list(dict.fromkeys([s.slug for s in tag_suggestions] + tags))
+    )
 
     return IntakeAssistResponse(
         title=title[:256],
@@ -163,7 +186,8 @@ def build_intake_assist_draft(messages: list[IntakeAssistMessage]) -> IntakeAssi
         intake_answers=intake,
         suggested_priority=priority,
         suggested_ticket_type=ticket_type,
-        tags=tags[:10],
+        tags=merged_tags[:10],
+        tag_suggestions=tag_suggestions[:10],
         emoji=emoji if isinstance(emoji, str) else None,
     )
 
