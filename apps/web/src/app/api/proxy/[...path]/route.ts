@@ -1,7 +1,12 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { buildBackendUrl } from "@/lib/api-backend";
+import {
+  buildBackendUrl,
+  getApiBackendBase,
+  isProtectedStagingApiHost,
+  STAGING_JWT_MISMATCH_DETAIL,
+} from "@/lib/api-backend";
 import { TOKEN_COOKIE } from "@/lib/auth";
 import { vercelProtectionBypassHeaders } from "@/lib/vercel-protection-bypass";
 
@@ -56,6 +61,16 @@ async function proxyRequest(request: Request, pathSegments: string[]) {
   const location = upstream.headers.get("location");
   if (location) {
     responseHeaders.set("Location", location);
+  }
+
+  const apiBase = getApiBackendBase();
+  if (
+    token &&
+    upstream.status === 401 &&
+    isProtectedStagingApiHost(apiBase) &&
+    (upstreamType?.includes("application/json") ?? true)
+  ) {
+    return NextResponse.json({ detail: STAGING_JWT_MISMATCH_DETAIL }, { status: 401 });
   }
 
   return new NextResponse(upstream.body, {
