@@ -67,6 +67,11 @@ Skabelon: [`apps/api/.env.test.example`](../apps/api/.env.test.example)
 | `NEXT_PUBLIC_STARDESK_ENV` | `test` |
 | `NEXT_PUBLIC_ENABLE_DEMO_LOGIN` | `true` |
 | `NEXT_PUBLIC_PROTOTYPE_BOOTSTRAP_PASSWORD` | `Stardesk2026!` |
+| `VERCEL_PROTECTION_BYPASS` | API-projektets bypass-token (Settings → Deployment Protection → Protection Bypass for Automation) — **ikke** web-projektets eget token |
+
+`VERCEL_AUTOMATION_BYPASS_SECRET` på **web** bypasser kun web-deployments — den låser ikke **api** Preview op. Kopiér token fra **api**-projektet til `VERCEL_PROTECTION_BYPASS` på web Preview.
+
+Uden korrekt API-bypass kan login fejle eller udstede prod-JWT mens proxy rammer staging → 401 "Invalid or expired token". Se **[staging-401-jwt-mismatch-checklist.md](./staging-401-jwt-mismatch-checklist.md)**.
 | `VERCEL_PROTECTION_BYPASS` | **API-projektets** bypass-token (ikke web-token) |
 | `STARDESK_USE_STAGING_API` | `false` — **kun** hvis BFF skal tvinges til production API trods bypass |
 
@@ -133,4 +138,5 @@ Gentag for `apps\web` med `NEXT_PUBLIC_*` fra `.env.test.example`.
 
 - [deliverable-gate.md](./deliverable-gate.md) — gate-krav
 - [environments.md](./environments.md) — miljøoversigt
+- [staging-401-jwt-mismatch-checklist.md](./staging-401-jwt-mismatch-checklist.md) — 401 JWT mismatch efter login
 - PR #36 merged til `staging` — env-baseret demo-password (S2068)

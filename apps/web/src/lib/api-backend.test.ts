@@ -146,10 +146,10 @@ describe("shouldRetryAuthOnStagingForMissingRoute", () => {
 });
 
 describe("shouldFallbackAuthUpstream", () => {
-  it("retries when protected staging API returns server error", () => {
-    const upstream = new Response("error", {
-      status: 500,
-      headers: { "content-type": "application/json" },
+  it("retries when Vercel deployment protection blocks staging API", () => {
+    const upstream = new Response("<html>login</html>", {
+      status: 401,
+      headers: { "content-type": "text/html" },
     });
     expect(
       shouldFallbackAuthUpstream(
@@ -158,6 +158,33 @@ describe("shouldFallbackAuthUpstream", () => {
         VERCEL_PROTOTYPE_API_FALLBACK,
       ),
     ).toBe(true);
+  });
+
+  it("retries when staging API is unreachable (gateway 502)", () => {
+    const upstream = new Response("bad gateway", { status: 502 });
+    expect(
+      shouldFallbackAuthUpstream(
+        upstream,
+        VERCEL_STAGING_API_FALLBACK,
+        VERCEL_PROTOTYPE_API_FALLBACK,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not retry on staging API 401/500 — avoids prod JWT mismatch", () => {
+    for (const status of [401, 403, 500]) {
+      const upstream = new Response(JSON.stringify({ detail: "error" }), {
+        status,
+        headers: { "content-type": "application/json" },
+      });
+      expect(
+        shouldFallbackAuthUpstream(
+          upstream,
+          VERCEL_STAGING_API_FALLBACK,
+          VERCEL_PROTOTYPE_API_FALLBACK,
+        ),
+      ).toBe(false);
+    }
   });
 });
 

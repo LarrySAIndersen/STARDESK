@@ -182,8 +182,16 @@ export function shouldFallbackAuthUpstream(
   if (isVercelDeploymentProtectionResponse(upstream)) {
     return true;
   }
-  return isProtectedStagingApiHost(primaryBase);
+  if (!isProtectedStagingApiHost(primaryBase)) {
+    return false;
+  }
+  // Gateway/unreachable only — never fall back on API 401/403/500 (wrong password, DB down).
+  // Prod JWT + staging proxy → 401 mismatch (see docs/staging-401-jwt-mismatch-checklist.md).
+  return upstream.status === 502 || upstream.status === 503 || upstream.status === 504;
 }
+
+export const STAGING_JWT_MISMATCH_DETAIL =
+  "Session udstedt mod forkert API (JWT mismatch). Log ud, slet cookies for domænet, og log ind igen — eller bed administrator om VERCEL_PROTECTION_BYPASS + API Preview-env (se docs/staging-401-jwt-mismatch-checklist.md).";
 
 /** Retry authenticated server fetches when JWT from prod API is rejected by staging host. */
 export function shouldFallbackServerUpstream(
