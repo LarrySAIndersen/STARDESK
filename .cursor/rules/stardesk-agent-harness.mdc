@@ -28,6 +28,7 @@ Do **not** assume sibling folders (`Golden set`, `star-docs-portal`) exist outsi
 ## Task start checklist
 
 - [ ] Which repo/folder? (default: this repo root)
+- [ ] Deferred work? → check `workboard/backlog.md` if user mentions "senere" or backlog
 - [ ] Ambiguous scope? → afklaring (unless user opted out)
 - [ ] Branch `cursor/…` or `opgave-…` from latest `staging`
 - [ ] DB: Neon **test** — never Neon `main` in dev `.env`

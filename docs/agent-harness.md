@@ -124,6 +124,7 @@ Derefter `bash scripts/bootstrap-dev-database.sh --no-write-env` og `bash script
 ## Relateret
 
 - [AGENTS.md](../AGENTS.md) — Cloud Agent VM
+- [workboard/backlog.md](../workboard/backlog.md) — opgaver til senere (markdown i Git)
 - [deliverable-gate.md](./deliverable-gate.md)
 - [pr-only-period.md](./pr-only-period.md)
 - [environments.md](./environments.md)
