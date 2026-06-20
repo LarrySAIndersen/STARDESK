@@ -10,4 +10,6 @@ Canonical live files (hvis canvas stadig findes lokalt i Cursor):
 
 Agenter skal **ikke** synce, opdatere eller bygge mod Work Board medmindre brugeren eksplicit genaktiverer det.
 
+**Opgaveliste i Cursor:** [backlog.md](./backlog.md) — tilføj og læs opgaver til senere (markdown i Git).
+
 API-endpoints under `/api/v1/workboard/` og Alembic-tabellen `workboard_tasks` findes stadig i `apps/api` til evt. manuel drift — ikke til agent-workflow.
