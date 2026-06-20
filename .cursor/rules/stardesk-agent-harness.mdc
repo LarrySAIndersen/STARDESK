@@ -1,0 +1,39 @@
+---
+description: STARDESK agent harness index — read first for correct behavior (local + Cloud Agent)
+alwaysApply: true
+---
+
+# STARDESK agent harness
+
+Read **`docs/agent-harness.md`** when setup, scope, or environment is unclear.
+
+## Harness stack (in order)
+
+1. **Grundlov:** `workboard/constitution/STARDESK-agent-afklaring.md` — stop ved tvivl; opt-out in chat only
+2. **Security:** `.cursor/rules/00-security-invariants.mdc`
+3. **Release:** `.cursor/rules/pr-only-period.mdc` — PR to **`staging`** only; never push `main`/`staging`
+4. **Done:** `.cursor/rules/deliverable-gate.mdc` + skill `stardesk-deliverable-gate`
+5. **Process:** `.cursor/rules/stardesk-proces.mdc`, `stardesk-constitution-paradigme.mdc`
+6. **Cloud VM:** `AGENTS.md` — Neon **test**, `sync-neon-env.sh`, `dev-up.sh`
+
+## Environment truth
+
+| Context | What "localhost" means |
+|---------|-------------------------|
+| Cloud Agent VM | Remote Linux VM — gate and scripts use it |
+| User's Windows PC | Only if **they** ran `dev-up` locally — not the Cloud Agent VM |
+
+Do **not** assume sibling folders (`Golden set`, `star-docs-portal`) exist outside this Git repo.
+
+## Task start checklist
+
+- [ ] Which repo/folder? (default: this repo root)
+- [ ] Ambiguous scope? → afklaring (unless user opted out)
+- [ ] Branch `cursor/…` or `opgave-…` from latest `staging`
+- [ ] DB: Neon **test** — never Neon `main` in dev `.env`
+
+## Task end checklist
+
+- [ ] `bash scripts/run-deliverable-gate.sh` (`--full` if UI/auth)
+- [ ] Summary: **Deliverable gate: PASSED** + output
+- [ ] PR link to **`staging`** (draft until batch ready)

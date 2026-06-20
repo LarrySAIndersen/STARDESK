@@ -1,0 +1,38 @@
+---
+description: STARDESK CURSOR multi-folder workspace — which folder is the app, what Cloud Agent does not see
+alwaysApply: true
+---
+
+# STARDESK workspace root (local multi-folder)
+
+This rule applies at the **workspace root** (`STARDESK CURSOR`), above individual project folders.
+
+## Primary application
+
+- **`STARDESK/`** is the main product repo (**star-itsm-cloud**): `apps/web`, `apps/api`, scripts, `.cursor/rules`, `AGENTS.md`.
+- **All feature work, PRs, gate, and deploy flow** happen inside `STARDESK/` unless the user explicitly names another folder.
+
+## Secondary folders (not the running app unless asked)
+
+| Folder | Treat as |
+|--------|----------|
+| `star-docs-portal` | Documentation / portal content — read-only unless task says otherwise |
+| `STARDESK-gate-pr` | PR/gate notes or tooling — do not confuse with main app source |
+| `Golden set` | Reference / test fixtures — not production code |
+| `*.lnk`, `*.bat`, `*.zip` | Windows shortcuts/archives — ignore for code changes |
+
+## Cloud Agent vs this PC
+
+- **Cursor Cloud Agent** clones **only** the `STARDESK` Git repo — not sibling folders on this machine.
+- `localhost:3000` / `:8000` on Cloud Agent = **remote VM**, not the user's browser on Windows.
+- For browser-visible testing, use **Vercel Preview** after PR to `staging`, or run `dev-up` locally on this PC.
+
+## Before coding
+
+1. Confirm **which folder** the task targets (default: `STARDESK/`).
+2. Read `STARDESK/AGENTS.md` and `STARDESK/docs/agent-harness.md`.
+3. Follow `STARDESK/.cursor/rules` (PR-only to `staging`, deliverable gate, constitution).
+
+## Opt-out
+
+User may say `opt-out afklaring` / `bare gør det` for the current task — still respect hard guardrails in `STARDESK/.cursor/rules`.

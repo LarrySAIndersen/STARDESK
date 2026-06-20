@@ -1,6 +1,6 @@
 ﻿# AGENTS.md
 
-Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`.
+Guidance for AI agents in **star-itsm-cloud** (STARDESK). See `ARCHITECTURE.md`, `CLAUDE.md`, `docs/environments.md`, **`docs/agent-harness.md`** (full harness: local workspace + Cloud Agent).
 
 ## PR-only periode (aktiv — alle ændringer)
 

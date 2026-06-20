@@ -1,0 +1,43 @@
+{
+  "folders": [
+    {
+      "name": "STARDESK (app)",
+      "path": "STARDESK"
+    },
+    {
+      "name": "star-docs-portal",
+      "path": "star-docs-portal"
+    },
+    {
+      "name": "STARDESK-gate-pr",
+      "path": "STARDESK-gate-pr"
+    },
+    {
+      "name": "Golden set",
+      "path": "Golden set"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/.venv": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/.venv": true,
+      "**/Golden set.zip": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "ms-python.python",
+      "charliermarsh.ruff",
+      "bradlc.vscode-tailwindcss"
+    ]
+  }
+}

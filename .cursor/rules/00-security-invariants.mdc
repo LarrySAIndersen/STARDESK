@@ -1,0 +1,35 @@
+---
+description: Non-negotiable security invariants for STARDESK API and web
+alwaysApply: true
+---
+
+# Security invariants (STARDESK)
+
+Violating these requires explicit human approval and usually an ADR.
+
+## Identity and auth
+
+- **Server-derived identity:** User id, role, tenant, and permissions come from validated JWT/session on the server — never trust client-supplied user ids or role fields for authorization.
+- **Auth on mutations:** New API endpoints need at least one test expecting **401 without token** (see `apps/api/tests/conftest.py`).
+- **No auth bypass** in production paths for convenience.
+
+## Secrets and configuration
+
+- **Never** commit secrets, tokens, or production `DATABASE_URL` (Neon `main`) to Git.
+- **Never** hardcode secrets — use env vars; fail hard in production if required vars are missing.
+- Client env (`NEXT_PUBLIC_*`) must not carry upstream API keys or private URLs.
+
+## Upstream and integrations
+
+- **No client-supplied upstream URLs** for server-side fetches (SSRF risk) — server config only.
+- OAuth/webhook secrets validated server-side; mock flags (`SLACK_MOCK`, `GMAIL_MOCK`) only in non-production.
+
+## Data and API
+
+- **No schema changes** (Alembic) without explicit human approval.
+- Paginate list endpoints; validate all request bodies with Pydantic.
+- Soft-delete and tenant scoping where the domain requires it — do not leak cross-tenant data.
+
+## When unsure
+
+Read `workboard/constitution/STARDESK-sikkerhed-50.md` (debate-first) before implementing security-sensitive changes.
