@@ -74,11 +74,13 @@ function PaletteSwatchCircle({
 export function ThemePalettePicker({
   user,
   variant = "default",
+  layout = "dropdown",
   onUserUpdated,
   defaultOpen = false,
 }: Readonly<{
   user: User;
   variant?: "default" | "chrome";
+  layout?: "dropdown" | "inline";
   onUserUpdated?: (user: User) => void;
   defaultOpen?: boolean;
 }>) {
@@ -109,11 +111,16 @@ export function ThemePalettePicker({
     return SLOT_ORDER.map((slot) => modeOverrides[slot] ?? base[slot]);
   }, [mode, overrides, presetId]);
 
+  const chrome = variant === "chrome";
+  const inline = layout === "inline";
+  const panelActive = inline || open;
+
   useEffect(() => {
-    if (!open) {
+    if (!panelActive) {
       applyThemePalette(initial, mode);
       return;
     }
+    if (inline) return;
     function onPointerDown(event: MouseEvent) {
       if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
         setOpen(false);
@@ -121,12 +128,12 @@ export function ThemePalettePicker({
     }
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [initial, mode, open]);
+  }, [initial, inline, mode, panelActive]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!panelActive) return;
     applyThemePalette(draft, mode);
-  }, [draft, mode, open]);
+  }, [draft, inline, mode, panelActive]);
 
   const validateDraft = useCallback(() => {
     const preset = getThemePreset(presetId);
@@ -183,10 +190,125 @@ export function ThemePalettePicker({
       return;
     }
     onUserUpdated?.(result.user);
-    setOpen(false);
+    if (!inline) {
+      setOpen(false);
+    }
   };
 
-  const chrome = variant === "chrome";
+  const panelContent = (
+    <>
+      <p className={cn("mb-2 text-sm font-semibold", inline && "text-base")}>Farvetema</p>
+      <p className="mb-3 text-xs opacity-80">
+        Branding (topbjælke og Help-a-Bot) er låst. Tilpas indhold under bjælken.
+      </p>
+
+      <div className="space-y-2">
+        {THEME_PALETTE_PRESETS.map((preset) => {
+          const colors =
+            mode === "light"
+              ? SLOT_ORDER.map((slot) => preset.light[slot])
+              : SLOT_ORDER.map((slot) => preset.dark[slot]);
+          const selected = presetId === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              className={cn(
+                "flex w-full items-center gap-3 rounded-md border px-2 py-2 text-left text-sm transition-colors",
+                selected
+                  ? chrome && !inline
+                    ? "border-white/50 bg-white/15"
+                    : "border-primary bg-accent"
+                  : chrome && !inline
+                    ? "border-white/15 hover:bg-white/10"
+                    : "border-border hover:bg-muted/50",
+              )}
+              onClick={() => handlePresetSelect(preset.id)}
+              aria-pressed={selected}
+            >
+              <PaletteSwatchCircle colors={colors} className="size-7 shrink-0" />
+              <span className="font-medium">{preset.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 border-t border-current/15 pt-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-80">
+          Tilpas ({mode === "light" ? "dag" : "nat"})
+        </p>
+        <div className="space-y-2">
+          {SLOT_ORDER.map((slot) => {
+            const preset = getThemePreset(presetId);
+            const current =
+              overrides?.[mode]?.[slot] ??
+              (mode === "light" ? preset.light[slot] : preset.dark[slot]);
+            return (
+              <div key={slot} className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium">{THEME_SLOT_LABELS[slot]}</span>
+                <div className="flex flex-wrap justify-end gap-1">
+                  {SWATCH_OPTIONS.map((color) => (
+                    <button
+                      key={`${slot}-${color}`}
+                      type="button"
+                      className={cn(
+                        "size-5 rounded-full border",
+                        current === color ? "ring-2 ring-primary ring-offset-1" : "border-border",
+                      )}
+                      style={{ backgroundColor: color }}
+                      aria-label={`${THEME_SLOT_LABELS[slot]} ${color}`}
+                      aria-pressed={current === color}
+                      onClick={() => handleSlotColor(slot, color)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {error ? (
+        <p className="text-destructive mt-3 text-xs font-medium" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          className={cn(
+            "rounded-sm px-2 py-1 text-xs font-semibold",
+            chrome && !inline ? "hover:bg-white/10" : "hover:bg-muted",
+          )}
+          onClick={handleReset}
+        >
+          Nulstil
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "rounded-sm px-3 py-1 text-xs font-semibold",
+            chrome && !inline
+              ? "bg-white text-[var(--star-chrome)] hover:bg-white/90"
+              : "bg-primary text-primary-foreground hover:opacity-90",
+          )}
+          disabled={saving}
+          onClick={() => void handleSave()}
+        >
+          {saving ? "Gemmer…" : "Gem"}
+        </button>
+      </div>
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="rounded-md border border-border bg-card p-4 text-card-foreground">
+        {panelContent}
+      </div>
+    );
+  }
 
   return (
     <div ref={rootRef} className="relative">
@@ -220,108 +342,7 @@ export function ThemePalettePicker({
               : "border-border bg-popover text-popover-foreground",
           )}
         >
-          <p className="mb-2 text-sm font-semibold">Farvetema</p>
-          <p className="mb-3 text-xs opacity-80">
-            Branding (topbjælke og Help-a-Bot) er låst. Tilpas indhold under bjælken.
-          </p>
-
-          <div className="space-y-2">
-            {THEME_PALETTE_PRESETS.map((preset) => {
-              const colors =
-                mode === "light"
-                  ? SLOT_ORDER.map((slot) => preset.light[slot])
-                  : SLOT_ORDER.map((slot) => preset.dark[slot]);
-              const selected = presetId === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-md border px-2 py-2 text-left text-sm transition-colors",
-                    selected
-                      ? chrome
-                        ? "border-white/50 bg-white/15"
-                        : "border-primary bg-accent"
-                      : chrome
-                        ? "border-white/15 hover:bg-white/10"
-                        : "border-border hover:bg-muted/50",
-                  )}
-                  onClick={() => handlePresetSelect(preset.id)}
-                  aria-pressed={selected}
-                >
-                  <PaletteSwatchCircle colors={colors} className="size-7 shrink-0" />
-                  <span className="font-medium">{preset.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-4 border-t border-current/15 pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-80">
-              Tilpas ({mode === "light" ? "dag" : "nat"})
-            </p>
-            <div className="space-y-2">
-              {SLOT_ORDER.map((slot) => {
-                const preset = getThemePreset(presetId);
-                const current =
-                  overrides?.[mode]?.[slot] ??
-                  (mode === "light" ? preset.light[slot] : preset.dark[slot]);
-                return (
-                  <div key={slot} className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium">{THEME_SLOT_LABELS[slot]}</span>
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {SWATCH_OPTIONS.map((color) => (
-                        <button
-                          key={`${slot}-${color}`}
-                          type="button"
-                          className={cn(
-                            "size-5 rounded-full border",
-                            current === color ? "ring-2 ring-white/80 ring-offset-1" : "border-white/20",
-                          )}
-                          style={{ backgroundColor: color }}
-                          aria-label={`${THEME_SLOT_LABELS[slot]} ${color}`}
-                          aria-pressed={current === color}
-                          onClick={() => handleSlotColor(slot, color)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {error ? (
-            <p className="mt-3 text-xs font-medium text-[#ffb4b4]" role="alert">
-              {error}
-            </p>
-          ) : null}
-
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className={cn(
-                "rounded-sm px-2 py-1 text-xs font-semibold",
-                chrome ? "hover:bg-white/10" : "hover:bg-muted",
-              )}
-              onClick={handleReset}
-            >
-              Nulstil
-            </button>
-            <button
-              type="button"
-              className={cn(
-                "rounded-sm px-3 py-1 text-xs font-semibold",
-                chrome
-                  ? "bg-white text-[var(--star-chrome)] hover:bg-white/90"
-                  : "bg-primary text-primary-foreground hover:opacity-90",
-              )}
-              disabled={saving}
-              onClick={() => void handleSave()}
-            >
-              {saving ? "Gemmer…" : "Gem"}
-            </button>
-          </div>
+          {panelContent}
         </div>
       ) : null}
     </div>

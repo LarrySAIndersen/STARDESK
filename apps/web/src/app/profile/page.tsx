@@ -45,7 +45,11 @@ export default async function ProfilePage() {
           <Link href="/skift-adgangskode" className="text-star-blue underline">
             skift adgangskode
           </Link>{" "}
-          i menuen, eller skift profilbillede via sidebjælken.
+          eller gå til{" "}
+          <Link href="/indstillinger" className="text-star-blue underline">
+            personlige indstillinger
+          </Link>{" "}
+          for at skifte profilbillede og udseende.
         </p>
       </div>
     </div>

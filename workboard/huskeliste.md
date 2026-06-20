@@ -65,10 +65,13 @@ Merged PRs: #123, #129, #132, #134 (S2083 `safe_repo_paths.py`).
 
 | Emne | Fil |
 |------|-----|
+| **Backlog (epics + delopgaver)** | [backlog.md](./backlog.md) |
 | Sagsarkiv, revision, migration før prod | [sagsarkiv-produktion.md](./sagsarkiv-produktion.md) |
 | Constitution (sikkerhed, performance, kodepraksis) | [constitution/README.md](./constitution/README.md) |
 
 ## Åbne opfølgninger
 
-- [ ] Merge PR #137 (staging gate Vercel bypass) til `staging`
-- [ ] Efter merge til `main`: Sonar-dashboard opdateres på prod-gren
+Se [backlog.md](./backlog.md) for fuld liste. Korte punkter:
+
+- [ ] Merge PR #137 (staging gate Vercel bypass) til `staging` — backlog **8.2**
+- [ ] Efter merge til `main`: Sonar-dashboard opdateres på prod-gren — backlog **3.6**
