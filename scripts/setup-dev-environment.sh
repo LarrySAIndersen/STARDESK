@@ -40,7 +40,7 @@ export PATH="${HOME}/.local/bin:${PATH}"
 
 echo "==> Installing dependencies"
 cd "$ROOT/apps/web" && npm ci --ignore-scripts
-cd "$API_DIR" && uv sync --group dev --no-build
+cd "$API_DIR" && uv sync --group dev
 API_VENV_PYTHON="$(stardesk_api_venv_python "$API_DIR")"
 API_PYTEST="$(stardesk_api_venv_pytest "$API_DIR")"
 

@@ -127,3 +127,4 @@ From `scripts/`: `npm run watchdog:start` / `watchdog:stop`.
 - Alembic does not run on Vercel API cold start — CI/`migrate-db.sh`/bootstrap.
 - Restart `npm run dev` after `.env.local` changes.
 - Neon MCP may need IDE auth; `DATABASE_URL` secret is enough for bootstrap.
+- Gate user `sf01@example.dk` (Anna) is a `stardesk_reviewer`: she can list tickets but **cannot open ticket details** (access control returns 404), and her session enables the click-to-place **"Ny forbedring"** review overlay that intercepts clicks. To test ticket-detail / full-visibility UI flows, log in as an admin such as `sf02@example.dk` (Bo) — same demo password.
