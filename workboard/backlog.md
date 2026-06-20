@@ -1,8 +1,41 @@
 # STARDESK backlog
 
-Opdateret: 2026-06-20. Git-spejlet backlog til chat + agent-arbejde (Work Board canvas er pensioneret).
+Opdateret: 2026-06-20 (epic 0 tilføjet). Git-spejlet backlog til chat + agent-arbejde (Work Board canvas er pensioneret).
 
 **Status-legend:** `[ ]` todo · `[~]` i gang · `[x]` færdig · `[-]` blokeret / venter på Jan
+
+---
+
+## 0. Fiks staging — backend-fejl (PRIORITET 1)
+
+**Epic-status:** `[~]` staging deployer, men backend/login fejler på preview  
+**Symptomer:** `Database is not configured` ved login · `/health` → 401 uden bypass · BFF/API mismatch  
+**Docs:** [staging-vercel-preview-env.md](../docs/staging-vercel-preview-env.md) · auth-fixes #376–#390 merged
+
+| # | Delopgave | Status | Ansvar |
+|---|-----------|--------|--------|
+| 0.1 | Verificér `DATABASE_URL` (Neon **test**, `postgresql+asyncpg://`) på Vercel **api** → **Preview** | `[ ]` | Jan |
+| 0.2 | Verificér øvrige Preview-env på api: `STARDESK_ENV=test`, `JWT_SECRET`, `FRONTEND_URL`, `PROTOTYPE_BOOTSTRAP_PASSWORD` | `[ ]` | Jan |
+| 0.3 | Verificér web Preview-env: `NEXT_PUBLIC_API_URL` peger på staging API (ikke prod) | `[ ]` | Jan |
+| 0.4 | Redeploy api + web efter env-ændring (api først) | `[ ]` | Jan |
+| 0.5 | Kør Neon **test** bootstrap/seed hvis DB tom (`bootstrap-dev-database.sh`) | `[ ]` | Agent/Jan |
+| 0.6 | Smoke: `GET /health` med Vercel share/bypass → `stardesk_env` ≠ production | `[ ]` | Agent |
+| 0.7 | Smoke: `POST /auth/login` med `sf01@example.dk` / demo-password → 200 + token | `[ ]` | Agent |
+| 0.8 | Smoke: `GET /api/v1/tickets` med token → sager returneres | `[ ]` | Agent |
+| 0.9 | Verificér web BFF login på staging URL (ikke silent fallback til prod JWT) | `[ ]` | Agent |
+| 0.10 | Dokumentér root cause + fix i backlog (opdatér 0.x til `[x]`) | `[ ]` | Agent |
+| 0.11 | Kør `verify-staging-hello-world.ps1` / `hello-world-gate-api.sh` mod staging | `[ ]` | Agent |
+| 0.12 | Hvis ny backend-fejl: isolér (logs/Vercel) → fix PR mod `staging` | `[ ]` | Agent |
+
+**Kendte fejlscenarier (tjekliste):**
+
+| Fejl | Sandsynlig årsag | Delopgave |
+|------|------------------|-----------|
+| `Database is not configured` | Manglende `DATABASE_URL` på Preview | 0.1, 0.4 |
+| `/health` 401 | Vercel Deployment Protection | 0.6, share-link |
+| Login OK men tickets 401 | JWT secret mismatch api/web | 0.2, 0.3 |
+| Web logger ind men session dør | BFF peger på forkert API | 0.9 |
+| 500 på login | Staging API nede eller DB utilgængelig | 0.5, 0.12 |
 
 ---
 
@@ -25,7 +58,7 @@ Opdateret: 2026-06-20. Git-spejlet backlog til chat + agent-arbejde (Work Board 
 ## 2. Staging auth & login (preview-miljø)
 
 **Epic-status:** `[x]` merged til `staging` (PR #376–#390)  
-**Opfølgning:**
+**Opfølgning:** *Se også **Epic 0** (backend/env) — auth-kode er merged, men staging skal virke end-to-end.*
 
 | # | Delopgave | Status |
 |---|-----------|--------|
@@ -137,8 +170,9 @@ Se [STARDESK-kodepraksis-50-plan.md](./constitution/STARDESK-kodepraksis-50-plan
 
 ## Prioriteret rækkefølge (anbefaling)
 
+0. **Epic 0** — fiks staging backend-fejl (blokerer alt preview-test)  
 1. **Epic 1** — afslut tag-PR (#374)  
-2. **Epic 2** — staging smoke efter auth-batch  
+2. **Epic 2** — staging smoke efter auth-batch (overlapper 0.7–0.9)  
 3. **Epic 3** — prod-release (Jan)  
 4. **Epic 4** — dependabot i små batches  
 5. **Epic 5–6** — constitution ticks  
