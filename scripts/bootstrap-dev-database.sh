@@ -102,7 +102,7 @@ setup_local_postgres() {
 
 ensure_uv
 cd "$API_DIR"
-uv sync --group dev --no-build
+uv sync --group dev
 API_VENV_PYTHON="$(stardesk_api_venv_python "$API_DIR")"
 cd "$ROOT"
 
