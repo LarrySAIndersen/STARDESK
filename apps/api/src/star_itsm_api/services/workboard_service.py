@@ -151,7 +151,11 @@ async def update_task(
     merge.update(patch)
     status_override: str | None = None
     if "status" in patch and patch["status"] is not None:
-        resolved, _preserved = resolve_persisted_status(row.status, str(patch["status"]))
+        resolved, _preserved = resolve_persisted_status(
+            row.status,
+            str(patch["status"]),
+            staff_ui=True,
+        )
         status_override = resolved
         merge["status"] = resolved
     parent_uuid = await _resolve_parent_id(

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ClipboardList,
   Columns3,
   Headset,
   Inbox,
@@ -27,6 +28,15 @@ export const PROJEKTER_HUB_ITEMS: ProjekterHubItem[] = [
     icon: Columns3,
     accent: "#1a5fb4",
     accentSoft: "#e8f1fb",
+  },
+  {
+    id: "workboard",
+    href: "/workboard",
+    label: "Opgaver til senere",
+    description: "Online backlog — gem og prioriter opgaver til senere.",
+    icon: ClipboardList,
+    accent: "#6b4c9a",
+    accentSoft: "#f0ebf8",
   },
   {
     id: "backlog",

@@ -1,6 +1,9 @@
 # Backlog — opgaver til senere
 
-> **Formål:** Ét sted i Git til opgaver I **ikke** arbejder på nu, men vil huske.
+> **Online (anbefalet):** [Opgaver til senere](/workboard) i STARDESK-web — gemt i databasen (Neon).
+> **Markdown-kopi:** denne fil i Git — til agent-reference og backup.
+
+> **Formål:** Ét sted til opgaver I **ikke** arbejder på nu, men vil huske.
 > Work Board / kanban er pensioneret — brug denne fil + chat + PR'er.
 
 **Opdateret:** 2026-06-20
