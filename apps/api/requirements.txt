@@ -5,6 +5,6 @@ fastapi>=0.115.0
 httpx>=0.28.0
 bcrypt>=4.2.0
 pyjwt>=2.10.0
-pydantic-settings>=2.6.0
+pydantic-settings>=2.14.2
 sqlalchemy[asyncio]>=2.0.36
 uvicorn[standard]>=0.32.0
